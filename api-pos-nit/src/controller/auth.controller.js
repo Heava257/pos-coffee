@@ -688,14 +688,15 @@ exports.validate_token = (permission_name) => {
 
       // 3. SECURE CHECK: Verify subscription status with the Platform (The Brain)
       try {
-        const platformRes = await axios.get('http://localhost:5001/api/subscriptions/status', {
+        const platformStatusUrl = `${config.config.platform_api_url}/subscriptions/status`;
+        const platformRes = await axios.get(platformStatusUrl, {
           headers: { Authorization: `Bearer ${token_from_client}` }
         });
 
         if (!platformRes.data.active) {
           return res.status(403).json({
             message: "Subscription Inactive/Expired",
-            renew_url: "http://localhost:3000/dashboard", // Platform URL
+            renew_url: config.config.platform_hub_url + "/dashboard",
             error: "SUBSCRIPTION_REQUIRED"
           });
         }

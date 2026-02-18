@@ -15,6 +15,8 @@ module.exports = {
       PORT: process.env.DB_PORT || 3306,
     },
     flutter_secret_key: process.env.FLUTTER_SECRET_KEY || "FLWSECK_TEST-51f96fcfc9d06ac2d35ed8a01a523fae-X",
+    platform_api_url: process.env.VITE_PLATFORM_API_URL || "http://localhost:5001/api",
+    platform_hub_url: process.env.VITE_PLATFORM_URL || "http://localhost:3000",
     token: {
       access_token_key: process.env.ACCESS_TOKEN_KEY || "saas_hub_secret_key_2024",
       refresh_token_key: process.env.REFRESH_TOKEN_KEY || "REFRESH_saas_hub_secret_key_2024",
