@@ -13,8 +13,11 @@
 // };
 
 
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/";
+const formattedBaseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
+
 export const Config = {
-  base_url: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/",
+  base_url: formattedBaseUrl,
   version: "1.0",
   token: "",
   image_path: import.meta.env.VITE_IMAGE_PATH || "http://localhost:80/fullstack/",
