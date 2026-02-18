@@ -42,7 +42,7 @@ function App() {
   );
   return (
     <ExchangeRateProvider>
-      <BrowserRouter basename={import.meta.env.MODE === 'production' ? '/' : '/kofi'}>
+      <BrowserRouter basename="/">
         <Routes >
           <Route path="/customer" element={<CoffeeMenuApp />} />
 

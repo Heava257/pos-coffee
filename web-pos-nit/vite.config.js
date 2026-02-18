@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     outDir: 'build', // ឲ្យ build ទៅ build (instead of dist)
   },
-  base: process.env.NODE_ENV === 'production' ? '/' : '/kofi/', 
+  base: '/', 
 })
 
 // import { defineConfig } from 'vite'
