@@ -682,7 +682,8 @@ exports.validate_token = (permission_name) => {
       const { user_id, company_id, system_code } = decoded;
 
       // 2. Validate it belongs to this System
-      if (system_code !== "COFFEE") {
+      const validSystemCodes = ["COFFEE", "coffee_system"];
+      if (!validSystemCodes.includes(system_code)) {
         return res.status(403).json({ message: "Invalid system authorization" });
       }
 
