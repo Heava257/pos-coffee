@@ -21,7 +21,7 @@ require("./src/route/dashbaord.route")(app);
 require("./src/route/report.route")(app);
 require("./src/route/currency.route")(app);
 require("./src/route/invoices.route")(app);
-require("./src/route/admin_stock_transfer.route")(app); 
+require("./src/route/admin_stock_transfer.route")(app);
 require("./src/route/StockUser.route")(app);
 require("./src/route/Chat_Application.route")(app);
 require("./src/route/order_menu.route")(app);
@@ -46,7 +46,7 @@ const server = http.createServer({
   keepAliveTimeout: 120000, // 2 minutes
 }, app);
 
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log("http://localhost:" + PORT);
+  console.log("Server running on port " + PORT);
 });

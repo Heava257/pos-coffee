@@ -8,19 +8,16 @@ module.exports = {
 
     image_path: "C:/xampp/htdocs/fullstack/",
     db: {
-      HOST: "localhost",
-      USER: "root",
-      PASSWORD: "",
-      DATABASE: "pos-coffee",
-      PORT: 3306,
+      HOST: process.env.DB_HOST || "localhost",
+      USER: process.env.DB_USER || "root",
+      PASSWORD: process.env.DB_PASSWORD || "",
+      DATABASE: process.env.DB_DATABASE || "pos-coffee",
+      PORT: process.env.DB_PORT || 3306,
     },
-flutter_secret_key:"FLWSECK_TEST-51f96fcfc9d06ac2d35ed8a01a523fae-X",
+    flutter_secret_key: process.env.FLUTTER_SECRET_KEY || "FLWSECK_TEST-51f96fcfc9d06ac2d35ed8a01a523fae-X",
     token: {
-      access_token_key:
-        "saas_hub_secret_key_2024",
-        refresh_token_key:
-        "REFRESH_saas_hub_secret_key_2024",
-        
+      access_token_key: process.env.ACCESS_TOKEN_KEY || "saas_hub_secret_key_2024",
+      refresh_token_key: process.env.REFRESH_TOKEN_KEY || "REFRESH_saas_hub_secret_key_2024",
     },
   },
 };
