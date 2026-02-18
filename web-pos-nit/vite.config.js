@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     outDir: 'build', // ឲ្យ build ទៅ build (instead of dist)
   },
-  base: '/kofi/', // base path សំខាន់ណាស់ ព្រោះ hosting នៅ http://localhost/kofi/
+  base: process.env.NODE_ENV === 'production' ? '/' : '/kofi/', 
 })
 
 // import { defineConfig } from 'vite'
