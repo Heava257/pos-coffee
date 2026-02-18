@@ -683,7 +683,9 @@ exports.validate_token = (permission_name) => {
 
       // 2. Validate it belongs to this System
       const validSystemCodes = ["COFFEE", "coffee_system"];
+      console.log("SSO Validation - Decoded System Code:", system_code);
       if (!validSystemCodes.includes(system_code)) {
+        console.warn(`SSO Blocked: System Code mismatch. Expected one of [${validSystemCodes}], got '${system_code}'`);
         return res.status(403).json({ message: "Invalid system authorization" });
       }
 
@@ -693,6 +695,8 @@ exports.validate_token = (permission_name) => {
         const platformRes = await axios.get(platformStatusUrl, {
           headers: { Authorization: `Bearer ${token_from_client}` }
         });
+
+        console.log("Platform Status Response:", platformRes.data);
 
         if (!platformRes.data.active) {
           return res.status(403).json({
