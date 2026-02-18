@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Form, Button, message, Input } from "antd";
 import { request } from "../../util/helper";
+import { Config } from "../../util/config";
 import { setAcccessToken, setPermission, setProfile } from "../../store/profile.store";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.png";
@@ -53,7 +54,7 @@ function LoginPage() {
   };
 
   const goToPlatform = () => {
-    window.location.href = "http://localhost:3000"; // Platform URL
+    window.location.href = Config.platform_url;
   };
 
   // Show welcome animation if login is successful
