@@ -552,7 +552,7 @@ exports.refreshToken = async (req, res) => {
     }
 
     // Verify refresh token
-    jwt.verify(refresh_token, config.config.token.refresh_token_key, async (error, decoded) => {
+    jwt.verify(refresh_token, config.token.refresh_token_key, async (error, decoded) => {
       if (error) {
         return res.status(401).json({
           message: "Invalid refresh token",
@@ -705,7 +705,7 @@ exports.validate_token = (permission_name) => {
       // 1. Verify Platform JWT (Passport)
       const decoded = jwt.verify(
         token_from_client,
-        config.config.token.access_token_key
+        config.token.access_token_key
       );
 
       // Expected payload: { user_id, id, company_id, system_code, role }
@@ -722,7 +722,7 @@ exports.validate_token = (permission_name) => {
 
       // 3. SECURE CHECK: Verify subscription status with the Platform (The Brain)
       try {
-        const platformStatusUrl = `${config.config.platform_api_url}/subscriptions/status`;
+        const platformStatusUrl = `${config.platform_api_url}/subscriptions/status`;
         const platformRes = await axios.get(platformStatusUrl, {
           headers: { Authorization: `Bearer ${token_from_client}` }
         });
@@ -732,7 +732,7 @@ exports.validate_token = (permission_name) => {
         if (!platformRes.data.active) {
           return res.status(403).json({
             message: "Subscription Inactive/Expired",
-            renew_url: config.config.platform_hub_url + "/dashboard",
+            renew_url: config.platform_hub_url + "/dashboard",
             error: "SUBSCRIPTION_REQUIRED"
           });
         }
@@ -774,7 +774,7 @@ exports.validate_token = (permission_name) => {
 const getRefreshToken = async (userData) => {
   const refresh_token = await jwt.sign(
     userData,
-    config.config.token.refresh_token_key,
+    config.token.refresh_token_key,
     {
       expiresIn: "7d", // Refresh token expires in 7 days
     }

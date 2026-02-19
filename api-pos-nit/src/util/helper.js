@@ -1,4 +1,4 @@
-const { config } = require("./config");
+const config = require("./config");
 const connection = require("./connection");
 const { logError } = require("./logError");
 const fs = require("fs/promises");
@@ -50,7 +50,7 @@ exports.formartDateServer = (data) => {
   return true;
 };
 
-exports.formartDateClient = (data )=> {
+exports.formartDateClient = (data) => {
   return true;
 };
 
