@@ -747,15 +747,16 @@ exports.validate_token = (permission_name) => {
       req.auth = {
         ...decoded,
         id: user_id,
-        plan: platformRes.data.plan,
-        name: decoded.name || 'User ' + user_id // Ensure name exists for logging
+        plan: platformRes.data.plan || "Starter",
+        name: decoded.name || 'User ' + user_id
       };
 
-      // Mock permission to bypass old checks while keeping business logic working
-      req.permission = [{ name: permission_name }];
+      // Standardize permission format (Array of strings)
+      req.permission = [permission_name || "all"];
 
       next();
     } catch (error) {
+      console.error("[SSO_ERROR]", error.message);
       if (error.name === "TokenExpiredError") {
         return res.status(401).json({
           message: "Session expired",
