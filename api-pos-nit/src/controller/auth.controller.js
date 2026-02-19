@@ -708,8 +708,9 @@ exports.validate_token = (permission_name) => {
         config.config.token.access_token_key
       );
 
-      // Expected payload: { user_id, company_id, system_code, role }
-      const { user_id, company_id, system_code } = decoded;
+      // Expected payload: { user_id, id, company_id, system_code, role }
+      const user_id = decoded.user_id || decoded.id;
+      const { company_id, system_code } = decoded;
 
       // 2. Validate it belongs to this System
       const validSystemCodes = ["COFFEE", "coffee_system"];
