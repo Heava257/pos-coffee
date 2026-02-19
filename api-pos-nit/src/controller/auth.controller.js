@@ -645,10 +645,40 @@ exports.logout = async (req, res) => {
 
 exports.profile = async (req, res) => {
   try {
-    // Return profile from the Handshake JWT
+    const { id: user_id, plan, company_id } = req.auth;
+
+    // 1. Fetch local permissions if user exists, otherwise grant 'owner' permissions
+    let permissions = [];
+    try {
+      const perms = await getPermissionByUser(user_id);
+      permissions = perms.map(p => p.name);
+    } catch (err) {
+      console.warn("Failed to fetch local permissions for SSO user:", err.message);
+    }
+
+    // Default permissions for owner if none found
+    if (permissions.length === 0) {
+      // In a multi-tenant SaaS, the owner usually gets access to everything
+      // Here we can also restrict based on the 'plan'
+      const isPro = plan?.toLowerCase().includes("pro");
+      const isEnterprise = plan?.toLowerCase().includes("enterprise");
+
+      permissions = ["dashboard", "pos", "report", "setting"];
+      if (isPro || isEnterprise) {
+        permissions.push("inventory", "expense", "stock");
+      }
+      if (isEnterprise) {
+        permissions.push("wholesale", "analytics", "multi_branch");
+      }
+    }
+
     res.json({
-      profile: req.auth,
-      permission: req.permission || []
+      profile: {
+        ...req.auth,
+        role: "Owner",
+        plan: plan || "Starter"
+      },
+      permission: permissions
     });
   } catch (error) {
     logError("auth.profile", error, res);
@@ -716,6 +746,7 @@ exports.validate_token = (permission_name) => {
       req.auth = {
         ...decoded,
         id: user_id,
+        plan: platformRes.data.plan,
         name: decoded.name || 'User ' + user_id // Ensure name exists for logging
       };
 
