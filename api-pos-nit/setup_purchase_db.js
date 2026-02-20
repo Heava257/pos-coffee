@@ -10,7 +10,7 @@ async function setupPurchaseDb(connection) {
 
         console.log("Starting Purchase & Stock Movement Setup...");
 
-        // 0. Ensure PURCHASE table exists
+        // 0. Ensure PURCHASE table exists with ALL columns
         await connection.query(`
       CREATE TABLE IF NOT EXISTS purchase (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -27,96 +27,55 @@ async function setupPurchaseDb(connection) {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-        // 0.1 explicitly add company_id if missing (handling existing tables)
-        try {
-            await connection.query(`
-        ALTER TABLE purchase 
-        ADD COLUMN company_id INT NOT NULL AFTER ref,
-        ADD INDEX (company_id);
-      `);
-            console.log("✅ Added company_id to purchase table.");
-        } catch (e) {
-            if (e.code === 'ER_DUP_FIELDNAME') {
-                console.log("ℹ️ company_id column already exists in purchase.");
-            } else {
-                console.error("Warning: purchase column add failed (company_id)", e.message);
+        // --- Helper to add column if missing ---
+        const addColumn = async (table, column, definition) => {
+            try {
+                await connection.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+                console.log(`✅ Added ${column} to ${table} table.`);
+            } catch (e) {
+                if (e.code === 'ER_DUP_FIELDNAME') {
+                    console.log(`ℹ️ ${column} column already exists in ${table}.`);
+                } else {
+                    console.error(`Warning: Failed to add ${column} to ${table}`, e.message);
+                }
             }
-        }
+        };
 
-        // 0.2 Check for total_amount, paid_amount, and note column names
-        try {
-            await connection.query(`
-         ALTER TABLE purchase 
-         ADD COLUMN total_amount DECIMAL(10, 2) DEFAULT 0.00 AFTER company_id;
-       `);
-            console.log("✅ Added total_amount to purchase table.");
-        } catch (e) {
-            if (e.code === 'ER_DUP_FIELDNAME') {
-                console.log("ℹ️ total_amount column already exists.");
-            } else {
-                console.log("Warning: Failed to add total_amount", e.message);
-            }
-        }
-
-        try {
-            await connection.query(`
-          ALTER TABLE purchase 
-          ADD COLUMN paid_amount DECIMAL(10, 2) DEFAULT 0.00 AFTER total_amount;
-        `);
-            console.log("✅ Added paid_amount to purchase table.");
-        } catch (e) {
-            if (e.code === 'ER_DUP_FIELDNAME') {
-                console.log("ℹ️ paid_amount column already exists.");
-            } else {
-                console.log("Warning: Failed to add paid_amount", e.message);
-            }
-        }
-
-        try {
-            await connection.query(`
-          ALTER TABLE purchase 
-          ADD COLUMN note TEXT AFTER paid_amount;
-        `);
-            console.log("✅ Added note to purchase table.");
-        } catch (e) {
-            if (e.code === 'ER_DUP_FIELDNAME') {
-                console.log("ℹ️ note column already exists.");
-            } else {
-                console.log("Warning: Failed to add note", e.message);
-            }
-        }
+        // 0.1 Explicitly check/add ALL potentially missing columns in 'purchase'
+        await addColumn('purchase', 'company_id', 'INT NOT NULL AFTER ref, ADD INDEX (company_id)');
+        await addColumn('purchase', 'total_amount', 'DECIMAL(10, 2) DEFAULT 0.00 AFTER company_id');
+        await addColumn('purchase', 'paid_amount', 'DECIMAL(10, 2) DEFAULT 0.00 AFTER total_amount');
+        await addColumn('purchase', 'note', 'TEXT AFTER paid_amount');
+        await addColumn('purchase', 'created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER note');
+        await addColumn('purchase', 'created_by', 'VARCHAR(100) AFTER created_at');
+        await addColumn('purchase', 'supplier_id', 'INT NULL AFTER id, ADD INDEX (supplier_id)');
+        await addColumn('purchase', 'ref', 'VARCHAR(50) NOT NULL AFTER supplier_id');
 
 
-        // 1. Add raw_material_id to purchase_product
-        // If purchase_product doesn't exist, create it first (failsafe)
+        // 1. Ensure PURCHASE_PRODUCT table exists
         await connection.query(`
        CREATE TABLE IF NOT EXISTS purchase_product (
         id INT AUTO_INCREMENT PRIMARY KEY,
         purchase_id INT NOT NULL,
         product_id INT NULL,
+        raw_material_id INT NULL,
         qty DECIMAL(10, 2) NOT NULL,
         cost DECIMAL(10, 2) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_by VARCHAR(100),
         FOREIGN KEY (purchase_id) REFERENCES purchase(id) ON DELETE CASCADE,
-        INDEX (purchase_id)
+        INDEX (purchase_id),
+        INDEX (raw_material_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-        try {
-            await connection.query(`
-        ALTER TABLE purchase_product 
-        ADD COLUMN raw_material_id INT NULL AFTER product_id,
-        ADD INDEX (raw_material_id);
-      `);
-            console.log("✅ Added raw_material_id to purchase_product table.");
-        } catch (e) {
-            if (e.code === 'ER_DUP_FIELDNAME') {
-                console.log("ℹ️ raw_material_id column already exists.");
-            } else {
-                console.error("Warning: purchase_product column add failed", e.message);
-            }
-        }
+        // 1.1 Check columns for purchase_product
+        await addColumn('purchase_product', 'raw_material_id', 'INT NULL AFTER product_id, ADD INDEX (raw_material_id)');
+        await addColumn('purchase_product', 'qty', 'DECIMAL(10, 2) NOT NULL');
+        await addColumn('purchase_product', 'cost', 'DECIMAL(10, 2) NOT NULL');
+        await addColumn('purchase_product', 'created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+        await addColumn('purchase_product', 'created_by', 'VARCHAR(100)');
+
 
         // 2. Create stock_movement table
         await connection.query(`
