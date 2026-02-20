@@ -734,54 +734,63 @@ exports.validate_token = (permission_name) => {
     }
 
     try {
-      // 1. Verify Platform JWT (Passport)
+      // 1. Verify JWT
       const decoded = jwt.verify(
         token_from_client,
         config.token.access_token_key
       );
 
-      // Expected payload: { user_id, id, company_id, system_code, role }
-      const user_id = decoded.user_id || decoded.id;
-      const { company_id, system_code } = decoded;
+      // Handle both Traditional (Legacy) and New Platform (SSO) payloads
+      let user_data = decoded;
+      let isSSO = !!decoded.system_code;
 
-      // 2. Validate it belongs to this System
-      const validSystemCodes = ["COFFEE", "coffee_system"];
-      console.log("SSO Validation - Decoded System Code:", system_code);
-      if (!validSystemCodes.includes(system_code)) {
-        console.warn(`SSO Blocked: System Code mismatch. Expected one of [${validSystemCodes}], got '${system_code}'`);
-        return res.status(403).json({ message: "Invalid system authorization" });
+      // Traditional payload structure check
+      if (decoded.data) {
+        user_data = decoded.data.profile || decoded.data;
+        isSSO = false;
       }
-      let platformData = { plan: "Starter" };
-      // 3. SECURE CHECK: Verify subscription status with the Platform (The Brain)
-      try {
-        const platformStatusUrl = `${config.platform_api_url}/subscriptions/status`;
-        const platformRes = await axios.get(platformStatusUrl, {
-          headers: { Authorization: `Bearer ${token_from_client}` }
-        });
 
-        console.log("Platform Status Response:", platformRes.data);
-        platformData = platformRes.data;
+      const user_id = user_data.id || user_data.user_id;
 
-        if (!platformRes.data.active) {
-          return res.status(403).json({
-            message: "Subscription Inactive/Expired",
-            renew_url: config.platform_hub_url + "/dashboard",
-            error: "SUBSCRIPTION_REQUIRED"
-          });
+      // 2. SSO Specific Validations
+      if (isSSO) {
+        const validSystemCodes = ["COFFEE", "coffee_system"];
+        if (!validSystemCodes.includes(user_data.system_code)) {
+          console.warn(`SSO Blocked: System Code mismatch. Got '${user_data.system_code}'`);
+          return res.status(403).json({ message: "Invalid system authorization" });
         }
-      } catch (err) {
-        console.error("Platform Subscription Check Failed:", err.message);
-        return res.status(503).json({ message: "Identity Service Unavailable" });
+
+        // Verify subscription status with Platform
+        try {
+          const platformStatusUrl = `${config.platform_api_url}/subscriptions/status`;
+          const platformRes = await axios.get(platformStatusUrl, {
+            headers: { Authorization: `Bearer ${token_from_client}` },
+            timeout: 3000 // Add timeout to prevent hanging
+          });
+
+          if (!platformRes.data.active) {
+            return res.status(403).json({
+              message: "Subscription Inactive/Expired",
+              renew_url: config.platform_hub_url + "/dashboard",
+              error: "SUBSCRIPTION_REQUIRED"
+            });
+          }
+        } catch (err) {
+          console.error("Platform Subscription Check Failed:", err.message);
+          // Optional: for better UX, we could allow fallback if platform is just down, 
+          // but for now, we follow strict secure rules
+          return res.status(503).json({ message: "Identity Service Unavailable" });
+        }
       }
 
       // 4. Multi-Tenant Context Injection
       req.current_id = user_id;
-      req.company_id = company_id;
+      req.company_id = user_data.company_id;
       req.auth = {
-        ...decoded,
+        ...user_data,
         id: user_id,
-        plan: platformData.plan || "Starter",
-        name: decoded.name || 'User ' + user_id
+        plan: user_data.plan || "Starter",
+        name: user_data.name || 'User ' + user_id
       };
 
       // Standardize permission format (Array of strings)
