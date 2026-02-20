@@ -650,25 +650,54 @@ exports.profile = async (req, res) => {
     // 1. Fetch local permissions if user exists, otherwise grant 'owner' permissions
     let permissions = [];
     try {
-      const perms = await getPermissionByUser(user_id);
-      permissions = perms.map(p => p.name);
+      // Return full permission objects instead of just names
+      permissions = await getPermissionByUser(user_id);
     } catch (err) {
       console.warn("Failed to fetch local permissions for SSO user:", err.message);
     }
 
-    // Default permissions for owner if none found
-    if (permissions.length === 0) {
+    // Default permissions for owner if none found or empty
+    if (!permissions || permissions.length === 0) {
       // In a multi-tenant SaaS, the owner usually gets access to everything
       // Here we can also restrict based on the 'plan'
       const isPro = plan?.toLowerCase().includes("pro");
       const isEnterprise = plan?.toLowerCase().includes("enterprise");
 
-      permissions = ["dashboard", "pos", "report", "setting"];
+      // Base permissions (Starter Plan)
+      permissions = [
+        { name: "dashboard", web_route_key: "/" },
+        { name: "pos", web_route_key: "/pos" },
+        { name: "menu", web_route_key: "/invoices" },
+        { name: "order", web_route_key: "/order" },
+        { name: "setting", web_route_key: "/setting" },
+        { name: "shop_managment", web_route_key: "/shop_managment" },
+        { name: "customer", web_route_key: "/customer" },
+        { name: "category", web_route_key: "/category" },
+        { name: "product", web_route_key: "/product" },
+        { name: "employee", web_route_key: "/employee" },
+        { name: "total_due", web_route_key: "/total_due" },
+      ];
+
       if (isPro || isEnterprise) {
-        permissions.push("inventory", "expense", "stock");
+        permissions.push(
+          { name: "inventory", web_route_key: "/inventory" },
+          { name: "expense", web_route_key: "/expanse" },
+          { name: "expense_type", web_route_key: "/expanse_type" },
+          { name: "stock", web_route_key: "/stock" },
+          { name: "user", web_route_key: "/user" },
+          { name: "role", web_route_key: "/role" },
+          { name: "report_Sale_Summary", web_route_key: "/report_Sale_Summary" },
+          { name: "report_Expense_Summary", web_route_key: "/report_Expense_Summary" },
+          { name: "Top_Sale", web_route_key: "/Top_Sale" }
+        );
       }
+
       if (isEnterprise) {
-        permissions.push("wholesale", "analytics", "multi_branch");
+        permissions.push(
+          { name: "wholesale", web_route_key: "/wholesale" },
+          { name: "analytics", web_route_key: "/analytics" },
+          { name: "multi_branch", web_route_key: "/multi_branch" }
+        );
       }
     }
 
