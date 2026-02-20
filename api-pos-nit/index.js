@@ -5,6 +5,7 @@ const cors = require("cors");
 const app = express();
 const setupDatabase = require("./setup_inventory_db");
 const setupPurchaseDb = require("./setup_purchase_db");
+const updatePermissions = require("./update_permissions");
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -57,4 +58,5 @@ app.listen(PORT, async () => {
   console.log("Server running on port " + PORT);
   await setupDatabase();
   await setupPurchaseDb();
+  await updatePermissions();
 });
