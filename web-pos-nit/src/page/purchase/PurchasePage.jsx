@@ -29,9 +29,10 @@ function PurchasePage() {
         rawMaterials: [],
         total: 0,
     });
-    const [filter, setFilter] = useState({
-        page: 1,
-        pageSize: 10,
+    const [totals, setTotals] = useState({
+        totalAmount: 0,
+        totalPaid: 0,
+        totalBalance: 0
     });
 
     useEffect(() => {
@@ -50,6 +51,18 @@ function PurchasePage() {
                 total: res.total,
                 loading: false,
             }));
+
+            // Calculate local summary for the current view (or fetch from server)
+            let amt = 0, paid = 0;
+            res.list.forEach(i => {
+                amt += Number(i.total_amount) || 0;
+                paid += Number(i.paid_amount) || 0;
+            });
+            setTotals({
+                totalAmount: amt,
+                totalPaid: paid,
+                totalBalance: amt - paid
+            });
         } else {
             setState((pre) => ({ ...pre, loading: false }));
         }
@@ -125,62 +138,114 @@ function PurchasePage() {
     const columns = [
         {
             title: "No",
+            width: 60,
             render: (value, item, index) => (filter.page - 1) * filter.pageSize + index + 1,
-        },
-        {
-            title: "Ref #",
-            dataIndex: "ref",
-        },
-        {
-            title: "Supplier",
-            dataIndex: "supplier_name",
-            render: (val) => val || "N/A"
-        },
-        {
-            title: "Total Amount",
-            dataIndex: "total_amount",
-            render: (val) => `$${Number(val).toFixed(2)}`
         },
         {
             title: "Date",
             dataIndex: "created_at",
+            width: 150,
             render: (val) => dayjs(val).format("YYYY-MM-DD HH:mm")
         },
         {
+            title: "Ref #",
+            dataIndex: "ref",
+            render: (val) => <Tag color="blue">{val}</Tag>
+        },
+        {
+            title: "Supplier",
+            dataIndex: "supplier_name",
+            render: (val) => <span style={{ fontWeight: 500 }}>{val || "N/A"}</span>
+        },
+        {
+            title: "Total",
+            dataIndex: "total_amount",
+            align: 'right',
+            render: (val) => <span style={{ color: "#2ecc71", fontWeight: "bold" }}>${Number(val).toFixed(2)}</span>
+        },
+        {
+            title: "Paid",
+            dataIndex: "paid_amount",
+            align: 'right',
+            render: (val) => <span style={{ color: "#3498db" }}>${Number(val).toFixed(2)}</span>
+        },
+        {
+            title: "Balance",
+            align: 'right',
+            render: (_, item) => {
+                const balance = (Number(item.total_amount) || 0) - (Number(item.paid_amount) || 0);
+                return <Tag color={balance > 0 ? "orange" : "green"}>${balance.toFixed(2)}</Tag>
+            }
+        },
+        {
             title: "Created By",
-            dataIndex: "created_by"
+            dataIndex: "created_by",
+            width: 120,
         }
     ];
 
     return (
         <MainPage loading={state.loading}>
-            <div className="pageHeader">
+            <div style={{ marginBottom: 24 }}>
+                <Row gutter={16}>
+                    <Col span={6}>
+                        <div className="statCard" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Total Purchase</div>
+                            <div style={{ fontSize: "24px", fontWeight: "bold" }}>${totals.totalAmount.toFixed(2)}</div>
+                        </div>
+                    </Col>
+                    <Col span={6}>
+                        <div className="statCard" style={{ background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Total Paid</div>
+                            <div style={{ fontSize: "24px", fontWeight: "bold" }}>${totals.totalPaid.toFixed(2)}</div>
+                        </div>
+                    </Col>
+                    <Col span={6}>
+                        <div className="statCard" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Outstanding Balance</div>
+                            <div style={{ fontSize: "24px", fontWeight: "bold" }}>${totals.totalBalance.toFixed(2)}</div>
+                        </div>
+                    </Col>
+                    <Col span={6}>
+                        <div className="statCard" style={{ background: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Total Orders</div>
+                            <div style={{ fontSize: "24px", fontWeight: "bold" }}>{state.total}</div>
+                        </div>
+                    </Col>
+                </Row>
+            </div>
+
+            <div className="pageHeader" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h2>Purchase History</h2>
                 <Space>
-                    <h2>Purchase History</h2>
+                    <Input.Search placeholder="Search Ref#" style={{ width: 250 }} />
+                    <Button type="primary" icon={<MdAdd />} onClick={onOpenModal}>
+                        New Purchase
+                    </Button>
                 </Space>
-                <Button type="primary" icon={<MdAdd />} onClick={onOpenModal}>
-                    New Purchase
-                </Button>
             </div>
 
             <Table
                 rowKey="id"
                 dataSource={state.list}
                 columns={columns}
+                size="middle"
                 pagination={{
                     current: filter.page,
                     pageSize: filter.pageSize,
                     total: state.total,
+                    showSizeChanger: true,
                     onChange: (page, pageSize) => setFilter({ ...filter, page, pageSize })
                 }}
             />
 
             <Modal
-                title="New Purchase"
+                title={<b>➕ New Purchase Entry</b>}
                 open={state.visibleModal}
                 onCancel={onCloseModal}
-                width={800}
+                width={850}
                 footer={null}
+                centered
                 destroyOnClose
             >
                 <Form layout="vertical" form={form} onFinish={onFinish}>
@@ -191,35 +256,35 @@ function PurchasePage() {
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item name="note" label="Note">
-                                <Input />
+                            <Form.Item name="note" label="Internal Note">
+                                <Input placeholder="Ref invoice, batch info etc." />
                             </Form.Item>
                         </Col>
                     </Row>
 
-                    <div style={{ background: "#f9f9f9", padding: 10, borderRadius: 5, marginBottom: 10 }}>
-                        <h4>Items</h4>
+                    <div style={{ background: "#fcfcfc", border: "1px solid #eee", padding: "16px", borderRadius: "8px", marginBottom: "20px" }}>
+                        <div style={{ marginBottom: "12px", fontWeight: 600, color: "#555" }}>Purchase Items</div>
                         <Form.List name="items">
                             {(fields, { add, remove }) => (
                                 <>
                                     {fields.map(({ key, name, ...restField }) => (
-                                        <Row key={key} gutter={8} align="middle" style={{ marginBottom: 8 }}>
-                                            <Col span={8}>
+                                        <Row key={key} gutter={12} align="middle" style={{ marginBottom: 12 }}>
+                                            <Col span={9}>
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, 'raw_material_id']}
-                                                    rules={[{ required: true, message: 'Required' }]}
+                                                    rules={[{ required: true, message: 'Select item' }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <Select
-                                                        placeholder="Item"
+                                                        placeholder="Item (Ingrediant)"
                                                         options={state.rawMaterials}
                                                         showSearch
                                                         onChange={(val) => {
                                                             const item = state.rawMaterials.find(rm => rm.value === val);
                                                             if (item) {
                                                                 const fields = form.getFieldsValue();
-                                                                const items = fields.items;
+                                                                const items = [...fields.items];
                                                                 items[name].cost = item.price;
                                                                 form.setFieldsValue({ items });
                                                             }
@@ -231,26 +296,25 @@ function PurchasePage() {
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, 'qty']}
-                                                    rules={[{ required: true, message: 'Required' }]}
+                                                    rules={[{ required: true, message: 'Qty' }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
-                                                    <InputNumber placeholder="Qty" min={0} style={{ width: '100%' }} onChange={() => setState({ ...state })} />
+                                                    <InputNumber placeholder="Qty" min={0.01} style={{ width: '100%' }} onChange={() => setState({ ...state })} />
                                                 </Form.Item>
                                             </Col>
                                             <Col span={5}>
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, 'cost']}
-                                                    rules={[{ required: true, message: 'Required' }]}
+                                                    rules={[{ required: true, message: 'Cost' }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
-                                                    <InputNumber placeholder="Cost" min={0} prefix="$" style={{ width: '100%' }} onChange={() => setState({ ...state })} />
+                                                    <InputNumber placeholder="Unit Cost" min={0} prefix="$" style={{ width: '100%' }} onChange={() => setState({ ...state })} />
                                                 </Form.Item>
                                             </Col>
-                                            <Col span={4}>
-                                                {/* Subtotal Display */}
-                                                <div style={{ textAlign: "right", color: "#666" }}>
-                                                    ${((form.getFieldValue(['items', name, 'qty']) || 0) * (form.getFieldValue(['items', name, 'cost']) || 0)).toFixed(2)}
+                                            <Col span={3}>
+                                                <div style={{ textAlign: "right", fontWeight: 600 }}>
+                                                    ${((Number(form.getFieldValue(['items', name, 'qty'])) || 0) * (Number(form.getFieldValue(['items', name, 'cost'])) || 0)).toFixed(2)}
                                                 </div>
                                             </Col>
                                             <Col span={2}>
@@ -258,30 +322,29 @@ function PurchasePage() {
                                             </Col>
                                         </Row>
                                     ))}
-                                    <Button type="dashed" onClick={() => add()} block icon={<MdAdd />}>
-                                        Add Item
+                                    <Button type="dashed" onClick={() => add()} block icon={<MdAdd />} style={{ marginTop: 8 }}>
+                                        Add New Ingredient
                                     </Button>
                                 </>
                             )}
                         </Form.List>
                     </div>
 
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <div style={{ fontSize: 16, fontWeight: "bold", marginTop: 10 }}>Total: ${calculateTotal().toFixed(2)}</div>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item name="paid_amount" label="Paid Amount">
-                                <InputNumber style={{ width: "100%" }} min={0} prefix="$" />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", paddingTop: 20 }}>
+                        <div style={{ fontSize: 18 }}>
+                            Total Amount: <b style={{ color: "#2ecc71" }}>${calculateTotal().toFixed(2)}</b>
+                        </div>
+                        <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+                            <Form.Item name="paid_amount" label="Amount Paid" style={{ marginBottom: 0 }}>
+                                <InputNumber style={{ width: 150 }} min={0} prefix="$" placeholder="0.00" />
                             </Form.Item>
-                        </Col>
-                    </Row>
-
-                    <div style={{ textAlign: "right" }}>
-                        <Space>
-                            <Button onClick={onCloseModal}>Cancel</Button>
-                            <Button type="primary" htmlType="submit">Save Purchase</Button>
-                        </Space>
+                            <Space style={{ marginTop: 24 }}>
+                                <Button onClick={onCloseModal}>Cancel</Button>
+                                <Button type="primary" size="large" htmlType="submit" style={{ paddingLeft: 30, paddingRight: 30 }}>
+                                    Save Purchase
+                                </Button>
+                            </Space>
+                        </div>
                     </div>
                 </Form>
             </Modal>

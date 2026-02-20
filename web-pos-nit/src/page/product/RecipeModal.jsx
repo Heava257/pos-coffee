@@ -71,99 +71,145 @@ function RecipeModal({ open, onCancel, product }) {
         setLoading(false);
     };
 
-    const calculateCost = () => {
-        // client-side calculation for estimation
+    const calculateSummary = () => {
         const currentIngredients = form.getFieldValue("ingredients") || [];
-        let total = 0;
+        let totalCost = 0;
         currentIngredients.forEach(ing => {
             if (!ing) return;
             const material = rawMaterials.find(rm => rm.value === ing.raw_material_id);
             if (material) {
-                total += (Number(ing.qty) || 0) * (Number(material.price) || 0);
+                totalCost += (Number(ing.qty) || 0) * (Number(material.price) || 0);
             }
         });
-        return total.toFixed(2);
+
+        const sellingPrice = Number(product?.price) || 0;
+        const profit = sellingPrice - totalCost;
+        const margin = sellingPrice > 0 ? (profit / sellingPrice) * 100 : 0;
+
+        return {
+            totalCost: totalCost.toFixed(2),
+            profit: profit.toFixed(2),
+            margin: margin.toFixed(1)
+        };
     };
+
+    const summary = calculateSummary();
 
     return (
         <Modal
-            title={`Recipe for: ${product?.name}`}
+            title={<b>☕ Recipe Configuration - {product?.name}</b>}
             open={open}
             onCancel={onCancel}
-            width={700}
+            width={720}
             footer={null}
+            centered
             destroyOnClose
         >
-            <div style={{ marginBottom: 16, padding: 10, background: "#f5f5f5", borderRadius: 4 }}>
-                <strong>Est. Cost: ${calculateCost()}</strong>
-                <span style={{ marginLeft: 15, color: '#888' }}>Selling Price: ${product?.price}</span>
+            <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                background: "linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%)",
+                padding: "16px",
+                borderRadius: "12px",
+                marginBottom: "20px",
+                border: "1px solid #dee2e6"
+            }}>
+                <div>
+                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>Est. Cost Per Cup</div>
+                    <div style={{ fontSize: 20, fontWeight: "bold", color: "#333" }}>${summary.totalCost}</div>
+                </div>
+                <div>
+                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>Selling Price</div>
+                    <div style={{ fontSize: 20, fontWeight: "bold", color: "#333" }}>${Number(product?.price || 0).toFixed(2)}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>Gross Profit</div>
+                    <div style={{ fontSize: 20, fontWeight: "bold", color: "#2ecc71" }}>
+                        ${summary.profit} <span style={{ fontSize: 14, fontWeight: "normal" }}>({summary.margin}%)</span>
+                    </div>
+                </div>
             </div>
 
             <Form form={form} layout="vertical" onFinish={onFinish}>
-                <Form.List name="ingredients">
-                    {(fields, { add, remove }) => (
-                        <>
-                            {fields.map(({ key, name, ...restField }) => (
-                                <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
-                                    <Form.Item
-                                        {...restField}
-                                        name={[name, "raw_material_id"]}
-                                        label="Ingredient"
-                                        rules={[{ required: true, message: "Required" }]}
-                                        style={{ width: 250 }}
-                                    >
-                                        <Select
-                                            placeholder="Select Raw Material"
-                                            options={rawMaterials}
-                                            showSearch
-                                            filterOption={(input, option) =>
-                                                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                                            }
-                                            onChange={() => form.setFieldsValue({})} // trigger re-render for cost calc
-                                        />
-                                    </Form.Item>
-
-                                    <Form.Item
-                                        {...restField}
-                                        name={[name, "qty"]}
-                                        label="Quantity"
-                                        rules={[{ required: true, message: "Required" }]}
-                                    >
-                                        <InputNumber min={0.01} onChange={() => form.setFieldsValue({})} />
-                                    </Form.Item>
-
-                                    {/* Display Unit (read-only based on selection) */}
-                                    <Form.Item
-                                        shouldUpdate={(prevValues, currentValues) => {
-                                            return prevValues.ingredients?.[name]?.raw_material_id !== currentValues.ingredients?.[name]?.raw_material_id;
-                                        }}
-                                        label="Unit"
-                                    >
-                                        {() => {
-                                            const selectedId = form.getFieldValue(["ingredients", name, "raw_material_id"]);
-                                            const material = rawMaterials.find(rm => rm.value === selectedId);
-                                            return <span style={{ lineHeight: '32px', display: 'inline-block' }}>{material?.unit || '-'}</span>
-                                        }}
-                                    </Form.Item>
-
-                                    <Button danger type="text" icon={<MdDelete />} onClick={() => { remove(name); form.setFieldsValue({}); }} style={{ marginTop: 30 }} />
-                                </Space>
-                            ))}
-
-                            <Form.Item>
-                                <Button type="dashed" onClick={() => add()} block icon={<MdAdd />}>
-                                    Add Ingredient
+                <div style={{ maxHeight: "400px", overflowY: "auto", overflowX: "hidden", paddingRight: 8 }}>
+                    <Form.List name="ingredients">
+                        {(fields, { add, remove }) => (
+                            <>
+                                {fields.map(({ key, name, ...restField }) => (
+                                    <div key={key} style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 8, padding: "12px", marginBottom: 12, position: "relative" }}>
+                                        <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
+                                            <div style={{ flex: 1 }}>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, "raw_material_id"]}
+                                                    label="Select Ingredient"
+                                                    rules={[{ required: true, message: "Required" }]}
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    <Select
+                                                        placeholder="Search Ingredient..."
+                                                        options={rawMaterials}
+                                                        showSearch
+                                                        onChange={() => form.setFieldsValue({})}
+                                                    />
+                                                </Form.Item>
+                                            </div>
+                                            <div style={{ width: 120 }}>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, "qty"]}
+                                                    label="Usage Qty"
+                                                    rules={[{ required: true, message: "Required" }]}
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    <InputNumber
+                                                        min={0.01}
+                                                        style={{ width: "100%" }}
+                                                        placeholder="0.00"
+                                                        onChange={() => form.setFieldsValue({})}
+                                                    />
+                                                </Form.Item>
+                                            </div>
+                                            <div style={{ width: 60, paddingBottom: 6 }}>
+                                                <Form.Item
+                                                    shouldUpdate={(prev, curr) => prev.ingredients?.[name]?.raw_material_id !== curr.ingredients?.[name]?.raw_material_id}
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    {() => {
+                                                        const id = form.getFieldValue(["ingredients", name, "raw_material_id"]);
+                                                        const material = rawMaterials.find(rm => rm.value === id);
+                                                        return <Tag bordered={false}>{material?.unit || '-'}</Tag>
+                                                    }}
+                                                </Form.Item>
+                                            </div>
+                                            <Button
+                                                danger
+                                                type="text"
+                                                icon={<MdDelete size={20} />}
+                                                onClick={() => { remove(name); form.setFieldsValue({}); }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                                <Button
+                                    type="dashed"
+                                    onClick={() => add()}
+                                    block
+                                    icon={<MdAdd />}
+                                    style={{ height: 45, borderRadius: 8 }}
+                                >
+                                    Add New Ingredient Link
                                 </Button>
-                            </Form.Item>
-                        </>
-                    )}
-                </Form.List>
+                            </>
+                        )}
+                    </Form.List>
+                </div>
 
-                <div style={{ textAlign: "right", marginTop: 20 }}>
-                    <Space>
-                        <Button onClick={onCancel}>Cancel</Button>
-                        <Button type="primary" htmlType="submit" loading={loading}>
-                            Save Recipe
+                <div style={{ textAlign: "right", marginTop: 24, borderTop: "1px solid #eee", paddingTop: 20 }}>
+                    <Space size="middle">
+                        <Button size="large" onClick={onCancel}>Close</Button>
+                        <Button size="large" type="primary" htmlType="submit" loading={loading} style={{ paddingLeft: 40, paddingRight: 40 }}>
+                            Sync Recipe
                         </Button>
                     </Space>
                 </div>

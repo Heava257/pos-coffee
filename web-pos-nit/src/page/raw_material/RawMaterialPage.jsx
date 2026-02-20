@@ -170,34 +170,34 @@ function RawMaterialPage() {
         {
             key: "no",
             title: "No",
+            width: 60,
             render: (value, data, index) => index + 1,
         },
         {
             key: "image",
-            title: "Image",
-            dataIndex: "image",
-            render: (value) => (
-                <div style={{ width: 50, height: 50, borderRadius: "50%", overflow: "hidden", border: "1px solid #ddd" }}>
-                    {value ? (
+            title: "Item",
+            width: 80,
+            render: (record) => (
+                <div style={{ width: 45, height: 45, borderRadius: "8px", overflow: "hidden", border: "1px solid #f0f0f0" }}>
+                    {record.image ? (
                         <Image
-                            src={Config.getFullImagePath(value)}
+                            src={Config.getFullImagePath(record.image)}
                             style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             preview={true}
                         />
                     ) : (
-                        <div style={{ width: "100%", height: "100%", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#999" }}>No Img</div>
+                        <div style={{ width: "100%", height: "100%", background: "#f9f9f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#ccc" }}>No Img</div>
                     )}
                 </div>
             ),
         },
         {
             key: "name",
-            title: "Name",
-            dataIndex: "name",
-            render: (text, record) => (
+            title: "Name / Code",
+            render: (record) => (
                 <div>
-                    <div style={{ fontWeight: 600 }}>{text}</div>
-                    <div style={{ fontSize: 12, color: "#888" }}>{record.code}</div>
+                    <div style={{ fontWeight: 600, color: "#333" }}>{record.name}</div>
+                    <div style={{ fontSize: 11, color: "#999" }}>CODE: {record.code || 'N/A'}</div>
                 </div>
             )
         },
@@ -205,57 +205,90 @@ function RawMaterialPage() {
             key: "unit",
             title: "Unit",
             dataIndex: "unit",
+            width: 80,
+            render: (unit) => <Tag>{unit}</Tag>
         },
         {
             key: "qty",
-            title: "Current Stock",
-            dataIndex: "qty",
-            render: (val, record) => (
-                <Tag color={val <= record.min_stock ? "red" : "green"}>
-                    {val} {record.unit}
-                </Tag>
-            )
+            title: "Stock Status",
+            width: 250,
+            render: (record) => {
+                const isLow = Number(record.qty) <= Number(record.min_stock);
+                const isOut = Number(record.qty) <= 0;
+                let color = "#2ecc71"; // Green
+                if (isLow) color = "#f1c40f"; // Yellow
+                if (isOut) color = "#e74c3c"; // Red
+
+                return (
+                    <div style={{ width: "100%" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
+                            <span style={{ fontWeight: 600, color }}>
+                                {isOut ? "OUT OF STOCK" : isLow ? "LOW STOCK" : "IN STOCK"}
+                            </span>
+                            <span style={{ fontWeight: 600 }}>{record.qty} {record.unit}</span>
+                        </div>
+                        <div style={{ height: 6, width: "100%", background: "#eee", borderRadius: 3, overflow: "hidden" }}>
+                            <div style={{
+                                height: "100%",
+                                width: record.qty > 0 ? `${Math.min((record.qty / (record.min_stock * 3)) * 100, 100)}%` : 0,
+                                background: color,
+                                transition: "0.3s"
+                            }} />
+                        </div>
+                    </div>
+                )
+            }
         },
         {
             key: "price",
-            title: "Cost Price",
+            title: "Last Cost",
             dataIndex: "price",
-            render: (val) => `$${Number(val).toFixed(2)}`
+            align: 'right',
+            render: (val) => <b style={{ color: "#333" }}>${Number(val).toFixed(2)}</b>
         },
         {
             key: "status",
             title: "Status",
             dataIndex: "status",
+            width: 100,
             render: (status) =>
                 status == 1 ? (
-                    <Tag color="green">Active</Tag>
+                    <BadgeStatus color="#52c41a" text="Active" />
                 ) : (
-                    <Tag color="red">Inactive</Tag>
+                    <BadgeStatus color="#ff4d4f" text="Disabled" />
                 ),
         },
         {
             key: "Action",
             title: "Action",
+            width: 100,
             align: "center",
-            render: (item, data, index) => (
+            render: (item, data) => (
                 <Space>
                     <Button
-                        type="primary"
-                        icon={<MdEdit />}
+                        type="text"
+                        style={{ color: "#3498db" }}
+                        icon={<MdEdit size={18} />}
                         onClick={() => onClickEdit(data)}
-                        size="small"
                     />
                     <Button
-                        type="primary"
+                        type="text"
                         danger
-                        icon={<MdDelete />}
+                        icon={<MdDelete size={18} />}
                         onClick={() => onClickDelete(data)}
-                        size="small"
                     />
                 </Space>
             ),
         },
     ];
+
+    // Helper component for clean status
+    const BadgeStatus = ({ color, text }) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
+            <span style={{ fontSize: 13, color: "#666" }}>{text}</span>
+        </div>
+    );
 
     return (
         <MainPage loading={state.loading}>
