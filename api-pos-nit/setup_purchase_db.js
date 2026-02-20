@@ -26,7 +26,22 @@ async function setupPurchaseDb(connection) {
         INDEX (supplier_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
-        console.log("✅ Checked purchase table.");
+
+        // 0.1 explicitly add company_id if missing (handling existing tables)
+        try {
+            await connection.query(`
+        ALTER TABLE purchase 
+        ADD COLUMN company_id INT NOT NULL AFTER ref,
+        ADD INDEX (company_id);
+      `);
+            console.log("✅ Added company_id to purchase table.");
+        } catch (e) {
+            if (e.code === 'ER_DUP_FIELDNAME') {
+                console.log("ℹ️ company_id column already exists in purchase.");
+            } else {
+                console.error("Warning: purchase column add failed (company_id)", e.message);
+            }
+        }
 
         // 1. Add raw_material_id to purchase_product
         // If purchase_product doesn't exist, create it first (failsafe)
@@ -77,7 +92,7 @@ async function setupPurchaseDb(connection) {
         INDEX (ref_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
-        console.log("✅ Created stock_movement table.");
+        console.log("✅ Checked stock_movement table.");
 
         console.log("🎉 Purchase Setup Complete!");
 
