@@ -758,15 +758,86 @@ exports.validate_token = (permission_name) => {
       const user_id = auth_user.id || auth_user.user_id;
 
       // 3. SSO Specific Validations (Subscription check)
-      // BYPASS: Allowing all for now to resolve 403
       if (isSSO) {
-        console.log(`[BYPASS] User ${user_id} using SSO, bypassing subscription check.`);
+        const validSystemCodes = ["COFFEE", "coffee_system"];
+        const system_code = auth_user.system_code || decoded.system_code;
+        if (!validSystemCodes.includes(system_code)) {
+          console.warn(`SSO Blocked: System Code mismatch. Got '${system_code}'`);
+          return res.status(403).json({ message: "Invalid system authorization" });
+        }
+
+        try {
+          const platformStatusUrl = `${config.platform_api_url}/subscriptions/status`;
+          const platformRes = await axios.get(platformStatusUrl, {
+            headers: { Authorization: `Bearer ${token_from_client}` },
+            timeout: 3000
+          });
+
+          if (!platformRes.data.active) {
+            return res.status(403).json({
+              message: "Subscription Inactive/Expired",
+              renew_url: config.platform_hub_url + "/dashboard",
+              error: "SUBSCRIPTION_REQUIRED"
+            });
+          }
+        } catch (err) {
+          console.error("Platform Subscription Check Failed:", err.message);
+          return res.status(503).json({ message: "Identity Service Unavailable" });
+        }
       }
 
       // 4. Permission Check
-      // BYPASS: Allowing all users to view/create/update/remove as requested
       const permissions = await getPermissionByUser(user_id);
-      console.log(`[BYPASS] User ${user_id} authorized for ${permission_name || 'all'} (Full Access Mode)`);
+
+      // Final Decision logic
+      let isAuthorized = false;
+
+      if (!permission_name || permission_name === "all") {
+        isAuthorized = true;
+      } else {
+        // A. Check specific permissions
+        isAuthorized = permissions.some(p => {
+          const dbName = (p.name || "").toLowerCase();
+          const reqName = (permission_name || "").toLowerCase();
+          const dbRoute = (p.web_route_key || "").toLowerCase();
+          const reqRoute = (permission_name.startsWith('/') ? permission_name : "/" + permission_name).toLowerCase();
+          return (
+            dbName === reqName ||
+            dbRoute === reqRoute ||
+            reqName.startsWith(dbName + ".") ||
+            dbName === reqName.split('.')[0]
+          );
+        });
+
+        // B. Full Access Bypass for Admins (Development Support)
+        if (!isAuthorized) {
+          // Check if User is Owner (Role ID 1) or is_super_admin
+          const [[userStatus]] = await db.query(
+            "SELECT role_id, is_super_admin FROM user WHERE id = ?",
+            [user_id]
+          );
+
+          if (userStatus) {
+            const isOwner = userStatus.role_id === 1;
+            const isSuper = userStatus.is_super_admin === 1;
+            const isOwnerName = (auth_user.role_name === "Owner" || auth_user.role === "Owner");
+
+            if (isOwner || isSuper || isOwnerName) {
+              console.log(`[BYPASS] User ${user_id} granted access as Owner/SuperAdmin for ${permission_name}`);
+              isAuthorized = true;
+            }
+          }
+        }
+      }
+
+      if (!isAuthorized) {
+        console.warn(`[403_BLOCKED] User ${user_id} denied access to ${permission_name}`);
+        return res.status(403).json({
+          message: "Permission Denied",
+          required: permission_name,
+          hint: "Ensure you have the required module permissions enabled in your role."
+        });
+      }
 
 
       // 5. Inject context
