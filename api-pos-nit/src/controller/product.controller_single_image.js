@@ -74,10 +74,10 @@ exports.getList = async (req, res) => {
           u.name as created_by_name,
           u.username as created_by_username
         FROM product p
-        INNER JOIN category c ON p.category_id = c.id
+        LEFT JOIN category c ON p.category_id = c.id
         LEFT JOIN category parent_cat ON c.parent_id = parent_cat.id
-        INNER JOIN user u ON p.user_id = u.id
-        WHERE p.status = 1
+        LEFT JOIN user u ON p.user_id = u.id
+        WHERE 1=1
       `;
     } else {
       // Regular users see products from their COMPANY (Multi-tenant isolation)
@@ -91,11 +91,10 @@ exports.getList = async (req, res) => {
           u.name as created_by_name,
           u.username as created_by_username
         FROM product p
-        INNER JOIN category c ON p.category_id = c.id
+        LEFT JOIN category c ON p.category_id = c.id
         LEFT JOIN category parent_cat ON c.parent_id = parent_cat.id
-        INNER JOIN user u ON p.user_id = u.id
-        WHERE p.status = 1 
-        AND p.company_id = :company_id
+        LEFT JOIN user u ON p.user_id = u.id
+        WHERE p.company_id = :company_id
       `;
       params.company_id = company_id;
     }
