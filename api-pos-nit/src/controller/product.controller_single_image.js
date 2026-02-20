@@ -202,17 +202,25 @@ exports.create = async (req, res) => {
 `;
 
 
+    // Help sanitize "undefined" strings from multipart/form-data
+    const body = { ...req.body };
+    Object.keys(body).forEach(key => {
+      if (body[key] === "undefined" || body[key] === "null") {
+        body[key] = null;
+      }
+    });
+
     const [result] = await connection.query(sql, {
-      ...req.body,
-      discount: req.body.discount || 0,
-      price: req.body.price || 0,
-      qty: req.body.qty || 0,
-      status: req.body.status || 1,
+      ...body,
+      discount: body.discount || 0,
+      price: body.price || 0,
+      qty: body.qty || 0,
+      status: body.status || 1,
       image: req.file?.filename || null,
       create_by: req.auth?.name || "System",
       user_id: req.auth?.id || null,
       company_id: req.auth?.company_id,
-      product_type: req.body.product_type || 'ready'
+      product_type: body.product_type || 'ready'
     });
 
     const product_id = result.insertId;
