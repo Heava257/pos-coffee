@@ -2,6 +2,7 @@ const fs = require("fs/promises");
 const path = require("path");
 
 exports.logError = async (controller, message_error, res) => {
+  console.error("🚨 Controller Error [" + controller + "]:", message_error);
   try {
     const logDir = "./logs";
     try {
