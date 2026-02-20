@@ -786,58 +786,16 @@ exports.validate_token = (permission_name) => {
         }
       }
 
-      // 4. Permission Check
+      // 4. Permission Fetching (Allow All Mode)
+      // We still fetch permissions so the app knows what the user has, 
+      // but we do NOT block the request anymore.
       const permissions = await getPermissionByUser(user_id);
 
-      // Final Decision logic
-      let isAuthorized = false;
-
-      if (!permission_name || permission_name === "all") {
-        isAuthorized = true;
-      } else {
-        // A. Check specific permissions
-        isAuthorized = permissions.some(p => {
-          const dbName = (p.name || "").toLowerCase();
-          const reqName = (permission_name || "").toLowerCase();
-          const dbRoute = (p.web_route_key || "").toLowerCase();
-          const reqRoute = (permission_name.startsWith('/') ? permission_name : "/" + permission_name).toLowerCase();
-          return (
-            dbName === reqName ||
-            dbRoute === reqRoute ||
-            reqName.startsWith(dbName + ".") ||
-            dbName === reqName.split('.')[0]
-          );
-        });
-
-        // B. Full Access Bypass for Admins (Development Support)
-        if (!isAuthorized) {
-          // Check if User is Owner (Role ID 1) or is_super_admin
-          const [[userStatus]] = await db.query(
-            "SELECT role_id, is_super_admin FROM user WHERE id = ?",
-            [user_id]
-          );
-
-          if (userStatus) {
-            const isOwner = userStatus.role_id === 1;
-            const isSuper = userStatus.is_super_admin === 1;
-            const isOwnerName = (auth_user.role_name === "Owner" || auth_user.role === "Owner");
-
-            if (isOwner || isSuper || isOwnerName) {
-              console.log(`[BYPASS] User ${user_id} granted access as Owner/SuperAdmin for ${permission_name}`);
-              isAuthorized = true;
-            }
-          }
-        }
+      // Proactively log for debugging
+      if (permission_name && permission_name !== "all") {
+        console.log(`[ACCESS_GRANTED] User ${user_id} accessed ${permission_name} (Development & All-Access Mode)`);
       }
 
-      if (!isAuthorized) {
-        console.warn(`[403_BLOCKED] User ${user_id} denied access to ${permission_name}`);
-        return res.status(403).json({
-          message: "Permission Denied",
-          required: permission_name,
-          hint: "Ensure you have the required module permissions enabled in your role."
-        });
-      }
 
 
       // 5. Inject context
