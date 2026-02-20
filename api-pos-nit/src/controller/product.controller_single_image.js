@@ -60,6 +60,7 @@ exports.getList = async (req, res) => {
     });
 
     const isSuperAdmin = currentUserResult[0]?.is_super_admin === 1;
+    const company_id = req.auth?.company_id;
 
     if (isSuperAdmin) {
       // Super admin can see all products
@@ -79,7 +80,7 @@ exports.getList = async (req, res) => {
         WHERE p.status = 1
       `;
     } else {
-      // Regular users can only see products from their group
+      // Regular users see products from their COMPANY (Multi-tenant isolation)
       sql = `
         SELECT 
           p.*, 
@@ -93,11 +94,10 @@ exports.getList = async (req, res) => {
         INNER JOIN category c ON p.category_id = c.id
         LEFT JOIN category parent_cat ON c.parent_id = parent_cat.id
         INNER JOIN user u ON p.user_id = u.id
-        INNER JOIN user cu ON cu.group_id = u.group_id
         WHERE p.status = 1 
-        AND cu.id = :current_user_id
+        AND p.company_id = :company_id
       `;
-      params.current_user_id = req.current_id;
+      params.company_id = company_id;
     }
 
     // Search by name or barcode
@@ -196,9 +196,9 @@ exports.create = async (req, res) => {
 
     const sql = `
   INSERT INTO product 
-    (category_id, barcode, name, brand, description, qty, price, discount, status, image, create_by, user_id) 
+    (category_id, barcode, name, brand, description, qty, price, discount, status, image, create_by, user_id, company_id) 
   VALUES 
-    (:category_id, :barcode, :name, :brand, :description, :qty, :price, :discount, :status, :image, :create_by, :user_id)
+    (:category_id, :barcode, :name, :brand, :description, :qty, :price, :discount, :status, :image, :create_by, :user_id, :company_id)
 `;
 
 
@@ -206,7 +206,8 @@ exports.create = async (req, res) => {
       ...req.body,
       image: req.file?.filename,
       create_by: req.auth?.name,
-      user_id: req.auth?.id || 3 // fallback or use session ID
+      user_id: req.auth?.id || 3, // fallback or use session ID
+      company_id: req.auth?.company_id
     });
 
     const product_id = result.insertId;
