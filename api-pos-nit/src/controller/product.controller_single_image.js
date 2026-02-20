@@ -204,9 +204,13 @@ exports.create = async (req, res) => {
 
     const [result] = await connection.query(sql, {
       ...req.body,
-      image: req.file?.filename,
-      create_by: req.auth?.name,
-      user_id: req.auth?.id || 3, // fallback or use session ID
+      discount: req.body.discount || 0,
+      price: req.body.price || 0,
+      qty: req.body.qty || 0,
+      status: req.body.status || 1,
+      image: req.file?.filename || null,
+      create_by: req.auth?.name || "System",
+      user_id: req.auth?.id || null,
       company_id: req.auth?.company_id,
       product_type: req.body.product_type || 'ready'
     });
