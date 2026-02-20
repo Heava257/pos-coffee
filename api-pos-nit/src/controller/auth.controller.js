@@ -789,12 +789,34 @@ exports.validate_token = (permission_name) => {
       // 4. Permission Check
       const permissions = await getPermissionByUser(user_id);
       if (permission_name && permission_name !== "all") {
-        const hasPermission = permissions.some(p => p.name === permission_name || p.web_route_key === (permission_name.startsWith('/') ? permission_name : "/" + permission_name));
-        // Owners usually bypass strict permission checks in some systems, but for security, we check for super admin if no permission
-        if (!hasPermission) {
+        // Flexible check:
+        // 1. Exact match on name
+        // 2. Exact match on web_route_key
+        // 3. Module match (e.g. DB "purchase" matches Request "purchase.list")
+        const hasPermission = permissions.some(p => {
+          const dbName = (p.name || "").toLowerCase();
+          const reqName = (permission_name || "").toLowerCase();
+          const dbRoute = (p.web_route_key || "").toLowerCase();
+          const reqRoute = (permission_name.startsWith('/') ? permission_name : "/" + permission_name).toLowerCase();
+          return (
+            dbName === reqName ||
+            dbRoute === reqRoute ||
+            reqName.startsWith(dbName + ".") ||
+            dbName === reqName.split('.')[0]
+          );
+        });
+
+        // SECURITY BYPASS: Owners or Super Admins are trusted
+        const isOwner = auth_user.role === "Owner" || auth_user.role_name === "Owner";
+        if (!hasPermission && !isOwner) {
           const [u] = await db.query("SELECT is_super_admin FROM user WHERE id = ?", [user_id]);
           if (!u[0] || u[0].is_super_admin !== 1) {
-            return res.status(403).json({ message: "No permission to access: " + permission_name });
+            console.warn(`[403_BLOCKED] User ${user_id} denied access to ${permission_name}`);
+            return res.status(403).json({
+              message: "Permission Denied",
+              required: permission_name,
+              hint: "Contact Admin to grant module access"
+            });
           }
         }
       }
