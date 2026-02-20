@@ -676,6 +676,9 @@ exports.profile = async (req, res) => {
         { name: "product", web_route_key: "/product" },
         { name: "employee", web_route_key: "/employee" },
         { name: "total_due", web_route_key: "/total_due" },
+        { name: "raw_material", web_route_key: "/raw_material" },
+        { name: "purchase", web_route_key: "/purchase" },
+        { name: "supplier", web_route_key: "/supplier" },
       ];
 
       if (isPro || isEnterprise) {
@@ -834,11 +837,11 @@ const getPermissionByUser = async (user_id) => {
     " p.`group`, " +
     " p.is_menu_web, " +
     " p.web_route_key " +
-    " FROM permissions  p " +
+    " FROM permissions p " +
     " INNER JOIN permission_roles pr ON p.id = pr.permission_id " +
     " INNER JOIN `role` r ON pr.role_id = r.id " +
-    " INNER JOIN user_roles ur ON r.id = ur.role_id " +
-    " WHERE ur.user_id = :user_id; "
+    " INNER JOIN user u ON u.role_id = r.id " +
+    " WHERE u.id = :user_id; ";
 
   const [permission] = await db.query(sql, { user_id })
   return permission;
