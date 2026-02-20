@@ -719,7 +719,7 @@ exports.validate_token = (permission_name) => {
         console.warn(`SSO Blocked: System Code mismatch. Expected one of [${validSystemCodes}], got '${system_code}'`);
         return res.status(403).json({ message: "Invalid system authorization" });
       }
-
+      let platformData = { plan: "Starter" };
       // 3. SECURE CHECK: Verify subscription status with the Platform (The Brain)
       try {
         const platformStatusUrl = `${config.platform_api_url}/subscriptions/status`;
@@ -728,6 +728,7 @@ exports.validate_token = (permission_name) => {
         });
 
         console.log("Platform Status Response:", platformRes.data);
+        platformData = platformRes.data;
 
         if (!platformRes.data.active) {
           return res.status(403).json({
@@ -747,7 +748,7 @@ exports.validate_token = (permission_name) => {
       req.auth = {
         ...decoded,
         id: user_id,
-        plan: platformRes.data.plan || "Starter",
+        plan: platformData.plan || "Starter",
         name: decoded.name || 'User ' + user_id
       };
 
@@ -789,7 +790,7 @@ const getPermissionByUser = async (user_id) => {
     " DISTINCT " +
     " p.id, " +
     " p.name, " +
-    " p.group, " +
+    " p.`group`, " +
     " p.is_menu_web, " +
     " p.web_route_key " +
     " FROM permissions  p " +
@@ -805,7 +806,7 @@ const getPermissionByUser = async (user_id) => {
 const getAccessToken = async (paramData) => {
   const access_token = await jwt.sign(
     { data: paramData },
-    config.config.token.access_token_key,
+    config.token.access_token_key,
     {
       expiresIn: "7d",
     }
