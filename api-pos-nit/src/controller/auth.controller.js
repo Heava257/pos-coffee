@@ -743,32 +743,34 @@ exports.validate_token = (permission_name) => {
         config.token.access_token_key
       );
 
-      // Handle both Traditional (Legacy) and New Platform (SSO) payloads
-      let user_data = decoded;
-      let isSSO = !!decoded.system_code;
+      // 2. Extract User Data (Support multiple structures)
+      let auth_user = null;
+      let isSSO = false;
 
-      // Traditional payload structure check
       if (decoded.data) {
-        user_data = decoded.data.profile || decoded.data;
-        isSSO = false;
+        auth_user = decoded.data.profile || decoded.data;
+        isSSO = !!(decoded.data.system_code || decoded.system_code);
+      } else {
+        auth_user = decoded;
+        isSSO = !!decoded.system_code;
       }
 
-      const user_id = user_data.id || user_data.user_id;
+      const user_id = auth_user.id || auth_user.user_id;
 
-      // 2. SSO Specific Validations
+      // 3. SSO Specific Validations (Subscription check)
       if (isSSO) {
         const validSystemCodes = ["COFFEE", "coffee_system"];
-        if (!validSystemCodes.includes(user_data.system_code)) {
-          console.warn(`SSO Blocked: System Code mismatch. Got '${user_data.system_code}'`);
+        const system_code = auth_user.system_code || decoded.system_code;
+        if (!validSystemCodes.includes(system_code)) {
+          console.warn(`SSO Blocked: System Code mismatch. Got '${system_code}'`);
           return res.status(403).json({ message: "Invalid system authorization" });
         }
 
-        // Verify subscription status with Platform
         try {
           const platformStatusUrl = `${config.platform_api_url}/subscriptions/status`;
           const platformRes = await axios.get(platformStatusUrl, {
             headers: { Authorization: `Bearer ${token_from_client}` },
-            timeout: 3000 // Add timeout to prevent hanging
+            timeout: 3000
           });
 
           if (!platformRes.data.active) {
@@ -780,24 +782,33 @@ exports.validate_token = (permission_name) => {
           }
         } catch (err) {
           console.error("Platform Subscription Check Failed:", err.message);
-          // Optional: for better UX, we could allow fallback if platform is just down, 
-          // but for now, we follow strict secure rules
           return res.status(503).json({ message: "Identity Service Unavailable" });
         }
       }
 
-      // 4. Multi-Tenant Context Injection
-      req.current_id = user_id;
-      req.company_id = user_data.company_id;
-      req.auth = {
-        ...user_data,
-        id: user_id,
-        plan: user_data.plan || "Starter",
-        name: user_data.name || 'User ' + user_id
-      };
+      // 4. Permission Check
+      const permissions = await getPermissionByUser(user_id);
+      if (permission_name && permission_name !== "all") {
+        const hasPermission = permissions.some(p => p.name === permission_name || p.web_route_key === (permission_name.startsWith('/') ? permission_name : "/" + permission_name));
+        // Owners usually bypass strict permission checks in some systems, but for security, we check for super admin if no permission
+        if (!hasPermission) {
+          const [u] = await db.query("SELECT is_super_admin FROM user WHERE id = ?", [user_id]);
+          if (!u[0] || u[0].is_super_admin !== 1) {
+            return res.status(403).json({ message: "No permission to access: " + permission_name });
+          }
+        }
+      }
 
-      // Standardize permission format (Array of strings)
-      req.permission = [permission_name || "all"];
+      // 5. Inject context
+      req.current_id = user_id;
+      req.user = auth_user;
+      req.auth = {
+        ...auth_user,
+        id: user_id,
+        plan: auth_user.plan || "Starter",
+        name: auth_user.name || auth_user.username || 'User ' + user_id,
+        permissions: permissions
+      };
 
       next();
     } catch (error) {
