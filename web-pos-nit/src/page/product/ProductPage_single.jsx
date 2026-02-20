@@ -16,12 +16,13 @@ import {
   Upload,
 } from "antd";
 import { request } from "../../util/helper";
-import { MdAdd, MdDelete, MdEdit } from "react-icons/md";
+import { MdAdd, MdDelete, MdEdit, MdRestaurantMenu } from "react-icons/md";
 import MainPage from "../../component/layout/MainPage";
 import { configStore } from "../../store/configStore";
 import { Config } from "../../util/config";
 import { getProfile } from "../../store/profile.store";
 import "./Product.css"
+import RecipeModal from "./RecipeModal";
 const getBase64 = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -45,6 +46,8 @@ function ProductPage() {
   const [previewImage, setPreviewImage] = useState("");
   const [imageDefault, setImageDefault] = useState([]);
   const [imageOptional, setImageOptional] = useState([]);
+  const [visibleRecipeModal, setVisibleRecipeModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     getList();
@@ -216,9 +219,16 @@ function ProductPage() {
       },
     });
   };
+
+  const onClickRecipe = (item) => {
+    setSelectedProduct(item);
+    setVisibleRecipeModal(true);
+  };
+
   return (
     <MainPage loading={false}>
       <div className="pageHeader">
+
         <Space>
           <div>Product</div>
           <Input.Search
@@ -264,166 +274,166 @@ function ProductPage() {
         bodyStyle={{ maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}
       >
 
-<Form layout="vertical" onFinish={onFinish} form={form}>
-  <Row gutter={16}>
-    <Col span={12}>
-      <div className="form-section">
-        <Form.Item
-          name={"name"}
-          label="Product Name"
-          rules={[{ required: true, message: "Please enter product name" }]}
-        >
-          <Input placeholder="Enter product name" />
-        </Form.Item>
+        <Form layout="vertical" onFinish={onFinish} form={form}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <div className="form-section">
+                <Form.Item
+                  name={"name"}
+                  label="Product Name"
+                  rules={[{ required: true, message: "Please enter product name" }]}
+                >
+                  <Input placeholder="Enter product name" />
+                </Form.Item>
 
-        {state.selectedParentId === 51 && (
-          <>
-            <Form.List name="sizes">
-              {(fields, { add, remove }) => (
-                <>
-                  <h3>Sizes</h3>
-                  {fields.map(({ key, name, ...restField }) => (
-                    <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
-                      <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: 'Label required' }]}>
-                        <Select options={SAMPLE_SIZES} placeholder="Choose Size" style={{ width: 120 }} />
-                      </Form.Item>
-                      <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: 'Price required' }]}>
-                        <InputNumber placeholder="Price" />
-                      </Form.Item>
-                      <Button danger onClick={() => remove(name)}>Delete</Button>
-                    </Space>
-                  ))}
-                  <Button type="link" onClick={() => add()} icon={<MdAdd />}>Add Size</Button>
-                </>
-              )}
-            </Form.List>
+                {state.selectedParentId === 51 && (
+                  <>
+                    <Form.List name="sizes">
+                      {(fields, { add, remove }) => (
+                        <>
+                          <h3>Sizes</h3>
+                          {fields.map(({ key, name, ...restField }) => (
+                            <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
+                              <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: 'Label required' }]}>
+                                <Select options={SAMPLE_SIZES} placeholder="Choose Size" style={{ width: 120 }} />
+                              </Form.Item>
+                              <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: 'Price required' }]}>
+                                <InputNumber placeholder="Price" />
+                              </Form.Item>
+                              <Button danger onClick={() => remove(name)}>Delete</Button>
+                            </Space>
+                          ))}
+                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>Add Size</Button>
+                        </>
+                      )}
+                    </Form.List>
 
-            <Form.List name="addons">
-              {(fields, { add, remove }) => (
-                <>
-                  <h3>Add-ons</h3>
-                  {fields.map(({ key, name, ...restField }) => (
-                    <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
-                      <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: 'Label required' }]}>
-                        <Select options={SAMPLE_ADDONS} placeholder="Choose Add-on" style={{ width: 180 }} />
-                      </Form.Item>
-                      <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: 'Price required' }]}>
-                        <InputNumber placeholder="Price" />
-                      </Form.Item>
-                      <Button danger onClick={() => remove(name)}>Delete</Button>
-                    </Space>
-                  ))}
-                  <Button type="link" onClick={() => add()} icon={<MdAdd />}>Add Add-on</Button>
-                </>
-              )}
-            </Form.List>
-          </>
-        )}
+                    <Form.List name="addons">
+                      {(fields, { add, remove }) => (
+                        <>
+                          <h3>Add-ons</h3>
+                          {fields.map(({ key, name, ...restField }) => (
+                            <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
+                              <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: 'Label required' }]}>
+                                <Select options={SAMPLE_ADDONS} placeholder="Choose Add-on" style={{ width: 180 }} />
+                              </Form.Item>
+                              <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: 'Price required' }]}>
+                                <InputNumber placeholder="Price" />
+                              </Form.Item>
+                              <Button danger onClick={() => remove(name)}>Delete</Button>
+                            </Space>
+                          ))}
+                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>Add Add-on</Button>
+                        </>
+                      )}
+                    </Form.List>
+                  </>
+                )}
 
-        <Form.Item name={"barcode"} label="Barcode">
-          <Input disabled placeholder="Barcode" />
-        </Form.Item>
+                <Form.Item name={"barcode"} label="Barcode">
+                  <Input disabled placeholder="Barcode" />
+                </Form.Item>
 
-        {/* Always show Quantity field */}
-        <Form.Item name={"qty"} label="Quantity">
-          <InputNumber placeholder="Quantity" style={{ width: "100%" }} />
-        </Form.Item>
+                {/* Always show Quantity field */}
+                <Form.Item name={"qty"} label="Quantity">
+                  <InputNumber placeholder="Quantity" style={{ width: "100%" }} />
+                </Form.Item>
 
-        {/* Show Discount for all categories except Rice (55) */}
-        {state.selectedParentId !== 55 && (
-          <Form.Item name={"discount"} label="Discount">
-            <InputNumber placeholder="Discount" style={{ width: "100%" }} />
-          </Form.Item>
-        )}
-      </div>
-    </Col>
+                {/* Show Discount for all categories except Rice (55) */}
+                {state.selectedParentId !== 55 && (
+                  <Form.Item name={"discount"} label="Discount">
+                    <InputNumber placeholder="Discount" style={{ width: "100%" }} />
+                  </Form.Item>
+                )}
+              </div>
+            </Col>
 
-    <Col span={12}>
-      <div className="form-section">
-        <Form.Item
-          name={"category_id"}
-          label="Category"
-          rules={[{ required: true, message: "Please select category" }]}
-        >
-          <Select
-            options={[
-              { label: "🍽️ All", value: "all" },
-              { label: "☕ Coffee", value: 51 },
-              { label: "🧃 Juice", value: 52 },
-              { label: "🥛 Milk Based", value: 53 },
-              { label: "🍪 Snack", value: 54 },
-              { label: "🍚 Rice", value: 55 },
-              { label: "🍰 Dessert", value: 56 },
-            ]}
-            placeholder="Select category"
-            onChange={(value) => {
-              form.setFieldValue("category_id", value);
-              setState((prev) => ({ ...prev, selectedParentId: value }));
-            }}
-          />
-        </Form.Item>
+            <Col span={12}>
+              <div className="form-section">
+                <Form.Item
+                  name={"category_id"}
+                  label="Category"
+                  rules={[{ required: true, message: "Please select category" }]}
+                >
+                  <Select
+                    options={[
+                      { label: "🍽️ All", value: "all" },
+                      { label: "☕ Coffee", value: 51 },
+                      { label: "🧃 Juice", value: 52 },
+                      { label: "🥛 Milk Based", value: 53 },
+                      { label: "🍪 Snack", value: 54 },
+                      { label: "🍚 Rice", value: 55 },
+                      { label: "🍰 Dessert", value: 56 },
+                    ]}
+                    placeholder="Select category"
+                    onChange={(value) => {
+                      form.setFieldValue("category_id", value);
+                      setState((prev) => ({ ...prev, selectedParentId: value }));
+                    }}
+                  />
+                </Form.Item>
 
-        <Form.Item
-          label="Price"
-          name="price"
-          rules={[{ required: true, message: 'Please enter price' }]}
-        >
-          <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
-        </Form.Item>
+                <Form.Item
+                  label="Price"
+                  name="price"
+                  rules={[{ required: true, message: 'Please enter price' }]}
+                >
+                  <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+                </Form.Item>
 
-        <Form.Item name={"status"} label="Status">
-          <Select
-            options={[
-              { label: "Active", value: 1 },
-              { label: "Inactive", value: 0 },
-            ]}
-            placeholder="Select status"
-          />
-        </Form.Item>
+                <Form.Item name={"status"} label="Status">
+                  <Select
+                    options={[
+                      { label: "Active", value: 1 },
+                      { label: "Inactive", value: 0 },
+                    ]}
+                    placeholder="Select status"
+                  />
+                </Form.Item>
 
-        <Form.Item name={"description"} label="Description">
-          <Input.TextArea rows={4} placeholder="Enter product description" />
-        </Form.Item>
+                <Form.Item name={"description"} label="Description">
+                  <Input.TextArea rows={4} placeholder="Enter product description" />
+                </Form.Item>
 
-        {/* REMOVED: Duplicate Quantity field that was here */}
+                {/* REMOVED: Duplicate Quantity field that was here */}
 
-        <Form.Item name={"image_default"} label="Image">
-          <Upload
-            customRequest={(options) => options.onSuccess()}
-            maxCount={1}
-            listType="picture-card"
-            fileList={imageDefault}
-            onPreview={handlePreview}
-            onChange={handleChangeImageDefault}
-          >
-            <div>+Upload</div>
-          </Upload>
-        </Form.Item>
-      </div>
-    </Col>
-  </Row>
+                <Form.Item name={"image_default"} label="Image">
+                  <Upload
+                    customRequest={(options) => options.onSuccess()}
+                    maxCount={1}
+                    listType="picture-card"
+                    fileList={imageDefault}
+                    onPreview={handlePreview}
+                    onChange={handleChangeImageDefault}
+                  >
+                    <div>+Upload</div>
+                  </Upload>
+                </Form.Item>
+              </div>
+            </Col>
+          </Row>
 
-  {previewImage && (
-    <Image
-      wrapperStyle={{ display: "none" }}
-      preview={{
-        visible: previewOpen,
-        onVisibleChange: (visible) => setPreviewOpen(visible),
-        afterOpenChange: (visible) => !visible && setPreviewImage(""),
-      }}
-      src={previewImage}
-    />
-  )}
+          {previewImage && (
+            <Image
+              wrapperStyle={{ display: "none" }}
+              preview={{
+                visible: previewOpen,
+                onVisibleChange: (visible) => setPreviewOpen(visible),
+                afterOpenChange: (visible) => !visible && setPreviewImage(""),
+              }}
+              src={previewImage}
+            />
+          )}
 
-  <div style={{ textAlign: "right", marginTop: 24 }}>
-    <Space>
-      <Button onClick={onCloseModal}>Cancel</Button>
-      <Button type="primary" htmlType="submit">
-        {form.getFieldValue("id") ? "Update" : "Save"}
-      </Button>
-    </Space>
-  </div>
-</Form>
+          <div style={{ textAlign: "right", marginTop: 24 }}>
+            <Space>
+              <Button onClick={onCloseModal}>Cancel</Button>
+              <Button type="primary" htmlType="submit">
+                {form.getFieldValue("id") ? "Update" : "Save"}
+              </Button>
+            </Space>
+          </div>
+        </Form>
       </Modal>
 
       <Table
@@ -561,6 +571,12 @@ function ProductPage() {
             render: (item, data, index) => (
               <Space>
                 <Button
+                  title="Recipe"
+                  style={{ borderColor: "#faad14", color: "#faad14" }}
+                  icon={<MdRestaurantMenu />}
+                  onClick={() => onClickRecipe(item)}
+                />
+                <Button
                   type="primary"
                   icon={<MdEdit />}
                   onClick={() => onClickEdit(data, index)}
@@ -575,20 +591,28 @@ function ProductPage() {
             ),
           },
           {
-              key: "created_by",
-              title: "បង្កើតដោយ",
-              render: (text, record) => (
-                <div>
-                  <strong>{record.created_by_name}</strong>
-                  {record.created_by_username && (
-                    <div style={{ fontSize: '12px', color: '#666' }}>
-                      @{record.created_by_username}
-                    </div>
-                  )}
-                </div>
-              ),
-            },
+            key: "created_by",
+            title: "បង្កើតដោយ",
+            render: (text, record) => (
+              <div>
+                <strong>{record.created_by_name}</strong>
+                {record.created_by_username && (
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    @{record.created_by_username}
+                  </div>
+                )}
+              </div>
+            ),
+          },
         ]}
+      />
+      <RecipeModal
+        open={visibleRecipeModal}
+        onCancel={() => {
+          setVisibleRecipeModal(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
       />
     </MainPage>
   );

@@ -32,6 +32,8 @@ import {
   TrophyOutlined,
   CreditCardOutlined,
   SmileOutlined,
+  ShoppingCartOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
 import { Config } from "../../util/config";
 import { FaHistory } from "react-icons/fa";
@@ -56,7 +58,7 @@ const items_menu = [
     icon: <MdRestaurantMenu />,
     className: "invoices-item khmrt-branch",
   },
-    {
+  {
     key: "shop_managment",
     label: "Shop Managment",
     icon: <FaShop />,
@@ -79,6 +81,24 @@ const items_menu = [
     key: "product",
     icon: <ShopOutlined />,
     className: "product-menu khmrt-branch",
+  },
+  {
+    key: "raw_material",
+    label: "Raw Materials",
+    icon: <FileProtectOutlined />,
+    className: "raw-material-menu khmrt-branch",
+  },
+  {
+    key: "purchase",
+    label: "Purchases",
+    icon: <ShoppingCartOutlined />,
+    className: "purchase-menu khmrt-branch",
+  },
+  {
+    key: "supplier",
+    label: "Suppliers",
+    icon: <TeamOutlined />,
+    className: "supplier-menu khmrt-branch",
   },
   {
     key: "category",

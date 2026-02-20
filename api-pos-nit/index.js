@@ -22,12 +22,15 @@ require("./src/route/dashbaord.route")(app);
 require("./src/route/report.route")(app);
 require("./src/route/currency.route")(app);
 require("./src/route/invoices.route")(app);
+require("./src/route/purchase.route")(app);
 require("./src/route/admin_stock_transfer.route")(app);
 require("./src/route/StockUser.route")(app);
 require("./src/route/Chat_Application.route")(app);
 require("./src/route/order_menu.route")(app);
 require("./src/route/exchange_rate.route")(app);
 require("./src/route/shop.route")(app);
+require("./src/route/raw_material.route")(app);
+require("./src/route/recipe.route")(app);
 
 app.use((err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {

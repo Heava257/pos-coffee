@@ -196,9 +196,9 @@ exports.create = async (req, res) => {
 
     const sql = `
   INSERT INTO product 
-    (category_id, barcode, name, brand, description, qty, price, discount, status, image, create_by, user_id, company_id) 
+    (category_id, barcode, name, brand, description, qty, price, discount, status, image, create_by, user_id, company_id, product_type) 
   VALUES 
-    (:category_id, :barcode, :name, :brand, :description, :qty, :price, :discount, :status, :image, :create_by, :user_id, :company_id)
+    (:category_id, :barcode, :name, :brand, :description, :qty, :price, :discount, :status, :image, :create_by, :user_id, :company_id, :product_type)
 `;
 
 
@@ -207,7 +207,8 @@ exports.create = async (req, res) => {
       image: req.file?.filename,
       create_by: req.auth?.name,
       user_id: req.auth?.id || 3, // fallback or use session ID
-      company_id: req.auth?.company_id
+      company_id: req.auth?.company_id,
+      product_type: req.body.product_type || 'ready'
     });
 
     const product_id = result.insertId;
@@ -263,12 +264,14 @@ exports.update = async (req, res) => {
         price = :price,
         discount = :discount,
         status = :status,
-        image = :image
+        image = :image,
+        product_type = :product_type
       WHERE id = :id
     `;
     await connection.query(updateSql, {
       ...req.body,
       image: filename,
+      product_type: req.body.product_type || "ready",
     });
 
     let sizes = [];

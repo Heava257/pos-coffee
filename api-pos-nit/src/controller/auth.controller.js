@@ -681,6 +681,9 @@ exports.profile = async (req, res) => {
       if (isPro || isEnterprise) {
         permissions.push(
           { name: "inventory", web_route_key: "/inventory" },
+          { name: "raw_material", web_route_key: "/raw_material" }, // New Permission
+          { name: "purchase", web_route_key: "/purchase" },
+          { name: "supplier", web_route_key: "/supplier" },
           { name: "expense", web_route_key: "/expanse" },
           { name: "expense_type", web_route_key: "/expanse_type" },
           { name: "stock", web_route_key: "/stock" },

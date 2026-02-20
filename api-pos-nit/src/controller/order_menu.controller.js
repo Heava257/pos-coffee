@@ -2,6 +2,7 @@ const { db, generatePaymentLink } = require("../util/helper");
 const axios = require('axios');
 
 const { logError } = require("../util/logError");
+const { processStockDeduction } = require("../util/stock.helper");
 
 // Get list of orders with summary
 exports.getList = async (req, res) => {
@@ -283,6 +284,11 @@ exports.create_byCashie = async (req, res) => {
       );
     }
 
+
+
+    // Process Stock Deduction for Ingredients or Products (Stock Out)
+    await processStockDeduction(connection, order_id, finalOrderNo, items, user_id);
+
     await connection.commit();
 
     // Generate payment link
@@ -438,6 +444,9 @@ exports.create = async (req, res) => {
         ]
       );
     }
+
+    // Process Stock Deduction for Ingredients or Products (Stock Out)
+    await processStockDeduction(connection, order_id, finalOrderNo, items, user_id);
 
     await connection.commit();
 

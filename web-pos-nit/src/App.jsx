@@ -32,6 +32,8 @@ import ExchangeRatePage from "./page/ExchangeRatePage/ExchangeRatePage";
 import ShopPage from "./page/shop/ShopPage";
 // import SmartProductEntry from "./page/product/ProductPage";
 // import ChatPage from "./component/chat/ChatPage";
+import RawMaterialPage from "./page/raw_material/RawMaterialPage";
+import PurchasePage from "./page/purchase/PurchasePage";
 
 
 function App() {
@@ -70,6 +72,8 @@ function App() {
             <Route path="/report_Customer" element={<ReportCustomer_Summary />} />
             <Route path="/purchase_Summary" element={<ReportPurchase_Summary />} />
             <Route path="/Top_Sale" element={<Top_Sales />} />
+            <Route path="/raw_material" element={<RawMaterialPage />} />
+            <Route path="/purchase" element={<PurchasePage />} />
 
 
 
