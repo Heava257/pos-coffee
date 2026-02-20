@@ -235,7 +235,6 @@ exports.create = async (req, res) => {
   } catch (error) {
     await connection.rollback();
     logError("product.create", error, res);
-    res.status(500).json({ error: "Internal server error" });
   } finally {
     connection.release();
   }
@@ -309,7 +308,6 @@ exports.update = async (req, res) => {
   } catch (error) {
     await connection.rollback();
     logError("product.update", error, res);
-    res.status(500).json({ error: "Internal server error" });
   } finally {
     connection.release();
   }
