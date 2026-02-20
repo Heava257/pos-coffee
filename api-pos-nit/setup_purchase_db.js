@@ -43,7 +43,7 @@ async function setupPurchaseDb(connection) {
             }
         }
 
-        // 0.2 Check for total_amount and paid_amount column names (handle legacy `total` vs `total_amount`)
+        // 0.2 Check for total_amount, paid_amount, and note column names
         try {
             await connection.query(`
          ALTER TABLE purchase 
@@ -51,7 +51,6 @@ async function setupPurchaseDb(connection) {
        `);
             console.log("✅ Added total_amount to purchase table.");
         } catch (e) {
-            // If duplicate, it's fine. If standard error, check if 'total' exists and rename?
             if (e.code === 'ER_DUP_FIELDNAME') {
                 console.log("ℹ️ total_amount column already exists.");
             } else {
@@ -70,6 +69,20 @@ async function setupPurchaseDb(connection) {
                 console.log("ℹ️ paid_amount column already exists.");
             } else {
                 console.log("Warning: Failed to add paid_amount", e.message);
+            }
+        }
+
+        try {
+            await connection.query(`
+          ALTER TABLE purchase 
+          ADD COLUMN note TEXT AFTER paid_amount;
+        `);
+            console.log("✅ Added note to purchase table.");
+        } catch (e) {
+            if (e.code === 'ER_DUP_FIELDNAME') {
+                console.log("ℹ️ note column already exists.");
+            } else {
+                console.log("Warning: Failed to add note", e.message);
             }
         }
 
