@@ -43,6 +43,37 @@ async function setupPurchaseDb(connection) {
             }
         }
 
+        // 0.2 Check for total_amount and paid_amount column names (handle legacy `total` vs `total_amount`)
+        try {
+            await connection.query(`
+         ALTER TABLE purchase 
+         ADD COLUMN total_amount DECIMAL(10, 2) DEFAULT 0.00 AFTER company_id;
+       `);
+            console.log("✅ Added total_amount to purchase table.");
+        } catch (e) {
+            // If duplicate, it's fine. If standard error, check if 'total' exists and rename?
+            if (e.code === 'ER_DUP_FIELDNAME') {
+                console.log("ℹ️ total_amount column already exists.");
+            } else {
+                console.log("Warning: Failed to add total_amount", e.message);
+            }
+        }
+
+        try {
+            await connection.query(`
+          ALTER TABLE purchase 
+          ADD COLUMN paid_amount DECIMAL(10, 2) DEFAULT 0.00 AFTER total_amount;
+        `);
+            console.log("✅ Added paid_amount to purchase table.");
+        } catch (e) {
+            if (e.code === 'ER_DUP_FIELDNAME') {
+                console.log("ℹ️ paid_amount column already exists.");
+            } else {
+                console.log("Warning: Failed to add paid_amount", e.message);
+            }
+        }
+
+
         // 1. Add raw_material_id to purchase_product
         // If purchase_product doesn't exist, create it first (failsafe)
         await connection.query(`
