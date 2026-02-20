@@ -34,6 +34,11 @@ function PurchasePage() {
         totalPaid: 0,
         totalBalance: 0
     });
+    const [filter, setFilter] = useState({
+        page: 1,
+        pageSize: 10,
+        txt: "",
+    });
 
     useEffect(() => {
         getList();
@@ -218,7 +223,12 @@ function PurchasePage() {
             <div className="pageHeader" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <h2>Purchase History</h2>
                 <Space>
-                    <Input.Search placeholder="Search Ref#" style={{ width: 250 }} />
+                    <Input.Search
+                        placeholder="Search Ref#"
+                        style={{ width: 250 }}
+                        onSearch={(txt) => setFilter({ ...filter, txt, page: 1 })}
+                        allowClear
+                    />
                     <Button type="primary" icon={<MdAdd />} onClick={onOpenModal}>
                         New Purchase
                     </Button>
