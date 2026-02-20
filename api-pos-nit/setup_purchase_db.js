@@ -1,12 +1,49 @@
 const { db } = require('./src/util/helper');
 
 async function setupPurchaseDb(connection) {
+    let localConnection = false;
     try {
-        if (!connection) connection = await db.getConnection();
+        if (!connection) {
+            connection = await db.getConnection();
+            localConnection = true;
+        }
 
         console.log("Starting Purchase & Stock Movement Setup...");
 
+        // 0. Ensure PURCHASE table exists
+        await connection.query(`
+      CREATE TABLE IF NOT EXISTS purchase (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        supplier_id INT NULL,
+        ref VARCHAR(50) NOT NULL,
+        company_id INT NOT NULL,
+        total_amount DECIMAL(10, 2) DEFAULT 0.00,
+        paid_amount DECIMAL(10, 2) DEFAULT 0.00,
+        note TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by VARCHAR(100),
+        INDEX (company_id),
+        INDEX (supplier_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+        console.log("✅ Checked purchase table.");
+
         // 1. Add raw_material_id to purchase_product
+        // If purchase_product doesn't exist, create it first (failsafe)
+        await connection.query(`
+       CREATE TABLE IF NOT EXISTS purchase_product (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        purchase_id INT NOT NULL,
+        product_id INT NULL,
+        qty DECIMAL(10, 2) NOT NULL,
+        cost DECIMAL(10, 2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by VARCHAR(100),
+        FOREIGN KEY (purchase_id) REFERENCES purchase(id) ON DELETE CASCADE,
+        INDEX (purchase_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
         try {
             await connection.query(`
         ALTER TABLE purchase_product 
@@ -46,6 +83,8 @@ async function setupPurchaseDb(connection) {
 
     } catch (error) {
         console.error("❌ Setup Failed:", error);
+    } finally {
+        if (localConnection && connection) connection.release();
     }
 }
 
@@ -54,6 +93,7 @@ if (require.main === module) {
     (async () => {
         const connection = await db.getConnection();
         await setupPurchaseDb(connection);
+        connection.release(); // Release properly
         process.exit();
     })();
 }

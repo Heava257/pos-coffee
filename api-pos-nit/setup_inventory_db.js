@@ -1,8 +1,12 @@
 const { db } = require('./src/util/helper');
 
 async function setupDatabase(connection) {
+    let localConnection = false;
     try {
-        if (!connection) connection = await db.getConnection();
+        if (!connection) {
+            connection = await db.getConnection();
+            localConnection = true;
+        }
 
         console.log("Starting Database Setup for Inventory System...");
 
@@ -59,11 +63,12 @@ async function setupDatabase(connection) {
     `);
         console.log("✅ Checked recipe_detail table.");
 
-        console.log("🎉 Database Setup Complete!");
-        // Do not exit process here
+        console.log("🎉 Inventory Database Setup Complete!");
+
     } catch (error) {
-        console.error("❌ Database Setup Failed:", error);
-        // Don't kill the process, just log error
+        console.error("❌ Inventory Database Setup Failed:", error);
+    } finally {
+        if (localConnection && connection) connection.release();
     }
 }
 
@@ -72,6 +77,7 @@ if (require.main === module) {
     (async () => {
         const connection = await db.getConnection();
         await setupDatabase(connection);
+        connection.release(); // Release properly
         process.exit();
     })();
 }
