@@ -32,7 +32,6 @@ import {
   TrophyOutlined,
   CreditCardOutlined,
   SmileOutlined,
-  ShoppingCartOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import { Config } from "../../util/config";
