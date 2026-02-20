@@ -1,9 +1,8 @@
 const { db } = require('./src/util/helper');
 
-async function setupDatabase() {
+async function setupDatabase(connection) {
     try {
-        const connection = await db.getConnection();
-        await connection.beginTransaction();
+        if (!connection) connection = await db.getConnection();
 
         console.log("Starting Database Setup for Inventory System...");
 
@@ -18,7 +17,7 @@ async function setupDatabase() {
             if (e.code === 'ER_DUP_FIELDNAME') {
                 console.log("ℹ️ product_type column already exists.");
             } else {
-                throw e;
+                console.error("Warning: Failed to add product_type", e.message);
             }
         }
 
@@ -41,7 +40,7 @@ async function setupDatabase() {
         INDEX (company_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
-        console.log("✅ Created raw_material table.");
+        console.log("✅ Checked raw_material table.");
 
         // 3. Create recipe_detail table
         await connection.query(`
@@ -58,17 +57,23 @@ async function setupDatabase() {
         INDEX (raw_material_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
-        console.log("✅ Created recipe_detail table.");
+        console.log("✅ Checked recipe_detail table.");
 
-        await connection.commit();
         console.log("🎉 Database Setup Complete!");
-
+        // Do not exit process here
     } catch (error) {
-        if (connection) await connection.rollback();
         console.error("❌ Database Setup Failed:", error);
-    } finally {
-        process.exit();
+        // Don't kill the process, just log error
     }
 }
 
-setupDatabase();
+// Check if running directly
+if (require.main === module) {
+    (async () => {
+        const connection = await db.getConnection();
+        await setupDatabase(connection);
+        process.exit();
+    })();
+}
+
+module.exports = setupDatabase;

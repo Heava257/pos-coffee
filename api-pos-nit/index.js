@@ -3,6 +3,8 @@ require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
 const app = express();
+const setupDatabase = require("./setup_inventory_db");
+const setupPurchaseDb = require("./setup_purchase_db");
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -51,6 +53,8 @@ const server = http.createServer({
 }, app);
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log("Server running on port " + PORT);
+  await setupDatabase();
+  await setupPurchaseDb();
 });

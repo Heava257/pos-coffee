@@ -1,9 +1,8 @@
 const { db } = require('./src/util/helper');
 
-async function setupPurchaseDb() {
+async function setupPurchaseDb(connection) {
     try {
-        const connection = await db.getConnection();
-        await connection.beginTransaction();
+        if (!connection) connection = await db.getConnection();
 
         console.log("Starting Purchase & Stock Movement Setup...");
 
@@ -19,7 +18,7 @@ async function setupPurchaseDb() {
             if (e.code === 'ER_DUP_FIELDNAME') {
                 console.log("ℹ️ raw_material_id column already exists.");
             } else {
-                throw e;
+                console.error("Warning: purchase_product column add failed", e.message);
             }
         }
 
@@ -43,15 +42,20 @@ async function setupPurchaseDb() {
     `);
         console.log("✅ Created stock_movement table.");
 
-        await connection.commit();
         console.log("🎉 Purchase Setup Complete!");
 
     } catch (error) {
-        if (connection) await connection.rollback();
         console.error("❌ Setup Failed:", error);
-    } finally {
-        process.exit();
     }
 }
 
-setupPurchaseDb();
+// Check if running directly
+if (require.main === module) {
+    (async () => {
+        const connection = await db.getConnection();
+        await setupPurchaseDb(connection);
+        process.exit();
+    })();
+}
+
+module.exports = setupPurchaseDb;
