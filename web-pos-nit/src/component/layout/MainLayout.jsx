@@ -7,7 +7,7 @@ import ImgUser from "../../assets/profile.png";
 import { Tooltip } from "antd";
 import { MdOutlineMarkEmailUnread, MdRestaurantMenu } from "react-icons/md";
 import { IoMdNotificationsOutline } from "react-icons/io";
-import { MenuOutlined, UnlockOutlined } from "@ant-design/icons";
+import { LockOutlined, MenuOutlined, UnlockOutlined } from "@ant-design/icons";
 import {
   getPermission,
   getProfile,
@@ -34,6 +34,7 @@ import {
   SmileOutlined,
   TeamOutlined,
   GlobalOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import { Config } from "../../util/config";
 import { FaHistory } from "react-icons/fa";
@@ -116,12 +117,18 @@ const items_menu = [
     ],
   },
   {
+    key: "settings",
+    label: "Settings",
+    icon: <SettingOutlined />,
+  },
+  {
     key: "business",
     label: "Business Ecosystem",
     icon: <GlobalOutlined />,
     style: { background: '#fff9ef', margin: '4px 8px', borderRadius: '8px', color: '#c0a060', fontWeight: 'bold' }
   },
 ];
+
 
 const MainLayout = () => {
   const [permision, setPermision] = useState([]);
@@ -224,8 +231,8 @@ const MainLayout = () => {
 
     const currentPath = location.pathname;
 
-    // always allow profile page
-    if (currentPath === '/profile') return;
+    // always allow profile and settings page
+    if (currentPath === '/profile' || currentPath === '/settings') return;
 
     // Special Case: always allow business page for system admin (Business ID 1)
     if (currentPath === '/business' && profile?.business_id === 1) return;

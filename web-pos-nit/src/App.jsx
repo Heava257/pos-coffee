@@ -38,6 +38,7 @@ import StockPage from "./page/stock/StockPage";
 import MyPlanPage from "./page/plans/MyPlanPage";
 import PaymentResultPage from "./page/plans/PaymentResultPage";
 import TablePage from "./page/table/TablePage";
+import SettingsPage from "./page/settings/SettingsPage";
 
 function App() {
   const MainLayoutWrapper = () => (
@@ -72,6 +73,7 @@ function App() {
             <Route path="/order" element={<OrderPage />} />
             <Route path="/supplier" element={<SupplierPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
 
             <Route path="/report_Sale_Summary" element={<ReportSale_Summary />} />
             <Route path="/report_Expense_Summary" element={<ReportExpense_Summary />} />
