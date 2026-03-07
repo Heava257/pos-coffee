@@ -602,19 +602,21 @@ function UserPage() {
                 <Select placeholder="Select Branch" size="large" options={state?.branches} />
               </Form.Item>
 
-              <Form.Item
-                name="is_super_admin"
-                label={<Text strong>អ្នកគ្រប់គ្រងជាន់ខ្ពស់ / Super Admin</Text>}
-              >
-                <Select
-                  placeholder="Is Super Admin?"
-                  size="large"
-                  options={[
-                    { label: "No / ទេ", value: 0 },
-                    { label: "Yes / បាទ/ចាស់", value: 1 }
-                  ]}
-                />
-              </Form.Item>
+              {profile?.business_id === 1 && (
+                <Form.Item
+                  name="is_super_admin"
+                  label={<Text strong>អ្នកគ្រប់គ្រងជាន់ខ្ពស់ / Super Admin</Text>}
+                >
+                  <Select
+                    placeholder="Is Super Admin?"
+                    size="large"
+                    options={[
+                      { label: "No / ទេ", value: 0 },
+                      { label: "Yes / បាទ/ចាស់", value: 1 }
+                    ]}
+                  />
+                </Form.Item>
+              )}
 
               {/* Password */}
               <Form.Item
