@@ -483,25 +483,24 @@ function UserPage() {
         <img alt="Identity" style={{ width: "100%", borderRadius: '12px' }} src={previewImage} />
       </Modal>
       <Modal
-        className="khmer-branch"
         open={state.visible}
         onCancel={handleCloseModal}
         centered
+        width={800}
         footer={null}
-        title={form.getFieldValue("id") ? "កែប្រែអ្នកប្រើប្រាស់" : "បញ្ចូលអ្នកប្រើប្រាស់ថ្មី"}
+        title={
+          <Title level={4} style={{ margin: 0, color: '#1e4a2d' }}>
+            {form.getFieldValue("id") ? "កែប្រែអ្នកប្រើប្រាស់ / Update Staff" : "បញ្ចូលអ្នកប្រើប្រាស់ថ្មី / New Staff"}
+          </Title>
+        }
       >
-        <Form layout="vertical" form={form} onFinish={onFinish} className="custom-form">
-          <Row justify="center" align="middle">
+        <Form layout="vertical" form={form} onFinish={onFinish}>
+          <Row justify="center" align="middle" style={{ marginBottom: '24px' }}>
             <Col>
               <Form.Item
                 name="profile_image"
-                label={
-                  <div style={{ textAlign: "center" }}>
-                    <span className="khmer-text">រូបភាព</span>
-                    <br />
-                    <span className="english-text">Profile Image</span>
-                  </div>
-                }
+                style={{ margin: 0 }}
+                label={<div style={{ textAlign: "center", width: "100%", fontWeight: 600 }}>រូបភាព / Profile Image</div>}
               >
                 <Upload
                   name="profile_image"
@@ -527,228 +526,134 @@ function UserPage() {
             </Col>
           </Row>
 
-          <Row gutter={[16, 16]}>
+          <Row gutter={[32, 16]}>
             {/* Left Column */}
-            <Col span={12}>
+            <Col xs={24} md={12}>
               {/* Name */}
               <Form.Item
                 name="name"
-                label={
-                  <div>
-                    <span className="khmer-text">ឈ្មោះ</span>
-                    <span className="english-text">Name</span>
-                  </div>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please fill in name",
-                  },
-                ]}
+                label={<Text strong>ឈ្មោះ / Name</Text>}
+                rules={[{ required: true, message: "Please fill in name" }]}
               >
-                <Input placeholder="Name" className="input-field" />
-              </Form.Item>
-
-              {/* Address */}
-              <Form.Item
-                name="address"
-                label={
-                  <div>
-                    <span className="khmer-text">អាសយដ្ឋាន</span>
-                    <span className="english-text">Address</span>
-                  </div>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please fill in Address",
-                  },
-                ]}
-              >
-                <Input placeholder="Address" className="input-field" />
-              </Form.Item>
-
-              {/* Tel */}
-              <Form.Item
-                name="tel"
-                label={
-                  <div>
-                    <span className="khmer-text">លេខទូរស័ព្ទ</span>
-                    <span className="english-text">Tel</span>
-                  </div>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please fill in Tel",
-                  },
-                ]}
-              >
-                <Input placeholder="Tel" className="input-field" />
+                <Input placeholder="Enter full name" size="large" />
               </Form.Item>
 
               {/* Username (Email) */}
               <Form.Item
                 name="username"
-                label={
-                  <div>
-                    <span className="khmer-text">អ៊ីម៉ែល</span>
-                    <span className="english-text">Email</span>
-                  </div>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please fill in email",
-                  },
-                ]}
+                label={<Text strong>អ៊ីម៉ែល / Email</Text>}
+                rules={[{ required: true, message: "Please fill in email" }]}
               >
-                <Input placeholder="Email" className="input-field" />
+                <Input placeholder="Enter username or email" size="large" />
+              </Form.Item>
+
+              {/* Tel */}
+              <Form.Item
+                name="tel"
+                label={<Text strong>លេខទូរស័ព្ទ / Tel</Text>}
+                rules={[{ required: true, message: "Please fill in Tel" }]}
+              >
+                <Input placeholder="Enter phone number" size="large" />
+              </Form.Item>
+
+              {/* Address */}
+              <Form.Item
+                name="address"
+                label={<Text strong>អាសយដ្ឋាន / Address</Text>}
+                rules={[{ required: true, message: "Please fill in Address" }]}
+              >
+                <Input placeholder="Enter address" size="large" />
               </Form.Item>
 
               {/* Status */}
               <Form.Item
                 name="is_active"
-                label={
-                  <div>
-                    <span className="khmer-text">ស្ថានភាព</span>
-                    <span className="english-text">Status</span>
-                  </div>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select status",
-                  },
-                ]}
+                label={<Text strong>ស្ថានភាព / Status</Text>}
+                rules={[{ required: true, message: "Please select status" }]}
               >
                 <Select
                   placeholder="Select Status"
+                  size="large"
                   options={[
-                    {
-                      label: "Active",
-                      value: 1,
-                    },
-                    {
-                      label: "InActive",
-                      value: 0,
-                    },
+                    { label: "Active / សកម្ម", value: 1 },
+                    { label: "InActive / ផ្អាក", value: 0 },
                   ]}
-                  className="select-field"
                 />
               </Form.Item>
-
             </Col>
 
             {/* Right Column */}
-            <Col span={12}>
-              {/* Password */}
-              <Form.Item
-                name="password"
-                label={
-                  <div>
-                    <span className="khmer-text">ពាក្យសម្ងាត់</span>
-                    <span className="english-text">Password</span>
-                  </div>
-                }
-                rules={form.getFieldValue("id") ? [] : [
-                  {
-                    required: true,
-                    message: "Please fill in password",
-                  },
-                ]}
-              >
-                <Input.Password placeholder="Password" className="input-field" />
-              </Form.Item>
-
-              {/* Confirm Password */}
-              <Form.Item
-                name="confirm_password"
-                label={
-                  <div>
-                    <span className="khmer-text">បញ្ជាក់ពាក្យសម្ងាត់</span>
-                    <span className="english-text">Confirm Password</span>
-                  </div>
-                }
-                dependencies={["password"]}
-                rules={form.getFieldValue("id") ? [] : [
-                  {
-                    required: true,
-                    message: "សូមបញ្ជាក់ពាក្យសម្ងាត់",
-                  },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue("password") === value) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(new Error("ពាក្យសម្ងាត់មិនត្រូវគ្នា!"));
-                    },
-                  }),
-                ]}
-              >
-                <Input.Password placeholder="បញ្ជាក់ពាក្យសម្ងាត់" className="input-field" />
-              </Form.Item>
-
-              <Form.Item
-                name="is_super_admin"
-                label="Super Admin"
-              >
-                <Select
-                  placeholder="Super Admin Status"
-                  options={[
-                    { label: "No", value: 0 },
-                    { label: "Yes", value: 1 }
-                  ]}
-                />
-              </Form.Item>
-
+            <Col xs={24} md={12}>
               {/* Role */}
               <Form.Item
                 name="role_id"
-                label={
-                  <div>
-                    <span className="khmer-text">តួនាទី</span>
-                    <span className="english-text">Role</span>
-                  </div>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select role",
-                  },
-                ]}
+                label={<Text strong>តួនាទី / Role</Text>}
+                rules={[{ required: true, message: "Please select role" }]}
               >
-                <Select placeholder="Select Role" options={state?.role} className="select-field" />
+                <Select placeholder="Select Role" size="large" options={state?.role} />
               </Form.Item>
 
               {/* Branch */}
               <Form.Item
                 name="branch_id"
-                label={
-                  <div>
-                    <span className="khmer-text">សាខា</span>
-                    <span className="english-text">Branch</span>
-                  </div>
-                }
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select Branch",
-                  },
+                label={<Text strong>សាខា / Branch</Text>}
+                rules={[{ required: true, message: "Please select Branch" }]}
+              >
+                <Select placeholder="Select Branch" size="large" options={state?.branches} />
+              </Form.Item>
+
+              <Form.Item
+                name="is_super_admin"
+                label={<Text strong>អ្នកគ្រប់គ្រងជាន់ខ្ពស់ / Super Admin</Text>}
+              >
+                <Select
+                  placeholder="Is Super Admin?"
+                  size="large"
+                  options={[
+                    { label: "No / ទេ", value: 0 },
+                    { label: "Yes / បាទ/ចាស់", value: 1 }
+                  ]}
+                />
+              </Form.Item>
+
+              {/* Password */}
+              <Form.Item
+                name="password"
+                label={<Text strong>ពាក្យសម្ងាត់ / Password</Text>}
+                rules={form.getFieldValue("id") ? [] : [{ required: true, message: "Please fill in password" }]}
+              >
+                <Input.Password placeholder="Enter password" size="large" />
+              </Form.Item>
+
+              {/* Confirm Password */}
+              <Form.Item
+                name="confirm_password"
+                label={<Text strong>បញ្ជាក់ពាក្យសម្ងាត់ / Confirm Password</Text>}
+                dependencies={["password"]}
+                rules={form.getFieldValue("id") ? [] : [
+                  { required: true, message: "Please confirm password" },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue("password") === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error("Passwords do not match!"));
+                    },
+                  }),
                 ]}
               >
-                <Select placeholder="Select Branch" options={state?.branches} className="select-field" />
+                <Input.Password placeholder="Confirm password" size="large" />
               </Form.Item>
             </Col>
           </Row>
 
           {/* Form Footer */}
-          <Divider />
+          <Divider style={{ margin: '16px 0' }} />
           <div style={{ textAlign: "right" }}>
             <Space>
-              <Button onClick={handleCloseModal}>Cancel</Button>
-              <Button type="primary" htmlType="submit" style={{ background: '#1e4a2d', borderColor: '#1e4a2d' }}>
-                {form.getFieldValue("id") ? "Update Executive" : "Register Staff"}
+              <Button onClick={handleCloseModal} size="large" style={{ borderRadius: '8px' }}>Cancel / បោះបង់</Button>
+              <Button type="primary" htmlType="submit" size="large" style={{ background: '#1e4a2d', borderColor: '#1e4a2d', borderRadius: '8px' }}>
+                {form.getFieldValue("id") ? "Update Account" : "Register Staff / រក្សាទុក"}
               </Button>
             </Space>
           </div>
