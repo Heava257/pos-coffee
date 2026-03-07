@@ -66,13 +66,22 @@ app.listen(PORT, async () => {
   const { startSubscriptionCron } = require("./src/util/cron");
   startSubscriptionCron();
 
-  // STEP 4: Ensure orders table allows NULL for user_id (Migration Fix)
+  // Migration Fix: Ensure orders table allows NULL for user_id
   const { db } = require("./src/util/helper");
   try {
     await db.query("ALTER TABLE orders MODIFY user_id INT NULL");
     console.log("Migration: 'orders.user_id' is now NULLABLE");
-  } catch (err) {
-    console.log("Migration Note: Could not alter table or already fixed");
-  }
+  } catch (err) { }
+
+  // Migration Fix: Ensure products table has 'brand' and 'discount' columns
+  try {
+    await db.query("ALTER TABLE products ADD COLUMN brand VARCHAR(255) AFTER barcode");
+    console.log("Migration: Added 'brand' column to products");
+  } catch (err) { }
+
+  try {
+    await db.query("ALTER TABLE products ADD COLUMN discount DOUBLE DEFAULT 0;");
+    console.log("Migration: Added 'discount' column to products");
+  } catch (err) { }
 });
 
