@@ -88,37 +88,46 @@ const ProductOptionsModal = ({
           </div>
         )}
 
-        <div className="space-y-2">
-          <p className="text-sm font-bold text-[#1e4a2d]">Temperature</p>
-          <div className="flex gap-2">
-            {temperatures.map(temp => (
-              <button
-                key={temp}
-                onClick={() => setSelTemp(temp)}
-                className={cn(
-                  "flex-1 py-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2",
-                  selectedTemp === temp ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
-                )}
-              > {temp === 'Hot' ? '🔥' : '🧊'} {temp} </button>
-            ))}
-          </div>
-        </div>
+        {/* Filter drink-specific options: Temperature and Sugar */}
+        {(item.category_name?.toLowerCase().includes('coffee') ||
+          item.category_name?.toLowerCase().includes('juice') ||
+          item.category_name?.toLowerCase().includes('milk') ||
+          item.category_name?.toLowerCase().includes('drink') ||
+          item.category_name?.toLowerCase().includes('tea')) && (
+            <>
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-[#1e4a2d]">Temperature</p>
+                <div className="flex gap-2">
+                  {temperatures.map(temp => (
+                    <button
+                      key={temp}
+                      onClick={() => setSelTemp(temp)}
+                      className={cn(
+                        "flex-1 py-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2",
+                        selectedTemp === temp ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
+                      )}
+                    > {temp === 'Hot' ? '🔥' : '🧊'} {temp} </button>
+                  ))}
+                </div>
+              </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-bold text-[#1e4a2d]">Sugar Level</p>
-          <div className="grid grid-cols-3 gap-2">
-            {sugarLevels.map(level => (
-              <button
-                key={level}
-                onClick={() => setSelSugar(level)}
-                className={cn(
-                  "py-2 rounded-xl border text-xs font-bold transition-all",
-                  selectedSugar === level ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
-                )}
-              > {level} </button>
-            ))}
-          </div>
-        </div>
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-[#1e4a2d]">Sugar Level</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {sugarLevels.map(level => (
+                    <button
+                      key={level}
+                      onClick={() => setSelSugar(level)}
+                      className={cn(
+                        "py-2 rounded-xl border text-xs font-bold transition-all",
+                        selectedSugar === level ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
+                      )}
+                    > {level} </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
         <div className="pt-4 flex items-center justify-between gap-4">
           <div className="flex items-center bg-[#f8f7f2] rounded-2xl p-1 border border-gray-100">
