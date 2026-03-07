@@ -19,10 +19,16 @@ function cn(...inputs) {
 }
 
 const CoffeeMenuApp = () => {
-  const [selectedTable, setSelectedTable] = useState(null);
-  const [selectedShop, setSelectedShop] = useState(null);
-  const [cart, setCart] = useState([]);
-  const [currentView, setCurrentView] = useState('shops');
+  const [selectedTable, setSelectedTable] = useState(() => localStorage.getItem('coffee_pos_table') || null);
+  const [selectedShop, setSelectedShop] = useState(() => {
+    const saved = localStorage.getItem('coffee_pos_shop');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [cart, setCart] = useState(() => {
+    const saved = localStorage.getItem('coffee_pos_cart');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [currentView, setCurrentView] = useState(() => localStorage.getItem('coffee_pos_view') || 'shops');
   const [orders, setOrders] = useState([]);
   const [newOrderAlert, setNewOrderAlert] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
@@ -46,6 +52,24 @@ const CoffeeMenuApp = () => {
     user_id: null
   });
   const { config } = configStore();
+
+  // Save selections and cart to localStorage for survival after browser refresh
+  useEffect(() => {
+    if (selectedTable) {
+      localStorage.setItem('coffee_pos_table', selectedTable);
+    } else {
+      localStorage.removeItem('coffee_pos_table');
+    }
+
+    if (selectedShop) {
+      localStorage.setItem('coffee_pos_shop', JSON.stringify(selectedShop));
+    } else {
+      localStorage.removeItem('coffee_pos_shop');
+    }
+
+    localStorage.setItem('coffee_pos_view', currentView || 'shops');
+    localStorage.setItem('coffee_pos_cart', JSON.stringify(cart));
+  }, [selectedTable, selectedShop, currentView, cart]);
 
   useEffect(() => {
     const isGuest = localStorage.getItem("is_guest") === "true";
@@ -151,9 +175,13 @@ const CoffeeMenuApp = () => {
     return p - (p * d / 100);
   };
 
-  const calculateItemPrice = (basePrice, size, addons) => {
-    let total = parseFloat(basePrice) || 0;
-    if (size && size.price) total += parseFloat(size.price) || 0;
+  const calculateItemPrice = (item, size, addons) => {
+    let basePrice = parseFloat(item.price) || 0;
+    if (size && size.price) {
+      basePrice = parseFloat(size.price);
+    }
+    const discountedBase = basePrice - (basePrice * (parseFloat(item.discount) || 0) / 100);
+    let total = discountedBase;
     if (addons && addons.length > 0) {
       total += addons.reduce((sum, addon) => sum + (parseFloat(addon.price) || 0), 0);
     }
@@ -167,8 +195,7 @@ const CoffeeMenuApp = () => {
       return;
     }
 
-    const discountedPrice = calculateDiscountedPrice(item.price, item.discount);
-    const unitPrice = calculateItemPrice(discountedPrice, selectedSize, selectedAddons);
+    const unitPrice = calculateItemPrice(item, selectedSize, selectedAddons);
 
     const cartItem = {
       cart_id: Date.now() + Math.random(),
@@ -256,7 +283,12 @@ const CoffeeMenuApp = () => {
     </motion.div>
   );
 
-  const ProductCard = ({ item }) => {
+  const ProductCard = ({ item, onSelect }) => {
+    const calculateDiscountedPrice = (price, discount) => {
+      const p = parseFloat(price) || 0;
+      const d = parseFloat(discount) || 0;
+      return p - (p * d / 100);
+    };
     const discountedPrice = calculateDiscountedPrice(item.price, item.discount);
     const inStock = (item.qty || item.stock) > 0;
 
@@ -287,12 +319,19 @@ const CoffeeMenuApp = () => {
         <div className="space-y-1 px-1">
           <h3 className="font-bold text-[#1e4a2d] truncate">{item.name}</h3>
           <div className="flex items-center justify-between">
-            <p className="text-lg font-black text-[#1e4a2d]">
-              ${discountedPrice.toFixed(2)}
-            </p>
+            <div className="flex flex-col">
+              {item.discount > 0 && (
+                <span className="text-[10px] text-gray-400 line-through font-bold">
+                  ${parseFloat(item.price).toFixed(2)}
+                </span>
+              )}
+              <p className="text-lg font-black text-[#1e4a2d] leading-none">
+                ${discountedPrice.toFixed(2)}
+              </p>
+            </div>
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => showOptionsModal(item)}
+              onClick={() => onSelect(item)}
               disabled={!inStock}
               className={cn(
                 "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
@@ -328,280 +367,286 @@ const CoffeeMenuApp = () => {
     setOptionsModalItem(null);
   };
 
-  const MainMenuView = () => (
-    <div className="min-h-screen bg-[#f8f7f2] flex flex-col md:flex-row">
-      <div className="flex-1 flex flex-col max-h-screen overflow-hidden">
-        <header className="px-6 py-6 flex items-center justify-between bg-white border-b border-[#1e4a2d]/5">
-          <div className="flex items-center gap-3">
-            <div className="bg-[#1e4a2d] p-2 rounded-xl text-white"> <Coffee size={24} /> </div>
-            <div>
-              <h1 className="text-xl font-black text-[#1e4a2d] tracking-tight uppercase leading-none">
-                {selectedShop?.business_name || "Green Grounds"}
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-[10px] text-[#1e4a2d] font-bold uppercase tracking-widest opacity-60">
-                  {selectedShop?.branch_name || "Main Branch"}
-                </p>
-                <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                <p className="text-[10px] text-gray-400 font-medium">
-                  Table: {selectedTable || "N/A"}
-                </p>
-                {getProfile()?.name && (
-                  <>
-                    <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                    <p className="text-[10px] text-[#1e4a2d] font-bold">
-                      Staff: {getProfile().name}
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:block text-right mr-2">
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
-                {new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
-              </p>
-              <p className="text-[10px] text-[#1e4a2d] font-black">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</p>
-            </div>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setIsCartOpen(true)}
-              className="relative bg-[#1e4a2d] p-3 rounded-full text-white shadow-lg shadow-[#1e4a2d]/20"
-            >
-              <ShoppingCart size={20} />
-              {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
-                  {cart.length}
-                </span>
-              )}
-            </motion.button>
-          </div>
-        </header>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
-          <div className="relative mb-8 text-[#1e4a2d]">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Search beverages, snacks..."
-              className="w-full bg-white border border-gray-100 rounded-[24px] py-4 pl-14 pr-6 focus:outline-none focus:ring-2 focus:ring-[#1e4a2d]/10 transition-all font-medium"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
-          </div>
-
-          <div className="mb-10">
-            <h2 className="text-lg font-black text-[#1e4a2d] mb-4">Categories</h2>
-            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-              <CategoryCard
-                category={{ id: 'all', name: 'All Menu' }}
-                isActive={selectedCategory === 'all'}
-                onClick={() => setSelectedCategory('all')}
-              />
-              {categories.map(cat => (
-                <CategoryCard
-                  key={cat.id}
-                  category={cat}
-                  isActive={selectedCategory === cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
-            {menuItems.map(item => (<ProductCard key={item.id} item={item} />))}
-          </div>
-
-          {menuItems.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 opacity-30 text-[#1e4a2d]">
-              <ImageIcon size={64} />
-              <p className="mt-4 font-bold uppercase tracking-widest text-xs">No items found</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <Modal
-        open={!!optionsModalItem}
-        onCancel={() => setOptionsModalItem(null)}
-        footer={null}
-        closeIcon={<X className="text-[#1e4a2d]" />}
-        centered
-        width={450}
-        className="premium-modal"
-      >
-        {optionsModalItem && (
-          <div className="space-y-6 pt-2">
-            <div className="flex gap-4">
-              <div className="w-24 h-24 rounded-2xl bg-[#f8f7f2] overflow-hidden flex-shrink-0">
-                {optionsModalItem.image ? (
-                  <img src={Config.getFullImagePath(optionsModalItem.image)} className="w-full h-full object-cover" />
-                ) : (<div className="w-full h-full flex items-center justify-center text-3xl">☕</div>)}
-              </div>
+  switch (currentView) {
+    case 'menu': return (
+      <div className="min-h-screen bg-[#f8f7f2] flex flex-col md:flex-row">
+        <div className="flex-1 flex flex-col max-h-screen overflow-hidden">
+          <header className="px-6 py-6 flex items-center justify-between bg-white border-b border-[#1e4a2d]/5">
+            <div className="flex items-center gap-3">
+              <div className="bg-[#1e4a2d] p-2 rounded-xl text-white"> <Coffee size={24} /> </div>
               <div>
-                <h2 className="text-xl font-bold text-[#1e4a2d]">{optionsModalItem.name}</h2>
-                <p className="text-[#1e4a2d] font-black text-2xl mt-2">
-                  ${calculateDiscountedPrice(optionsModalItem.price, optionsModalItem.discount).toFixed(2)}
+                <h1 className="text-xl font-black text-[#1e4a2d] tracking-tight uppercase leading-none">
+                  {selectedShop?.business_name || "Green Grounds"}
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-[10px] text-[#1e4a2d] font-bold uppercase tracking-widest opacity-60">
+                    {selectedShop?.branch_name || "Main Branch"}
+                  </p>
+                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                  <p className="text-[10px] text-gray-400 font-medium">
+                    Table: {selectedTable || "N/A"}
+                  </p>
+                  {getProfile()?.name && (
+                    <>
+                      <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                      <p className="text-[10px] text-[#1e4a2d] font-bold">
+                        Staff: {getProfile().name}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:block text-right mr-2">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
+                  {new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                 </p>
+                <p className="text-[10px] text-[#1e4a2d] font-black">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</p>
               </div>
-            </div>
-
-            <div className="space-y-5">
-              {productSizes[optionsModalItem.id]?.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-bold text-[#1e4a2d]">Select Size</p>
-                  <div className="flex flex-wrap gap-2">
-                    {productSizes[optionsModalItem.id].map(size => (
-                      <button
-                        key={size.id}
-                        onClick={() => setSelSize(size)}
-                        className={cn(
-                          "px-4 py-2 rounded-xl border text-sm font-bold transition-all",
-                          selectedSize?.id === size.id ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
-                        )}
-                      > {size.name} </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <p className="text-sm font-bold text-[#1e4a2d]">Temperature</p>
-                <div className="flex gap-2">
-                  {temperatures.map(temp => (
-                    <button
-                      key={temp}
-                      onClick={() => setSelTemp(temp)}
-                      className={cn(
-                        "flex-1 py-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2",
-                        selectedTemp === temp ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
-                      )}
-                    > {temp === 'Hot' ? '🔥' : '🧊'} {temp} </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-bold text-[#1e4a2d]">Sugar Level</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {sugarLevels.map(level => (
-                    <button
-                      key={level}
-                      onClick={() => setSelSugar(level)}
-                      className={cn(
-                        "py-2 rounded-xl border text-xs font-bold transition-all",
-                        selectedSugar === level ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
-                      )}
-                    > {level} </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-4 flex items-center justify-between gap-4">
-                <div className="flex items-center bg-[#f8f7f2] rounded-2xl p-1 border border-gray-100">
-                  <button onClick={() => setItemQty(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-[#1e4a2d]"> <Minus size={18} /> </button>
-                  <span className="w-8 text-center font-bold text-[#1e4a2d]">{itemQty}</span>
-                  <button onClick={() => setItemQty(q => q + 1)} className="w-10 h-10 flex items-center justify-center text-[#1e4a2d]"> <Plus size={18} /> </button>
-                </div>
-                <button
-                  onClick={handleAddToCart}
-                  className="flex-1 bg-[#1e4a2d] text-white py-4 rounded-2xl font-bold shadow-lg shadow-[#1e4a2d]/20 hover:bg-[#153420] transition-colors"
-                > Add to Cart </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      <Drawer
-        open={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        placement="right"
-        width={window.innerWidth > 768 ? 400 : '100%'}
-        className="premium-drawer"
-        title={<span className="font-black text-[#1e4a2d] uppercase tracking-tighter">Current Order List</span>}
-        closeIcon={<X className="text-[#1e4a2d]" />}
-      >
-        <div className="flex flex-col h-full bg-[#f8f7f2]">
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pt-2">
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => setOrderType('dine_in')}
-                className={cn(
-                  "flex-1 py-3 rounded-2xl font-bold text-sm transition-all border",
-                  orderType === 'dine_in' ? "bg-[#1e4a2d] border-[#1e4a2d] text-white shadow-lg" : "bg-white border-gray-100 text-[#1e4a2d]"
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsCartOpen(true)}
+                className="relative bg-[#1e4a2d] p-3 rounded-full text-white shadow-lg shadow-[#1e4a2d]/20"
+              >
+                <ShoppingCart size={20} />
+                {cart.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                    {cart.length}
+                  </span>
                 )}
-              > Dine In </button>
-              <button
-                onClick={() => setOrderType('take_away')}
-                className={cn(
-                  "flex-1 py-3 rounded-2xl font-bold text-sm transition-all border",
-                  orderType === 'take_away' ? "bg-[#1e4a2d] border-[#1e4a2d] text-white shadow-lg" : "bg-white border-gray-100 text-[#1e4a2d]"
-                )}
-              > Take Away </button>
+              </motion.button>
+            </div>
+          </header>
+
+          <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
+            <div className="relative mb-8 text-[#1e4a2d]">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Search beverages, snacks..."
+                className="w-full bg-white border border-gray-100 rounded-[24px] py-4 pl-14 pr-6 focus:outline-none focus:ring-2 focus:ring-[#1e4a2d]/10 transition-all font-medium"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
             </div>
 
-            {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-[50vh] opacity-30 gap-4">
-                <div className="bg-[#1e4a2d] p-6 rounded-full text-white"> <ShoppingCart size={40} /> </div>
-                <p className="font-bold uppercase tracking-widest text-[10px] text-[#1e4a2d]">Your cart is empty</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {cart.map((item, index) => (
-                  <div key={index} className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm flex gap-4 group hover:border-[#1e4a2d]/30 transition-all">
-                    <div className="w-16 h-16 rounded-2xl bg-[#f8f7f2] overflow-hidden flex-shrink-0">
-                      {item.image ? (<img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" />) : <div className="w-full h-full flex items-center justify-center text-xl">☕</div>}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-bold text-[#1e4a2d] text-sm">{item.name}</h4>
-                        <button onClick={() => removeFromCart(index)} className="text-red-400 opacity-0 group-hover:opacity-100 transition-all"> <X size={14} /> </button>
-                      </div>
-                      <p className="text-[9px] text-gray-400 font-medium">{item.size?.name}, {item.temperature}, {item.sugarLevel}</p>
-                      <div className="flex justify-between items-center mt-1">
-                        <p className="font-black text-[#1e4a2d] text-sm">${item.totalPrice.toFixed(2)}</p>
-                        <span className="text-[10px] font-black text-[#1e4a2d] bg-[#f8f7f2] px-2 py-0.5 rounded-lg border border-gray-50">x{item.quantity}</span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="mb-10">
+              <h2 className="text-lg font-black text-[#1e4a2d] mb-4">Categories</h2>
+              <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                <CategoryCard
+                  category={{ id: 'all', name: 'All Menu' }}
+                  isActive={selectedCategory === 'all'}
+                  onClick={() => setSelectedCategory('all')}
+                />
+                {categories.map(cat => (
+                  <CategoryCard
+                    key={cat.id}
+                    category={cat}
+                    isActive={selectedCategory === cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                  />
                 ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+              {menuItems.map(item => (<ProductCard key={item.id} item={item} onSelect={showOptionsModal} />))}
+            </div>
+
+            {menuItems.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 opacity-30 text-[#1e4a2d]">
+                <ImageIcon size={64} />
+                <p className="mt-4 font-bold uppercase tracking-widest text-xs">No items found</p>
               </div>
             )}
           </div>
+        </div>
 
-          {cart.length > 0 && (
-            <div className="pt-6 border-t mt-4 space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-gray-400 text-sm font-bold"> <span>Subtotal</span> <span>${getTotalPrice().toFixed(2)}</span> </div>
-                <div className="flex justify-between text-[#1e4a2d] text-2xl font-black"> <span>Total</span> <span>${getTotalPrice().toFixed(2)}</span> </div>
+        <Modal
+          open={!!optionsModalItem}
+          onCancel={() => setOptionsModalItem(null)}
+          footer={null}
+          closeIcon={<X className="text-[#1e4a2d]" />}
+          centered
+          width={450}
+          className="premium-modal"
+        >
+          {optionsModalItem && (
+            <div className="space-y-6 pt-2">
+              <div className="flex gap-4">
+                <div className="w-24 h-24 rounded-2xl bg-[#f8f7f2] overflow-hidden flex-shrink-0">
+                  {optionsModalItem.image ? (
+                    <img src={Config.getFullImagePath(optionsModalItem.image)} className="w-full h-full object-cover" />
+                  ) : (<div className="w-full h-full flex items-center justify-center text-3xl">☕</div>)}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-[#1e4a2d]">{optionsModalItem.name}</h2>
+                  <div className="flex items-center gap-2 mt-2">
+                    <p className="text-[#1e4a2d] font-black text-2xl">
+                      ${calculateItemPrice(optionsModalItem, selectedSize, []).toFixed(2)}
+                    </p>
+                    {optionsModalItem.discount > 0 && (
+                      <span className="text-sm text-gray-400 line-through font-bold">
+                        ${(selectedSize?.price ? parseFloat(selectedSize.price) : parseFloat(optionsModalItem.price)).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={submitOrder}
-                className="w-full bg-[#1e4a2d] text-white py-5 rounded-3xl font-black text-lg shadow-lg shadow-[#1e4a2d]/20 hover:bg-[#153420] transition-colors uppercase tracking-tight"
-              > Place Order Now </button>
+
+              <div className="space-y-5">
+                {productSizes[optionsModalItem.id]?.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold text-[#1e4a2d]">Select Size</p>
+                    <div className="flex flex-wrap gap-2">
+                      {productSizes[optionsModalItem.id].map(size => (
+                        <button
+                          key={size.id}
+                          onClick={() => setSelSize(size)}
+                          className={cn(
+                            "px-4 py-2 rounded-xl border text-sm font-bold transition-all",
+                            selectedSize?.id === size.id ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
+                          )}
+                        > {size.name} </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <p className="text-sm font-bold text-[#1e4a2d]">Temperature</p>
+                  <div className="flex gap-2">
+                    {temperatures.map(temp => (
+                      <button
+                        key={temp}
+                        onClick={() => setSelTemp(temp)}
+                        className={cn(
+                          "flex-1 py-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2",
+                          selectedTemp === temp ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
+                        )}
+                      > {temp === 'Hot' ? '🔥' : '🧊'} {temp} </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-bold text-[#1e4a2d]">Sugar Level</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {sugarLevels.map(level => (
+                      <button
+                        key={level}
+                        onClick={() => setSelSugar(level)}
+                        className={cn(
+                          "py-2 rounded-xl border text-xs font-bold transition-all",
+                          selectedSugar === level ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
+                        )}
+                      > {level} </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center bg-[#f8f7f2] rounded-2xl p-1 border border-gray-100">
+                    <button onClick={() => setItemQty(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-[#1e4a2d]"> <Minus size={18} /> </button>
+                    <span className="w-8 text-center font-bold text-[#1e4a2d]">{itemQty}</span>
+                    <button onClick={() => setItemQty(q => q + 1)} className="w-10 h-10 flex items-center justify-center text-[#1e4a2d]"> <Plus size={18} /> </button>
+                  </div>
+                  <button
+                    onClick={handleAddToCart}
+                    className="flex-1 bg-[#1e4a2d] text-white py-4 rounded-2xl font-bold shadow-lg shadow-[#1e4a2d]/20 hover:bg-[#153420] transition-colors"
+                  > Add to Cart </button>
+                </div>
+              </div>
             </div>
           )}
-        </div>
-      </Drawer>
+        </Modal>
 
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e4a2d20; border-radius: 10px; }
-        .premium-modal .ant-modal-content { border-radius: 40px; padding: 24px; }
-        .premium-drawer .ant-drawer-content { border-radius: 40px 0 0 40px; }
-        .premium-drawer .ant-drawer-header { border-bottom: none; padding: 32px 24px 16px; }
-      `}</style>
-    </div>
-  );
+        <Drawer
+          open={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          placement="right"
+          width={window.innerWidth > 768 ? 400 : '100%'}
+          className="premium-drawer"
+          title={<span className="font-black text-[#1e4a2d] uppercase tracking-tighter">Current Order List</span>}
+          closeIcon={<X className="text-[#1e4a2d]" />}
+        >
+          <div className="flex flex-col h-full bg-[#f8f7f2]">
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pt-2">
+              <div className="flex gap-2 mb-6">
+                <button
+                  onClick={() => setOrderType('dine_in')}
+                  className={cn(
+                    "flex-1 py-3 rounded-2xl font-bold text-sm transition-all border",
+                    orderType === 'dine_in' ? "bg-[#1e4a2d] border-[#1e4a2d] text-white shadow-lg" : "bg-white border-gray-100 text-[#1e4a2d]"
+                  )}
+                > Dine In </button>
+                <button
+                  onClick={() => setOrderType('take_away')}
+                  className={cn(
+                    "flex-1 py-3 rounded-2xl font-bold text-sm transition-all border",
+                    orderType === 'take_away' ? "bg-[#1e4a2d] border-[#1e4a2d] text-white shadow-lg" : "bg-white border-gray-100 text-[#1e4a2d]"
+                  )}
+                > Take Away </button>
+              </div>
 
-  switch (currentView) {
-    case 'menu': return <MainMenuView />;
+              {cart.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-[50vh] opacity-30 gap-4">
+                  <div className="bg-[#1e4a2d] p-6 rounded-full text-white"> <ShoppingCart size={40} /> </div>
+                  <p className="font-bold uppercase tracking-widest text-[10px] text-[#1e4a2d]">Your cart is empty</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cart.map((item, index) => (
+                    <div key={index} className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm flex gap-4 group hover:border-[#1e4a2d]/30 transition-all">
+                      <div className="w-16 h-16 rounded-2xl bg-[#f8f7f2] overflow-hidden flex-shrink-0">
+                        {item.image ? (<img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" />) : <div className="w-full h-full flex items-center justify-center text-xl">☕</div>}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-bold text-[#1e4a2d] text-sm">{item.name}</h4>
+                          <button onClick={() => removeFromCart(index)} className="text-red-400 opacity-0 group-hover:opacity-100 transition-all"> <X size={14} /> </button>
+                        </div>
+                        <p className="text-[9px] text-gray-400 font-medium">{item.size?.name}, {item.temperature}, {item.sugarLevel}</p>
+                        <div className="flex justify-between items-center mt-1">
+                          <p className="font-black text-[#1e4a2d] text-sm">${item.totalPrice.toFixed(2)}</p>
+                          <span className="text-[10px] font-black text-[#1e4a2d] bg-[#f8f7f2] px-2 py-0.5 rounded-lg border border-gray-50">x{item.quantity}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {cart.length > 0 && (
+              <div className="pt-6 border-t mt-4 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-gray-400 text-sm font-bold"> <span>Subtotal</span> <span>${getTotalPrice().toFixed(2)}</span> </div>
+                  <div className="flex justify-between text-[#1e4a2d] text-2xl font-black"> <span>Total</span> <span>${getTotalPrice().toFixed(2)}</span> </div>
+                </div>
+                <button
+                  onClick={submitOrder}
+                  className="w-full bg-[#1e4a2d] text-white py-5 rounded-3xl font-black text-lg shadow-lg shadow-[#1e4a2d]/20 hover:bg-[#153420] transition-colors uppercase tracking-tight"
+                > Place Order Now </button>
+              </div>
+            )}
+          </div>
+        </Drawer>
+
+        <style>{`
+          .no-scrollbar::-webkit-scrollbar { display: none; }
+          .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e4a2d20; border-radius: 10px; }
+          .premium-modal .ant-modal-content { border-radius: 40px; padding: 24px; }
+          .premium-drawer .ant-drawer-content { border-radius: 40px 0 0 40px; }
+          .premium-drawer .ant-drawer-header { border-bottom: none; padding: 32px 24px 16px; }
+        `}</style>
+      </div>
+    );
     case 'tables': return (
       <div className="min-h-screen bg-[#f8f7f2] flex flex-col items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
         <div className="max-w-4xl w-full">

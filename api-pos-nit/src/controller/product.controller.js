@@ -9,8 +9,8 @@ exports.getList = async (req, res) => {
         let params = [business_id];
         let sql = `
         SELECT 
-            p.id, p.name, p.image, p.category_id, p.status, p.barcode,
-            p.sizes, p.addons,
+            p.id, p.name, p.image, p.category_id, p.status, p.barcode, p.brand,
+            p.sizes, p.addons, p.discount,
             bp.price, bp.cost_price, bp.stock_qty AS qty, bp.is_available,
             c.name as category_name
         FROM products p
@@ -59,7 +59,7 @@ exports.create = async (req, res) => {
     try {
         await conn.beginTransaction();
         const { business_id, branch_id } = req;
-        const { name, category_id, barcode, price, cost_price, description, status, qty, sizes, addons } = req.body;
+        const { name, category_id, barcode, price, cost_price, description, status, qty, sizes, addons, discount } = req.body;
         const image = req.file?.filename || null;
 
         // Optimized Subscription Limit Check
@@ -74,8 +74,8 @@ exports.create = async (req, res) => {
 
         // A. Insert into Global Products (Template)
         const [p_res] = await conn.query(
-            "INSERT INTO products (business_id, category_id, barcode, name, description, image, status, sizes, addons) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [business_id, category_id, barcode, name, description, image, status || 1, sizes || null, addons || null]
+            "INSERT INTO products (business_id, category_id, barcode, brand, name, description, image, status, sizes, addons, discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [business_id, category_id, barcode, brand || null, name, description || null, image, status || 1, sizes || null, addons || null, discount || 0]
         );
         const product_id = p_res.insertId;
 
@@ -98,7 +98,7 @@ exports.create = async (req, res) => {
 // 3. Update Product details
 exports.update = async (req, res) => {
     try {
-        const { id, name, category_id, barcode, price, cost_price, description, status, qty, sizes, addons } = req.body;
+        const { id, name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, discount } = req.body;
         const { business_id, branch_id } = req;
 
         const p_status = (status === 'undefined' || status === undefined) ? 1 : Number(status);
@@ -106,8 +106,8 @@ exports.update = async (req, res) => {
 
         // Update Template
         await db.query(
-            "UPDATE products SET name = ?, category_id = ?, barcode = ?, description = ?, status = ?, sizes = ?, addons = ? WHERE id = ? AND business_id = ?",
-            [name, category_id, barcode, description, p_status, sizes || null, addons || null, id, business_id]
+            "UPDATE products SET name = ?, category_id = ?, barcode = ?, brand = ?, description = ?, status = ?, sizes = ?, addons = ?, discount = ? WHERE id = ? AND business_id = ?",
+            [name, category_id, barcode, brand || null, description || null, p_status, sizes || null, addons || null, discount || 0, id, business_id]
         );
 
         // Update Branch Specifics

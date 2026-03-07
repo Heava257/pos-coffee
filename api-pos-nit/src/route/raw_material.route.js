@@ -1,7 +1,7 @@
 const authMiddleware = require("../middleware/auth.middleware");
 const {
     getList,
-    create,
+    create, 
     update,
     remove,
 } = require("../controller/raw_material.controller");

@@ -107,17 +107,17 @@ function ProductPage() {
   };
   const onFinish = async (items) => {
     var params = new FormData();
-    params.append("name", items.name);
-    params.append("category_id", items.category_id);
-    params.append("barcode", items.barcode);
-    params.append("brand", items.brand);
-    params.append("description", items.description);
-    params.append("qty", items.qty);
-    params.append("price", items.price);
-    params.append("discount", items.discount);
-    params.append("status", items.status);
-    params.append("image", form.getFieldValue("image"));
-    params.append("id", form.getFieldValue("id"));
+    params.append("name", items.name || "");
+    params.append("category_id", items.category_id || "");
+    params.append("barcode", items.barcode || "");
+    params.append("brand", items.brand || "");
+    params.append("description", items.description || "");
+    params.append("qty", items.qty || 0);
+    params.append("price", items.price || 0);
+    params.append("discount", items.discount || 0);
+    params.append("status", items.status === 0 ? 0 : 1);
+    params.append("image", form.getFieldValue("image") || "");
+    params.append("id", form.getFieldValue("id") || "");
     params.append("sizes", JSON.stringify(items.sizes || []));
     params.append("addons", JSON.stringify(items.addons || []));
 
@@ -198,7 +198,7 @@ function ProductPage() {
     form.setFieldsValue({
       ...item,
     });
-    setState((pre) => ({ ...pre, visibleModal: true }));
+    setState((pre) => ({ ...pre, visibleModal: true, selectedParentId: item.category_id }));
     if (item.image != "" && item.image != null) {
       const imageProduct = [
         {

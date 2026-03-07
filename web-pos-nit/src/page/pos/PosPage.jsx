@@ -121,6 +121,26 @@ function ProductCard({ product, onAdd, cartQty }) {
         gap: 8,
       }}
     >
+      {/* discount badge */}
+      {product.discount > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            left: 10,
+            background: "#e85d5d",
+            color: "#fff",
+            borderRadius: "6px",
+            padding: "2px 6px",
+            fontSize: "10px",
+            fontWeight: 800,
+            zIndex: 2,
+          }}
+        >
+          -{product.discount}%
+        </div>
+      )}
+
       {/* cart badge */}
       {cartQty > 0 && (
         <div
@@ -131,13 +151,15 @@ function ProductCard({ product, onAdd, cartQty }) {
             background: COLORS.darkGreen,
             color: "#fff",
             borderRadius: "50%",
-            width: 20,
-            height: 20,
-            fontSize: 11,
-            fontWeight: 700,
+            width: 24,
+            height: 24,
+            fontSize: 12,
+            fontWeight: 800,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            boxShadow: "0 4px 8px rgba(30,74,45,0.3)",
+            zIndex: 2,
           }}
         >
           {cartQty}
@@ -147,39 +169,43 @@ function ProductCard({ product, onAdd, cartQty }) {
       {/* product image */}
       <div
         style={{
-          width: 90,
-          height: 90,
+          width: "100%",
+          aspectRatio: "1/1",
           borderRadius: 14,
           overflow: "hidden",
-          background: "#f0ede6",
+          background: "#f8f7f2",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
+          marginBottom: 4,
         }}
       >
         {imgUrl ? (
           <img
             src={imgUrl}
             alt={product.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            onError={(e) => {
-              e.target.style.display = "none";
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: hovered ? "scale(1.1)" : "scale(1)",
+              transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
             }}
           />
         ) : (
-          <span style={{ fontSize: 38 }}>
+          <span style={{ fontSize: 44 }}>
             {getIconForCategory(product.category_name)}
           </span>
         )}
       </div>
 
       {/* name + price */}
-      <div style={{ width: "100%", paddingLeft: 2 }}>
+      <div style={{ width: "100%", textAlign: "left" }}>
         <div
           style={{
-            fontWeight: 600,
-            fontSize: 13,
+            fontWeight: 700,
+            fontSize: 14,
             color: COLORS.textPrimary,
             marginBottom: 2,
             maxWidth: "100%",
@@ -190,8 +216,15 @@ function ProductCard({ product, onAdd, cartQty }) {
         >
           {product.name}
         </div>
-        <div style={{ fontSize: 13, color: COLORS.textSecondary }}>
-          ${price.toFixed(2)}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 15, fontWeight: 800, color: COLORS.darkGreen }}>
+            ${(price - (price * (parseFloat(product.discount) || 0) / 100)).toFixed(2)}
+          </span>
+          {product.discount > 0 && (
+            <span style={{ fontSize: 11, color: COLORS.textSecondary, textDecoration: "line-through", fontWeight: 500 }}>
+              ${price.toFixed(2)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -299,9 +332,16 @@ function BillCartItem({ item, onIncrease, onDecrease, onRemove }) {
             {item.size ? ` • ${item.size}` : ""}
           </div>
         )}
-        <div style={{ fontSize: 11, color: COLORS.textSecondary }}>
-          ${Number(item.unit_price || item.price || 0).toFixed(2)} x{" "}
-          {item.cart_qty}
+        <div style={{ fontSize: 11, color: COLORS.textSecondary, display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ fontWeight: 700, color: COLORS.darkGreen }}>
+            ${(Number(item.unit_price || item.price || 0) * (1 - (parseFloat(item.discount || 0) / 100))).toFixed(2)}
+          </span>
+          {item.discount > 0 && (
+            <span style={{ textDecoration: "line-through", fontSize: "10px", opacity: 0.6 }}>
+              ${Number(item.unit_price || item.price || 0).toFixed(2)}
+            </span>
+          )}
+          <span>x {item.cart_qty}</span>
         </div>
       </div>
 
@@ -354,13 +394,17 @@ function BillCartItem({ item, onIncrease, onDecrease, onRemove }) {
       <div
         style={{
           fontSize: 13,
-          fontWeight: 700,
-          color: COLORS.textPrimary,
-          minWidth: 48,
+          fontWeight: 800,
+          color: COLORS.darkGreen,
+          minWidth: 50,
           textAlign: "right",
+          padding: "2px 6px",
+          background: "#f8f7f2",
+          borderRadius: 8,
+          border: `1px solid ${COLORS.softBorder}`,
         }}
       >
-        ${price.toFixed(2)}
+        ${(Number(item.unit_price || item.price || 0) * (1 - (parseFloat(item.discount || 0) / 100)) * Number(item.cart_qty || 1)).toFixed(2)}
       </div>
     </div>
   );
@@ -537,20 +581,28 @@ function PosPage() {
   const handleCalSummary = useCallback(() => {
     let total_qty = 0;
     let sub_total = 0;
+    let save_discount = 0;
+
     state.cart_list.forEach((item) => {
       const qty = Number(item.cart_qty) || 0;
-      const prc = Number(item.unit_price || item.price || 0);
+      const originalPrice = Number(item.unit_price || item.price || 0);
+      const discountPercent = parseFloat(item.discount) || 0;
+      const discountedPrice = originalPrice * (1 - (discountPercent / 100));
+
       total_qty += qty;
-      sub_total += prc * qty;
+      sub_total += originalPrice * qty;
+      save_discount += (originalPrice - discountedPrice) * qty;
     });
-    const total = sub_total;
+
+    const total = sub_total - save_discount;
+
     setObjSummary((p) => ({
       ...p,
       total_qty,
       sub_total: +sub_total.toFixed(2),
+      save_discount: +save_discount.toFixed(2),
       total: +total.toFixed(2),
       tax: 0,
-      save_discount: 0,
     }));
   }, [state.cart_list]);
 
@@ -1351,6 +1403,24 @@ function PosPage() {
               </span>
             </div>
 
+            {/* Discount Summary */}
+            {objSummary.save_discount > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 6,
+                  fontSize: 13,
+                  color: "#e85d5d",
+                }}
+              >
+                <span style={{ fontWeight: 500 }}>Total Savings</span>
+                <span style={{ fontWeight: 700 }}>
+                  -${objSummary.save_discount.toFixed(2)}
+                </span>
+              </div>
+            )}
+
             <div
               style={{
                 display: "flex",
@@ -1372,12 +1442,14 @@ function PosPage() {
                 marginBottom: 14,
               }}
             >
-              <span style={{ fontWeight: 700, fontSize: 15, color: COLORS.textPrimary }}>
-                Total
-              </span>
-              <span style={{ fontWeight: 800, fontSize: 18, color: COLORS.darkGreen }}>
-                ${objSummary.total.toFixed(2)}
-              </span>
+              <div style={{ textAlign: "right", marginTop: 4 }}>
+                <span style={{ fontWeight: 700, fontSize: 13, color: COLORS.textPrimary, marginRight: 8 }}>
+                  Total
+                </span>
+                <span style={{ fontWeight: 900, fontSize: 22, color: COLORS.darkGreen }}>
+                  ${objSummary.total.toFixed(2)}
+                </span>
+              </div>
             </div>
 
             {/* Payment method */}
