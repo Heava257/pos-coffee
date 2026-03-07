@@ -13,15 +13,41 @@
 // };
 
 
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/";
-const formattedBaseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
+// Helper to get consistent API URL
+const getDynamicBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && !envUrl.includes("localhost")) return envUrl.endsWith('/') ? envUrl : `${envUrl}/`;
+
+  // Fallback for local/mobile testing
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    // If we're on a real IP or Railway, but backend is localhost, try to point to the same host on port 8080
+    if (host !== 'localhost' && (!envUrl || envUrl.includes('localhost'))) {
+      return `http://${host}:8080/api/`;
+    }
+  }
+  return "http://localhost:8080/api/";
+};
+
+const formattedBaseUrl = getDynamicBaseUrl();
+const defaultImagePath = formattedBaseUrl.replace('/api/', '/public/images/');
 
 export const Config = {
   base_url: formattedBaseUrl,
   version: "1.0",
   token: "",
-  image_path: import.meta.env.VITE_IMAGE_PATH || "http://localhost:8080/public/images/",
+  image_path: import.meta.env.VITE_IMAGE_PATH || defaultImagePath,
   platform_url: import.meta.env.VITE_PLATFORM_URL || "http://localhost:3000",
-  getFullImagePath: (imagePart) => `${Config.image_path}${imagePart}`,
-  getProductImagePath: (imagePart) => `${Config.image_path}image_pos/${imagePart}`,
+  getFullImagePath: (imagePart) => {
+    if (!imagePart) return "";
+    if (imagePart.startsWith('http')) return imagePart;
+    const base = Config.image_path.endsWith('/') ? Config.image_path : `${Config.image_path}/`;
+    return `${base}${imagePart}`;
+  },
+  getProductImagePath: (imagePart) => {
+    if (!imagePart) return "";
+    if (imagePart.startsWith('http')) return imagePart;
+    const base = Config.image_path.endsWith('/') ? Config.image_path : `${Config.image_path}/`;
+    return `${base}image_pos/${imagePart}`;
+  },
 };

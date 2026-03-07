@@ -23,11 +23,19 @@ exports.create = async (req, res) => {
         let order_status = requestStatus || (user_id ? 'completed' : 'ordered');
         if (payment_method === 'Cash' && !user_id) order_status = 'unpaid';
 
-        // A. Insert into Orders Table
+        // A. Insert into Orders Table (Dynamic to handle null user_id)
+        const fields = ["business_id", "branch_id", "customer_name", "table_no", "sub_total", "total_amount", "payment_method", "order_type", "status"];
+        const values = [business_id, branch_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, order_status];
+
+        if (user_id) {
+            fields.push("user_id");
+            values.push(user_id);
+        }
+
+        const placeholders = values.map(() => "?").join(", ");
         const [order_res] = await conn.query(
-            `INSERT INTO orders (business_id, branch_id, user_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, status) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [business_id, branch_id, user_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, order_status]
+            `INSERT INTO orders (${fields.join(", ")}) VALUES (${placeholders})`,
+            values
         );
         const order_id = order_res.insertId;
 

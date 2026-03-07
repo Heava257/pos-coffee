@@ -335,17 +335,34 @@ const CoffeeMenuApp = () => {
           <div className="flex items-center gap-3">
             <div className="bg-[#1e4a2d] p-2 rounded-xl text-white"> <Coffee size={24} /> </div>
             <div>
-              <h1 className="text-xl font-black text-[#1e4a2d] tracking-tight uppercase">
+              <h1 className="text-xl font-black text-[#1e4a2d] tracking-tight uppercase leading-none">
                 {selectedShop?.business_name || "Green Grounds"}
               </h1>
-              <p className="text-xs text-gray-400 font-medium">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-[10px] text-[#1e4a2d] font-bold uppercase tracking-widest opacity-60">
+                  {selectedShop?.branch_name || "Main Branch"}
+                </p>
+                <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                <p className="text-[10px] text-gray-400 font-medium">
+                  Table: {selectedTable || "N/A"}
+                </p>
+                {getProfile()?.name && (
+                  <>
+                    <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                    <p className="text-[10px] text-[#1e4a2d] font-bold">
+                      Staff: {getProfile().name}
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex bg-[#f8f7f2] px-4 py-2 rounded-full text-[#1e4a2d] font-bold text-sm">
-              Table: {selectedTable}
+            <div className="hidden sm:block text-right mr-2">
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
+                {new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+              </p>
+              <p className="text-[10px] text-[#1e4a2d] font-black">{new Date().toLocaleDateString('en-US', { weekday: 'long' })}</p>
             </div>
             <motion.button
               whileTap={{ scale: 0.95 }}
