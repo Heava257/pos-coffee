@@ -42,6 +42,8 @@ import {
 } from "@ant-design/icons";
 import { FiSettings } from "react-icons/fi";
 import ImgUser from "../../assets/profile.png";
+import useSound from "use-sound";
+import bellSound from "../../assets/bell.mp3";
 
 const { Text } = Typography;
 
@@ -371,6 +373,8 @@ function PosPage() {
   const [orderType, setOrderType] = useState("dine_in");
   const [customerName, setCustomerName] = useState("");
   const [tableNo, setTableNo] = useState("");
+  const [playBell] = useSound(bellSound);
+  const prevPendingCountRef = useRef(0);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [selectedProductForOptions, setSelectedProductForOptions] = useState(null);
@@ -451,6 +455,29 @@ function PosPage() {
       if (res && res.list) {
         setPendingOrders(res.list);
         setPendingCount(res.list.length);
+
+        // Sound Notification and Message
+        if (res.list.length > prevPendingCountRef.current) {
+          playBell();
+          message.info({
+            content: "🔔 New order received from table!",
+            icon: <BellOutlined style={{ color: COLORS.darkGreen }} />,
+            duration: 5,
+          });
+        }
+        prevPendingCountRef.current = res.list.length;
+
+        // Auto-fetch details for each pending order to show summary
+        res.list.forEach(async (order) => {
+          if (!order.details) {
+            const detailRes = await request(`order/${order.id}`, "get");
+            if (detailRes && detailRes.details) {
+              setPendingOrders(prev => prev.map(o =>
+                o.id === order.id ? { ...o, details: detailRes.details } : o
+              ));
+            }
+          }
+        });
       }
     } catch (error) {
       console.error("Error fetching pending orders:", error);
@@ -1545,6 +1572,19 @@ function PosPage() {
                     ${Number(order.total_amount).toFixed(2)}
                   </Text>
                 </div>
+
+                {/* Show Order Items Summary */}
+                {order.details && (
+                  <div style={{ marginTop: 8, padding: '8px', background: '#f9f9f9', borderRadius: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textSecondary, marginBottom: 4 }}>ITEMS:</div>
+                    {order.details.map((d, i) => (
+                      <div key={i} style={{ fontSize: 11, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>• {d.product_name} x {d.qty}</span>
+                        {d.note && <span style={{ color: COLORS.midGreen, fontSize: 10, marginLeft: 10 }}>({d.note})</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </List.Item>
           )}
