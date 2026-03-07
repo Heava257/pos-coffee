@@ -473,16 +473,7 @@ const CoffeeMenuApp = () => {
           width={450}
           maskClosable={true}
           className="premium-modal"
-          modalRender={(modal) => (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            >
-              {modal}
-            </motion.div>
-          )}
+          modalRender={(modal) => modal}
         >
           {optionsModalItem && (
             <div className="space-y-6 pt-2">
@@ -653,10 +644,11 @@ const CoffeeMenuApp = () => {
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e4a2d20; border-radius: 10px; }
           
-          /* Premium Modal & Blur */
+          /* Premium Modal & Mask */
           .ant-modal-mask {
-            backdrop-filter: blur(8px) !important;
-            background: rgba(30, 74, 45, 0.2) !important;
+            backdrop-filter: blur(4px) !important;
+            background: rgba(0, 0, 0, 0.45) !important;
+            transition: none !important;
           }
           .premium-modal .ant-modal-content { 
             border-radius: 40px; 
