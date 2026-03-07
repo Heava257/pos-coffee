@@ -105,5 +105,70 @@ app.listen(PORT, async () => {
   } catch (err) {
     console.error("Migration Error (orders table):", err.message);
   }
+
+  // Seeder: Add 25 products seeds (5 per new category)
+  try {
+    const bizId = 5;
+    const [branches] = await db.query("SELECT id FROM branches WHERE business_id = ? LIMIT 1", [bizId]);
+    const branchId = branches[0]?.id || 6;
+
+    // Get modern category mapping
+    const [dbCats] = await db.query("SELECT id, name FROM categories WHERE business_id = ?", [bizId]);
+    const catMap = {};
+    dbCats.forEach(c => catMap[c.name] = c.id);
+
+    const productsToSeed = [
+      { cat: 'Juice', name: 'Fresh Orange Juice', price: 2.5, img: 'juice_cat.png' },
+      { cat: 'Juice', name: 'Apple Juice Delight', price: 2.5, img: 'juice_cat.png' },
+      { cat: 'Juice', name: 'Watermelon Splash', price: 2.5, img: 'juice_cat.png' },
+      { cat: 'Juice', name: 'Pineapple Glow', price: 2.5, img: 'juice_cat.png' },
+      { cat: 'Juice', name: 'Tropical Mixed Juice', price: 3.0, img: 'juice_cat.png' },
+
+      { cat: 'Milk', name: 'Pure Fresh Milk', price: 2.0, img: 'milk_cat.png' },
+      { cat: 'Milk', name: 'Soy Milk Classic', price: 2.5, img: 'milk_cat.png' },
+      { cat: 'Milk', name: 'Almond Milk Silky', price: 3.0, img: 'milk_cat.png' },
+      { cat: 'Milk', name: 'Strawberry Milk Dream', price: 2.5, img: 'milk_cat.png' },
+      { cat: 'Milk', name: 'Rich Chocolate Milk', price: 2.5, img: 'milk_cat.png' },
+
+      { cat: 'Snack', name: 'Chocolate Cookies', price: 1.5, img: 'snack_cat.png' },
+      { cat: 'Snack', name: 'Potato Chips', price: 1.5, img: 'snack_cat.png' },
+      { cat: 'Snack', name: 'Butter Popcorn', price: 2.0, img: 'snack_cat.png' },
+      { cat: 'Snack', name: 'Spicy Nachos', price: 3.5, img: 'snack_cat.png' },
+      { cat: 'Snack', name: 'Fudge Brownie', price: 2.5, img: 'snack_cat.png' },
+
+      { cat: 'Rice', name: 'Shrimp Fried Rice', price: 4.5, img: 'rice_cat.png' },
+      { cat: 'Rice', name: 'Golden Steam Rice', price: 1.0, img: 'rice_cat.png' },
+      { cat: 'Rice', name: 'Garlic Rice', price: 1.5, img: 'rice_cat.png' },
+      { cat: 'Rice', name: 'Pineapple Rice', price: 5.0, img: 'rice_cat.png' },
+      { cat: 'Rice', name: 'Holy Basil Rice', price: 4.0, img: 'rice_cat.png' },
+
+      { cat: 'Dessert', name: 'New York Cheesecake', price: 3.5, img: 'dessert_cat.png' },
+      { cat: 'Dessert', name: 'Tiramisu Cup', price: 4.0, img: 'dessert_cat.png' },
+      { cat: 'Dessert', name: 'Mango Sticky Rice', price: 3.5, img: 'dessert_cat.png' },
+      { cat: 'Dessert', name: 'Premium Ice Cream', price: 2.5, img: 'dessert_cat.png' },
+      { cat: 'Dessert', name: 'Delicate Fruit Tart', price: 3.0, img: 'dessert_cat.png' }
+    ];
+
+    for (const p of productsToSeed) {
+      const catId = catMap[p.cat];
+      if (!catId) continue;
+
+      const [exists] = await db.query("SELECT id FROM products WHERE name = ? AND business_id = ?", [p.name, bizId]);
+      if (exists.length === 0) {
+        const [res] = await db.query(
+          "INSERT INTO products (business_id, category_id, name, image, status) VALUES (?, ?, ?, ?, 1)",
+          [bizId, catId, p.name, p.img]
+        );
+        const pid = res.insertId;
+        await db.query(
+          "INSERT IGNORE INTO branch_products (branch_id, product_id, price, cost_price, stock_qty) VALUES (?, ?, ?, ?, 100)",
+          [branchId, pid, p.price, p.price * 0.5]
+        );
+        console.log(`Seeder: Added product '${p.name}'`);
+      }
+    }
+  } catch (err) {
+    console.error("Seeder Error:", err.message);
+  }
 });
 
