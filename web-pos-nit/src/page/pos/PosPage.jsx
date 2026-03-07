@@ -44,8 +44,8 @@ import { FiSettings } from "react-icons/fi";
 import ImgUser from "../../assets/profile.png";
 import useSound from "use-sound";
 
-// Public notification sound URL
-const BELL_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
+// Public notification sound URL (stable mirror)
+const BELL_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3";
 
 const { Text } = Typography;
 
@@ -376,6 +376,7 @@ function PosPage() {
   const [customerName, setCustomerName] = useState("");
   const [tableNo, setTableNo] = useState("");
   const [playBell] = useSound(BELL_SOUND_URL);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(false);
   const prevPendingCountRef = useRef(0);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
@@ -460,7 +461,9 @@ function PosPage() {
 
         // Sound Notification and Message
         if (res.list.length > prevPendingCountRef.current) {
-          playBell();
+          if (isSoundEnabled) {
+            playBell();
+          }
           message.info({
             content: "🔔 New order received from table!",
             icon: <BellOutlined style={{ color: COLORS.darkGreen }} />,
@@ -928,6 +931,35 @@ function PosPage() {
                 <span>Pending Table</span>
               </button>
             </Badge>
+
+            <button
+              onClick={() => {
+                setIsSoundEnabled(!isSoundEnabled);
+                if (!isSoundEnabled) {
+                  playBell(); // Play once to "unlock" audio in browser
+                  message.success("Audio notifications enabled!");
+                }
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: isSoundEnabled ? COLORS.darkGreen : COLORS.white,
+                border: `1px solid ${isSoundEnabled ? COLORS.darkGreen : COLORS.softBorder}`,
+                borderRadius: 8,
+                padding: "6px 14px",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 700,
+                color: isSoundEnabled ? "#fff" : COLORS.textPrimary,
+                transition: "all 0.25s",
+                whiteSpace: "nowrap",
+                boxShadow: isSoundEnabled ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
+              }}
+            >
+              <BellOutlined style={{ fontSize: 16 }} />
+              <span>{isSoundEnabled ? "Sound On" : "Sound Off"}</span>
+            </button>
 
             <button
               style={{
