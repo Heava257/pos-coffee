@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import HomePage from "./page/home/HomePage";
 import LogingPage from "./page/auth/LogingPage";
 import RegisterPage from "./page/auth/RegisterPage";
+import ScanPage from "./page/auth/ScanPage";
 
 import MainLayout from "./component/layout/MainLayout";
 import MainLayoutAuth from "./component/layout/MainLayoutAuth";
@@ -36,6 +37,7 @@ import PurchasePage from "./page/purchase/PurchasePage";
 import StockPage from "./page/stock/StockPage";
 import MyPlanPage from "./page/plans/MyPlanPage";
 import PaymentResultPage from "./page/plans/PaymentResultPage";
+import TablePage from "./page/table/TablePage";
 
 function App() {
   const MainLayoutWrapper = () => (
@@ -48,10 +50,12 @@ function App() {
       <BrowserRouter basename="/">
         <Routes >
           <Route path="/customer" element={<CoffeeMenuApp />} />
+          <Route path="/scan" element={<ScanPage />} />
 
           <Route element={<MainLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/invoices" element={<PosPage />} />
+            <Route path="/table" element={<TablePage />} />
             <Route path="/category" element={<CategoryPage />} />
             <Route path="/shop_managment" element={<BranchPage />} />
             <Route path="/expense" element={<ExpensePage />} />

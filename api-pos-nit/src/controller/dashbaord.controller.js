@@ -117,7 +117,6 @@ exports.getList = async (req, res) => {
     const recentOrdersQuery = `
       SELECT 
         o.id, 
-        o.order_no, 
         o.total_amount, 
         o.created_at,
         b.name as branch_name

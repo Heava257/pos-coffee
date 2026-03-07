@@ -9,7 +9,11 @@ export const request = (url = "", method = "get", data = {}) => {
   var access_token = getAcccessToken();
 
   // Skip requests that require auth if token is missing (except login/register)
-  const isAuthRoute = url.includes("auth/login") || url.includes("auth/register") || url.includes("auth/register-owner");
+  const isAuthRoute =
+    url.includes("auth/login") ||
+    url.includes("auth/register") ||
+    url.includes("auth/register-owner") ||
+    url.includes("auth/guest-access");
   if (!isAuthRoute && (!access_token || access_token === "null" || access_token === "undefined")) {
     return Promise.resolve(false);
   }

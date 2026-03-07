@@ -74,6 +74,11 @@ const items_menu = [
     icon: <FaShop />,
   },
   {
+    key: "table",
+    label: "Tables & QR Setup",
+    icon: <DesktopOutlined />,
+  },
+  {
     key: "product",
     label: "Products",
     icon: <ShopOutlined />,

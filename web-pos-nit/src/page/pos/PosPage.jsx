@@ -15,6 +15,9 @@ import {
   Divider,
   Radio,
   Checkbox,
+  Badge,
+  Drawer,
+  List,
 } from "antd";
 import { request } from "../../util/helper";
 import { configStore } from "../../store/configStore";
@@ -34,6 +37,8 @@ import {
   MinusOutlined,
   PlusOutlined,
   CreditCardOutlined,
+  ClockCircleOutlined,
+  ShoppingOutlined,
 } from "@ant-design/icons";
 import { FiSettings } from "react-icons/fi";
 import ImgUser from "../../assets/profile.png";
@@ -371,6 +376,11 @@ function PosPage() {
   const [selectedProductForOptions, setSelectedProductForOptions] = useState(null);
   const [tempOptions, setTempOptions] = useState({ mood: "hot", size: "M", sugar: "100%", addons: [] });
   const [paymentData, setPaymentData] = useState({ paymentLink: "", orderNo: "", total: 0 });
+  const [pendingOrdersVisible, setPendingOrdersVisible] = useState(false);
+  const [pendingOrders, setPendingOrders] = useState([]);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const [currentOrderId, setCurrentOrderId] = useState(null);
 
   const { config } = configStore();
   const refInvoice = useRef(null);
@@ -422,6 +432,9 @@ function PosPage() {
   useEffect(() => {
     getParentCategories();
     getList();
+    getPendingOrders();
+    const iv = setInterval(getPendingOrders, 30000); // Check every 30s
+    return () => clearInterval(iv);
   }, []);
 
   useEffect(() => {
@@ -431,6 +444,18 @@ function PosPage() {
   useEffect(() => {
     handleCalSummary();
   }, [state.cart_list]);
+
+  const getPendingOrders = async () => {
+    try {
+      const res = await request("order-pending", "get");
+      if (res && res.list) {
+        setPendingOrders(res.list);
+        setPendingCount(res.list.length);
+      }
+    } catch (error) {
+      console.error("Error fetching pending orders:", error);
+    }
+  };
 
   // ── fetch categories ──
   const getParentCategories = async () => {
@@ -633,7 +658,41 @@ function PosPage() {
     }));
     setCustomerName("");
     setTableNo("");
+    setCurrentOrderId(null);
     form.resetFields();
+  };
+
+  const handleSelectPendingOrder = async (order) => {
+    setState((p) => ({ ...p, loading: true }));
+    try {
+      const res = await request(`order/${order.id}`, "get");
+      if (res && res.details) {
+        // Map details back to cart format
+        const cart = res.details.map((d) => ({
+          id: d.product_id,
+          name: d.product_name,
+          unit_price: d.price,
+          cart_qty: d.qty,
+          image: d.image,
+          note: d.note || "",
+        }));
+
+        setState((p) => ({
+          ...p,
+          cart_list: cart,
+          loading: false,
+        }));
+        setCustomerName(order.customer_name || "");
+        setTableNo(order.table_no || "");
+        setOrderType(order.order_type || "dine_in");
+        setCurrentOrderId(order.id);
+        setPendingOrdersVisible(false);
+        message.info(`Loaded order for ${order.table_no ? "Table " + order.table_no : "Guest"}`);
+      }
+    } catch (error) {
+      console.error("Error loading pending order:", error);
+      setState((p) => ({ ...p, loading: false }));
+    }
   };
 
   // ── place order ──
@@ -670,9 +729,20 @@ function PosPage() {
       payment_method: objSummary.payment_method
     };
     try {
-      const res = await request("order", "post", param);
+      let res;
+      if (currentOrderId) {
+        res = await request("order-status", "put", {
+          order_id: currentOrderId,
+          status: "completed",
+          payment_method: objSummary.payment_method
+        });
+        if (res && !res.error) res.order_id = currentOrderId;
+      } else {
+        res = await request("order", "post", param);
+      }
+
       if (res && !res.error) {
-        message.success("Order placed successfully!");
+        message.success(currentOrderId ? "Order completed!" : "Order placed successfully!");
         if (res.payment_link) {
           setPaymentData({ paymentLink: res.payment_link, orderNo: res.order_no, total: param.total });
           setQrModalVisible(true);
@@ -801,6 +871,34 @@ function PosPage() {
             <div style={{ fontSize: 13, color: COLORS.textSecondary, fontWeight: 500, whiteSpace: "nowrap" }}>
               Total: <span style={{ fontWeight: 700, color: COLORS.darkGreen }}>{state.cart_list.length}</span>
             </div>
+
+            <Divider type="vertical" />
+
+            {/* Table Orders Button */}
+            <Badge count={pendingCount} size="small" offset={[-2, 2]} overflowCount={99}>
+              <button
+                onClick={() => setPendingOrdersVisible(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: pendingCount > 0 ? COLORS.darkGreen : COLORS.white,
+                  border: `1px solid ${pendingCount > 0 ? COLORS.darkGreen : COLORS.softBorder}`,
+                  borderRadius: 8,
+                  padding: "6px 14px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: pendingCount > 0 ? "#fff" : COLORS.textPrimary,
+                  transition: "all 0.25s",
+                  whiteSpace: "nowrap",
+                  boxShadow: pendingCount > 0 ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
+                }}
+              >
+                <ClockCircleOutlined style={{ fontSize: 16 }} />
+                <span>Pending Table</span>
+              </button>
+            </Badge>
 
             <button
               style={{
@@ -1393,6 +1491,68 @@ function PosPage() {
           )}
         </div>
       </Modal>
+
+      {/* Pending Orders Drawer */}
+      <Drawer
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: COLORS.darkGreen }}>
+            <ClockCircleOutlined />
+            <span>Pending Table Orders</span>
+          </div>
+        }
+        placement="right"
+        onClose={() => setPendingOrdersVisible(false)}
+        open={pendingOrdersVisible}
+        width={400}
+        styles={{
+          header: { borderBottom: `1px solid ${COLORS.softBorder}`, padding: '16px 24px' },
+          body: { padding: 0 }
+        }}
+      >
+        <List
+          dataSource={pendingOrders}
+          locale={{ emptyText: <Empty description="No pending table orders" /> }}
+          renderItem={(order) => (
+            <List.Item
+              onClick={() => handleSelectPendingOrder(order)}
+              style={{
+                cursor: 'pointer',
+                padding: '16px 24px',
+                borderBottom: `1px solid ${COLORS.softBorder}`,
+                transition: 'all 0.2s',
+              }}
+              className="pending-order-item"
+            >
+              <div style={{ width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text strong style={{ fontSize: 15 }}>
+                    {order.table_no ? `Table ${order.table_no}` : 'Walk-in'}
+                  </Text>
+                  <Tag color={order.status === 'unpaid' ? 'volcano' : 'blue'}>
+                    {order.status.toUpperCase()}
+                  </Tag>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {order.customer_name || 'Guest'}
+                    </Text>
+                    <Text type="secondary" style={{ fontSize: 11 }}>
+                      {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </div>
+                  <Text strong style={{ color: COLORS.darkGreen, fontSize: 16 }}>
+                    ${Number(order.total_amount).toFixed(2)}
+                  </Text>
+                </div>
+              </div>
+            </List.Item>
+          )}
+        />
+        <div style={{ padding: 20 }}>
+          <Button block onClick={getPendingOrders} icon={<ClockCircleOutlined />}>Refresh List</Button>
+        </div>
+      </Drawer>
     </div>
   );
 }

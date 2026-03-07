@@ -5,7 +5,8 @@ exports.create = async (req, res) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const { business_id, branch_id, user_id } = req;
+        const { business_id, branch_id } = req;
+        const user_id = req.user_id || null; // Support guest orders (QR Scan)
         const {
             customer_name,
             table_no,
@@ -13,14 +14,20 @@ exports.create = async (req, res) => {
             total_amount,
             payment_method,
             order_type,
-            cart_items // Array of products
+            cart_items, // Array of products
+            status: requestStatus // 'unpaid' etc.
         } = req.body;
+
+        // Default status: if guest ordered without paying yet -> 'ordered' or 'unpaid'
+        // If POS staff created it (user_id exists) -> usually 'completed' (already paid)
+        let order_status = requestStatus || (user_id ? 'completed' : 'ordered');
+        if (payment_method === 'Cash' && !user_id) order_status = 'unpaid';
 
         // A. Insert into Orders Table
         const [order_res] = await conn.query(
-            `INSERT INTO orders (business_id, branch_id, user_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [business_id, branch_id, user_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type]
+            `INSERT INTO orders (business_id, branch_id, user_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, status) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [business_id, branch_id, user_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, order_status]
         );
         const order_id = order_res.insertId;
 
@@ -112,6 +119,7 @@ exports.getList = async (req, res) => {
             params.push(from_date, to_date);
         }
 
+        sql += " AND o.status != 'cancelled'";
         sql += " ORDER BY o.id DESC LIMIT 100";
 
         const [list] = await db.query(sql, params);
@@ -135,5 +143,41 @@ exports.getOrderDetail = async (req, res) => {
         res.json({ details });
     } catch (error) {
         logError("order.getOrderDetail", error, res);
+    }
+};
+
+// 4. Get Pending Orders (For POS Table ordering)
+exports.getPendingOrders = async (req, res) => {
+    try {
+        const { business_id, branch_id } = req;
+        const sql = `
+            SELECT o.* 
+            FROM orders o
+            WHERE o.business_id = ? AND o.branch_id = ? AND o.status IN ('ordered', 'unpaid')
+            ORDER BY o.id DESC
+        `;
+        const [list] = await db.query(sql, [business_id, branch_id]);
+        res.json({ list });
+    } catch (error) {
+        logError("order.getPendingOrders", error, res);
+    }
+};
+
+// 5. Update Order Status (e.g. from table ordering to paid)
+exports.updateStatus = async (req, res) => {
+    try {
+        const { order_id, status, payment_method } = req.body;
+        const { business_id } = req;
+
+        // Verify ownership
+        const [order] = await db.query("SELECT id FROM orders WHERE id = ? AND business_id = ?", [order_id, business_id]);
+        if (order.length === 0) return res.status(403).json({ message: "Order not found" });
+
+        const sql = "UPDATE orders SET status = ?, payment_method = ? WHERE id = ?";
+        await db.query(sql, [status || 'completed', payment_method || 'Cash', order_id]);
+
+        res.json({ success: true, message: "Order status updated successfully!" });
+    } catch (error) {
+        logError("order.updateStatus", error, res);
     }
 };

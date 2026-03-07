@@ -16,8 +16,10 @@
     "axios": "^1.7.5",
     "baseline-browser-mapping": "^2.10.0",
     "caniuse-lite": "^1.0.30001776",
+    "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
     "file-saver": "^2.0.5",
+    "framer-motion": "^12.35.0",
     "html2canvas": "^1.4.1",
     "image-extensions": "^1.1.0",
     "jspdf": "^3.0.1",
@@ -37,6 +39,7 @@
     "react-router-dom": "^6.26.1",
     "react-to-print": "^3.0.5",
     "recharts": "^2.15.1",
+    "tailwind-merge": "^3.5.0",
     "xlsx": "^0.18.5",
     "zustand": "^4.5.5"
   },
