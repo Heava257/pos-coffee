@@ -183,3 +183,45 @@ exports.getProfile = async (req, res) => {
     logError("auth.getProfile", error, res);
   }
 };
+
+// 4. Update Profile (User themselves)
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, password } = req.body;
+    const user_id = req.user_id; // From token
+    const image = req.file?.filename;
+
+    let sql = "UPDATE users SET name = ?";
+    let params = [name];
+
+    if (image) {
+      sql += ", image = ?";
+      params.push(image);
+    }
+
+    if (password && password.trim() !== "") {
+      const hashedPassword = bcrypt.hashSync(password, 10);
+      sql += ", password = ?";
+      params.push(hashedPassword);
+    }
+
+    sql += " WHERE id = ?";
+    params.push(user_id);
+
+    await db.query(sql, params);
+
+    // Fetch updated data
+    const [updatedUser] = await db.query(
+      "SELECT id, name, email, image as profile_image FROM users WHERE id = ?",
+      [user_id]
+    );
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully!",
+      profile: updatedUser[0]
+    });
+  } catch (error) {
+    logError("auth.updateProfile", error, res);
+  }
+};

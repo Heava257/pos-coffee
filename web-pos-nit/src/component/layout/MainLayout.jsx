@@ -345,34 +345,21 @@ const MainLayout = () => {
 
   const itemsDropdown = [
     {
-      key: "1",
-      label: (
-        <a
-          onClick={(e) => {
-            e.preventDefault();
-            navigate('/profile');
-          }}
-        >
-          Profile
-        </a>
-      ),
+      key: "profile",
+      label: "My Profile / ព័ត៌មានផ្ទាល់ខ្លួន",
+      icon: <UserOutlined />,
     },
     {
-      key: "2",
-      label: (
-        <a target="_blank" rel="noopener noreferrer" href="/">
-          Change Your Password
-        </a>
-      ),
-      icon: <SmileOutlined />,
-      disabled: true,
+      type: 'divider',
     },
     {
       key: "logout",
       danger: true,
-      label: "Logout",
+      label: "Logout / ចាកចេញ",
+      icon: <LockOutlined />,
     },
   ];
+
 
   // Calculate responsive margins and dimensions
   const getSiderWidth = () => {

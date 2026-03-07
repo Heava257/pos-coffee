@@ -1,285 +1,354 @@
 
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Form, Input, Button, Upload, message, Card, Row, Col, Modal } from "antd";
-import { UserOutlined } from "@ant-design/icons";
+import {
+  Form,
+  Input,
+  Button,
+  Upload,
+  message,
+  Card,
+  Row,
+  Col,
+  Typography,
+  Avatar,
+  Divider,
+  Space,
+  Tag
+} from "antd";
+import {
+  UserOutlined,
+  LockOutlined,
+  CameraOutlined,
+  SaveOutlined,
+  MailOutlined,
+  ShopOutlined,
+  SafetyCertificateOutlined
+} from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
 import { getProfile, setProfile } from "../../store/profile.store";
-import "./ProfilePage.module.css";
+
+const { Title, Text } = Typography;
 
 const ProfilePage = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [imageUrl, setImageUrl] = useState(null);
-  const [profile, setProfileState] = useState(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState("");
-  const navigate = useNavigate();
+  const [fetching, setFetching] = useState(true);
+  const [profileData, setProfileData] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+
   const currentUser = getProfile();
-  const [imageDefault, setImageDefault] = useState([]);
 
-  // Fetch user profile data
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
   const fetchProfile = async () => {
-    if (!currentUser || !currentUser.id) {
-      message.error("User not found, redirecting to login");
-      navigate("/login");
-      return;
-    }
-
+    setFetching(true);
     try {
-      const res = await request(`auth/user-profile/${currentUser.id}`, "get");
-      if (res && !res.error) {
-        setProfileState(res.profile);
+      const res = await request("auth/profile", "get");
+      if (res && res.profile) {
+        setProfileData(res.profile);
         form.setFieldsValue({
           name: res.profile.name,
-          username: res.profile.username,
         });
-
-        // Set the profile image if it exists
-        if (res.profile.profile_image) {
-          const imageUrl = Config.getFullImagePath(res.profile.profile_image);
-          setImageUrl(imageUrl);
-          setImageDefault([
-            {
-              uid: "-1",
-              name: res.profile.profile_image,
-              status: "done",
-              url: imageUrl,
-            },
-          ]);
-        } else {
-          setImageDefault([]); // Clear the image if no profile image exists
+        if (res.profile.image) {
+          setPreviewUrl(Config.getFullImagePath(res.profile.image));
         }
       }
     } catch (error) {
-      message.error("Error retrieving profile information");
-      console.error("Error fetching profile:", error);
+      console.error("Fetch profile error:", error);
+      message.error("Failed to load profile data");
+    } finally {
+      setFetching(false);
     }
   };
 
-  // Only run once when component mounts
-  useEffect(() => {
-    fetchProfile();
-  }, []); // Empty dependency array to run only once
-
-  // Handle form submission
   const onFinish = async (values) => {
-    if (!currentUser || !currentUser.id) {
-      message.error("User information is missing");
-      return;
-    }
-  
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append("name", values.name.trim());
-      formData.append("username", values.username.trim());
-  
+      formData.append("name", values.name);
       if (values.password) {
         formData.append("password", values.password);
       }
-  
-      // Append the file if it exists - use "upload_image" to match backend
-      if (values.profile_image && values.profile_image.file) {
-        formData.append("upload_image", values.profile_image.file.originFileObj);
+      if (imageFile) {
+        formData.append("upload_image", imageFile);
       }
-  
-      // Send the request to the backend
-      const res = await request(`user/profile/${currentUser.id}`, "put", formData);
-  
+
+      const res = await request("auth/profile", "put", formData);
       if (res && res.success) {
         message.success("Profile updated successfully!");
-  
-        // Clear the form cache for the image
-        form.setFieldsValue({
-          profile_image: null
-        });
-  
-        // Update locally stored profile with the returned profile data
-        if (res.profile) {
-          setProfile({
-            ...currentUser,
-            name: res.profile.name,
-            username: res.profile.username,
-            profile_image: res.profile.profile_image
-          });
-        }
-  
-        // Refresh profile to get updated data including the new image
-        setTimeout(() => {
-          fetchProfile();
-          navigate("/login");
-        }, 300);
-      } else {
-        message.error(res.message || "Failed to update profile");
+
+        // Update local storage
+        const updatedProfile = {
+          ...currentUser,
+          name: res.profile.name,
+          profile_image: res.profile.profile_image
+        };
+        setProfile(updatedProfile);
+
+        // Update local state
+        setProfileData(prev => ({
+          ...prev,
+          name: res.profile.name,
+          image: res.profile.profile_image
+        }));
+
+        form.setFieldValue("password", "");
+        form.setFieldValue("confirm_password", "");
+        setImageFile(null);
       }
     } catch (error) {
-      message.error("Failed to update profile. Please try again.");
-      console.error("Error updating profile:", error);
+      console.error("Update profile error:", error);
+      message.error("Failed to update profile");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle image preview
-  const handlePreview = async (file) => {
-    if (!file.url && !file.preview) {
-      file.preview = await getBase64(file.originFileObj);
+  const handleImageChange = (info) => {
+    if (info.file.status === 'removed') {
+      setImageFile(null);
+      setPreviewUrl(profileData?.image ? Config.getFullImagePath(profileData.image) : null);
+      return;
     }
-    setPreviewImage(file.url || file.preview);
-    setPreviewOpen(true);
-  };
 
-  // Convert file to base64 for preview
-  const getBase64 = (file) => {
-    return new Promise((resolve, reject) => {
+    const file = info.file.originFileObj || info.file;
+    if (file) {
+      setImageFile(file);
       const reader = new FileReader();
+      reader.onload = (e) => setPreviewUrl(e.target.result);
       reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  // Handle image upload changes
-  const handleChangeImageDefault = ({ fileList: newFileList }) => {
-    setImageDefault(newFileList);
-
-    // Update the form state with the new file
-    if (newFileList.length > 0) {
-      form.setFieldsValue({
-        profile_image: { file: newFileList[0] },
-      });
-    } else {
-      form.setFieldsValue({
-        profile_image: null,
-      });
     }
   };
+
+  if (fetching) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <Card loading={true} style={{ width: 400 }} />
+      </div>
+    );
+  }
 
   return (
-    <div className="profile-page">
-      <Card
-        title="Profile Settings"
-        bordered={false}
-        style={{ width: "100%", maxWidth: 800, margin: "0 auto" }}
-      >
-        <Row gutter={[24, 24]}>
-         
-          <Col xs={24} md={16}>
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={onFinish}
-              initialValues={{
-                name: profile?.name || "",
-                username: profile?.username || "",
+    <div style={{ padding: "40px 20px", background: "#f4f1eb", minHeight: "100vh" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+
+        <Row gutter={[32, 32]}>
+          {/* Left Column: Summary Card */}
+          <Col xs={24} lg={8}>
+            <Card
+              bordered={false}
+              style={{
+                borderRadius: "24px",
+                textAlign: "center",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
+                overflow: "hidden"
               }}
+              bodyStyle={{ padding: "40px 24px" }}
             >
-               <Col xs={24} md={8} style={{ textAlign: "center" }}>
-            <Form.Item
-              name="profile_image"
-              label={
-                <div style={{ textAlign: "center" }}>
-                  <span className="khmer-text">រូបភាព</span>
-                  <br />
-                  <span className="english-text">Profile Image</span>
-                </div>
+              <div style={{ position: "relative", display: "inline-block", marginBottom: "24px" }}>
+                <Avatar
+                  size={140}
+                  icon={<UserOutlined />}
+                  src={previewUrl}
+                  style={{
+                    border: "4px solid #fff",
+                    boxShadow: "0 8px 20px rgba(30,74,45,0.15)",
+                    backgroundColor: "#1e4a2d"
+                  }}
+                />
+                <Upload
+                  showUploadList={false}
+                  beforeUpload={() => false}
+                  onChange={handleImageChange}
+                  accept="image/*"
+                >
+                  <Button
+                    shape="circle"
+                    icon={<CameraOutlined />}
+                    style={{
+                      position: "absolute",
+                      bottom: 5,
+                      right: 5,
+                      background: "#c0a060",
+                      borderColor: "#c0a060",
+                      color: "#fff",
+                      boxShadow: "0 4px 10px rgba(192, 160, 96, 0.4)"
+                    }}
+                  />
+                </Upload>
+              </div>
+
+              <Title level={3} style={{ margin: "0 0 8px", color: "#1e4a2d" }}>
+                {profileData?.name}
+              </Title>
+              <Text type="secondary" style={{ display: "block", marginBottom: "16px" }}>
+                {profileData?.email}
+              </Text>
+
+              <Space direction="vertical" size="small" style={{ width: "100%" }}>
+                <Tag color="#1e4a2d" style={{ borderRadius: "100px", padding: "2px 12px" }}>
+                  {currentUser?.role_name || "Staff"}
+                </Tag>
+                {profileData?.status === 'active' && (
+                  <Tag color="success" style={{ borderRadius: "100px", padding: "2px 12px" }}>Active Account</Tag>
+                )}
+              </Space>
+
+              <Divider style={{ margin: "24px 0" }} />
+
+              <div style={{ textAlign: "left" }}>
+                <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <ShopOutlined style={{ color: "#c0a060", fontSize: "18px" }} />
+                    <div>
+                      <Text type="secondary" size="small" style={{ display: "block", fontSize: "11px" }}>BRANCH</Text>
+                      <Text strong style={{ color: "#1e4a2d" }}>{profileData?.branch_name || "Main Branch"}</Text>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <SafetyCertificateOutlined style={{ color: "#c0a060", fontSize: "18px" }} />
+                    <div>
+                      <Text type="secondary" size="small" style={{ display: "block", fontSize: "11px" }}>BUSINESS</Text>
+                      <Text strong style={{ color: "#1e4a2d" }}>{profileData?.business_name || "Green Grounds"}</Text>
+                    </div>
+                  </div>
+                </Space>
+              </div>
+            </Card>
+          </Col>
+
+          {/* Right Column: Settings Form */}
+          <Col xs={24} lg={16}>
+            <Card
+              bordered={false}
+              style={{
+                borderRadius: "24px",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.05)"
+              }}
+              title={
+                <Title level={4} style={{ margin: "8px 0", color: "#1e4a2d" }}>
+                  Account Settings / ការកំណត់គណនី
+                </Title>
               }
             >
-              <Upload
-                name="upload_image" // Ensure this matches the backend field name
-                accept="image/*"
-                customRequest={(options) => {
-                  setTimeout(() => {
-                    options.onSuccess("ok");
-                  }, 0);
-                }}
-                maxCount={1}
-                listType="picture-card"
-                fileList={imageDefault}
-                onPreview={handlePreview}
-                onChange={handleChangeImageDefault}
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={onFinish}
+                requiredMark={false}
               >
-                {imageDefault.length >= 1 ? null : (
-                  <div>
-                    <UserOutlined style={{ fontSize: 40, color: "#aaa" }} />
-                    <div style={{ marginTop: 8 }}>Upload</div>
-                  </div>
-                )}
-              </Upload>
-            </Form.Item>
-          </Col>
-              <Form.Item
-                label="Name"
-                name="name"
-                rules={[
-                  { required: true, message: "Please enter your name!" },
-                ]}
-              >
-                <Input placeholder="Enter your name" />
-              </Form.Item>
+                <Row gutter={24}>
+                  <Col xs={24}>
+                    <Title level={5} style={{ marginBottom: "20px", color: "#c0a060" }}>
+                      General Information / ព័ត៌មានទូទៅ
+                    </Title>
+                  </Col>
 
-              <Form.Item
-                label="Username"
-                name="username"
-                rules={[
-                  { required: true, message: "Please enter your username!" },
-                ]}
-              >
-                <Input placeholder="Enter your username" />
-              </Form.Item>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      label={<Text strong>FullName / ឈ្មោះពេញ</Text>}
+                      name="name"
+                      rules={[{ required: true, message: "Please enter your name" }]}
+                    >
+                      <Input
+                        prefix={<UserOutlined style={{ color: "#bfbfbf" }} />}
+                        placeholder="Enter full name"
+                        size="large"
+                        style={{ borderRadius: "8px" }}
+                      />
+                    </Form.Item>
+                  </Col>
 
-              <Form.Item
-                label="New Password"
-                name="password"
-                rules={[
-                  { min: 6, message: "Password must be at least 6 characters!" },
-                ]}
-              >
-                <Input.Password placeholder="Enter new password (leave blank to keep current)" />
-              </Form.Item>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      label={<Text strong>Email Address / អ៊ីម៉ែល (Login ID)</Text>}
+                    >
+                      <Input
+                        prefix={<MailOutlined style={{ color: "#bfbfbf" }} />}
+                        value={profileData?.email}
+                        disabled
+                        size="large"
+                        style={{ borderRadius: "8px", background: "#f5f5f5" }}
+                      />
+                    </Form.Item>
+                  </Col>
 
-              <Form.Item
-                label="Confirm Password"
-                name="confirmPassword"
-                dependencies={["password"]}
-                rules={[
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!getFieldValue("password") || !value) {
-                        return Promise.resolve();
-                      }
-                      if (getFieldValue("password") === value) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject("Passwords do not match!");
-                    },
-                  }),
-                ]}
-              >
-                <Input.Password placeholder="Confirm new password" />
-              </Form.Item>
+                  <Col xs={24}>
+                    <Divider style={{ margin: "32px 0 24px" }} />
+                    <Title level={5} style={{ marginBottom: "20px", color: "#c0a060" }}>
+                      Security Settings / សុវត្ថិភាព
+                    </Title>
+                  </Col>
 
-              <Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={loading}
-                  style={{ width: "100%" }}
-                >
-                  Save Changes
-                </Button>
-              </Form.Item>
-            </Form>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      label={<Text strong>New Password / លេខសម្ងាត់ថ្មី</Text>}
+                      name="password"
+                      rules={[{ min: 6, message: "Minimum 6 characters" }]}
+                    >
+                      <Input.Password
+                        prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
+                        placeholder="Leave blank to keep current"
+                        size="large"
+                        style={{ borderRadius: "8px" }}
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      label={<Text strong>Confirm Password / បញ្ជាក់លេខសម្ងាត់</Text>}
+                      name="confirm_password"
+                      dependencies={['password']}
+                      rules={[
+                        ({ getFieldValue }) => ({
+                          validator(_, value) {
+                            if (!value || getFieldValue('password') === value) {
+                              return Promise.resolve();
+                            }
+                            return Promise.reject(new Error('Passwords do not match!'));
+                          },
+                        }),
+                      ]}
+                    >
+                      <Input.Password
+                        prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
+                        placeholder="Repeat new password"
+                        size="large"
+                        style={{ borderRadius: "8px" }}
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} style={{ marginTop: "32px", textAlign: "right" }}>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={loading}
+                      icon={<SaveOutlined />}
+                      size="large"
+                      style={{
+                        height: "50px",
+                        padding: "0 40px",
+                        borderRadius: "12px",
+                        background: "#1e4a2d",
+                        borderColor: "#1e4a2d",
+                        boxShadow: "0 8px 20px rgba(30,74,45,0.2)"
+                      }}
+                    >
+                      Save Changes / រក្សាទុក
+                    </Button>
+                  </Col>
+                </Row>
+              </Form>
+            </Card>
           </Col>
         </Row>
-      </Card>
-
-      {/* Image Preview Modal */}
-      <Modal open={previewOpen} title="Image Preview" footer={null} onCancel={() => setPreviewOpen(false)}>
-        <img alt="Preview" style={{ width: "100%" }} src={previewImage} />
-      </Modal>
+      </div>
     </div>
   );
 };

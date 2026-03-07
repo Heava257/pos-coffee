@@ -1,10 +1,12 @@
 const {
   register,
   login,
-  getProfile
+  getProfile,
+  updateProfile
 } = require("../controller/auth.controller");
 const { guestAccess } = require("../controller/guest.controller");
 const authMiddleware = require("../middleware/auth.middleware");
+const { uploadFile } = require("../util/helper");
 
 module.exports = (app) => {
   // Public Routes
@@ -14,4 +16,6 @@ module.exports = (app) => {
 
   // Protected Routes
   app.get("/api/auth/profile", authMiddleware(), getProfile);
+  app.put("/api/auth/profile", authMiddleware(), uploadFile.single("upload_image"), updateProfile);
 };
+
