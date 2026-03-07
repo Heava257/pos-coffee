@@ -18,6 +18,124 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+const ProductOptionsModal = ({
+  item,
+  onAdd,
+  onClose,
+  productSizes,
+  calculateItemPrice
+}) => {
+  const [selectedSize, setSelSize] = useState(null);
+  const [selectedAddons, setSelAddons] = useState([]);
+  const [selectedTemp, setSelTemp] = useState('Cold');
+  const [selectedSugar, setSelSugar] = useState('50%');
+  const [itemQty, setItemQty] = useState(1);
+
+  const temperatures = ['Hot', 'Cold'];
+  const sugarLevels = ['No Sugar', '25%', '50%', '75%', '100%'];
+
+  useEffect(() => {
+    if (item) {
+      setSelSize(productSizes[item.id]?.[0] || null);
+      setSelAddons([]);
+      setSelTemp('Cold');
+      setSelSugar('50%');
+      setItemQty(1);
+    }
+  }, [item, productSizes]);
+
+  if (!item) return null;
+
+  return (
+    <div className="space-y-6 pt-2">
+      <div className="flex gap-4">
+        <div className="w-24 h-24 rounded-2xl bg-[#f8f7f2] overflow-hidden flex-shrink-0">
+          {item.image ? (
+            <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" />
+          ) : (<div className="w-full h-full flex items-center justify-center text-3xl">☕</div>)}
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-[#1e4a2d]">{item.name}</h2>
+          <div className="flex items-center gap-2 mt-2">
+            <p className="text-[#1e4a2d] font-black text-2xl">
+              ${calculateItemPrice(item, selectedSize, []).toFixed(2)}
+            </p>
+            {item.discount > 0 && (
+              <span className="text-sm text-gray-400 line-through font-bold">
+                ${(selectedSize?.price ? parseFloat(selectedSize.price) : parseFloat(item.price)).toFixed(2)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-5">
+        {productSizes[item.id]?.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-bold text-[#1e4a2d]">Select Size</p>
+            <div className="flex flex-wrap gap-2">
+              {productSizes[item.id].map(size => (
+                <button
+                  key={size.id}
+                  onClick={() => setSelSize(size)}
+                  className={cn(
+                    "px-4 py-2 rounded-xl border text-sm font-bold transition-all",
+                    selectedSize?.id === size.id ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
+                  )}
+                > {size.name} </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <p className="text-sm font-bold text-[#1e4a2d]">Temperature</p>
+          <div className="flex gap-2">
+            {temperatures.map(temp => (
+              <button
+                key={temp}
+                onClick={() => setSelTemp(temp)}
+                className={cn(
+                  "flex-1 py-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2",
+                  selectedTemp === temp ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
+                )}
+              > {temp === 'Hot' ? '🔥' : '🧊'} {temp} </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-bold text-[#1e4a2d]">Sugar Level</p>
+          <div className="grid grid-cols-3 gap-2">
+            {sugarLevels.map(level => (
+              <button
+                key={level}
+                onClick={() => setSelSugar(level)}
+                className={cn(
+                  "py-2 rounded-xl border text-xs font-bold transition-all",
+                  selectedSugar === level ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
+                )}
+              > {level} </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-4 flex items-center justify-between gap-4">
+          <div className="flex items-center bg-[#f8f7f2] rounded-2xl p-1 border border-gray-100">
+            <button onClick={() => setItemQty(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-[#1e4a2d]"> <Minus size={18} /> </button>
+            <span className="w-8 text-center font-bold text-[#1e4a2d]">{itemQty}</span>
+            <button onClick={() => setItemQty(q => q + 1)} className="w-10 h-10 flex items-center justify-center text-[#1e4a2d]"> <Plus size={18} /> </button>
+          </div>
+          <button
+            onClick={() => onAdd(item, selectedSize, selectedAddons, selectedTemp, selectedSugar, itemQty)}
+            className="flex-1 bg-[#1e4a2d] text-white py-4 rounded-2xl font-bold shadow-lg shadow-[#1e4a2d]/20 hover:bg-[#153420] transition-colors"
+          > Add to Cart </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CoffeeMenuApp = () => {
   const [selectedTable, setSelectedTable] = useState(() => localStorage.getItem('coffee_pos_table') || null);
   const [selectedShop, setSelectedShop] = useState(() => {
@@ -347,23 +465,13 @@ const CoffeeMenuApp = () => {
   };
 
   const [optionsModalItem, setOptionsModalItem] = useState(null);
-  const [selectedSize, setSelSize] = useState(null);
-  const [selectedAddons, setSelAddons] = useState([]);
-  const [selectedTemp, setSelTemp] = useState('Cold');
-  const [selectedSugar, setSelSugar] = useState('50%');
-  const [itemQty, setItemQty] = useState(1);
 
   const showOptionsModal = (item) => {
     setOptionsModalItem(item);
-    setSelSize(productSizes[item.id]?.[0] || null);
-    setSelAddons([]);
-    setSelTemp('Cold');
-    setSelSugar('50%');
-    setItemQty(1);
   };
 
-  const handleAddToCart = () => {
-    addToCart(optionsModalItem, selectedSize, selectedAddons, selectedTemp, selectedSugar, itemQty);
+  const handleAddToCart = (item, selectedSize, selectedAddons, selectedTemp, selectedSugar, itemQty) => {
+    addToCart(item, selectedSize, selectedAddons, selectedTemp, selectedSugar, itemQty);
     setOptionsModalItem(null);
   };
 
@@ -475,94 +583,13 @@ const CoffeeMenuApp = () => {
           className="premium-modal"
           modalRender={(modal) => modal}
         >
-          {optionsModalItem && (
-            <div className="space-y-6 pt-2">
-              <div className="flex gap-4">
-                <div className="w-24 h-24 rounded-2xl bg-[#f8f7f2] overflow-hidden flex-shrink-0">
-                  {optionsModalItem.image ? (
-                    <img src={Config.getFullImagePath(optionsModalItem.image)} className="w-full h-full object-cover" />
-                  ) : (<div className="w-full h-full flex items-center justify-center text-3xl">☕</div>)}
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#1e4a2d]">{optionsModalItem.name}</h2>
-                  <div className="flex items-center gap-2 mt-2">
-                    <p className="text-[#1e4a2d] font-black text-2xl">
-                      ${calculateItemPrice(optionsModalItem, selectedSize, []).toFixed(2)}
-                    </p>
-                    {optionsModalItem.discount > 0 && (
-                      <span className="text-sm text-gray-400 line-through font-bold">
-                        ${(selectedSize?.price ? parseFloat(selectedSize.price) : parseFloat(optionsModalItem.price)).toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                {productSizes[optionsModalItem.id]?.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-bold text-[#1e4a2d]">Select Size</p>
-                    <div className="flex flex-wrap gap-2">
-                      {productSizes[optionsModalItem.id].map(size => (
-                        <button
-                          key={size.id}
-                          onClick={() => setSelSize(size)}
-                          className={cn(
-                            "px-4 py-2 rounded-xl border text-sm font-bold transition-all",
-                            selectedSize?.id === size.id ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
-                          )}
-                        > {size.name} </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <p className="text-sm font-bold text-[#1e4a2d]">Temperature</p>
-                  <div className="flex gap-2">
-                    {temperatures.map(temp => (
-                      <button
-                        key={temp}
-                        onClick={() => setSelTemp(temp)}
-                        className={cn(
-                          "flex-1 py-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2",
-                          selectedTemp === temp ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
-                        )}
-                      > {temp === 'Hot' ? '🔥' : '🧊'} {temp} </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-sm font-bold text-[#1e4a2d]">Sugar Level</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {sugarLevels.map(level => (
-                      <button
-                        key={level}
-                        onClick={() => setSelSugar(level)}
-                        className={cn(
-                          "py-2 rounded-xl border text-xs font-bold transition-all",
-                          selectedSugar === level ? "bg-[#1e4a2d] border-[#1e4a2d] text-white" : "bg-white border-gray-100 text-[#1e4a2d] hover:bg-gray-50"
-                        )}
-                      > {level} </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center bg-[#f8f7f2] rounded-2xl p-1 border border-gray-100">
-                    <button onClick={() => setItemQty(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-[#1e4a2d]"> <Minus size={18} /> </button>
-                    <span className="w-8 text-center font-bold text-[#1e4a2d]">{itemQty}</span>
-                    <button onClick={() => setItemQty(q => q + 1)} className="w-10 h-10 flex items-center justify-center text-[#1e4a2d]"> <Plus size={18} /> </button>
-                  </div>
-                  <button
-                    onClick={handleAddToCart}
-                    className="flex-1 bg-[#1e4a2d] text-white py-4 rounded-2xl font-bold shadow-lg shadow-[#1e4a2d]/20 hover:bg-[#153420] transition-colors"
-                  > Add to Cart </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <ProductOptionsModal
+            item={optionsModalItem}
+            onAdd={handleAddToCart}
+            onClose={() => setOptionsModalItem(null)}
+            productSizes={productSizes}
+            calculateItemPrice={calculateItemPrice}
+          />
         </Modal>
 
         <Drawer
