@@ -209,7 +209,7 @@ const CoffeeMenuApp = () => {
       quantity: Number(quantity),
       originalPrice: parseFloat(item.price) || 0,
       discount: parseFloat(item.discount) || 0,
-      discountedPrice,
+      discountedPrice: unitPrice,
       totalPrice: unitPrice * Number(quantity),
       image: item.image,
       category_name: item.category_name || ''
