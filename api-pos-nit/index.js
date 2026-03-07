@@ -84,6 +84,19 @@ app.listen(PORT, async () => {
     console.log("Migration: Added 'discount' column to products");
   } catch (err) { }
 
+  // Migration Fix: Add missing categories once
+  try {
+    const bizId = 5;
+    const cats = ['Juice', 'Milk', 'Snack', 'Rice', 'Dessert'];
+    for (const name of cats) {
+      const [rows] = await db.query("SELECT id FROM categories WHERE name = ? AND business_id = ?", [name, bizId]);
+      if (rows.length === 0) {
+        await db.query("INSERT INTO categories (business_id, name) VALUES (?, ?)", [bizId, name]);
+        console.log(`Migration: Added missing category '${name}'`);
+      }
+    }
+  } catch (err) { }
+
   // Migration Fix: Broaden orders table columns to prevent truncation
   try {
     await db.query("ALTER TABLE orders MODIFY payment_method VARCHAR(100) DEFAULT 'cash'");
