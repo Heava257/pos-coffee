@@ -248,27 +248,45 @@ const CoffeeMenuApp = () => {
           return { id: item.category_id, name: name };
         });
         setCategories(uniqueCats);
-        await fetchProductConfigurations(res.list || []);
+        fetchProductConfigurations(res.list || []);
       }
     } catch (error) {
       console.error('Error fetching shop products:', error);
     }
   };
 
-  const fetchProductConfigurations = async (products) => {
+  const fetchProductConfigurations = (products) => {
     if (!products || products.length === 0) return;
-    const productIds = products.map(p => p.id);
+    const sizesMap = {};
+    const addonsMap = {};
 
-    try {
-      // Use consolidated bulk endpoint instead of looping (fixes 404s and slowness)
-      const res = await request(`product/config/bulk`, "post", { product_ids: productIds });
-      if (res && res.success) {
-        setProductSizes(res.sizes || {});
-        setProductAddons(res.addons || {});
+    products.forEach(p => {
+      try {
+        if (p.sizes) {
+          const parsedSizes = typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes;
+          sizesMap[p.id] = parsedSizes.map(s => ({
+            id: s.id || Math.random(),
+            name: s.label || s.name || "Default",
+            value: (s.id || s.label || s.name || "").toString(),
+            price: parseFloat(s.price || 0)
+          }));
+        }
+        if (p.addons) {
+          const parsedAddons = typeof p.addons === 'string' ? JSON.parse(p.addons) : p.addons;
+          addonsMap[p.id] = parsedAddons.map(a => ({
+            id: a.id || Math.random(),
+            name: a.label || a.name || "Default",
+            value: (a.id || a.label || a.name || "").toString(),
+            price: parseFloat(a.price || 0)
+          }));
+        }
+      } catch (e) {
+        console.error("Error parsing configs for product", p.id, e);
       }
-    } catch (error) {
-      console.error('Error fetching bulk configurations:', error);
-    }
+    });
+
+    setProductSizes(sizesMap);
+    setProductAddons(addonsMap);
   };
 
   const temperatures = ['Hot', 'Cold'];

@@ -26,7 +26,5 @@ module.exports = (app) => {
     app.post("/api/new barcode", authMiddleware(), generateBarcode); // Fallback for space
     app.get("/api/check-barcode/:barcode", authMiddleware(), checkBarcode);
 
-    // Bulk Configurations (Consolidated to fix 404s and slowness)
-    const { getBulkConfig } = require("../controller/product.controller");
-    app.post("/api/product/config/bulk", authMiddleware(), getBulkConfig);
+    app.get("/api/check-barcode/:barcode", authMiddleware(), checkBarcode);
 };
