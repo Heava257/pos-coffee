@@ -83,5 +83,14 @@ app.listen(PORT, async () => {
     await db.query("ALTER TABLE products ADD COLUMN discount DOUBLE DEFAULT 0;");
     console.log("Migration: Added 'discount' column to products");
   } catch (err) { }
+
+  // Migration Fix: Broaden orders table columns to prevent truncation
+  try {
+    await db.query("ALTER TABLE orders MODIFY payment_method VARCHAR(100) DEFAULT 'cash'");
+    await db.query("ALTER TABLE orders MODIFY status VARCHAR(100) DEFAULT 'ordered'");
+    console.log("Migration: 'orders.payment_method' and 'orders.status' are now flexible VARCHARs");
+  } catch (err) {
+    console.error("Migration Error (orders table):", err.message);
+  }
 });
 
