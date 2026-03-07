@@ -562,7 +562,6 @@ function PosPage() {
     setState((p) => ({ ...p, loading: true }));
     try {
       const res = await request(`product`, "get", {
-        is_list_all: 1,
         category_id: selectedCategory,
       });
       if (res && !res.error) {

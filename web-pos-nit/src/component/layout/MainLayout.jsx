@@ -235,10 +235,15 @@ const MainLayout = () => {
     );
 
     if (findIndex === -1) {
+      if (currentPath === "/" && (profile?.business_id === 1 || profile?.is_super_admin === 1 || profile?.role_name?.toUpperCase() === "OWNER")) {
+        return;
+      }
       // Current page not in permissions — redirect to first allowed page
       // Ensure we have a valid route to redirect to
       if (permision[0] && permision[0].web_route_key) {
         navigate(permision[0].web_route_key);
+      } else {
+        navigate("/invoices"); // Fallback to POS if no permissions found
       }
     }
   };
@@ -270,6 +275,14 @@ const MainLayout = () => {
       // Case 1: Simple menu item (no children)
       if (newItem.hasOwnProperty('key') && !newItem.children) {
         if (newItem.key === "business" && profile?.business_id === 1) return newItem;
+
+        // Let Dashboard ("") be shown ONLY if they have explicit permission OR they are the owner/Super Admin
+        if (newItem.key === "") {
+          if (profile?.business_id === 1 || profile?.is_super_admin === 1 || profile?.role_name?.toUpperCase() === "OWNER") {
+            return newItem;
+          }
+        }
+
         return checkPath(newItem.key) ? newItem : null;
       }
 
@@ -428,6 +441,7 @@ const MainLayout = () => {
           collapsible
           collapsed={collapsed}
           onCollapse={(value) => setCollapsed(value)}
+          trigger={null}
           style={{
             background: "#ffffff",
             borderRight: "1px solid #e8e3d8",
