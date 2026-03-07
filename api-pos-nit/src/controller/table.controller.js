@@ -27,8 +27,14 @@ exports.create = async (req, res) => {
         const { branch_id, table_name } = req.body;
 
         // Format: [FrontendURL]/scan?biz=[business_id]&branch=[branch_id]&table=[table_name]
-        // Note: In real app, you'd get frontend URL from config or req.headers.referer
-        const frontendUrl = "http://localhost:5173"; // Updated to match user's Vite port
+        // Try to get frontend URL from Referer/Origin or use a fallback for local testing
+        let frontendUrl = "http://172.16.20.14:5173";
+        if (req.headers.origin && !req.headers.origin.includes("localhost")) {
+            frontendUrl = req.headers.origin;
+        } else if (req.headers.referer && !req.headers.referer.includes("localhost")) {
+            try { frontendUrl = new URL(req.headers.referer).origin; } catch (e) { }
+        }
+
         const qr_code_url = `${frontendUrl}/scan?biz=${business_id}&branch=${branch_id}&table=${encodeURIComponent(table_name)}`;
         const qr_api_url = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr_code_url)}`;
 

@@ -12,5 +12,6 @@ module.exports = (app) => {
     app.get("/api/order-pending", authMiddleware(), getPendingOrders);
     app.get("/api/order/:order_id", authMiddleware(), getOrderDetail);
     app.post("/api/order", authMiddleware(), create);
+    app.post("/api/order/create", authMiddleware(), create); // Alias for convenience
     app.put("/api/order-status", authMiddleware(), updateStatus);
 };

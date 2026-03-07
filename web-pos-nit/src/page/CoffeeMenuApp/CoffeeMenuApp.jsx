@@ -217,7 +217,7 @@ const CoffeeMenuApp = () => {
     };
 
     try {
-      const res = await request("order/create", "post", order);
+      const res = await request("order", "post", order);
       if (res && res.success) {
         message.success("Order placed successfully!");
         setCart([]);
