@@ -256,32 +256,19 @@ const CoffeeMenuApp = () => {
   };
 
   const fetchProductConfigurations = async (products) => {
-    const sizes = {};
-    const addons = {};
-    for (const product of products) {
-      try {
-        const sizesRes = await request(`product/getSizes?product_id=${product.id}`, "get");
-        if (sizesRes && sizesRes.list) {
-          sizes[product.id] = sizesRes.list.map(size => ({
-            id: size.id,
-            name: size.label,
-            value: size.id.toString(),
-            price: parseFloat(size.price || 0)
-          }));
-        }
-        const addonsRes = await request(`product/getAddons?product_id=${product.id}`, "get");
-        if (addonsRes && addonsRes.list) {
-          addons[product.id] = addonsRes.list.map(addon => ({
-            id: addon.id,
-            name: addon.label,
-            value: addon.id.toString(),
-            price: parseFloat(addon.price || 0)
-          }));
-        }
-      } catch (error) { }
+    if (!products || products.length === 0) return;
+    const productIds = products.map(p => p.id);
+
+    try {
+      // Use consolidated bulk endpoint instead of looping (fixes 404s and slowness)
+      const res = await request(`product/config/bulk`, "post", { product_ids: productIds });
+      if (res && res.success) {
+        setProductSizes(res.sizes || {});
+        setProductAddons(res.addons || {});
+      }
+    } catch (error) {
+      console.error('Error fetching bulk configurations:', error);
     }
-    setProductSizes(sizes);
-    setProductAddons(addons);
   };
 
   const temperatures = ['Hot', 'Cold'];
