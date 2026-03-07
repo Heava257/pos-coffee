@@ -118,20 +118,20 @@ app.listen(PORT, async () => {
     dbCats.forEach(c => catMap[c.name] = c.id);
 
     const productsToSeed = [
-      { cat: 'Juice', name: 'Fresh Orange Juice', price: 2.5, img: 'juice_cat.png' },
-      { cat: 'Juice', name: 'Apple Juice Delight', price: 2.5, img: 'juice_cat.png' },
-      { cat: 'Juice', name: 'Watermelon Splash', price: 2.5, img: 'juice_cat.png' },
-      { cat: 'Juice', name: 'Pineapple Glow', price: 2.5, img: 'juice_cat.png' },
-      { cat: 'Juice', name: 'Tropical Mixed Juice', price: 3.0, img: 'juice_cat.png' },
+      { cat: 'Juice', name: 'Fresh Orange Juice', price: 2.5, img: 'orange_juice.png' },
+      { cat: 'Juice', name: 'Apple Juice Delight', price: 2.5, img: 'apple_juice.png' },
+      { cat: 'Juice', name: 'Watermelon Splash', price: 2.5, img: 'watermelon_juice.png' },
+      { cat: 'Juice', name: 'Pineapple Glow', price: 2.5, img: 'pineapple_juice.png' },
+      { cat: 'Juice', name: 'Tropical Mixed Juice', price: 3.0, img: 'tropical_juice.png' },
 
-      { cat: 'Milk', name: 'Pure Fresh Milk', price: 2.0, img: 'milk_cat.png' },
-      { cat: 'Milk', name: 'Soy Milk Classic', price: 2.5, img: 'milk_cat.png' },
-      { cat: 'Milk', name: 'Almond Milk Silky', price: 3.0, img: 'milk_cat.png' },
-      { cat: 'Milk', name: 'Strawberry Milk Dream', price: 2.5, img: 'milk_cat.png' },
-      { cat: 'Milk', name: 'Rich Chocolate Milk', price: 2.5, img: 'milk_cat.png' },
+      { cat: 'Milk', name: 'Pure Fresh Milk', price: 2.0, img: 'pure_milk.png' },
+      { cat: 'Milk', name: 'Soy Milk Classic', price: 2.5, img: 'soy_milk.png' },
+      { cat: 'Milk', name: 'Almond Milk Silky', price: 3.0, img: 'almond_milk.png' },
+      { cat: 'Milk', name: 'Strawberry Milk Dream', price: 2.5, img: 'strawberry_milk.png' },
+      { cat: 'Milk', name: 'Rich Chocolate Milk', price: 2.5, img: 'chocolate_milk.png' },
 
-      { cat: 'Snack', name: 'Chocolate Cookies', price: 1.5, img: 'snack_cat.png' },
-      { cat: 'Snack', name: 'Potato Chips', price: 1.5, img: 'snack_cat.png' },
+      { cat: 'Snack', name: 'Chocolate Cookies', price: 1.5, img: 'cookies.png' },
+      { cat: 'Snack', name: 'Potato Chips', price: 1.5, img: 'potato_chips.png' },
       { cat: 'Snack', name: 'Butter Popcorn', price: 2.0, img: 'snack_cat.png' },
       { cat: 'Snack', name: 'Spicy Nachos', price: 3.5, img: 'snack_cat.png' },
       { cat: 'Snack', name: 'Fudge Brownie', price: 2.5, img: 'snack_cat.png' },
@@ -165,6 +165,10 @@ app.listen(PORT, async () => {
           [branchId, pid, p.price, p.price * 0.5]
         );
         console.log(`Seeder: Added product '${p.name}'`);
+      } else {
+        // Update image if it's currently generic or placeholder
+        await db.query("UPDATE products SET image = ? WHERE id = ?", [p.img, exists[0].id]);
+        console.log(`Seeder: Updated image for product '${p.name}'`);
       }
     }
   } catch (err) {
