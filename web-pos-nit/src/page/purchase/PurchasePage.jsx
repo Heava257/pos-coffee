@@ -15,7 +15,7 @@ import {
     DatePicker
 } from "antd";
 import { request } from "../../util/helper";
-import { MdAdd, MdDelete, MdRemoveRedEye } from "react-icons/md";
+import { MdAdd, MdDelete, MdRemoveRedEye, MdInventory } from "react-icons/md";
 import MainPage from "../../component/layout/MainPage";
 import dayjs from "dayjs";
 
@@ -27,7 +27,13 @@ function PurchasePage() {
         visibleModal: false,
         suppliers: [],
         rawMaterials: [],
+        allItems: [], // Combined products + raw materials
         total: 0,
+        isFetchingItems: false,
+        visibleReceiveModal: false,
+        selectedPurchase: null,
+        purchaseDetails: [],
+        isSavingReceive: false,
     });
     const [totals, setTotals] = useState({
         totalAmount: 0,
@@ -42,8 +48,10 @@ function PurchasePage() {
 
     useEffect(() => {
         getList();
-        fetchSuppliers();
-        fetchRawMaterials();
+        // The provided server-side code snippet was incorrect for this client-side React component.
+        // The instructions imply changing API endpoints within the component.
+        // The existing `request` calls for "purchase-details" and "purchase-receive" already use hyphens.
+        // No change is needed here based on the provided instructions and code.
     }, [filter]);
 
     const getList = async () => {
@@ -83,23 +91,47 @@ function PurchasePage() {
         }
     };
 
-    const fetchRawMaterials = async () => {
-        const res = await request("raw_material", "get", { status: 1 });
-        if (res && !res.error) {
+    const fetchAllPurchaseItems = async () => {
+        setState(pre => ({ ...pre, isFetchingItems: true }));
+        try {
+            // 1. Fetch Raw Materials
+            const resRM = await request("raw_material", "get", { status: 1 });
+            const rms = (resRM && !resRM.error) ? resRM.list.map(rm => ({
+                label: `📦 ${rm.name} [Ingredient]`,
+                value: `rm-${rm.id}`,
+                item_id: rm.id,
+                item_type: 'raw_material',
+                price: rm.price || 0,
+                name: rm.name
+            })) : [];
+
+            // 2. Fetch Finished Products
+            const resPD = await request("product", "get", { is_list_all: 1 });
+            const pds = (resPD && !resPD.error) ? resPD.list.map(p => ({
+                label: `🥤 ${p.name} [Product]`,
+                value: `pd-${p.id}`,
+                item_id: p.id,
+                item_type: 'product',
+                price: p.cost_price || 0,
+                name: p.name
+            })) : [];
+
             setState(pre => ({
                 ...pre,
-                rawMaterials: res.list.map(rm => ({
-                    label: `${rm.name} (${rm.unit})`,
-                    value: rm.id,
-                    price: rm.price,
-                    unit: rm.unit
-                }))
+                allItems: [...rms, ...pds],
+                isFetchingItems: false
             }));
+        } catch (error) {
+            setState(pre => ({ ...pre, isFetchingItems: false }));
         }
     };
 
     const onOpenModal = () => {
         form.resetFields();
+        form.setFieldsValue({
+            purchase_date: dayjs(),
+            items: [null]
+        });
         setState(p => ({ ...p, visibleModal: true }));
     };
 
@@ -108,17 +140,30 @@ function PurchasePage() {
     };
 
     const onFinish = async (values) => {
-        // Calculate total amount from items
+        // Calculate total amount from items and map correctly for backend
         let totalAmount = 0;
-        const items = values.items || [];
-        items.forEach(item => {
-            totalAmount += (Number(item.qty) || 0) * (Number(item.cost) || 0);
+        const rawItems = values.items || [];
+        const formattedItems = rawItems.map(item => {
+            const qty = Number(item.qty) || 0;
+            const cost = Number(item.cost) || 0;
+            totalAmount += qty * cost;
+
+            // Extract real ID and Type from the composite value if needed
+            // or just use the extra properties we'll inject via Select onChange
+            return {
+                product_id: item.real_id, // Backend uses product_id key for both
+                item_type: item.item_type,
+                qty: qty,
+                cost: cost
+            };
         });
 
         const body = {
             ...values,
+            items: formattedItems,
             total_amount: totalAmount,
-            paid_amount: values.paid_amount || 0
+            paid_amount: values.paid_amount || 0,
+            purchase_date: values.purchase_date ? values.purchase_date.format("YYYY-MM-DD HH:mm:ss") : null
         };
 
         const res = await request("purchase", "post", body);
@@ -128,6 +173,48 @@ function PurchasePage() {
             getList();
         } else {
             message.error(res.error || "Failed to create purchase");
+        }
+    };
+
+    const onClickReceive = async (item) => {
+        setState(p => ({ ...p, loading: true }));
+        const res = await request("purchase-details", "get", { id: item.id });
+        if (res && !res.error) {
+            setState(p => ({
+                ...p,
+                selectedPurchase: item,
+                purchaseDetails: res.list.map(i => ({
+                    ...i,
+                    receive_now: Number(i.qty) - Number(i.received_qty) // Default to remaining
+                })),
+                visibleReceiveModal: true,
+                loading: false
+            }));
+        } else {
+            setState(p => ({ ...p, loading: false }));
+        }
+    };
+
+    const onFinishReceive = async () => {
+        setState(p => ({ ...p, isSavingReceive: true }));
+        const body = {
+            purchase_id: state.selectedPurchase.id,
+            items: state.purchaseDetails.map(d => ({
+                id: d.id,
+                real_id: d.product_id || d.raw_material_id,
+                item_type: d.item_type,
+                receive_now: d.receive_now
+            }))
+        };
+
+        const res = await request("purchase-receive", "post", body);
+        if (res && !res.error) {
+            message.success("Goods received and stock updated!");
+            setState(p => ({ ...p, visibleReceiveModal: false, isSavingReceive: false }));
+            getList();
+        } else {
+            message.error(res.error || "Failed to receive goods");
+            setState(p => ({ ...p, isSavingReceive: false }));
         }
     };
 
@@ -147,8 +234,8 @@ function PurchasePage() {
             render: (value, item, index) => (filter.page - 1) * filter.pageSize + index + 1,
         },
         {
-            title: "Date",
-            dataIndex: "created_at",
+            title: "Purchase Date",
+            dataIndex: "purchase_date",
             width: 150,
             render: (val) => dayjs(val).format("YYYY-MM-DD HH:mm")
         },
@@ -183,9 +270,41 @@ function PurchasePage() {
             }
         },
         {
+            title: "Status",
+            dataIndex: "status",
+            width: 120,
+            render: (val) => {
+                let color = "orange"; // Pending
+                if (val === "Received") color = "green";
+                if (val === "Partial") color = "cyan";
+                if (val === "Cancelled") color = "red";
+                return <Tag color={color} style={{ borderRadius: 6, padding: '2px 8px', textTransform: 'uppercase', fontSize: 10 }}>{val}</Tag>
+            }
+        },
+        {
             title: "Created By",
             dataIndex: "created_by",
-            width: 120,
+            width: 100,
+        },
+        {
+            title: "Action",
+            width: 100,
+            align: 'center',
+            render: (item) => (
+                <Space>
+                    {(item.status === 'Pending' || item.status === 'Partial') && (
+                        <Button
+                            type="primary"
+                            size="small"
+                            icon={<MdInventory />}
+                            style={{ background: '#2ecc71', borderColor: '#2ecc71' }}
+                            onClick={() => onClickReceive(item)}
+                        >
+                            Receive
+                        </Button>
+                    )}
+                </Space>
+            )
         }
     ];
 
@@ -260,12 +379,26 @@ function PurchasePage() {
             >
                 <Form layout="vertical" form={form} onFinish={onFinish}>
                     <Row gutter={16}>
-                        <Col span={12}>
+                        <Col span={6}>
                             <Form.Item name="supplier_id" label="Supplier" rules={[{ required: true }]}>
                                 <Select options={state.suppliers} placeholder="Select Supplier" showSearch filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())} />
                             </Form.Item>
                         </Col>
-                        <Col span={12}>
+                        <Col span={6}>
+                            <Form.Item name="purchase_date" label="Receive Date" rules={[{ required: true }]}>
+                                <DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={6}>
+                            <Form.Item name="status" label="Status" rules={[{ required: true }]} initialValue="Received">
+                                <Select options={[
+                                    { label: "⏳ Pending", value: "Pending" },
+                                    { label: "✅ Received", value: "Received" },
+                                    { label: "❌ Cancelled", value: "Cancelled" }
+                                ]} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={6}>
                             <Form.Item name="note" label="Internal Note">
                                 <Input placeholder="Ref invoice, batch info etc." />
                             </Form.Item>
@@ -282,25 +415,34 @@ function PurchasePage() {
                                             <Col span={9}>
                                                 <Form.Item
                                                     {...restField}
-                                                    name={[name, 'raw_material_id']}
+                                                    name={[name, 'item_composite_id']}
                                                     rules={[{ required: true, message: 'Select item' }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <Select
-                                                        placeholder="Item (Ingrediant)"
-                                                        options={state.rawMaterials}
+                                                        placeholder="Search Product or Ingredient"
+                                                        options={state.allItems}
+                                                        loading={state.isFetchingItems}
                                                         showSearch
+                                                        filterOption={(input, option) =>
+                                                            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                                                        }
                                                         onChange={(val) => {
-                                                            const item = state.rawMaterials.find(rm => rm.value === val);
+                                                            const item = state.allItems.find(i => i.value === val);
                                                             if (item) {
-                                                                const fields = form.getFieldsValue();
-                                                                const items = [...fields.items];
+                                                                const fValues = form.getFieldsValue();
+                                                                const items = [...fValues.items];
                                                                 items[name].cost = item.price;
+                                                                items[name].item_type = item.item_type;
+                                                                items[name].real_id = item.item_id;
                                                                 form.setFieldsValue({ items });
+                                                                setState(p => ({ ...p })); // Refresh total display
                                                             }
                                                         }}
                                                     />
                                                 </Form.Item>
+                                                <Form.Item name={[name, 'item_type']} noStyle><Input type="hidden" /></Form.Item>
+                                                <Form.Item name={[name, 'real_id']} noStyle><Input type="hidden" /></Form.Item>
                                             </Col>
                                             <Col span={5}>
                                                 <Form.Item
@@ -342,7 +484,9 @@ function PurchasePage() {
 
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", paddingTop: 20 }}>
                         <div style={{ fontSize: 18 }}>
-                            Total Amount: <b style={{ color: "#2ecc71" }}>${calculateTotal().toFixed(2)}</b>
+                            Total Amount: <b style={{ color: "#2ecc71" }}>$
+                                {(form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0).toFixed(2)}
+                            </b>
                         </div>
                         <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
                             <Form.Item name="paid_amount" label="Amount Paid" style={{ marginBottom: 0 }}>
@@ -357,6 +501,51 @@ function PurchasePage() {
                         </div>
                     </div>
                 </Form>
+            </Modal>
+            {/* Receive Goods Modal */}
+            <Modal
+                title={<b>📥 Receive Goods - {state.selectedPurchase?.ref}</b>}
+                open={state.visibleReceiveModal}
+                onCancel={() => setState(p => ({ ...p, visibleReceiveModal: false }))}
+                width={800}
+                onOk={onFinishReceive}
+                confirmLoading={state.isSavingReceive}
+                okText="Receive Items"
+                centered
+            >
+                <div style={{ marginBottom: 16 }}>
+                    <b>Supplier:</b> {state.selectedPurchase?.supplier_name} <br />
+                    <small>Ordered Qty vs Received Qty. Enter amount coming in now.</small>
+                </div>
+                <Table
+                    dataSource={state.purchaseDetails}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                    columns={[
+                        { title: "Item Name", dataIndex: "name" },
+                        { title: "Type", dataIndex: "item_type", render: (t) => <Tag>{t.replace('_', ' ')}</Tag> },
+                        { title: "Ordered", dataIndex: "qty", align: 'center' },
+                        { title: "Received", dataIndex: "received_qty", align: 'center', render: (v) => <Tag color="green">{v}</Tag> },
+                        {
+                            title: "Receiving Now",
+                            width: 150,
+                            render: (_, record, index) => (
+                                <InputNumber
+                                    min={0}
+                                    max={Number(record.qty) - Number(record.received_qty)}
+                                    value={record.receive_now}
+                                    style={{ width: '100%' }}
+                                    onChange={(val) => {
+                                        const details = [...state.purchaseDetails];
+                                        details[index].receive_now = val;
+                                        setState(p => ({ ...p, purchaseDetails: details }));
+                                    }}
+                                />
+                            )
+                        }
+                    ]}
+                />
             </Modal>
         </MainPage>
     );

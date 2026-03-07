@@ -1,4 +1,4 @@
-const { validate_token } = require("../controller/auth.controller");
+const authMiddleware = require("../middleware/auth.middleware");
 const {
     getList,
     create,
@@ -8,8 +8,8 @@ const {
 const { uploadFile } = require("../util/helper");
 
 module.exports = (app) => {
-    app.get("/api/raw_material", validate_token("raw_material.getlist"), getList);
-    app.post("/api/raw_material", validate_token("raw_material.create"), uploadFile.single("image"), create);
-    app.put("/api/raw_material", validate_token("raw_material.update"), uploadFile.single("image"), update);
-    app.delete("/api/raw_material", validate_token("raw_material.remove"), remove);
+    app.get("/api/raw_material", authMiddleware(), getList);
+    app.post("/api/raw_material", authMiddleware(), uploadFile.single("image"), create);
+    app.put("/api/raw_material", authMiddleware(), uploadFile.single("image"), update);
+    app.delete("/api/raw_material", authMiddleware(), remove);
 };

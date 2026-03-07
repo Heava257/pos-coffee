@@ -62,11 +62,7 @@ function ProductPage() {
     };
 
     setState((pre) => ({ ...pre, loading: true }));
-    const { id } = getProfile();
-    if (!id) {
-      return;
-    }
-    const res = await request(`product/${id}`, "get", param);
+    const res = await request(`product`, "get", param);
     if (res && !res.error) {
       // Calculate totals for each product category
       const totals = res.list.reduce((acc, item) => {
@@ -95,14 +91,6 @@ function ProductPage() {
     form.resetFields();
   };
   const onFinish = async (items) => {
-    const barcode = form.getFieldValue("barcode");
-    const resCheck = await request(`check-barcode/${barcode}`, "get");
-
-    if (resCheck && resCheck.exists && !form.getFieldValue("id")) {
-      message.error("This barcode already exists. Please generate a new one.");
-      return;
-    }
-
     var params = new FormData();
     params.append("name", items.name);
     params.append("category_id", items.category_id);
@@ -144,15 +132,18 @@ function ProductPage() {
     }
   };
   const onBtnNew = async () => {
-    const res = await request("new_barcode", "post");
-    if (res && !res.error) {
-      // Check if this barcode already exists
-      const checkRes = await request(`check-barcode/${res.barcode}`, "get");
-      if (checkRes && checkRes.exists) {
-        // If exists, try again
-        return onBtnNew();
+    try {
+      const res = await request("new_barcode", "post");
+      if (res && res.barcode) {
+        const checkRes = await request(`check-barcode/${res.barcode}`, "get");
+        if (checkRes && checkRes.exists) {
+          return onBtnNew();
+        }
+        form.setFieldValue("barcode", res.barcode);
       }
-      form.setFieldValue("barcode", res.barcode);
+    } catch (err) {
+      console.error("Barcode generation failed:", err);
+    } finally {
       setState((p) => ({
         ...p,
         visibleModal: true,
@@ -356,15 +347,7 @@ function ProductPage() {
                   rules={[{ required: true, message: "Please select category" }]}
                 >
                   <Select
-                    options={[
-                      { label: "🍽️ All", value: "all" },
-                      { label: "☕ Coffee", value: 51 },
-                      { label: "🧃 Juice", value: 52 },
-                      { label: "🥛 Milk Based", value: 53 },
-                      { label: "🍪 Snack", value: 54 },
-                      { label: "🍚 Rice", value: 55 },
-                      { label: "🍰 Dessert", value: 56 },
-                    ]}
+                    options={config.category}
                     placeholder="Select category"
                     onChange={(value) => {
                       form.setFieldValue("category_id", value);

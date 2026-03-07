@@ -53,7 +53,7 @@ function Stock_UserPage() {
       if (!items.product_name) {
         message.error("Product is required");
         return;
-      }  
+      }
       if (!items.category_id) {
         message.error("Category is required");
         return;
@@ -120,28 +120,28 @@ function Stock_UserPage() {
       formRef.setFieldsValue({ price: totalPrice }); // Update the total price field
     }
   };
-const onClickEdit = (record) => {
-  console.log("Editing record:", record);
-  formRef.setFieldsValue({
-    id: record.id,
-    product_name: record.product_name,
-    category_id: record.category_id,
-    qty: record.qty,
-    barcode: record.barcode,
-    brand: record.brand,
-    description: record.description,
-    price: record.price,
-    discount: record.discount,
-    status: record.status,
-    unit: record.unit,
-    unit_price: record.unit_price,
-  });
-  setState((prev) => ({
-    ...prev,
-    visibleModal: true,
-  }));
-};
- const onClickDelete = (item, index) => {
+  const onClickEdit = (record) => {
+    console.log("Editing record:", record);
+    formRef.setFieldsValue({
+      id: record.id,
+      product_name: record.product_name,
+      category_id: record.category_id,
+      qty: record.qty,
+      barcode: record.barcode,
+      brand: record.brand,
+      description: record.description,
+      price: record.price,
+      discount: record.discount,
+      status: record.status,
+      unit: record.unit,
+      unit_price: record.unit_price,
+    });
+    setState((prev) => ({
+      ...prev,
+      visibleModal: true,
+    }));
+  };
+  const onClickDelete = (item, index) => {
     if (!item.id) {
       message.error("Product ID is missing!");
       return;
@@ -302,7 +302,7 @@ const onClickEdit = (record) => {
                   </div>
                 }
               >
-                 <Select placeholder="Select category" options={config?.brand} />
+                <Select placeholder="Select category" options={config?.brand} />
               </Form.Item>
               <Form.Item
                 name={"description"}

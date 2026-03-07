@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { request } from '../../util/helper';
+import { getAcccessToken } from '../../store/profile.store';
 
 // Context for exchange rate management
 const ExchangeRateContext = React.createContext();
@@ -11,10 +12,15 @@ export const ExchangeRateProvider = ({ children }) => {
   const [lastUpdated, setLastUpdated] = useState(null);
 
   const fetchExchangeRate = async () => {
+    const token = getAcccessToken();
+    if (!token || token === "null" || token === "undefined") {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const response = await request('exchange_rate', 'get');
-      
+
       if (response && response.live_rate) {
         setExchangeRate(response.live_rate);
         setLastUpdated(new Date());
@@ -29,10 +35,10 @@ export const ExchangeRateProvider = ({ children }) => {
 
   useEffect(() => {
     fetchExchangeRate();
-    
+
     // Refresh rate every 30 minutes
     const interval = setInterval(fetchExchangeRate, 30 * 60 * 1000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -58,9 +64,9 @@ export const useExchangeRate = () => {
 };
 
 // Price display component
-export const PriceDisplay = ({ 
-  usdAmount, 
-  showBothCurrencies = true, 
+export const PriceDisplay = ({
+  usdAmount,
+  showBothCurrencies = true,
   primaryCurrency = 'USD', // 'USD' or 'KHR'
   size = 'medium', // 'small', 'medium', 'large'
   orientation = 'horizontal', // 'horizontal' or 'vertical'
@@ -68,10 +74,10 @@ export const PriceDisplay = ({
   style = {}
 }) => {
   const { exchangeRate, loading } = useExchangeRate();
-  
+
   const usdPrice = parseFloat(usdAmount) || 0;
   const khrPrice = usdPrice * exchangeRate;
-  
+
   // Format numbers with proper separators
   const formatUSD = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -81,7 +87,7 @@ export const PriceDisplay = ({
       maximumFractionDigits: 2
     }).format(amount);
   };
-  
+
   const formatKHR = (amount) => {
     return new Intl.NumberFormat('km-KH', {
       style: 'decimal',
@@ -89,7 +95,7 @@ export const PriceDisplay = ({
       maximumFractionDigits: 0
     }).format(amount);
   };
-  
+
   // Size configurations
   const sizeConfig = {
     small: {
@@ -111,9 +117,9 @@ export const PriceDisplay = ({
       separator: '6px'
     }
   };
-  
+
   const config = sizeConfig[size];
-  
+
   // Base styles
   const containerStyle = {
     display: 'flex',
@@ -122,25 +128,25 @@ export const PriceDisplay = ({
     gap: config.gap,
     ...style
   };
-  
+
   const primaryStyle = {
     fontSize: config.primarySize,
     fontWeight: '700',
     color: '#2c3e50'
   };
-  
+
   const secondaryStyle = {
     fontSize: config.secondarySize,
     fontWeight: '500',
     color: '#6b7280'
   };
-  
+
   const separatorStyle = {
     fontSize: config.secondarySize,
     color: '#9ca3af',
     margin: orientation === 'vertical' ? '0' : `0 ${config.separator}`
   };
-  
+
   if (loading) {
     return (
       <div className={className} style={containerStyle}>
@@ -156,7 +162,7 @@ export const PriceDisplay = ({
       </div>
     );
   }
-  
+
   if (!showBothCurrencies) {
     return (
       <div className={className} style={containerStyle}>
@@ -166,7 +172,7 @@ export const PriceDisplay = ({
       </div>
     );
   }
-  
+
   return (
     <div className={className} style={containerStyle}>
       {primaryCurrency === 'USD' ? (
@@ -189,10 +195,10 @@ export const PriceDisplay = ({
 // Exchange rate status component
 export const ExchangeRateStatus = () => {
   const { exchangeRate, lastUpdated, loading, refreshRate } = useExchangeRate();
-  
-  const timeAgo = lastUpdated ? 
+
+  const timeAgo = lastUpdated ?
     Math.floor((new Date() - lastUpdated) / (1000 * 60)) : null;
-  
+
   return (
     <div style={{
       display: 'flex',

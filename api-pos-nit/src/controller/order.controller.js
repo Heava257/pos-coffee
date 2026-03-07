@@ -1,266 +1,139 @@
-// const { db, isArray, isEmpty, logError } = require("../util/helper");
-// exports.getList = async (req, res) => {
-//   try {
-//     const from_date = req.query.from_date;
-//     const to_date = req.query.to_date;
-//     const txtSearch = req.query.txtSearch;
-//     const user_id = req.params.user_id;
+const { db, logError } = require("../util/helper");
 
-//     if (!user_id) {
-//       return res.status(400).json({ error: "User ID is required" });
-//     }
+// 1. Create New Order (The Core Sale Point)
+exports.create = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const { business_id, branch_id, user_id } = req;
+        const {
+            customer_name,
+            table_no,
+            sub_total,
+            total_amount,
+            payment_method,
+            order_type,
+            cart_items // Array of products
+        } = req.body;
 
-//     // Build SQL for orders with group filtering
-//     let sqlSelect = `
-//       SELECT o.*, c.name AS customer_name, c.tel AS customer_tel, c.address AS customer_address,
-//              u.group_id, u.name as created_by_name, u.username as created_by_username
-//     `;
-//     let sqlJoin = `
-//       FROM \`order\` o
-//       LEFT JOIN customer c ON o.customer_id = c.id
-//       INNER JOIN user u ON o.user_id = u.id
-//       INNER JOIN user cu ON cu.group_id = u.group_id
-//     `;
-//     let sqlWhere = ` WHERE o.user_id = :user_id AND cu.id = :current_user_id`;
+        // A. Insert into Orders Table
+        const [order_res] = await conn.query(
+            `INSERT INTO orders (business_id, branch_id, user_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [business_id, branch_id, user_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type]
+        );
+        const order_id = order_res.insertId;
 
-//     if (!isEmpty(from_date) && isEmpty(to_date)) {
-//       sqlWhere += ` AND DATE_FORMAT(o.create_at, '%Y-%m-%d') >= :from_date `;
-//     } else if (!isEmpty(from_date) && !isEmpty(to_date)) {
-//       sqlWhere += ` AND DATE_FORMAT(o.create_at, '%Y-%m-%d') BETWEEN :from_date AND :to_date `;
-//     } else if (isEmpty(from_date) && !isEmpty(to_date)) {
-//       sqlWhere += ` AND DATE_FORMAT(o.create_at, '%Y-%m-%d') <= :to_date `;
-//     }
+        // B. Insert Details & Deduct Stock (Recipe Aware)
+        for (const item of cart_items) {
+            // 1. Insert Detail Record
+            await conn.query(
+                "INSERT INTO order_details (order_id, product_id, qty, price, note) VALUES (?, ?, ?, ?, ?)",
+                [order_id, item.product_id, item.qty, item.price, item.note || ""]
+            );
 
-//     if (!isEmpty(txtSearch)) {
-//       sqlWhere += ` AND o.order_no LIKE :txtSearch `;
-//     }
+            // 2. Fetch Recipe if exists
+            const [recipe] = await conn.query(
+                "SELECT raw_material_id, qty FROM recipe_detail WHERE product_id = ?",
+                [item.product_id]
+            );
 
-//     const sqlParams = {
-//       user_id: user_id,
-//       current_user_id: req.current_id, // Add current user ID for group filtering
-//       txtSearch: "%" + txtSearch + "%",
-//       from_date: from_date,
-//       to_date: to_date,
-//     };
+            if (recipe && recipe.length > 0) {
+                // CASE A: Deduced via Ingredients
+                for (const ing of recipe) {
+                    const totalDeduct = ing.qty * item.qty;
 
-//     const sqlList = sqlSelect + sqlJoin + sqlWhere + " ORDER BY o.create_at DESC";
-//     const sqlSummary = `
-//       SELECT COUNT(o.id) AS total_order, COALESCE(SUM(o.total_amount), 0) AS total_amount 
-//       ${sqlJoin} ${sqlWhere}
-//     `;
+                    // Fetch current RM stock for logging
+                    const [rmData] = await conn.query("SELECT qty FROM raw_material WHERE id = ?", [ing.raw_material_id]);
+                    const old_qty = rmData[0]?.qty || 0;
+                    const new_qty = old_qty - totalDeduct;
 
-//     // Step 1: Fetch orders
-//     const [list] = await db.query(sqlList, sqlParams);
-//     const [summaryArray] = await db.query(sqlSummary, sqlParams);
-//     const summary = summaryArray?.[0] || { total_order: 0, total_amount: 0 };
+                    // Update RM stock
+                    await conn.query(
+                        "UPDATE raw_material SET qty = qty - ? WHERE id = ?",
+                        [totalDeduct, ing.raw_material_id]
+                    );
 
-//     const orderIds = list.map((order) => order.id);
-//     let productMap = {};
+                    // LOG RM Movement
+                    await conn.query(`
+                        INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
+                        VALUES (?, ?, 'raw_material', ?, ?, ?, ?, 'sale', ?, 'POS Sale (Recipe)', ?)
+                    `, [business_id, branch_id, ing.raw_material_id, old_qty, new_qty, -totalDeduct, `INV-${order_id}`, user_id]);
+                }
+            } else {
+                // CASE B: Direct Product Stock (e.g. bottled drinks)
+                const [bpData] = await conn.query(
+                    "SELECT stock_qty FROM branch_products WHERE product_id = ? AND branch_id = ?",
+                    [item.product_id, branch_id]
+                );
+                const old_qty = bpData[0]?.stock_qty || 0;
+                const new_qty = old_qty - item.qty;
 
-//     // Step 2: Fetch products per order (with group filtering)
-//     if (orderIds.length > 0) {
-//       const [productDetails] = await db.query(`
-//         SELECT 
-//           od.order_id,
-//           p.name AS product_name,
-//           c.name AS category_name,
-//           od.qty,
-//           od.price,
-//           od.discount,
-//           (od.qty * od.price * (1 - COALESCE(od.discount, 0)/100)) AS total,
-//           pu.group_id as product_user_group_id
-//         FROM order_detail od
-//         JOIN product p ON od.product_id = p.id
-//         LEFT JOIN category c ON p.category_id = c.id
-//         INNER JOIN user pu ON p.user_id = pu.id
-//         INNER JOIN user cu ON cu.group_id = pu.group_id
-//         WHERE od.order_id IN (?) AND cu.id = ?
-//       `, [orderIds, req.current_id]);
+                await conn.query(
+                    "UPDATE branch_products SET stock_qty = stock_qty - ? WHERE product_id = ? AND branch_id = ?",
+                    [item.qty, item.product_id, branch_id]
+                );
 
-//       // Step 3: Group products by order_id
-//       productDetails.forEach(item => {
-//         if (!productMap[item.order_id]) {
-//           productMap[item.order_id] = [];
-//         }
-//         productMap[item.order_id].push(item);
-//       });
-//     }
+                // LOG Product Movement
+                await conn.query(`
+                    INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
+                    VALUES (?, ?, 'product', ?, ?, ?, ?, 'sale', ?, 'POS Sale', ?)
+                `, [business_id, branch_id, item.product_id, old_qty, new_qty, -item.qty, `INV-${order_id}`, user_id]);
+            }
+        }
 
-//     // Step 4: Merge into list
-//     const finalList = list.map(order => ({
-//       ...order,
-//       products: productMap[order.id] || []
-//     }));
+        await conn.commit();
+        res.json({ success: true, message: "Order Placed Successfully!", order_id });
 
-//     res.json({
-//       list: finalList,
-//       summary: summary,
-//       debug: {
-//         current_user_id: req.current_id,
-//         total_orders: finalList.length,
-//         user_id_filter: user_id
-//       }
-//     });
-//   } catch (error) { 
-//     logError("order.getList", error, res);
-//   }
-// };
+    } catch (error) {
+        await conn.rollback();
+        logError("order.create", error, res);
+    } finally {
+        conn.release();
+    }
+};
 
-// exports.getone = async (req, res) => {
-//   try {
-//     var sql = `
-//       SELECT 
-//         od.order_id,
-//         p.name AS product_name,
-//         c.name AS category_name,
-//         p.unit_price,
-//         p.discount,
-//         p.unit,
-//         SUM(od.qty) AS total_quantity,
-//         SUM(od.qty * p.unit_price * (1 - COALESCE(p.discount, 0)/100) / NULLIF(p.actual_price, 0)) AS grand_total,
-//         pu.group_id as product_user_group_id,
-//         pu.name as product_created_by_name,
-//         pu.username as product_created_by_username
-//       FROM order_detail od
-//       INNER JOIN product p ON od.product_id = p.id
-//       INNER JOIN category c ON p.category_id = c.id
-//       INNER JOIN user pu ON p.user_id = pu.id
-//       INNER JOIN user cu ON cu.group_id = pu.group_id
-//       INNER JOIN \`order\` o ON od.order_id = o.id
-//       INNER JOIN user ou ON o.user_id = ou.id
-//       INNER JOIN user cuo ON cuo.group_id = ou.group_id
-//       WHERE od.order_id = ? AND cu.id = ? AND cuo.id = ?
-//       GROUP BY od.order_id, p.name, c.name, p.unit_price, p.discount, p.unit, pu.group_id, pu.name, pu.username
-//     `;
+// 2. Get Order History (Branch Specific)
+exports.getList = async (req, res) => {
+    try {
+        const { business_id, branch_id } = req;
+        const { from_date, to_date } = req.query;
 
-//     const [list] = await db.query(sql, [
-//       req.params.id, 
-//       req.current_id, // Filter products by current user's group
-//       req.current_id  // Filter orders by current user's group
-//     ]);
-    
-//     res.json({ 
-//       list,
-//       debug: {
-//         current_user_id: req.current_id,
-//         order_id: req.params.id,
-//         total_items: list.length
-//       }
-//     });
-//   } catch (error) {
-//     logError("order.getone", error, res);
-//   }
-// };
-// exports.create = async (req, res) => {
-//   try {
-//     const { order, order_details = [] } = req.body;
+        let params = [business_id, branch_id];
+        let sql = `
+            SELECT o.*, u.name as staff_name
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.id
+            WHERE o.business_id = ? AND o.branch_id = ?
+        `;
 
-//     // ✅ Only validate required fields
-//     if (
-//       typeof order.total_amount !== 'number' ||
-//       typeof order.paid_amount !== 'number' ||
-//       !order.payment_method
-//     ) {
-//       return res.status(400).json({ error: "Missing or invalid order fields" });
-//     }
+        if (from_date && to_date) {
+            sql += " AND DATE(o.created_at) BETWEEN ? AND ?";
+            params.push(from_date, to_date);
+        }
 
-//     if (!order_details.length) {
-//       return res.status(400).json({ error: "Order details cannot be empty" });
-//     }
+        sql += " ORDER BY o.id DESC LIMIT 100";
 
-//     const order_no = await newOrderNo();
+        const [list] = await db.query(sql, params);
+        res.json({ list });
+    } catch (error) {
+        logError("order.getList", error, res);
+    }
+};
 
-//     const [orderResult] = await db.query(
-//       `INSERT INTO \`order\` 
-//         (order_no, customer_id, total_amount, paid_amount, payment_method, remark, user_id, create_by) 
-//        VALUES 
-//         (:order_no, :customer_id, :total_amount, :paid_amount, :payment_method, :remark, :user_id, :create_by)`,
-//       {
-//         order_no,
-//         customer_id: order.customer_id || null, // allow null
-//         total_amount: order.total_amount,
-//         paid_amount: order.paid_amount,
-//         payment_method: order.payment_method,
-//         remark: order.remark || "",
-//         user_id: req.auth?.id || null,
-//         create_by: req.auth?.name || "System",
-//       }
-//     );
-
-//     const sqlDetail = `INSERT INTO order_detail 
-//       (order_id, product_id, qty, price, discount, total)
-//       VALUES (:order_id, :product_id, :qty, :price, :discount, :total)`;
-
-//     for (const item of order_details) {
-//       await db.query(sqlDetail, {
-//         order_id: orderResult.insertId,
-//         ...item
-//       });
-
-//       if (item.product_id !== 0) {
-//         await db.query(`UPDATE product SET qty = qty - :qty WHERE id = :product_id`, {
-//           qty: item.qty,
-//           product_id: item.product_id
-//         });
-//       }
-//     }
-
-//     const [currentOrder] = await db.query("SELECT * FROM `order` WHERE id = :id", {
-//       id: orderResult.insertId
-//     });
-
-//     return res.json({
-//       order: currentOrder?.[0] || null,
-//       order_details,
-//       message: "Order created successfully"
-//     });
-
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Failed to create order", details: error.message });
-//   }
-// };
-
-
-// const newOrderNo = async (req, res) => {
-//   try {
-//     var sql =
-//       "SELECT " +
-//       "CONCAT('INV',LPAD((SELECT COALESCE(MAX(id),0) + 1 FROM `order`), 3, '0')) " +
-//       "as order_no";
-//     var [data] = await db.query(sql);
-//     return data[0].order_no;
-//   } catch (error) {
-//     logError("newOrderNo.create", error, res);
-//   }
-// };
-
-// exports.update = async (req, res) => {
-//   try {
-//     var sql =
-//       "UPDATE  order set name=:name, code=:code, tel=:tel, email=:email, address=:address, website=:website, note=:note WHERE id=:id ";
-//     var [data] = await db.query(sql, {
-//       ...req.body,
-//     });
-//     res.json({
-//       data: data,
-//       message: "Update success!",
-//     });
-//   } catch (error) {
-//     logError("order.update", error, res);
-//   }
-// };
-
-// exports.remove = async (req, res) => {
-//   try {
-//     var [data] = await db.query("DELETE FROM order WHERE id = :id", {
-//       ...req.body,
-//     });
-//     res.json({
-//       data: data,
-//       message: "Data delete success!",
-//     });
-//   } catch (error) {
-//     logError("order.remove", error, res);
-//   }
-// };
+// 3. Get Order Details
+exports.getOrderDetail = async (req, res) => {
+    try {
+        const { order_id } = req.params;
+        const sql = `
+            SELECT od.*, p.name as product_name, p.image
+            FROM order_details od
+            INNER JOIN products p ON od.product_id = p.id
+            WHERE od.order_id = ?
+        `;
+        const [details] = await db.query(sql, [order_id]);
+        res.json({ details });
+    } catch (error) {
+        logError("order.getOrderDetail", error, res);
+    }
+};

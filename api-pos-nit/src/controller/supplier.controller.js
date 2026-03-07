@@ -1,36 +1,36 @@
-const { db, isArray, isEmpty, logError } = require("../util/helper");
+const { db, logError } = require("../util/helper");
 
 exports.getList = async (req, res) => {
   try {
-    var txtSearch = req.query.txtSearch;
-    var sql = "SELECT * FROM supplier  ";
-    if (!isEmpty(txtSearch)) {
-      sql +=
-        " WHERE name LIKE :txtSearch OR code LIKE :txtSearch OR tel LIKE :txtSearch OR email LIKE :txtSearch";
+    const { business_id } = req;
+    const { txtSearch } = req.query;
+
+    let params = [business_id];
+    let sql = "SELECT * FROM suppliers WHERE business_id = ?";
+
+    if (txtSearch) {
+      sql += " AND (name LIKE ? OR phone LIKE ?)";
+      params.push(`%${txtSearch}%`, `%${txtSearch}%`);
     }
-    const [list] = await db.query(sql, {
-      txtSearch: "%" + txtSearch + "%",
-    });
-    res.json({
-      list: list,
-    });
+
+    const [list] = await db.query(sql, params);
+    res.json({ list });
   } catch (error) {
     logError("supplier.getList", error, res);
   }
 };
-// id,name,code,tel,email,address,website,note,create_by,create_at
-// id,:name,:code,:tel,:email,:address,:website,:note,:create_by,:create_at
+
 exports.create = async (req, res) => {
   try {
-    var sql =
-      "INSERT INTO supplier (name,code,tel,email,address,website,note,create_by) VALUES (:name,:code,:tel,:email,:address,:website,:note,:create_by) ";
-    var [data] = await db.query(sql, {
-      ...req.body,
-      create_by: req.auth?.name,
-    });
+    const { business_id } = req;
+    const { name, phone, address } = req.body;
+
+    const sql = "INSERT INTO suppliers (business_id, name, phone, address) VALUES (?, ?, ?, ?)";
+    const [data] = await db.query(sql, [business_id, name, phone, address]);
+
     res.json({
-      data: data,
-      message: "Insert success!",
+      success: true,
+      message: "Supplier added successfully!"
     });
   } catch (error) {
     logError("supplier.create", error, res);
@@ -39,15 +39,13 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    var sql =
-      "UPDATE  supplier set name=:name, code=:code, tel=:tel, email=:email, address=:address, website=:website, note=:note WHERE id=:id ";
-    var [data] = await db.query(sql, {
-      ...req.body,
-    });
-    res.json({
-      data: data,
-      message: "Update success!",
-    });
+    const { business_id } = req;
+    const { id, name, phone, address } = req.body;
+
+    const sql = "UPDATE suppliers SET name = ?, phone = ?, address = ? WHERE id = ? AND business_id = ?";
+    await db.query(sql, [name, phone, address, id, business_id]);
+
+    res.json({ message: "Supplier updated successfully!" });
   } catch (error) {
     logError("supplier.update", error, res);
   }
@@ -55,13 +53,11 @@ exports.update = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    var [data] = await db.query("DELETE FROM supplier WHERE id = :id", {
-      ...req.body,
-    });
-    res.json({
-      data: data,
-      message: "Data delete success!",
-    });
+    const { id } = req.body;
+    const { business_id } = req;
+
+    await db.query("DELETE FROM suppliers WHERE id = ? AND business_id = ?", [id, business_id]);
+    res.json({ message: "Supplier removed successfully!" });
   } catch (error) {
     logError("supplier.remove", error, res);
   }

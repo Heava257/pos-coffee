@@ -5,7 +5,7 @@ export const getAcccessToken = () => {
   return localStorage.getItem("access_token");
 };
 export const setProfile = (value) => {
-  localStorage.setItem("profile", value);
+  localStorage.setItem("profile", JSON.stringify(value));
 };
 export const getProfile = () => {
   try {
@@ -19,7 +19,7 @@ export const getProfile = () => {
   }
 };
 export const setPermission = (array) => {
-  localStorage.setItem("permission", array);
+  localStorage.setItem("permission", JSON.stringify(array));
 };
 export const getPermission = () => {
   try {

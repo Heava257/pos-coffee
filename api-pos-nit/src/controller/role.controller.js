@@ -1,25 +1,23 @@
-const { db, isArray, isEmpty, logError } = require("../util/helper");
+const { db, logError } = require("../util/helper");
 
 exports.getList = async (req, res) => {
   try {
-    const [list] = await db.query("SELECT * FROM role");
+    const { business_id } = req;
+    const [list] = await db.query("SELECT * FROM roles WHERE business_id = ?", [business_id]);
     res.json({
-      i_know_you_are_id: req.current_id,
       list: list,
     });
   } catch (error) {
-    logError("log.getList", error, res);
+    logError("role.getList", error, res);
   }
 };
 
 exports.create = async (req, res) => {
-  // validate
   try {
-    var sql = "INSERT INTO role (name,code) VALUES (:name,:code) ";
-    var [data] = await db.query(sql, {
-      name: req.body.name, // null
-      code: req.body.code,
-    });
+    const { business_id } = req;
+    const { name, code } = req.body;
+    const sql = "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)";
+    const [data] = await db.query(sql, [business_id, name, code]);
     res.json({
       data: data,
       message: "Insert success!",
@@ -31,13 +29,11 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    var [data] = await db.query(
-      "UPDATE role SET name=:name, code=:code WHERE id = :id",
-      {
-        id: req.body.id,
-        name: req.body.name,
-        code: req.body.code, // null
-      }
+    const { business_id } = req;
+    const { id, name, code } = req.body;
+    const [data] = await db.query(
+      "UPDATE roles SET name = ?, code = ? WHERE id = ? AND business_id = ?",
+      [name, code, id, business_id]
     );
     res.json({
       data: data,
@@ -50,9 +46,11 @@ exports.update = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    var [data] = await db.query("DELETE FROM role WHERE id = :id", {
-      id: req.body.id,
-    });
+    const { business_id } = req;
+    const { id } = req.body;
+    const [data] = await db.query("DELETE FROM roles WHERE id = ? AND business_id = ?", [
+      id, business_id
+    ]);
     res.json({
       data: data,
       message: "Data delete success!",

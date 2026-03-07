@@ -81,11 +81,11 @@ function ReportSale_Summary() {
 
   // Format number as currency
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2 
+      maximumFractionDigits: 2
     }).format(value);
   };
 
@@ -97,24 +97,24 @@ function ReportSale_Summary() {
   // Handle PDF download
   const handleDownloadPDF = async () => {
     if (!reportRef.current) return;
-    
+
     try {
       const canvas = await html2canvas(reportRef.current, {
         scale: 2,
         useCORS: true,
         logging: false
       });
-      
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
-      
+
       const imgWidth = 280;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
+
       pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
       pdf.save(`Sales_Report_${dayjs().format('YYYY-MM-DD')}.pdf`);
     } catch (error) {
@@ -127,16 +127,16 @@ function ReportSale_Summary() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
         <h1 style={{ marginRight: "20px", fontWeight: "bold" }}>Sales Performance Chart</h1>
         <Space>
-          <Button 
-            icon={<PrinterOutlined />} 
+          <Button
+            icon={<PrinterOutlined />}
             onClick={handlePrint}
             loading={loading}
           >
             Print
           </Button>
-          <Button 
-            type="primary" 
-            icon={<FilePdfOutlined />} 
+          <Button
+            type="primary"
+            icon={<FilePdfOutlined />}
             onClick={handleDownloadPDF}
             loading={loading}
           >
@@ -257,10 +257,10 @@ function ReportSale_Summary() {
                 dataIndex: "total_qty",
                 render: (value) => (
                   <Tag
-                    color={Number(value) > 2 ? "blue" : Number(value) > 1 ? "green" : "pink"}
+                    color={Number(value) > 20 ? "blue" : Number(value) > 10 ? "green" : "pink"}
                     style={{ fontSize: "14px" }}
                   >
-                    {Number(value).toLocaleString()} Liter
+                    {Number(value).toLocaleString()} Items
                   </Tag>
                 ),
               },
@@ -297,7 +297,7 @@ function ReportSale_Summary() {
                       <strong>Total</strong>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={1}>
-                      <strong>{totalQty.toLocaleString()} Liter</strong>
+                      <strong>{totalQty.toLocaleString()} Items</strong>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={2}>
                       <strong>{formatCurrency(totalAmount)}</strong>

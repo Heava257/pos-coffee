@@ -20,7 +20,7 @@ export const Config = {
   base_url: formattedBaseUrl,
   version: "1.0",
   token: "",
-  image_path: import.meta.env.VITE_IMAGE_PATH || "http://localhost:80/fullstack/",
+  image_path: import.meta.env.VITE_IMAGE_PATH || "http://localhost:8080/public/images/",
   platform_url: import.meta.env.VITE_PLATFORM_URL || "http://localhost:3000",
   getFullImagePath: (imagePart) => `${Config.image_path}${imagePart}`,
   getProductImagePath: (imagePart) => `${Config.image_path}image_pos/${imagePart}`,

@@ -1,423 +1,192 @@
-// const {
-//   db,
-//   isArray,
-//   isEmpty,
-//   logError,
-//   removeFile,
-// } = require("../util/helper");
+const { db, logError, removeFile } = require("../util/helper");
 
+// 1. Get Product List for POS (Active & Branch Filtered)
+exports.getList = async (req, res) => {
+    try {
+        const { txt_search, category_id, is_list_all } = req.query;
+        const { business_id, branch_id } = req;
 
+        let params = [business_id];
+        let sql = `
+        SELECT 
+            p.id, p.name, p.image, p.category_id, p.status, p.barcode,
+            p.sizes, p.addons,
+            bp.price, bp.cost_price, bp.stock_qty AS qty, bp.is_available,
+            c.name as category_name
+        FROM products p
+        LEFT JOIN branch_products bp ON p.id = bp.product_id AND bp.branch_id = ?
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE p.business_id = ?
+    `;
 
-// // exports.getList = async (req, res) => {
-// //   try {
-// //     const { txt_search, category_id, brand, page, is_list_all } = req.query;
-// //     const { user_id } = req.params; // Extract user_id from URL params
+        // Add branch_id to params for the LEFT JOIN
+        params.unshift(branch_id);
 
-// //     const pageSize = 2; // Fixed page size
-// //     const currentPage = Number(page) || 1; // Default to page 1 if not provided
-// //     const offset = (currentPage - 1) * pageSize; // Calculate offset for pagination
+        if (!is_list_all) {
+            sql += " AND bp.branch_id IS NOT NULL AND p.status = 1";
+        }
 
-// //     // Base SQL query to select product details
-// //     const sqlSelect = `
-// //       SELECT 
-// //         p.id, p.name, p.category_id, p.barcode, p.brand, p.company_name, 
-// //         p.description, p.qty, p.unit_price, p.discount, p.status, 
-// //         p.create_by, p.create_at, p.unit, 
-// //         c.name AS category_name,
-// //         (p.qty * p.unit_price) AS original_price,
-// //         CASE
-// //           WHEN p.discount > 0 THEN (p.qty * p.unit_price) * (1 - p.discount / 100)
-// //           ELSE (p.qty * p.unit_price)
-// //         END AS total_price
-// //     `;
+        if (txt_search) {
+            sql += " AND p.name LIKE ?";
+            params.push(`%${txt_search}%`);
+        }
 
-// //     // SQL JOIN clause
-// //     const sqlJoin = `FROM product p INNER JOIN category c ON p.category_id = c.id`;
+        if (category_id && category_id !== "all" && category_id !== "null") {
+            sql += " AND p.category_id = ?";
+            params.push(category_id);
+        }
 
-// //     // SQL WHERE clause with user_id filter
-// //     let sqlWhere = `WHERE p.user_id = :user_id`;
+        sql += " ORDER BY p.id DESC";
 
-// //     // Apply additional filters based on query parameters
-// //     if (txt_search) {
-// //       sqlWhere += ` AND (p.name LIKE :txt_search OR p.barcode = :barcode)`;
-// //     }
-// //     if (category_id) {
-// //       sqlWhere += ` AND p.category_id = :category_id`;
-// //     }
-// //     if (brand) {
-// //       sqlWhere += ` AND p.brand = :brand`;
-// //     }
+        const [list] = await db.query(sql, params);
 
-// //     // SQL ORDER BY clause
-// //     const sqlOrderBy = `ORDER BY p.id DESC`;
+        console.log("=== PRODUCT API LOG ===");
+        console.log("Query Params:", req.query);
+        console.log("Business/Branch:", business_id, branch_id);
+        console.log("SQL executing:", sql);
+        console.log("Params:", params);
+        console.log("Found Items:", list.length);
+        console.log("=======================");
 
-// //     // SQL LIMIT and OFFSET for pagination
-// //     let sqlLimit = `LIMIT ${pageSize} OFFSET ${offset}`;
-// //     if (is_list_all) {
-// //       sqlLimit = ``; // If is_list_all is true, remove LIMIT and OFFSET
-// //     }
+        res.json({ list });
+    } catch (error) {
+        logError("product.getList", error, res);
+    }
+};
 
-// //     // Combine SQL clauses with proper spacing
-// //     const sqlList = `${sqlSelect} ${sqlJoin} ${sqlWhere} ${sqlOrderBy} ${sqlLimit}`;
+exports.create = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const { business_id, branch_id } = req;
+        const { name, category_id, barcode, price, cost_price, description, status, qty, sizes, addons } = req.body;
+        const image = req.file?.filename || null;
 
-// //     // SQL parameters
-// //     const sqlParam = {
-// //       user_id, // Pass user_id from params
-// //       txt_search: `%${txt_search}%`, // Add wildcards for LIKE search
-// //       barcode: txt_search, // Use the same value for barcode search
-// //       category_id,
-// //       brand,
-// //     };
+        // Optimized Subscription Limit Check
+        const { checkPlanLimit } = require("../util/helper");
+        const limitCheck = await checkPlanLimit(business_id, 'product');
+        if (!limitCheck.allowed) {
+            return res.status(403).json({
+                message: limitCheck.message,
+                limit_reached: true
+            });
+        }
 
-// //     const [list] = await db.query(sqlList, sqlParam);
+        // A. Insert into Global Products (Template)
+        const [p_res] = await conn.query(
+            "INSERT INTO products (business_id, category_id, barcode, name, description, image, status, sizes, addons) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [business_id, category_id, barcode, name, description, image, status || 1, sizes || null, addons || null]
+        );
+        const product_id = p_res.insertId;
 
-// //     let dataCount = 0;
-// //     if (currentPage === 1) {
-// //       const sqlTotal = `SELECT COUNT(p.id) AS total ${sqlJoin} ${sqlWhere}`;
-// //       const [totalResult] = await db.query(sqlTotal, sqlParam);
-// //       dataCount = totalResult[0].total;
-// //     }
+        // B. Insert into Branch Inventory (The instance for current branch)
+        await conn.query(
+            "INSERT INTO branch_products (branch_id, product_id, price, cost_price, stock_qty) VALUES (?, ?, ?, ?, ?)",
+            [branch_id, product_id, price, cost_price || 0, qty || 0]
+        );
 
-// //     res.json({
-// //       list: list,
-// //       total: dataCount,
-// //     });
-// //   } catch (error) {
-// //     logError("product.getList", error, res);
-// //   }
-// // };
+        await conn.commit();
+        res.json({ success: true, message: "Product created and added to branch!" });
+    } catch (error) {
+        await conn.rollback();
+        logError("product.create", error, res);
+    } finally {
+        conn.release();
+    }
+};
 
-// exports.getList = async (req, res) => {
-//   try {
-//     const { txt_search, category_id, page, is_list_all } = req.query;
-//     const { user_id } = req.params; // Extract user_id from URL params
+// 3. Update Product details
+exports.update = async (req, res) => {
+    try {
+        const { id, name, category_id, barcode, price, cost_price, description, status, qty, sizes, addons } = req.body;
+        const { business_id, branch_id } = req;
 
-//     const pageSize = 10; // Increased page size for better UX
-//     const currentPage = Number(page) || 1;
-//     const offset = (currentPage - 1) * pageSize;
+        const p_status = (status === 'undefined' || status === undefined) ? 1 : Number(status);
+        const p_qty = (qty === 'undefined' || qty === undefined) ? 0 : Number(qty);
 
-//     // SQL query to select product details
-//     const sqlSelect = `
-//       SELECT 
-//         p.id, p.name, p.category_id, p.barcode,  p.company_name, 
-//         p.description, p.qty, p.unit_price, p.discount, p.actual_price, p.status, 
-//         p.create_by, p.create_at, p.unit, 
-//         c.name AS category_name,
-//         (p.qty * p.unit_price) AS original_price,
-//         CASE
-//           WHEN p.discount > 0 THEN ((p.qty * p.unit_price) * (1 - p.discount / 100)) / p.actual_price
-//           ELSE (p.qty * p.unit_price) / p.actual_price
-//         END AS total_price
-//     `;
+        // Update Template
+        await db.query(
+            "UPDATE products SET name = ?, category_id = ?, barcode = ?, description = ?, status = ?, sizes = ?, addons = ? WHERE id = ? AND business_id = ?",
+            [name, category_id, barcode, description, p_status, sizes || null, addons || null, id, business_id]
+        );
 
-//     // SQL JOIN clause
-//     const sqlJoin = `FROM product p INNER JOIN category c ON p.category_id = c.id`;
+        // Update Branch Specifics
+        await db.query(
+            "UPDATE branch_products SET price = ?, cost_price = ?, stock_qty = ? WHERE product_id = ? AND branch_id = ?",
+            [price, cost_price, p_qty, id, branch_id]
+        );
 
-//     // SQL WHERE clause with user_id filter
-//     let sqlWhere = `WHERE p.user_id = :user_id`;
+        res.json({ success: true, message: "Product updated successfully!" });
+    } catch (error) {
+        logError("product.update", error, res);
+    }
+};
 
-//     // Apply additional filters
-//     if (txt_search) {
-//       sqlWhere += ` AND (p.name LIKE :txt_search OR p.barcode = :barcode)`;
-//     }
-//     if (category_id) {
-//       sqlWhere += ` AND p.category_id = :category_id`;
-//     }
+// 4. Remove Product
+exports.remove = async (req, res) => {
+    try {
+        const { id } = req.body;
+        const { business_id } = req;
 
-//     // SQL ORDER BY clause
-//     const sqlOrderBy = `ORDER BY p.id DESC`;
+        // This will cascade delete from branch_products if foreign key is set correctly
+        await db.query("DELETE FROM products WHERE id = ? AND business_id = ?", [id, business_id]);
 
-//     // SQL LIMIT and OFFSET for pagination
-//     let sqlLimit = `LIMIT ${pageSize} OFFSET ${offset}`;
-//     if (is_list_all) {
-//       sqlLimit = ``; // If is_list_all is true, remove pagination
-//     }
+        res.json({ message: "Product removed successfully!" });
+    } catch (error) {
+        logError("product.remove", error, res);
+    }
+};
 
-//     // Combine SQL clauses
-//     const sqlList = `${sqlSelect} ${sqlJoin} ${sqlWhere} ${sqlOrderBy} ${sqlLimit}`;
+// 5. Get Business-wide products (to add existing products to another branch)
+exports.getBusinessProducts = async (req, res) => {
+    try {
+        const { business_id } = req;
+        const [list] = await db.query("SELECT * FROM products WHERE business_id = ?", [business_id]);
+        res.json({ list });
+    } catch (error) {
+        logError("product.getBusinessProducts", error, res);
+    }
+}
 
-//     // SQL parameters
-//     const sqlParam = {
-//       user_id,
-//       txt_search: `%${txt_search || ''}%`,
-//       barcode: txt_search || '',
-//       category_id,
-//     };
+// 6. Link existing product to branch
+exports.linkToBranch = async (req, res) => {
+    try {
+        const { branch_id } = req;
+        const { product_id, price, cost_price } = req.body;
 
-//     const [list] = await db.query(sqlList, sqlParam);
+        await db.query(
+            "INSERT INTO branch_products (branch_id, product_id, price, cost_price) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE price=?, cost_price=?",
+            [branch_id, product_id, price, cost_price, price, cost_price]
+        );
 
-//     let dataCount = 0;
-//     if (currentPage === 1) {
-//       const sqlTotal = `SELECT COUNT(p.id) AS total ${sqlJoin} ${sqlWhere}`;
-//       const [totalResult] = await db.query(sqlTotal, sqlParam);
-//       dataCount = totalResult[0].total;
-//     }
+        res.json({ message: "Product linked to branch!" });
+    } catch (error) {
+        logError("product.linkToBranch", error, res);
+    }
+}
 
-//     res.json({
-//       list,
-//       total: dataCount,
-//     });
-//   } catch (error) {
-//     logError("product.getList", error, res);
-//   }
-// };
+// 7. Generate New Barcode
+exports.generateBarcode = async (req, res) => {
+    try {
+        // Generate a random 8-digit barcode
+        const barcode = Math.floor(10000000 + Math.random() * 90000000).toString();
+        res.json({ barcode });
+    } catch (error) {
+        logError("product.generateBarcode", error, res);
+    }
+};
 
-
-// // exports.create = async (req, res) => {
-// //   try {
-// //     // Extract values from request body
-// //     const { name, category_id, barcode, company_name, description, qty, actual_price,unit, unit_price, discount, status } = req.body;
-    
-// //     // Get user_id from authentication or fallback to request body
-// //     const user_id = req.auth?.id || req.body.user_id;
-  
-// //     // Validate required fields
-// //     if (!user_id || !name || !category_id || !qty || !unit || !unit_price) {
-// //       return res.status(400).json({
-// //         success: false,
-// //         message: "Missing required fields (user_id, name, category_id, qty, unit, unit_price).",
-// //       });
-// //     }
-
-// //     var sql =
-// //       " INSERT INTO product (user_id, name, category_id, barcode, company_name, description, qty, actual_price,unit, unit_price, discount, status, create_by) " +
-// //       " VALUES (:user_id, :name, :category_id, :barcode,  :company_name, :description, :qty, :actual_price,:unit, :unit_price, :discount, :status, :create_by) ";
-
-// //     var [data] = await db.query(sql, {
-// //       user_id,
-// //       name,
-// //       category_id,
-// //       barcode,
-// //       company_name,
-// //       description,
-// //       qty,
-// //       actual_price,
-// //       unit,
-// //       unit_price,
-// //       discount,
-// //       status,
-// //       create_by: req.auth?.name,
-// //     });
-
-// //     res.json({
-// //       success: true,
-// //       data,
-// //       message: "Insert success!",
-// //     });
-// //   } catch (error) {
-// //     logError("product.create", error, res);
-// //   }
-// // };
-
-// exports.create = async (req, res) => {
-//   try {
-//     // Extract values from request body
-//     const { name, category_id, barcode, company_name, description, qty, actual_price, unit, unit_price, discount, status } = req.body;
-    
-//     // Get user_id from authentication or fallback to request body
-//     const user_id = req.auth?.id || req.body.user_id;
-
-//     // Log all the fields for debugging
-//     console.log("Fields received for product creation:", {
-//       user_id,
-//       name,
-//       category_id,
-//       barcode,
-//       company_name,
-//       description,
-//       qty,
-//       unit,
-//       unit_price,
-//       discount,
-//       status
-//     });
-  
-//     // Validate required fields
-//     if (!user_id || !name || !category_id || !qty || !unit || !unit_price || !actual_price) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Missing required fields (user_id, name, category_id, qty, unit, unit_price, actual_price).",
-//       });
-//     }
-
-//     var sql =
-//       " INSERT INTO product (user_id, name, category_id, barcode, company_name, description, qty, actual_price, unit, unit_price, discount, status, create_by) " +
-//       " VALUES (:user_id, :name, :category_id, :barcode, :company_name, :description, :qty, :actual_price, :unit, :unit_price, :discount, :status, :create_by) ";
-
-//     var [data] = await db.query(sql, {
-//       user_id,
-//       name,
-//       category_id,
-//       barcode,
-//       company_name,
-//       description,
-//       qty,
-//       actual_price, // ធានាថាតម្លៃនេះមិនទទេ
-//       unit,
-//       unit_price,
-//       discount,
-//       status,
-//       create_by: req.auth?.name,
-//     });
-
-//     res.json({
-//       success: true,
-//       message: "Product created successfully.",
-//       data,
-//     });
-//   } catch (error) {
-//     logError("product.create", error, res);
-
-//     // Log the full error object for debugging
-//     console.error("Error while creating product:", error);
-
-//     res.status(500).json({
-//       success: false,
-//       message: "An error occurred while creating the product. Please try again later.",
-//     });
-//   }
-// };
-// exports.update = async (req, res) => {
-//   try {
-//     // Extracting fields from request body
-//     const { id, name, category_id, company_name, description, qty, unit, unit_price, discount, status } = req.body;
-
-//     // Check if `id` is provided
-//     if (!id) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Product ID is required for the update.",
-//       });
-//     }
-
-//     const convertedUnitPrice = parseFloat(unit_price);
-
-//     const convertedDiscount = discount ? parseFloat(discount) : 0;
-
-//     if (isNaN(convertedUnitPrice)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid value for unit_price. Please provide a valid number.",
-//       });
-//     }
-
-//     const sql = `
-//       UPDATE product
-//       SET 
-//         name = :name, 
-//         category_id = :category_id, 
-//         company_name = :company_name, 
-//         description = :description, 
-//         qty = :qty, 
-//         unit = :unit, 
-//         unit_price = :unit_price, 
-//         discount = :discount, 
-//         status = :status
-//       WHERE id = :id
-//     `;
-
-//     const [data] = await db.query(sql, {
-//       id,
-//       name,
-//       category_id,
-//       company_name,
-//       description,
-//       qty,
-//       unit,
-//       unit_price: convertedUnitPrice,
-//       discount: convertedDiscount,
-//       status,
-//       create_by: req.auth?.name, // Assumes the authenticated user is the one updating the product
-//     });
-
-//     // If no rows are affected, it means the product ID doesn't exist
-//     if (data.affectedRows === 0) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Product not found.",
-//       });
-//     }
-
-//     res.json({
-//       success: true,
-//       message: "Product updated successfully.",
-//       data,
-//     });
-//   } catch (error) {
-//     // Log error for debugging
-//     console.error("Error while updating product:", error);
-    
-//     logError("product.update", error, res);
-//     res.status(500).json({
-//       success: false,
-//       message: "An error occurred while updating the product. Please try again later.",
-//     });
-//   }
-// };
-
-
-
-
-// exports.remove = async (req, res) => {
-//   try {
-//     const id = req.params.id || req.body.id; // Check both params & body
-    
-//     if (!id) {
-//       return res.status(400).json({ message: "Product ID is required!" });
-//     }
-
-//     var [data] = await db.query("DELETE FROM product WHERE id = :id", { id });
-
-//     if (data.affectedRows === 0) {
-//       return res.status(404).json({ message: "Product not found!" });
-//     }
-
-//     res.json({ message: "Product deleted successfully!" });
-//   } catch (error) {
-//     logError("remove.product", error, res);
-//   }
-// };
-
-// exports.newBarcode = async (req, res) => {
-//   try {
-//     var sql =
-//       "SELECT " +
-//       "CONCAT('P',LPAD((SELECT COALESCE(MAX(id),0) + 1 FROM product), 3, '0')) " +
-//       "as barcode";
-//     var [data] = await db.query(sql);
-//     res.json({
-//       barcode: data[0].barcode,
-//     });
-//   } catch (error) {
-//     logError("remove.create", error, res);
-//   }
-// };
-
-// isExistBarcode = async (barcode) => {
-//   try {
-//     var sql = "SELECT COUNT(id) as Total FROM product WHERE barcode=:barcode";
-//     var [data] = await db.query(sql, {
-//       barcode: barcode,
-//     });
-//     if (data.length > 0 && data[0].Total > 0) {
-//       return true; // ស្ទួន
-//     }
-//     return false; // អត់ស្ទួនទេ
-//   } catch (error) {
-//     logError("remove.create", error, res);
-//   }
-// };
-
-// exports.productImage = async (req, res) => {
-//   try {
-//     var sql = "SELECT *  FROM product_image WHERE product_id=:product_id";
-//     var [list] = await db.query(sql, {
-//       product_id: req.params.product_id,
-//     });
-//     res.json({
-//       list,
-//     });
-//   } catch (error) {
-//     logError("remove.create", error, res);
-//   }
-// };
+// 8. Check if Barcode Exists
+exports.checkBarcode = async (req, res) => {
+    try {
+        const { barcode } = req.params;
+        const { business_id } = req;
+        const [rows] = await db.query(
+            "SELECT id FROM products WHERE barcode = ? AND business_id = ?",
+            [barcode, business_id]
+        );
+        res.json({ exists: rows.length > 0 });
+    } catch (error) {
+        logError("product.checkBarcode", error, res);
+    }
+};

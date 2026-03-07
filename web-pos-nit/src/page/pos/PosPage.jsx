@@ -1,191 +1,388 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   Button,
-  Col,
   Empty,
   Input,
   InputNumber,
   message,
   notification,
-  Row,
   Select,
-  Space,
   Modal,
   Form,
   Tag,
-  Card,
   Typography,
-  Badge,
-  Tabs,
+  Spin,
   Divider,
-  Avatar,
+  Radio,
+  Checkbox,
 } from "antd";
 import { request } from "../../util/helper";
-import MainPage from "../../component/layout/MainPage";
 import { configStore } from "../../store/configStore";
-import BillItem from "../../component/pos/BillItem";
-import ProductItem from "../../component/pos/ProductItem";
-import styles from "./PosPage.module.css";
+import { getIconForCategory, getColorForCategory } from "../../util/helper";
+import { Config } from "../../util/config";
+import { getProfile } from "../../store/profile.store";
 import { useReactToPrint } from "react-to-print";
 import PrintInvoice from "../../component/pos/PrintInvoice";
-import { getProfile } from "../../store/profile.store";
-import { getIconForCategory, getColorForCategory } from "../../util/helper";
-
-import {
-  MdAddToPhotos,
-  MdLocalCafe,
-  MdRestaurant,
-  MdIcecream,
-  MdBakeryDining
-} from "react-icons/md";
-import { FiSearch, FiShoppingCart, FiTrash2 } from "react-icons/fi";
-import {
-  CoffeeOutlined,
-  ShoppingCartOutlined,
-  UserOutlined,
-  CreditCardOutlined,
-  EnvironmentOutlined
-} from "@ant-design/icons";
-import { Config } from "../../util/config";
 import QRPaymentModal from "../../QRPaymentModal/QRPaymentModal";
+import { PriceDisplay } from "../../component/pos/ExchangeRateContext";
+import {
+  SearchOutlined,
+  BellOutlined,
+  FileTextOutlined,
+  UserOutlined,
+  DeleteOutlined,
+  MinusOutlined,
+  PlusOutlined,
+  CreditCardOutlined,
+} from "@ant-design/icons";
+import { FiSettings } from "react-icons/fi";
+import ImgUser from "../../assets/profile.png";
 
-const { Text, Title } = Typography;
-const { TabPane } = Tabs;
+const { Text } = Typography;
 
+// ─── Color Palette ──────────────────────────────────────────────────────────
+const COLORS = {
+  bg: "#f4f1eb",          // warm cream background
+  darkGreen: "#1e4a2d",   // primary dark green
+  midGreen: "#2d6a42",    // medium green
+  accentGreen: "#3a7d52", // accent green
+  white: "#ffffff",
+  cardBg: "#ffffff",
+  textPrimary: "#1a2e1a",
+  textSecondary: "#6b7c6b",
+  softBorder: "#e8e3d8",
+  redBadge: "#e85d5d",
+  softGold: "#f7c06a",
+};
+
+// ─── Default categories ──────────────────────────────────────────────────────
 const defaultParentCategories = [
-  { id: 51, name: "Coffee", icon: "☕", color: "#8B4513" },
-  { id: 52, name: "Juice", icon: "🧃", color: "#4CAF50" },
-  { id: 53, name: "Milk Based", icon: "🥛", color: "#2196F3" },
-  { id: 54, name: "Snack", icon: "🍪", color: "#FF9800" },
-  { id: 55, name: "Rice", icon: "🍚", color: "#E91E63" },
-  { id: 56, name: "Dessert", icon: "🍰", color: "#9C27B0" },
+  { id: 51, name: "Coffee", icon: "☕", color: COLORS.darkGreen },
+  { id: 52, name: "Juice", icon: "🧃", color: "#4a8a3a" },
+  { id: 53, name: "Milk", icon: "🥛", color: "#3a6a9a" },
+  { id: 54, name: "Snack", icon: "🍪", color: "#9a5a2a" },
+  { id: 55, name: "Rice", icon: "🍚", color: "#7a4a8a" },
+  { id: 56, name: "Dessert", icon: "🍰", color: "#c0543a" },
 ];
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getDayLabel() {
+  const d = new Date();
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
+function getCategoryEmoji(catId) {
+  const map = { 51: "☕", 52: "🧃", 53: "🥛", 54: "🍪", 55: "🍚", 56: "🍰" };
+  return map[catId] || "🍽️";
+}
+
+// ─── Mini ProductCard ─────────────────────────────────────────────────────────
+function ProductCard({ product, onAdd, cartQty }) {
+  const [hovered, setHovered] = useState(false);
+  const price = Number(
+    product.unit_price || product.price || product.actual_price || 0
+  );
+  const isOOS = product.qty <= 0;
+  const imgUrl = product.image ? Config.getFullImagePath(product.image) : null;
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: COLORS.white,
+        borderRadius: 18,
+        padding: "14px 14px 12px",
+        boxShadow: hovered
+          ? "0 8px 28px rgba(30,74,45,0.15)"
+          : "0 2px 10px rgba(0,0,0,0.06)",
+        transform: hovered ? "translateY(-3px)" : "none",
+        transition: "all 0.25s ease",
+        cursor: isOOS ? "default" : "pointer",
+        opacity: isOOS ? 0.55 : 1,
+        position: "relative",
+        border: `1px solid ${COLORS.softBorder}`,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+      }}
+    >
+      {/* cart badge */}
+      {cartQty > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            background: COLORS.darkGreen,
+            color: "#fff",
+            borderRadius: "50%",
+            width: 20,
+            height: 20,
+            fontSize: 11,
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {cartQty}
+        </div>
+      )}
+
+      {/* product image */}
+      <div
+        style={{
+          width: 90,
+          height: 90,
+          borderRadius: 14,
+          overflow: "hidden",
+          background: "#f0ede6",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        {imgUrl ? (
+          <img
+            src={imgUrl}
+            alt={product.name}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            onError={(e) => {
+              e.target.style.display = "none";
+            }}
+          />
+        ) : (
+          <span style={{ fontSize: 38 }}>
+            {getIconForCategory(product.category_name)}
+          </span>
+        )}
+      </div>
+
+      {/* name + price */}
+      <div style={{ width: "100%", paddingLeft: 2 }}>
+        <div
+          style={{
+            fontWeight: 600,
+            fontSize: 13,
+            color: COLORS.textPrimary,
+            marginBottom: 2,
+            maxWidth: "100%",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {product.name}
+        </div>
+        <div style={{ fontSize: 13, color: COLORS.textSecondary }}>
+          ${price.toFixed(2)}
+        </div>
+      </div>
+
+      {/* add button */}
+      <button
+        onClick={() => !isOOS && onAdd(product)}
+        disabled={isOOS}
+        style={{
+          position: "absolute",
+          bottom: 12,
+          right: 12,
+          width: 30,
+          height: 30,
+          borderRadius: "50%",
+          background:
+            cartQty > 0
+              ? COLORS.darkGreen
+              : isOOS
+                ? "#ccc"
+                : COLORS.white,
+          border: `2px solid ${isOOS ? "#ccc" : COLORS.darkGreen}`,
+          color: cartQty > 0 ? "#fff" : COLORS.darkGreen,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: isOOS ? "not-allowed" : "pointer",
+          fontSize: 18,
+          fontWeight: 700,
+          transition: "all 0.2s ease",
+          boxShadow: cartQty > 0 ? "0 4px 12px rgba(30,74,45,0.3)" : "none",
+          lineHeight: 1,
+          padding: 0,
+        }}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+// ─── Bill Cart Item ───────────────────────────────────────────────────────────
+function BillCartItem({ item, onIncrease, onDecrease, onRemove }) {
+  const price =
+    Number(item.unit_price || item.price || 0) * Number(item.cart_qty || 1);
+  const imgUrl = item.image ? Config.getFullImagePath(item.image) : null;
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 0",
+        borderBottom: `1px solid ${COLORS.softBorder}`,
+      }}
+    >
+      {/* image */}
+      <div
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 10,
+          overflow: "hidden",
+          background: "#f0ede6",
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {imgUrl ? (
+          <img
+            src={imgUrl}
+            alt={item.name}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        ) : (
+          <span style={{ fontSize: 22 }}>
+            {getIconForCategory(item.category_name)}
+          </span>
+        )}
+      </div>
+
+      {/* info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontWeight: 600,
+            fontSize: 13,
+            color: COLORS.textPrimary,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {item.display_name || item.name}
+        </div>
+        {item.note && (
+          <div style={{ fontSize: 11, color: COLORS.midGreen, fontWeight: 500 }}>
+            {item.note}
+          </div>
+        )}
+        {item.mood && (
+          <div style={{ fontSize: 11, color: COLORS.textSecondary }}>
+            {item.mood === "hot" ? "🔥 Hot" : "❄️ Cold"}
+            {item.size ? ` • ${item.size}` : ""}
+          </div>
+        )}
+        <div style={{ fontSize: 11, color: COLORS.textSecondary }}>
+          ${Number(item.unit_price || item.price || 0).toFixed(2)} x{" "}
+          {item.cart_qty}
+        </div>
+      </div>
+
+      {/* qty controls */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button
+          onClick={() => onDecrease(item)}
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: "50%",
+            border: `1px solid ${COLORS.softBorder}`,
+            background: "#fff",
+            cursor: "pointer",
+            fontSize: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: COLORS.textSecondary,
+            padding: 0,
+          }}
+        >
+          −
+        </button>
+        <span style={{ fontSize: 13, fontWeight: 600, minWidth: 16, textAlign: "center" }}>
+          {item.cart_qty}
+        </span>
+        <button
+          onClick={() => onIncrease(item)}
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: "50%",
+            border: `none`,
+            background: COLORS.darkGreen,
+            cursor: "pointer",
+            fontSize: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            padding: 0,
+          }}
+        >
+          +
+        </button>
+      </div>
+
+      {/* total price */}
+      <div
+        style={{
+          fontSize: 13,
+          fontWeight: 700,
+          color: COLORS.textPrimary,
+          minWidth: 48,
+          textAlign: "right",
+        }}
+      >
+        ${price.toFixed(2)}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 function PosPage() {
   const [isDisabled, setIsDisabled] = useState(false);
-  const [resetTrigger, setResetTrigger] = useState(0);
-  const [selectedMood, setSelectedMood] = useState('hot');
-  const [selectedSize, setSelectedSize] = useState('M');
-  const [selectedSugar, setSelectedSugar] = useState(50);
-  const [selectedIce, setSelectedIce] = useState(50);
-  const [customQuantity, setCustomQuantity] = useState(1);
-  const [qrModalVisible, setQrModalVisible] = useState(false);
-  const [showOutOfStock, setShowOutOfStock] = useState(false);
-
-  const [paymentData, setPaymentData] = useState({
-    paymentLink: '',
-    orderNo: '',
-    total: 0
-  });
-
+  const [selectedCategory, setSelectedCategory] = useState(51);
   const [parentCategories, setParentCategories] = useState(defaultParentCategories);
-  const [selectedCategory, setSelectedCategory] = useState(51); // Changed from "all" to 51 (Coffee)
+  const [searchText, setSearchText] = useState("");
+  const [orderType, setOrderType] = useState("dine_in");
+  const [customerName, setCustomerName] = useState("");
+  const [tableNo, setTableNo] = useState("");
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [optionsModalVisible, setOptionsModalVisible] = useState(false);
+  const [selectedProductForOptions, setSelectedProductForOptions] = useState(null);
+  const [tempOptions, setTempOptions] = useState({ mood: "hot", size: "M", sugar: "100%", addons: [] });
+  const [paymentData, setPaymentData] = useState({ paymentLink: "", orderNo: "", total: 0 });
 
   const { config } = configStore();
-  const refInvoice = React.useRef(null);
+  const refInvoice = useRef(null);
+  const [form] = Form.useForm();
+
   const [state, setState] = useState({
     list: [],
     customers: [],
     total: 0,
     loading: false,
-    visibleModal: false,
     cart_list: [],
   });
-  const { id } = getProfile();
-
-  useEffect(() => {
-    setObjSummary((prev) => ({
-      ...prev,
-      user_id: id,
-    }));
-  }, [id]);
-
-  const fetchCustomers = async () => {
-    try {
-      const { id } = getProfile();
-      if (!id) {
-        console.error("User ID is missing.");
-        return;
-      }
-
-      const param = {
-        ...filter,
-        page: refPage.current,
-        is_list_all: 1,
-      };
-
-      setState((prev) => ({ ...prev, loading: true }));
-      const res = await request(`customer/${id}`, "get", param);
-
-      if (res && !res.error) {
-        const customers = (res.list || []).map((customer) => ({
-          label: `${customer.name} - ${customer.tel}`,
-          value: customer.id,
-        }));
-
-        setState((prev) => ({ ...prev, customers, loading: false }));
-      } else {
-        console.error("Failed to fetch customers:", res?.error);
-        setState((prev) => ({ ...prev, loading: false }));
-      }
-
-    } catch (error) {
-      console.error("Failed to fetch customers:", error);
-      setState((prev) => ({ ...prev, loading: false }));
-    }
-  };
-
-  const getParentCategories = async () => {
-    try {
-
-      const res = await request("category", "get");
-
-      let allCategories = [];
-
-      if (res?.all_parent_categories?.length > 0) {
-        allCategories = res.all_parent_categories.map(cat => ({
-          id: cat.id,
-          name: cat.name,
-          icon: getIconForCategory(cat.name),
-          color: getColorForCategory(cat.name),
-        }));
-      } else if (res?.list?.length > 0) {
-        const parentMap = new Map();
-        res.list.forEach(item => {
-          if (item.parent_id && item.parent_category_name) {
-            parentMap.set(item.parent_id, {
-              id: item.parent_id,
-              name: item.parent_category_name,
-              icon: getIconForCategory(item.parent_category_name),
-              color: getColorForCategory(item.parent_category_name),
-            });
-          }
-        });
-        const parents = Array.from(parentMap.values());
-        allCategories = parents;
-      }
-
-      if (allCategories.length === 0) {
-        console.warn("⚠️ No dynamic categories found. Falling back to defaults.");
-        setParentCategories(defaultParentCategories);
-      } else {
-        setParentCategories(allCategories);
-
-        const coffeeCategory = allCategories.find(cat =>
-          cat.name.toLowerCase().includes('coffee') || cat.id === 51
-        );
-        if (coffeeCategory && selectedCategory !== coffeeCategory.id) {
-          setSelectedCategory(coffeeCategory.id);
-        } else if (allCategories.length > 0 && !allCategories.find(cat => cat.id === selectedCategory)) {
-          setSelectedCategory(allCategories[0].id);
-        }
-      }
-
-    } catch (error) {
-      console.error("❌ Failed to fetch categories:", error);
-      setParentCategories(defaultParentCategories);
-    }
-  };
 
   const [objSummary, setObjSummary] = useState({
     sub_total: 0,
@@ -194,7 +391,6 @@ function PosPage() {
     tax: 0,
     total: 0,
     total_paid: 0,
-    customers: null,
     customer_id: null,
     user_id: null,
     payment_method: null,
@@ -203,762 +399,1001 @@ function PosPage() {
     order_date: null,
   });
 
-  const refPage = React.useRef(1);
-  const [filter, setFilter] = useState({
-    txt_search: "",
-    category_id: "", 
-    brand: "",
-  });
-  const [form] = Form.useForm();
-  const filteredProducts = showOutOfStock
-    ? state.list
-    : state.list.filter((product) => product.qty > 0);
+  const profile = getProfile();
+  const userId = profile?.user_id;
 
-  const allProducts = state.list;
-  const inStockProducts = state.list.filter((product) => product.qty > 0);
-  const outOfStockProducts = state.list.filter((product) => product.qty <= 0);
-
-  useEffect(() => {
-  }, [parentCategories]);
-
-  useEffect(() => {
-  }, [selectedCategory]);
-
-  useEffect(() => {
-    const initializeData = async () => {
-      try {
-        await getParentCategories();
-
-        await fetchCustomers();
-        await getList();
-
-      } catch (error) {
-      }
-    };
-
-    initializeData();
-  }, []); 
-
-  useEffect(() => {
-    setSelectedMood('hot');
-    setSelectedSize('M');
-    setSelectedSugar(50);
-    setSelectedIce(50);
-    setCustomQuantity(1);
-  }, [resetTrigger]);
-
-  useEffect(() => {
-    handleCalSummary();
-  }, [state.cart_list]);
-
-  useEffect(() => {
-    fetchCustomers();
-    getParentCategories(); 
-    getList();
-  }, []);
-
-  useEffect(() => {
-    getList();
-  }, [selectedCategory]);
-
+  // ── time disable ──
   useEffect(() => {
     const checkTime = () => {
       const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      setIsDisabled(hours === 0 && minutes === 0);
+      setIsDisabled(now.getHours() === 0 && now.getMinutes() === 0);
     };
     checkTime();
-    const interval = setInterval(checkTime, 60000);
-    return () => clearInterval(interval);
+    const iv = setInterval(checkTime, 60000);
+    return () => clearInterval(iv);
   }, []);
 
-  const getList = async () => {
-    let param = {
-      ...filter,
-      page: refPage.current,
-      is_list_all: 1,
-    };
+  // ── set user id ──
+  useEffect(() => {
+    setObjSummary((p) => ({ ...p, user_id: userId }));
+  }, [userId]);
 
-    param.parent_id = selectedCategory;
-
-    const { id } = getProfile();
-    if (!id) return;
-
-    try {
-      setState(pre => ({ ...pre, loading: true }));
-
-      const res = await request(`product/${id}`, "get", param);
-
-      if (res && !res.error) {
-        let filteredList = res.list || [];
-
-
-        if (filteredList.length > 0) {
-        }
-
-        const beforeFilter = filteredList.length;
-        filteredList = filteredList.filter(product => product.parent_id === selectedCategory);
-
-
-        setState(pre => ({
-          ...pre,
-          list: filteredList,
-          total: filteredList.length,
-          loading: false,
-        }));
-
-      }
-    } catch (error) {
-      console.error("❌ Error fetching products:", error);
-      setState(pre => ({ ...pre, loading: false }));
-    }
-  };
-
-  const onFilter = () => {
+  // ── initial data ──
+  useEffect(() => {
+    getParentCategories();
     getList();
-  };
+  }, []);
 
-  const handleAdd = (item, customizations = {}) => {
-    let cart_tmp = [...state.cart_list];
+  useEffect(() => {
+    getList();
+  }, [selectedCategory]);
 
-    const customKey = `${item.id}-${customizations.size || 'M'}-${customizations.temperature || 'Cold'}-${customizations.sugarLevel || '25%'}-${(customizations.addons || []).map(a => a.name || a).join(',')}`;
-
-    const findIndex = cart_tmp.findIndex(row => row.customKey === customKey);
-    let isNoStock = false;
-
-    if (findIndex === -1) {
-      if (item.qty > 0) {
-        const final_price = Number(item.unit_price) ||
-          Number(item.price) ||
-          Number(item.selling_price) ||
-          Number(item.actual_price) || 0;
-
-        if (final_price === 0) {
-          console.warn(`⚠️ Warning: No valid price found for product ${item.id} - ${item.name}`);
-          message.warning(`Price not set for ${item.name}. Please check product configuration.`);
-          return;
-        }
-
-        let sizeMultiplier = 1;
-        const size = customizations.size?.name || customizations.size || "M";
-        if (size === 'L' || size === 'Large') sizeMultiplier = 1.3;
-        else if (size === 'S' || size === 'Small') sizeMultiplier = 0.8;
-
-        const addonsPrice = (customizations.addons || []).reduce((sum, addon) => sum + Number(addon.price || 0), 0);
-
-        const quantity = item.cart_qty || 1;
-        const finalPrice = Number(item.discountedPrice || item.unit_price || item.price || 0);
-
-        cart_tmp.push({
-          ...item,
-          cart_qty: quantity,
-          totalPrice: finalPrice * quantity,
-          price: finalPrice,
-          unit_price: finalPrice,
-          actual_price: item.actual_price || item.unit_price || item.price,
-        });
-
-      } else {
-        isNoStock = true;
-      }
-    } else {
-      const current = cart_tmp[findIndex];
-      current.cart_qty += 1;
-      current.quantity += 1;
-      current.totalPrice = current.discountedPrice * current.quantity;
-
-      if (item.qty < current.cart_qty) {
-        isNoStock = true;
-      }
-    }
-
-    if (isNoStock) {
-      notification.error({
-        message: "Out of Stock",
-        description: `Only ${item.qty} item(s) available`,
-      });
-      return;
-    }
-
-    setState(pre => ({ ...pre, cart_list: cart_tmp }));
+  useEffect(() => {
     handleCalSummary();
+  }, [state.cart_list]);
+
+  // ── fetch categories ──
+  const getParentCategories = async () => {
+    try {
+      const res = await request("category", "get");
+      if (res && res.list) {
+        const cats = res.list.map((c) => ({
+          id: c.id,
+          name: c.name,
+          icon: getIconForCategory(c.name),
+          color: getColorForCategory(c.name) || COLORS.darkGreen,
+        }));
+        setParentCategories(cats.length > 0 ? cats : defaultParentCategories);
+        if (cats.length > 0 && !cats.find(c => c.id === selectedCategory)) {
+          setSelectedCategory(cats[0].id);
+        }
+      } else {
+        setParentCategories(defaultParentCategories);
+      }
+    } catch {
+      setParentCategories(defaultParentCategories);
+    }
   };
 
-  const handleClearCart = () => {
-    setState((p) => ({
-      ...p,
-      cart_list: [],
-      customers: [],
-    }));
-
-    setObjSummary((p) => ({
-      ...p,
-      sub_total: 0,
-      total_qty: 0,
-      save_discount: 0,
-      tax: 0,
-      total: 0,
-      total_paid: 0,
-      customer_id: null,
-      payment_method: null,
-      user_id: null,
-      remark: null,
-    }));
-
-    form.resetFields();
-    fetchCustomers();
+  // ── fetch products ──
+  const getList = async () => {
+    if (!userId) return;
+    setState((p) => ({ ...p, loading: true }));
+    try {
+      const res = await request(`product`, "get", {
+        is_list_all: 1,
+        category_id: selectedCategory,
+      });
+      if (res && !res.error) {
+        // API already filters by parent_id — no need to filter client-side
+        const products = res.list || [];
+        setState((p) => ({ ...p, list: products, total: products.length, loading: false }));
+      } else {
+        setState((p) => ({ ...p, loading: false }));
+      }
+    } catch {
+      setState((p) => ({ ...p, loading: false }));
+    }
   };
 
-  const debugProductPrices = () => {
-    state.list.forEach(product => {
-
-    });
-  };
-
+  // ── calculate summary ──
   const handleCalSummary = useCallback(() => {
     let total_qty = 0;
     let sub_total = 0;
-
     state.cart_list.forEach((item) => {
-      const qty = Number(item.cart_qty) || Number(item.quantity) || 0;
-      const item_price = Number(item.discountedPrice) || Number(item.price) || Number(item.unit_price) || 0;
-
-      const item_total = item_price * qty;
-
+      const qty = Number(item.cart_qty) || 0;
+      const prc = Number(item.unit_price || item.price || 0);
       total_qty += qty;
-      sub_total += item_total;
+      sub_total += prc * qty;
     });
-
-    const tax = 0; 
-    const total = sub_total + tax;
-
-    setObjSummary((prev) => ({
-      ...prev,
+    const total = sub_total;
+    setObjSummary((p) => ({
+      ...p,
       total_qty,
-      sub_total: Number(sub_total.toFixed(2)),
-      tax,
-      total: Number(total.toFixed(2)),
-      save_discount: 0, 
+      sub_total: +sub_total.toFixed(2),
+      total: +total.toFixed(2),
+      tax: 0,
+      save_discount: 0,
     }));
   }, [state.cart_list]);
 
-  const handleCloseQRModal = () => {
-    setQrModalVisible(false);
-    setPaymentData({
-      paymentLink: '',
-      orderNo: '',
-      total: 0
+  // ── cart helpers ──
+  const handleAdd = (product) => {
+    setState((prev) => {
+      const cart = [...prev.cart_list];
+      const idx = cart.findIndex((c) => c.id === product.id);
+      if (idx === -1) {
+        if (product.qty <= 0) {
+          notification.error({ message: "Out of Stock" });
+          return prev;
+        }
+
+        const isCoffee = product.category_name?.toLowerCase().includes("coffee");
+        const hasOptions = (product.sizes && JSON.parse(product.sizes).length > 0) || (product.addons && JSON.parse(product.addons).length > 0);
+
+        if (isCoffee || hasOptions) {
+          setSelectedProductForOptions(product);
+          // Default options
+          setTempOptions({
+            mood: "ice",
+            size: product.sizes ? JSON.parse(product.sizes)[0]?.label : "M",
+            sugar: "100%",
+            addons: []
+          });
+          setOptionsModalVisible(true);
+          return prev;
+        }
+
+        cart.push({ ...product, cart_qty: 1 });
+      } else {
+        if (cart[idx].cart_qty >= product.qty) {
+          notification.warning({ message: `Only ${product.qty} available` });
+          return prev;
+        }
+        cart[idx] = { ...cart[idx], cart_qty: cart[idx].cart_qty + 1 };
+      }
+      return { ...prev, cart_list: cart };
     });
   };
 
+  const handleConfirmOptions = () => {
+    const product = selectedProductForOptions;
+    setState((prev) => {
+      const cart = [...prev.cart_list];
+
+      let adjustedPrice = Number(product.price || product.unit_price || 0);
+      if (product.sizes) {
+        const sizes = JSON.parse(product.sizes);
+        const selectedSizeObj = sizes.find(s => s.label === tempOptions.size);
+        if (selectedSizeObj && selectedSizeObj.price) {
+          adjustedPrice = Number(selectedSizeObj.price);
+        }
+      }
+
+      if (product.addons && tempOptions.addons.length > 0) {
+        const addonsList = JSON.parse(product.addons);
+        tempOptions.addons.forEach(addonLabel => {
+          const addonObj = addonsList.find(a => a.label === addonLabel);
+          if (addonObj && addonObj.price) {
+            adjustedPrice += Number(addonObj.price);
+          }
+        });
+      }
+
+      const addonStr = tempOptions.addons.length > 0 ? ` + ${tempOptions.addons.join(", ")}` : "";
+      const optionNote = `${tempOptions.mood === "hot" ? "🔥 Hot" : "❄️ Ice"} (${tempOptions.size}, ${tempOptions.sugar} Sugar)${addonStr}`;
+
+      const uniqueName = `${product.name} [${optionNote}]`;
+      const uniqueId = `${product.id}-${optionNote}`;
+      const idx = cart.findIndex((c) => c.unique_id === uniqueId);
+
+      if (idx === -1) {
+        cart.push({
+          ...product,
+          unique_id: uniqueId,
+          display_name: uniqueName,
+          unit_price: adjustedPrice,
+          price: adjustedPrice,
+          cart_qty: 1,
+          mood: tempOptions.mood,
+          size: tempOptions.size,
+          sugar: tempOptions.sugar,
+          addons_selected: tempOptions.addons,
+          note: optionNote
+        });
+      } else {
+        cart[idx] = { ...cart[idx], cart_qty: cart[idx].cart_qty + 1 };
+      }
+      return { ...prev, cart_list: cart };
+    });
+    setOptionsModalVisible(false);
+    setSelectedProductForOptions(null);
+  };
+
+  const handleIncrease = (item) => {
+    setState((prev) => {
+      const cart = prev.cart_list.map((c) =>
+        c.id === item.id && c.name === item.name
+          ? { ...c, cart_qty: Math.min(c.cart_qty + 1, item.qty || 999) }
+          : c
+      );
+      return { ...prev, cart_list: cart };
+    });
+  };
+
+  const handleDecrease = (item) => {
+    setState((prev) => {
+      const cart = prev.cart_list
+        .map((c) =>
+          c.id === item.id && c.name === item.name
+            ? { ...c, cart_qty: c.cart_qty - 1 }
+            : c
+        )
+        .filter((c) => c.cart_qty > 0);
+      return { ...prev, cart_list: cart };
+    });
+  };
+
+  const handleRemoveItem = (item) => {
+    setState((prev) => ({
+      ...prev,
+      cart_list: prev.cart_list.filter(
+        (c) => !(c.id === item.id && c.name === item.name)
+      ),
+    }));
+  };
+
+  const handleClearCart = () => {
+    setState((p) => ({ ...p, cart_list: [] }));
+    setObjSummary((p) => ({
+      ...p,
+      sub_total: 0, total_qty: 0, save_discount: 0,
+      tax: 0, total: 0, total_paid: 0,
+      customer_id: null, payment_method: null,
+    }));
+    setCustomerName("");
+    setTableNo("");
+    form.resetFields();
+  };
+
+  // ── place order ──
   const handleClickOut = async () => {
     if (!state.cart_list.length) {
-      message.error("Your cart is empty! Please add some items first.");
+      message.error("Cart is empty!");
       return;
     }
-
     if (!objSummary.payment_method) {
       message.error("Please select a payment method!");
       return;
     }
-
     const items = state.cart_list.map((item) => {
-      const quantity = Number(item.cart_qty) || Number(item.quantity) || 1;
-      const unitPrice = Number(item.unit_price) || Number(item.price) || 0;
-      const discountedPrice = Number(item.discountedPrice) || unitPrice;
-      const discount_percent = Number(item.discount) || 0;
-      const totalPrice = discountedPrice * quantity;
-
-      const original_total = unitPrice * quantity;
-      const discount_amount = discount_percent > 0 ? (original_total * discount_percent / 100) : 0;
-
+      const qty = Number(item.cart_qty) || 1;
+      const unitPrice = Number(item.unit_price || item.price || 0);
       return {
         product_id: item.id,
-        name: item.name || item.product_name || `Product ${item.id}`,
-        quantity,
-
-        originalPrice: unitPrice,
-        discountedPrice: discountedPrice,
-        totalPrice: totalPrice,
-        discount_percent: discount_percent,     
-        discount_amount: discount_amount,      
-
+        qty: qty,
         price: unitPrice,
-        unit_price: unitPrice,
-        discount: discount_percent,
-
-        size: item.size,
-        temperature: item.temperature || item.mood,
-        sugarLevel: item.sugarLevel || item.sugar,
-        addons: item.addons || [],
+        note: item.note || ""
       };
     });
-
-    const { id: user_id } = getProfile();
-
     const param = {
       ...objSummary,
-      user_id,
-      items,
-      sub_total: Number(objSummary.sub_total) || 0,
-      total: Number(objSummary.total) || 0,
-      total_qty: Number(objSummary.total_qty) || 0,
-      tax: Number(objSummary.tax) || 0,
-      save_discount: Number(objSummary.save_discount) || 0,
+      cart_items: items, // renamed from items to cart_items for SaaS API
+      customer_name: customerName,
+      table_no: tableNo,
+      order_type: orderType,
+      sub_total: +objSummary.sub_total,
+      total_amount: +objSummary.total, // renamed from total to total_amount
+      total_qty: +objSummary.total_qty,
+      tax: 0,
+      discount: 0,
+      payment_method: objSummary.payment_method
     };
-
     try {
-      const res = await request("orders/create_byCashie", "post", param);
-
+      const res = await request("order", "post", param);
       if (res && !res.error) {
-        message.success("Order created successfully!");
-
+        message.success("Order placed successfully!");
         if (res.payment_link) {
-          setPaymentData({
-            paymentLink: res.payment_link,
-            orderNo: res.order_no,
-            total: param.total
-          });
+          setPaymentData({ paymentLink: res.payment_link, orderNo: res.order_no, total: param.total });
           setQrModalVisible(true);
         }
-
         setObjSummary((p) => ({
           ...p,
           order_no: res.order_id,
           order_date: new Date().toISOString(),
         }));
-
-        setTimeout(() => {
-          handlePrintInvoice();
-        }, 2000);
-
-        setResetTrigger(prev => prev + 1);
+        setTimeout(() => handlePrintInvoice(), 2000);
       } else {
-        console.error("❌ Error response:", res);
-        message.error(`Order failed! ${res?.message || res?.error || ''}`);
+        message.error(`Order failed! ${res?.message || res?.error || ""}`);
       }
-    } catch (error) {
-      console.error("❌ Error creating order:", error);
+    } catch {
       message.error("Failed to create order. Please try again.");
     }
   };
 
-  const onBeforePrint = React.useCallback(() => {
-    return Promise.resolve();
-  }, []);
-
-  const onAfterPrint = React.useCallback((event) => {
-    handleClearCart();
-  }, []);
-
-  const onPrintError = React.useCallback(() => {
-  }, []);
-
+  // ── print ──
   const handlePrintInvoice = useReactToPrint({
     contentRef: refInvoice,
-    onBeforePrint: onBeforePrint,
-    onAfterPrint: onAfterPrint,
-    onPrintError: onPrintError,
+    onAfterPrint: () => handleClearCart(),
   });
 
-  const handleModalOk = () => {
-    form.validateFields().then((values) => {
-      setState((p) => ({ ...p, visibleModal: false }));
-    });
+  // ── filtered products ──
+  const filteredProducts = state.list.filter((p) =>
+    p.name?.toLowerCase().includes(searchText.toLowerCase())
+  );
+  const inStock = filteredProducts.filter((p) => p.qty > 0);
+  const outOfStock = filteredProducts.filter((p) => p.qty <= 0);
+  const allVisible = [...inStock, ...outOfStock];
+
+  const getCartQty = (productId) => {
+    const item = state.cart_list.find((c) => c.id === productId);
+    return item ? item.cart_qty : 0;
   };
 
-  const handleModalCancel = () => {
-    setState((p) => ({ ...p, visibleModal: false }));
+  // ── category availability ──
+  const getCategoryStock = (catId) => {
+    // placeholder: we just say "Available" for selected, add logic if needed
+    return "Available";
   };
 
-  const handleQuantityChange = (value, index) => {
-    if (!value || isNaN(value) || value <= 0) return;
-
-    const newCartList = [...state.cart_list];
-    newCartList[index].cart_qty = Number(value);
-    newCartList[index].quantity = Number(value);
-
-    newCartList[index].totalPrice = newCartList[index].discountedPrice * Number(value);
-
-    setState((prev) => ({ ...prev, cart_list: newCartList }));
-  };
-
-  const handlePriceChange = (value, index) => {
-    if (value < 0) return;
-
-    const newCartList = [...state.cart_list];
-    newCartList[index] = {
-      ...newCartList[index],
-      unit_price: value,
-      discountedPrice: value,
-      totalPrice: value * newCartList[index].quantity
-    };
-
-    setState((prev) => ({ ...prev, cart_list: newCartList }));
-  };
-
-  const handleActualPriceChange = (value, index) => {
-    if (value < 0) return;
-
-    const newCartList = [...state.cart_list];
-    newCartList[index] = { ...newCartList[index], actual_price: value };
-
-    setState((prev) => ({ ...prev, cart_list: newCartList }));
-  };
-
-  const orderTypes = [
-    { key: 'delivery', label: 'Delivery', icon: '🚗', active: true },
-    { key: 'dine_in', label: 'Dine In', icon: '🍽️', active: false },
-    { key: 'takeaway', label: 'Take Away', icon: '🥤', active: false }
-  ];
-
-  const CategoryCard = ({ category, isSelected, onClick }) => (
+  // ─────────────────────────────────────────────────────────────────────────────
+  return (
     <div
-      onClick={() => onClick(category.id)}
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: 80,
-        height: 80,
-        borderRadius: 12,
-        background: isSelected ? category.color : 'white',
-        boxShadow: isSelected
-          ? `0 4px 12px ${category.color}40`
-          : '0 2px 8px rgba(0, 0, 0, 0.1)',
-        cursor: 'pointer',
-        transition: 'all 0.3s ease',
-        border: isSelected ? 'none' : '1px solid #e8e9ea',
-        transform: isSelected ? 'translateY(-2px)' : 'none'
+        background: COLORS.bg,
+        minHeight: "100vh",
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      <div style={{
-        fontSize: 24,
-        marginBottom: 4,
-        filter: isSelected ? 'brightness(1.2)' : 'none'
-      }}>
-        {category.icon}
-      </div>
-      <Text style={{
-        fontSize: 12,
-        color: isSelected ? 'white' : '#666',
-        fontWeight: isSelected ? 600 : 400,
-        textAlign: 'center',
-        lineHeight: 1.2
-      }}>
-        {category.name}
-      </Text>
-    </div>
-  );
-
-  return (
-    <MainPage loading={state.loading}>
+      {/* Hidden print invoice */}
       <div style={{ display: "none" }}>
-        <PrintInvoice
-          ref={refInvoice}
-          cart_list={state.cart_list}
-          objSummary={objSummary}
-        />
+        <PrintInvoice ref={refInvoice} cart_list={state.cart_list} objSummary={objSummary} />
       </div>
 
-      <div style={{
-        minHeight: '100vh',
-        padding: '20px'
-      }}>
-        <Row gutter={24} style={{ height: '100vh', overflow: 'hidden' }}>
-          <Col span={16} style={{ height: '100%', overflowY: 'auto', paddingRight: 8 }}>
-            <Card style={{ height: '100%', borderRadius: 20, border: 'none' }}>
-              <div style={{ marginBottom: 32 }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 24
-                }}>
-                  <div>
-                    <Title level={2} style={{ margin: 0, color: '#2c3e50' }}>
-                      Menu
-                    </Title>
-                    <Text type="secondary" style={{ fontSize: 16 }}>
-                      {state.list.length} items available
-                    </Text>
-                  </div>
-                  <Badge count={state.cart_list.length} style={{ backgroundColor: '#ff6b35' }}>
-                    <Avatar
-                      size={48}
-                      icon={<ShoppingCartOutlined />}
-                      style={{ backgroundColor: '#f0f0f0', color: '#666' }}
-                    />
-                  </Badge>
-                </div>
+      {/* ══ HEADER ══════════════════════════════════════════════════════════ */}
+      {/* ══ BODY ════════════════════════════════════════════════════════════ */}
+      <div
+        style={{
+          display: "flex",
+          flex: 1,
+          gap: 0,
+          overflow: "hidden",
+          height: "calc(100vh - 180px)", // Adjusted for MainLayout padding/header
+        }}
+      >
+        {/* ── LEFT PANEL ── */}
+        <div
+          style={{
+            flex: 1,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            padding: "20px 20px 0 20px",
+            gap: 16,
+          }}
+        >
+          {/* Search bar */}
+          <div
+            style={{
+              background: COLORS.white,
+              borderRadius: 14,
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              border: `1px solid ${COLORS.softBorder}`,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+            }}
+          >
+            <SearchOutlined style={{ fontSize: 16, color: COLORS.textSecondary }} />
+            <input
+              placeholder="Search"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{
+                flex: 1,
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                fontSize: 14,
+                color: COLORS.textPrimary,
+                fontFamily: "inherit",
+              }}
+            />
+            <div
+              style={{
+                fontSize: 11,
+                color: COLORS.textSecondary,
+                background: "#f5f5f5",
+                borderRadius: 6,
+                padding: "2px 6px",
+                fontWeight: 600,
+                letterSpacing: 0.5,
+              }}
+            >
+              ⌘K
+            </div>
 
-                <div style={{
-                  background: '#f8f9fa',
-                  borderRadius: 16,
-                  padding: '16px 20px',
-                  marginBottom: 24
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 8,
-                    overflowX: 'auto',
-                    paddingBottom: 4
-                  }}>
-                    {parentCategories.map(category => (
-                      <CategoryCard
-                        key={category.id}
-                        category={category}
-                        isSelected={selectedCategory === category.id}
-                        onClick={setSelectedCategory}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
+            <Divider type="vertical" />
 
-              <div style={{
-                height: 'calc(100% - 280px)',
-                overflow: 'auto',
-                paddingRight: 8,
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#ff6b35 #f5f5f5'
-              }}>
-                <Row gutter={[24, 24]}>
-                  {inStockProducts.map((product) => (
-                    <Col key={product.id} xs={24} sm={12} md={12} lg={8}>
-                      <ProductItem
-                        {...product}
-                        handleAdd={handleAdd}
-                        resetTrigger={resetTrigger}
-                      />
-                    </Col>
-                  ))}
+            <div style={{ fontSize: 13, color: COLORS.textSecondary, fontWeight: 500, whiteSpace: "nowrap" }}>
+              Total: <span style={{ fontWeight: 700, color: COLORS.darkGreen }}>{state.cart_list.length}</span>
+            </div>
 
-                  {outOfStockProducts.map((product) => (
-                    <Col key={product.id} xs={24} sm={12} md={12} lg={8}>
-                      <ProductItem
-                        {...product}
-                        handleAdd={handleAdd}
-                        resetTrigger={resetTrigger}
-                        isOutOfStock={true} 
-                      />
-                    </Col>
-                  ))}
-                </Row>
+            <button
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: COLORS.white,
+                border: `1px solid ${COLORS.softBorder}`,
+                borderRadius: 8,
+                padding: "4px 10px",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 600,
+                color: COLORS.textPrimary,
+                transition: "all 0.2s",
+                whiteSpace: "nowrap"
+              }}
+              onMouseEnter={(e) =>
+              ((e.currentTarget.style.borderColor = COLORS.darkGreen),
+                (e.currentTarget.style.color = COLORS.darkGreen))
+              }
+              onMouseLeave={(e) =>
+              ((e.currentTarget.style.borderColor = COLORS.softBorder),
+                (e.currentTarget.style.color = COLORS.textPrimary))
+              }
+            >
+              <FileTextOutlined /> Report
+            </button>
+          </div>
 
-                {filteredProducts.length === 0 && (
-                  <Empty
-                    description={
-                      <div>
-                        <Text style={{ fontSize: 16, color: '#999' }}>
-                          No products in {parentCategories.find(c => c.id === selectedCategory)?.name || 'this category'}
-                        </Text>
-                        <br />
-                        <Text type="secondary">
-                          Try selecting a different category
-                        </Text>
-                      </div>
-                    }
-                    style={{ marginTop: 100 }}
-                  />
-                )}
-              </div>
-            </Card>
-          </Col>
+          {/* Category cards */}
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              overflowX: "auto",
+              paddingBottom: 4,
+              scrollbarWidth: "none",
+            }}
+          >
+            {parentCategories.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              // Estimate items in this category
+              const total = state.list.filter(
+                (p) => p.category_id === cat.id
+              ).length;
+              const inStockCount = state.list.filter(
+                (p) => p.category_id === cat.id && p.qty > 0
+              ).length;
+              const needsRestock =
+                selectedCategory === cat.id
+                  ? outOfStock.length > 0 && inStock.length === 0
+                  : false;
 
-          <Col span={8}>
-            <div style={{ position: 'sticky', top: 0 }}>
-              <Card style={{ height: '100vh', borderRadius: 20, border: 'none', overflowY: 'auto' }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 20,
-                  paddingBottom: 16,
-                  borderBottom: '2px solid #f0f0f0'
-                }}>
-                  <div>
-                    <Title level={3} style={{ margin: 0, color: '#2c3e50' }}>
-                      🛒 Your Order
-                    </Title>
-                    <Text type="secondary">
-                      {state.cart_list.length} items in cart
-                    </Text>
-                  </div>
-                  <Button
-                    onClick={handleClearCart}
-                    icon={<FiTrash2 />}
-                    danger
-                    type="text"
-                    style={{ borderRadius: 8 }}
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  style={{
+                    minWidth: 150,
+                    borderRadius: 18,
+                    padding: "14px 16px",
+                    background: isSelected ? COLORS.darkGreen : COLORS.white,
+                    border: `1px solid ${isSelected ? COLORS.darkGreen : COLORS.softBorder}`,
+                    cursor: "pointer",
+                    position: "relative",
+                    overflow: "hidden",
+                    transition: "all 0.25s ease",
+                    boxShadow: isSelected
+                      ? "0 6px 20px rgba(30,74,45,0.3)"
+                      : "0 2px 8px rgba(0,0,0,0.05)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {/* Stock badge */}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      background: needsRestock
+                        ? "rgba(232,93,93,0.15)"
+                        : isSelected
+                          ? "rgba(255,255,255,0.15)"
+                          : "rgba(30,74,45,0.08)",
+                      borderRadius: 20,
+                      padding: "3px 10px",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: needsRestock
+                        ? COLORS.redBadge
+                        : isSelected
+                          ? "#fff"
+                          : COLORS.darkGreen,
+                      border: needsRestock ? `1px solid ${COLORS.redBadge}` : "none",
+                      marginBottom: 10,
+                    }}
                   >
-                    Clear All
-                  </Button>
-                </div>
+                    {needsRestock && (
+                      <span style={{ width: 6, height: 6, background: COLORS.redBadge, borderRadius: "50%", display: "inline-block" }} />
+                    )}
+                    {needsRestock ? "Need to re-stock" : "Available"}
+                  </div>
 
-                <div style={{ marginBottom: 24 }}>
-                  <Text strong style={{ display: 'block', marginBottom: 12, color: '#555' }}>
-                    Order Type
-                  </Text>
-                  <Space>
-                    {orderTypes.map(type => (
-                      <Button
-                        key={type.key}
-                        type={type.active ? "primary" : "default"}
-                        style={{
-                          borderRadius: 20,
-                          background: type.active ? '#ff6b35' : 'white',
-                          border: type.active ? 'none' : '1px solid #e0e0e0',
-                          color: type.active ? 'white' : '#666'
-                        }}
-                      >
-                        {type.icon} {type.label}
-                      </Button>
-                    ))}
-                  </Space>
-                </div>
+                  <div
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 700,
+                      color: isSelected ? COLORS.white : COLORS.textPrimary,
+                      marginBottom: 2,
+                    }}
+                  >
+                    {cat.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: isSelected ? "rgba(255,255,255,0.7)" : COLORS.textSecondary,
+                    }}
+                  >
+                    {selectedCategory == cat.id
+                      ? `${state.list.length} items`
+                      : "..."}
+                  </div>
 
-                <div style={{
-                  height: 'calc(100% - 500px)',
-                  overflow: 'auto',
-                  marginBottom: 20,
-                  paddingRight: 8
-                }}>
-                  {state.cart_list?.map((item, index) => (
-                    <BillItem
-                      key={`${item.customKey || item.id}-${index}`}
-                      {...item}
-                      handleQuantityChange={(value) => handleQuantityChange(value, index)}
-                      handlePriceChange={(value) => handlePriceChange(value, index)}
-                      handleActualPriceChange={(value) => handleActualPriceChange(value, index)}
-                      showDiscountBadge={true}
-                    />
-                  ))}
-
-                  {!state.cart_list.length && (
-                    <Empty
-                      description={
-                        <div style={{ textAlign: 'center', padding: 40 }}>
-                          <div style={{ fontSize: 48, marginBottom: 16 }}>🛒</div>
-                          <Text style={{ fontSize: 16, color: '#999' }}>
-                            Your cart is empty
-                          </Text>
-                          <br />
-                          <Text type="secondary">
-                            Add some delicious items from the menu
-                          </Text>
-                        </div>
-                      }
+                  {/* Decorative circle for selected */}
+                  {isSelected && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: -20,
+                        bottom: -20,
+                        width: 80,
+                        height: 80,
+                        borderRadius: "50%",
+                        background: "rgba(255,255,255,0.08)",
+                      }}
                     />
                   )}
-                </div>
-
-                {state.cart_list.length > 0 && (
-                  <div style={{
-                    borderTop: '2px solid #f0f0f0',
-                    paddingTop: 20,
-                    background: '#fafafa',
-                    margin: '-24px -24px -24px -24px',
-                    padding: '20px 24px 24px 24px',
-                    borderBottomLeftRadius: 20,
-                    borderBottomRightRadius: 20
-                  }}>
-                    <div style={{ marginBottom: 20 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <Text>Subtotal ({objSummary.total_qty} items)</Text>
-                        <Text>${Number(objSummary.sub_total).toFixed(2)}</Text>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <Text>Tax & Fees</Text>
-                        <Text>${Number(objSummary.tax || 0).toFixed(2)}</Text>
-                      </div>
-                      {objSummary.save_discount > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                          <Text style={{ color: '#52c41a' }}>💰 You Save</Text>
-                          <Text style={{ color: '#52c41a', fontWeight: 'bold' }}>
-                            -${Number(objSummary.save_discount).toFixed(2)}
-                          </Text>
-                        </div>
-                      )}
-
-                      <Divider style={{ margin: '12px 0' }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-                        <Text strong style={{ fontSize: 18, color: '#2c3e50' }}>Total</Text>
-                        <Text strong style={{ fontSize: 20, color: '#ff6b35' }}>
-                          ${Number(objSummary.total || 0).toFixed(2)}
-                        </Text>
-                      </div>
-
-                    </div>
-
-                    <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
-                      <Col span={12}>
-                        <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                          <CreditCardOutlined /> Payment
-                        </Text>
-                        <Select
-                          allowClear
-                          size="large"
-                          style={{ width: "100%", borderRadius: 8 }}
-                          placeholder="Payment method"
-                          options={[
-                            { label: "❤️ Other", value: "Other" },
-                            { label: "💵 Cash", value: "Cash" },
-                            { label: "📱 Wing", value: "Wing" },
-                            { label: "🏦 ABA", value: "ABA" },
-                            { label: "💳 Card", value: "Card" },
-                          ]}
-                          value={objSummary.payment_method}
-                          onSelect={(value) => {
-                            setObjSummary((p) => ({
-                              ...p,
-                              payment_method: value,
-                            }));
-                          }}
-                        />
-                      </Col>
-                    </Row>
-
-                    {/* Place Order Button */}
-                    <Button
-                      disabled={isDisabled || state.cart_list.length == 0}
-                      block
-                      type="primary"
-                      size="large"
-                      style={{
-                        background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)',
-                        border: 'none',
-                        borderRadius: 15,
-                        height: 56,
-                        fontSize: 18,
-                        fontWeight: 'bold',
-                        boxShadow: '0 6px 20px rgba(255, 107, 53, 0.4)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}
-                      onClick={handleClickOut}
-                    >
-                      🚀 Place Order Now
-                    </Button>
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 8,
+                      bottom: 6,
+                      fontSize: 36,
+                      opacity: isSelected ? 0.18 : 0.06,
+                    }}
+                  >
+                    {cat.icon}
                   </div>
-                )}
-              </Card>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Product Grid */}
+          <Spin spinning={state.loading}>
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                paddingBottom: 20,
+                scrollbarWidth: "thin",
+                scrollbarColor: `${COLORS.darkGreen} #f0ede6`,
+              }}
+            >
+              {allVisible.length === 0 && !state.loading ? (
+                <Empty
+                  style={{ marginTop: 60 }}
+                  description={
+                    <span style={{ color: COLORS.textSecondary, fontSize: 14 }}>
+                      No products found
+                    </span>
+                  }
+                />
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                    gap: 14,
+                  }}
+                >
+                  {allVisible.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onAdd={handleAdd}
+                      cartQty={getCartQty(product.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          </Col>
-        </Row>
-        <QRPaymentModal
-          visible={qrModalVisible}
-          onClose={handleCloseQRModal}
-          paymentLink={paymentData.paymentLink}
-          orderNo={paymentData.orderNo}
-          total={paymentData.total}
-        />
+          </Spin>
+        </div>
+
+        {/* ── RIGHT PANEL / RECEIPT ── */}
+        <div
+          style={{
+            width: 320,
+            flexShrink: 0,
+            background: COLORS.white,
+            borderLeft: `1px solid ${COLORS.softBorder}`,
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+            overflowY: "auto",
+          }}
+        >
+          {/* Receipt header */}
+          <div
+            style={{
+              padding: "18px 18px 14px",
+              borderBottom: `1px solid ${COLORS.softBorder}`,
+            }}
+          >
+            <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 2 }}>
+              Purchase Receipt
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
+              #{String(objSummary.order_no || Math.floor(Math.random() * 90000) + 10000).padStart(5, "0")}
+            </div>
+          </div>
+
+          {/* Order type tabs */}
+          <div style={{ padding: "14px 18px 0" }}>
+            <div
+              style={{
+                display: "flex",
+                background: "#f5f3ee",
+                borderRadius: 12,
+                padding: 4,
+                gap: 4,
+                marginBottom: 16,
+              }}
+            >
+              {[
+                { key: "dine_in", label: "Dine In" },
+                { key: "take_away", label: "Take Away" },
+              ].map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setOrderType(t.key)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 0",
+                    borderRadius: 9,
+                    border: "none",
+                    background:
+                      orderType === t.key ? COLORS.darkGreen : "transparent",
+                    color: orderType === t.key ? "#fff" : COLORS.textSecondary,
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Customer name + table */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 500 }}>
+                  Customer name
+                </div>
+                <input
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Name..."
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${COLORS.softBorder}`,
+                    borderRadius: 8,
+                    padding: "7px 10px",
+                    fontSize: 13,
+                    outline: "none",
+                    fontFamily: "inherit",
+                    background: "#fafaf8",
+                    color: COLORS.textPrimary,
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <div style={{ width: 70 }}>
+                <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 500 }}>
+                  Table
+                </div>
+                <input
+                  value={tableNo}
+                  onChange={(e) => setTableNo(e.target.value)}
+                  placeholder="T1"
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${COLORS.softBorder}`,
+                    borderRadius: 8,
+                    padding: "7px 8px",
+                    fontSize: 13,
+                    outline: "none",
+                    fontFamily: "inherit",
+                    background: "#fafaf8",
+                    color: COLORS.textPrimary,
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Order list label */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 6 }}>
+              Order list
+            </div>
+          </div>
+
+          {/* Cart items */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "0 18px",
+              scrollbarWidth: "thin",
+              scrollbarColor: `${COLORS.softBorder} transparent`,
+            }}
+          >
+            {state.cart_list.length === 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "40px 0",
+                  color: COLORS.textSecondary,
+                }}
+              >
+                <div style={{ fontSize: 36, marginBottom: 10 }}>🛒</div>
+                <div style={{ fontSize: 13 }}>Cart is empty</div>
+                <div style={{ fontSize: 11, marginTop: 4 }}>
+                  Add items from the menu
+                </div>
+              </div>
+            ) : (
+              state.cart_list.map((item, idx) => (
+                <BillCartItem
+                  key={`${item.id}-${idx}`}
+                  item={item}
+                  onIncrease={handleIncrease}
+                  onDecrease={handleDecrease}
+                  onRemove={handleRemoveItem}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Payment section */}
+          <div
+            style={{
+              padding: "14px 18px 18px",
+              borderTop: `1px solid ${COLORS.softBorder}`,
+              background: COLORS.white,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: COLORS.textPrimary,
+                marginBottom: 10,
+              }}
+            >
+              Payment Details
+            </div>
+
+            {/* Subtotal */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 6,
+                fontSize: 13,
+              }}
+            >
+              <span style={{ color: COLORS.textSecondary }}>
+                Subtotal ({objSummary.total_qty} items)
+              </span>
+              <span style={{ color: COLORS.textPrimary, fontWeight: 500 }}>
+                ${objSummary.sub_total.toFixed(2)}
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 12,
+                fontSize: 13,
+              }}
+            >
+              <span style={{ color: COLORS.textSecondary }}>Tax & Fees</span>
+              <span style={{ color: COLORS.textPrimary, fontWeight: 500 }}>$0.00</span>
+            </div>
+
+            <div
+              style={{
+                borderTop: `1px dashed ${COLORS.softBorder}`,
+                paddingTop: 10,
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              }}
+            >
+              <span style={{ fontWeight: 700, fontSize: 15, color: COLORS.textPrimary }}>
+                Total
+              </span>
+              <span style={{ fontWeight: 800, fontSize: 18, color: COLORS.darkGreen }}>
+                ${objSummary.total.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Payment method */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6, fontWeight: 500 }}>
+                Payment Method
+              </div>
+              <Select
+                size="large"
+                style={{ width: "100%", borderRadius: 10 }}
+                placeholder="Select payment"
+                value={objSummary.payment_method}
+                onChange={(v) =>
+                  setObjSummary((p) => ({ ...p, payment_method: v }))
+                }
+                options={[
+                  { label: "💵 Cash", value: "Cash" },
+                  { label: "📱 Wing", value: "Wing" },
+                  { label: "🏦 ABA", value: "ABA" },
+                  { label: "💳 Card", value: "Card" },
+                  { label: "❤️ Other", value: "Other" },
+                ]}
+              />
+            </div>
+
+            {/* Clear Cart link */}
+            {state.cart_list.length > 0 && (
+              <button
+                onClick={handleClearCart}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: COLORS.textSecondary,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  marginBottom: 10,
+                  fontFamily: "inherit",
+                  padding: 0,
+                }}
+              >
+                <DeleteOutlined /> Clear cart
+              </button>
+            )}
+
+            {/* Place Order button */}
+            <button
+              disabled={isDisabled || state.cart_list.length === 0 || !objSummary.payment_method}
+              onClick={handleClickOut}
+              style={{
+                width: "100%",
+                padding: "14px 0",
+                borderRadius: 14,
+                border: "none",
+                background:
+                  isDisabled || state.cart_list.length === 0 || !objSummary.payment_method
+                    ? "#c5c5c5"
+                    : COLORS.darkGreen,
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 15,
+                cursor:
+                  isDisabled || state.cart_list.length === 0 || !objSummary.payment_method
+                    ? "not-allowed"
+                    : "pointer",
+                transition: "all 0.25s ease",
+                boxShadow:
+                  state.cart_list.length > 0 && objSummary.payment_method
+                    ? "0 6px 20px rgba(30,74,45,0.35)"
+                    : "none",
+                fontFamily: "inherit",
+                letterSpacing: 0.3,
+              }}
+            >
+              Place Order
+            </button>
+          </div>
+        </div>
       </div>
-    </MainPage>
+
+      {/* QR Modal */}
+      <QRPaymentModal
+        visible={qrModalVisible}
+        onClose={() => {
+          setQrModalVisible(false);
+          setPaymentData({ paymentLink: "", orderNo: "", total: 0 });
+        }}
+        paymentLink={paymentData.paymentLink}
+        orderNo={paymentData.orderNo}
+        total={paymentData.total}
+      />
+
+      <Modal
+        title={
+          <div style={{ textAlign: 'center', fontSize: 18, color: COLORS.darkGreen }}>
+            ☕ Customize Your Coffee
+          </div>
+        }
+        open={optionsModalVisible}
+        onCancel={() => setOptionsModalVisible(false)}
+        onOk={handleConfirmOptions}
+        okText="Add to Order"
+        cancelText="Cancel"
+        okButtonProps={{ style: { background: COLORS.darkGreen, borderRadius: 8 } }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '10px 0' }}>
+          {/* Mood Selector */}
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Mood</div>
+            <Radio.Group
+              value={tempOptions.mood}
+              onChange={e => setTempOptions(p => ({ ...p, mood: e.target.value }))}
+              buttonStyle="solid"
+            >
+              <Radio.Button value="hot">🔥 Hot</Radio.Button>
+              <Radio.Button value="ice">❄️ Cold</Radio.Button>
+            </Radio.Group>
+          </div>
+
+          {/* Size Selector */}
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Size</div>
+            <Radio.Group
+              value={tempOptions.size}
+              onChange={e => setTempOptions(p => ({ ...p, size: e.target.value }))}
+            >
+              {(selectedProductForOptions?.sizes ? JSON.parse(selectedProductForOptions.sizes) : [
+                { label: 'S', price: selectedProductForOptions?.price },
+                { label: 'M', price: selectedProductForOptions?.price },
+                { label: 'L', price: selectedProductForOptions?.price }
+              ]).map(s => (
+                <Radio key={s.label} value={s.label}>
+                  {s.label} {s.price && s.price != selectedProductForOptions?.price ? `($${Number(s.price).toFixed(2)})` : ""}
+                </Radio>
+              ))}
+            </Radio.Group>
+          </div>
+
+          {/* Sugar Selector */}
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Sugar Level</div>
+            <Radio.Group
+              value={tempOptions.sugar}
+              onChange={e => setTempOptions(p => ({ ...p, sugar: e.target.value }))}
+            >
+              <Radio value="0%">0%</Radio>
+              <Radio value="25%">25%</Radio>
+              <Radio value="50%">50%</Radio>
+              <Radio value="100%">100%</Radio>
+            </Radio.Group>
+          </div>
+
+          {/* Add-ons Selector */}
+          {(selectedProductForOptions?.addons && JSON.parse(selectedProductForOptions.addons).length > 0) && (
+            <div>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>Add-ons</div>
+              <Checkbox.Group
+                value={tempOptions.addons}
+                onChange={v => setTempOptions(p => ({ ...p, addons: v }))}
+              >
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {JSON.parse(selectedProductForOptions.addons).map(a => (
+                    <Checkbox key={a.label} value={a.label}>
+                      {a.label} (+${Number(a.price).toFixed(2)})
+                    </Checkbox>
+                  ))}
+                </div>
+              </Checkbox.Group>
+            </div>
+          )}
+        </div>
+      </Modal>
+    </div>
   );
 }
 

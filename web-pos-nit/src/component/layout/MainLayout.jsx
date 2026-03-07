@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Breadcrumb, Button, Dropdown, Input, Layout, Menu, Tag, theme, Drawer } from "antd";
+import { Breadcrumb, Button, Dropdown, Input, Layout, Menu, Tag, theme, Drawer, Divider } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import "./MainLayout.css";
 import logo from "../../assets/coffee.png";
@@ -7,7 +7,7 @@ import ImgUser from "../../assets/profile.png";
 import { Tooltip } from "antd";
 import { MdOutlineMarkEmailUnread, MdRestaurantMenu } from "react-icons/md";
 import { IoMdNotificationsOutline } from "react-icons/io";
-import { MenuOutlined } from "@ant-design/icons";
+import { MenuOutlined, UnlockOutlined } from "@ant-design/icons";
 import {
   getPermission,
   getProfile,
@@ -33,159 +33,92 @@ import {
   CreditCardOutlined,
   SmileOutlined,
   TeamOutlined,
+  GlobalOutlined,
 } from "@ant-design/icons";
 import { Config } from "../../util/config";
 import { FaHistory } from "react-icons/fa";
+import { Alert } from "antd";
+import dayjs from "dayjs";
 const { Header, Content, Footer, Sider } = Layout;
 
 const items_menu = [
   {
-    key: "version",
-    label: <Tag color="green">V 1.0.1</Tag>,
-    disabled: true,
-    className: "version-item khmrt-branch",
-  },
-  {
     key: "",
     label: "Dashboard",
     icon: <PieChartOutlined />,
-    className: "dashboard-item khmrt-branch",
+  },
+  {
+    key: "my-plan",
+    label: "My Subscription",
+    icon: <CreditCardOutlined />,
+    style: { background: '#f0f7f2', margin: '4px 8px', borderRadius: '8px', color: '#1e4a2d', fontWeight: 'bold' }
+  },
+  {
+    label: "Inventory / 📦 Logistics",
+    icon: <ShoppingCartOutlined />,
+    children: [
+      { key: "purchase", label: "Purchases", icon: <ShoppingCartOutlined /> },
+      { key: "supplier", label: "Suppliers", icon: <TeamOutlined /> },
+      { key: "raw_material", label: "Inventory Stock", icon: <FileProtectOutlined /> },
+      { key: "stock", label: "Stock Logs & Adjust", icon: <FileProtectOutlined /> },
+    ]
   },
   {
     key: "invoices",
-    label: "Menu",
+    label: "POS / Sales",
     icon: <MdRestaurantMenu />,
-    className: "invoices-item khmrt-branch",
   },
   {
     key: "shop_managment",
-    label: "Shop Managment",
+    label: "My Branches",
     icon: <FaShop />,
-    className: "invoices-item khmrt-branch",
   },
   {
-    key: "customer",
-    label: "CoffeeMenuApp",
-    icon: <MdRestaurantMenu />,
-    className: "invoices-item khmrt-branch",
-  },
-  {
-    key: "order",
-    label: "History",
-    icon: <FaHistory />,
-    className: "invoices-detail-item khmrt-branch",
-  },
-  {
-    label: "Products",
     key: "product",
+    label: "Products",
     icon: <ShopOutlined />,
-    className: "product-menu khmrt-branch",
-  },
-  {
-    key: "raw_material",
-    label: "Raw Materials",
-    icon: <FileProtectOutlined />,
-    className: "raw-material-menu khmrt-branch",
-  },
-  {
-    key: "purchase",
-    label: "Purchases",
-    icon: <ShoppingCartOutlined />,
-    className: "purchase-menu khmrt-branch",
-  },
-  {
-    key: "supplier",
-    label: "Suppliers",
-    icon: <TeamOutlined />,
-    className: "supplier-menu khmrt-branch",
   },
   {
     key: "category",
     label: "Categories",
     icon: <SolutionOutlined />,
-    className: "category-item khmrt-branch",
   },
   {
-    label: "Expenses",
-    icon: <DollarOutlined />,
-    className: "expense-menu khmrt-branch",
+    key: "order",
+    label: "Order History",
+    icon: <FaHistory />,
+  },
+  {
+    label: "Staff & Roles",
+    icon: <UsergroupAddOutlined />,
     children: [
-      {
-        key: "expanse",
-        label: "Expenses",
-        icon: <DollarOutlined />,
-        className: "expense-item khmrt-branch",
-      },
-      {
-        key: "expanse_type",
-        label: "Expense Types",
-        icon: <DollarOutlined />,
-        className: "expense-item khmrt-branch",
-      },
+      { key: "user", label: "Users / Staff", icon: <UserOutlined /> },
+      { key: "role", label: "Roles", icon: <SafetyCertificateOutlined /> },
+      { key: "permission", label: "Role Permissions", icon: <UnlockOutlined /> },
+      { key: "plans", label: "Subscription Plans", icon: <CreditCardOutlined /> },
     ],
   },
   {
-    label: "Users",
-    icon: <SolutionOutlined />,
-    className: "user-menu khmrt-branch",
-    children: [
-      {
-        key: "user",
-        label: "Users",
-        icon: <UserOutlined />,
-        className: "user-item khmrt-branch",
-      },
-      {
-        key: "role",
-        label: "Roles",
-        icon: <SafetyCertificateOutlined />,
-        className: "role-item khmrt-branch",
-      },
-    ],
-  },
-  {
-    label: "Reports",
+    label: "Reports & Insights",
     icon: <FileOutlined />,
-    className: "report-menu khmrt-branch",
     children: [
-      {
-        key: "report_Sale_Summary",
-        label: "Sales Summary",
-        icon: <PieChartOutlined />,
-        className: "sale-summary-item khmrt-branch",
-      },
-      {
-        key: "report_Expense_Summary",
-        label: "Expense Summary",
-        icon: <DollarOutlined />,
-        className: "expense-summary-item khmrt-branch",
-      },
-      {
-        key: "Top_Sale",
-        label: "Top Sales",
-        icon: <TrophyOutlined />,
-        className: "top-sale-item khmrt-branch",
-      },
+      { key: "report_Sale_Summary", label: "Sales Report", icon: <PieChartOutlined /> },
+      { key: "expense", label: "Expenses", icon: <DollarOutlined /> },
+      { key: "Top_Sale", label: "Best Sellers", icon: <TrophyOutlined /> },
     ],
   },
   {
-    key: "employee",
-    label: "ExchangeRatePage",
-    icon: <SolutionOutlined />,
-    className: "category-item khmrt-branch",
-  },
-  {
-    key: "total_due",
-    label: "Product Management",
-    icon: <SolutionOutlined />,
-    className: "category-item khmrt-branch",
+    key: "business",
+    label: "Business Ecosystem",
+    icon: <GlobalOutlined />,
+    style: { background: '#fff9ef', margin: '4px 8px', borderRadius: '8px', color: '#c0a060', fontWeight: 'bold' }
   },
 ];
 
 const MainLayout = () => {
-  const permision = getPermission();
+  const [permision, setPermision] = useState([]);
+  const [subAlert, setSubAlert] = useState(null);
   const { setConfig } = configStore();
-  const [items, setItems] = useState(items_menu);
   const profile = getProfile();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false);
@@ -194,6 +127,33 @@ const MainLayout = () => {
   const location = useLocation();
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [openKeys, setOpenKeys] = useState([]);
+
+  useEffect(() => {
+    const list = getPermission();
+    setPermision(Array.isArray(list) ? list : []);
+    checkSubscriptionStatus();
+  }, [location.pathname]);
+
+  const checkSubscriptionStatus = async () => {
+    // Only check if logged in and NOT the system admin (Business ID 1)
+    if (!profile || profile.business_id === 1) return;
+    const res = await request("my-plan", "get");
+    if (res && res.success && res.plan.subscription) {
+      const sub = res.plan.subscription;
+      if (sub.is_lifetime) return;
+
+      const expiry = dayjs(sub.end_date);
+      const daysLeft = expiry.diff(dayjs(), 'day');
+
+      if (daysLeft < 0) {
+        setSubAlert({ type: 'error', msg: `Your subscription expired on ${expiry.format("DD MMM")}. Renew now to restore full access.` });
+      } else if (daysLeft <= 7) {
+        setSubAlert({ type: 'warning', msg: `Package expiring in ${daysLeft} days. Consider extending your subscription.` });
+      } else {
+        setSubAlert(null);
+      }
+    }
+  };
 
   const {
     token: { colorBgContainer, borderRadiusLG },
@@ -219,12 +179,13 @@ const MainLayout = () => {
   }, []);
 
   useEffect(() => {
+    if (!profile || profile === "" || profile === "null") {
+      navigate("/login");
+      return;
+    }
     checkISnotPermissionViewPage();
     getMenuByUser();
     getConfig();
-    if (!profile) {
-      navigate("/login");
-    }
 
     // Set selected menu item based on current path
     const currentPath = location.pathname.replace('/', '');
@@ -250,42 +211,76 @@ const MainLayout = () => {
   }, [location.pathname]);
 
   const checkISnotPermissionViewPage = () => {
-    let findIndex = permision?.findIndex(
-      (item) => item.web_route_key == location.pathname
+    // Guard: if no permissions loaded yet, don't redirect
+    if (!permision || permision.length === 0) return;
+
+    const currentPath = location.pathname;
+
+    // always allow profile page
+    if (currentPath === '/profile') return;
+
+    // Special Case: always allow business page for system admin (Business ID 1)
+    if (currentPath === '/business' && profile?.business_id === 1) return;
+
+    const findIndex = permision.findIndex(
+      (item) => item.web_route_key === currentPath
     );
-    if (findIndex == -1) {
-      for (let i = 0; i < permision.length; i++) {
-        navigate(permision[i].web_route_key);
-        break;
+
+    if (findIndex === -1) {
+      // Current page not in permissions — redirect to first allowed page
+      // Ensure we have a valid route to redirect to
+      if (permision[0] && permision[0].web_route_key) {
+        navigate(permision[0].web_route_key);
       }
     }
   };
 
-  const getMenuByUser = () => {
-    let new_items_menu = [];
-    items_menu?.map((item1) => {
-      const p1 = permision?.findIndex(
-        (data1) => data1.web_route_key == "/" + item1.key
-      );
-      if (p1 != -1) {
-        new_items_menu.push(item1);
-      }
-      if (item1?.children && item1?.children.length > 0) {
-        let childTmp = [];
-        item1?.children.map((data1) => {
-          permision?.map((data2) => {
-            if (data2.web_route_key == "/" + data1.key) {
-              childTmp.push(data1);
-            }
-          });
+  // Reactive menu filtering
+  const items = React.useMemo(() => {
+    if (!permision || !Array.isArray(permision)) return [];
+
+    return items_menu.map(item => {
+      const newItem = { ...item };
+
+      // 1. Contextual Visibility Rules
+      if (newItem.key === "business" && profile?.business_id !== 1) return null;
+      if (newItem.key === "my-plan" && profile?.business_id === 1) return null;
+
+      // Helper to check permission safely
+      const checkPath = (key) => {
+        if (!key && key !== "") return false;
+        const targetPath = key === "" ? "/" : "/" + key;
+        return permision.some(p => {
+          if (!p.web_route_key) return false;
+          // Normalize both paths: lowercase and remove trailing/leading slashes for comparison
+          const p1 = p.web_route_key.toLowerCase().replace(/^\/+|\/+$/g, '');
+          const p2 = targetPath.toLowerCase().replace(/^\/+|\/+$/g, '');
+          return p1 === p2 || (p.web_route_key === "/" && targetPath === "/");
         });
-        if (childTmp.length > 0) {
-          item1.children = childTmp;
-          new_items_menu.push(item1);
+      };
+
+      // Case 1: Simple menu item (no children)
+      if (newItem.hasOwnProperty('key') && !newItem.children) {
+        if (newItem.key === "business" && profile?.business_id === 1) return newItem;
+        return checkPath(newItem.key) ? newItem : null;
+      }
+
+      // Case 2: Parent menu with children
+      if (newItem.children) {
+        const filteredChildren = newItem.children.filter(child => checkPath(child.key));
+
+        if (filteredChildren.length > 0) {
+          return { ...newItem, children: filteredChildren };
         }
       }
-    });
-    setItems(new_items_menu);
+
+      return null;
+    }).filter(Boolean);
+  }, [permision, profile]);
+
+  const getMenuByUser = () => {
+    // This function is now redundant due to useMemo
+    // but we keep the signature if called elsewhere
   };
 
   const getConfig = async () => {
@@ -296,7 +291,7 @@ const MainLayout = () => {
   };
 
   const onClickMenu = (item) => {
-    navigate(item.key);
+    navigate("/" + item.key);
     setSelectedKeys([item.key]);
     // Close mobile drawer after navigation
     if (isMobile) {
@@ -311,6 +306,8 @@ const MainLayout = () => {
   const onLoginOut = () => {
     setProfile("");
     setAcccessToken("");
+    localStorage.removeItem("permission");
+    localStorage.removeItem("user_id");
     navigate("/login");
   };
 
@@ -414,7 +411,7 @@ const MainLayout = () => {
     <Layout
       style={{
         minHeight: "100vh",
-        background: "#FFFFFF",
+        background: "#f4f1eb",
       }}
     >
       {/* Desktop Sidebar */}
@@ -424,7 +421,8 @@ const MainLayout = () => {
           collapsed={collapsed}
           onCollapse={(value) => setCollapsed(value)}
           style={{
-            background: "#f8f9fa",
+            background: "#ffffff",
+            borderRight: "1px solid #e8e3d8",
             position: "fixed",
             height: "100vh",
             left: 0,
@@ -461,14 +459,15 @@ const MainLayout = () => {
 
       <Layout style={{
         marginLeft: getContentMargin(),
-        transition: "margin-left 0.3s"
+        transition: "margin-left 0.3s",
+        background: "#f4f1eb"
       }}>
         {/* Header */}
         <div
           className="admin-header"
           style={{
-            background: "#FFFFFF",
-            borderBottom: "1px solid #e9ecef",
+            background: "#ffffff",
+            borderBottom: "1px solid #e8e3d8",
             padding: getHeaderPadding(),
             height: isMobile ? "60px" : "70px",
             display: "flex",
@@ -477,7 +476,7 @@ const MainLayout = () => {
             position: "sticky",
             top: 0,
             zIndex: 999,
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+            boxShadow: "0 2px 10px rgba(30, 74, 45, 0.05)",
           }}
         >
           {/* Mobile Menu Button */}
@@ -521,18 +520,14 @@ const MainLayout = () => {
             {/* User info - hide text on mobile */}
             {!isMobile && (
               <div style={{ textAlign: "right", marginRight: "12px" }}>
-                <div className="txt-username" style={{
-                  fontWeight: "600",
-                  color: "#495057",
-                  fontSize: isTablet ? "14px" : "inherit"
-                }}>
-                  {profile?.name}
+                <div style={{ fontWeight: "700", color: "#1e4a2d", fontSize: "14px" }}>
+                  {profile?.business_name || "Green Grounds Business"}
                 </div>
-                <div style={{
-                  fontSize: isTablet ? "11px" : "12px",
-                  color: "#6c757d"
-                }}>
-                  {profile?.username}
+                <div style={{ fontSize: "12px", color: "#6c757d", display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                  <FaShop size={10} color="#f7c06a" />
+                  <span style={{ fontWeight: 500 }}>{profile?.branch_name || "Main Terminal"}</span>
+                  <Divider type="vertical" />
+                  <span style={{ fontStyle: 'italic' }}>{profile?.name}</span>
                 </div>
               </div>
             )}
@@ -574,33 +569,47 @@ const MainLayout = () => {
         <Content
           style={{
             margin: getContentPadding(),
-            background: "#FFFFFF",
+            background: "transparent",
             minHeight: `calc(100vh - ${isMobile ? '120px' : '140px'})`,
           }}
         >
           <div
             className="admin-body"
             style={{
-              background: "#FFFFFF",
-              borderRadius: borderRadiusLG,
+              background: "#ffffff",
+              borderRadius: "16px",
+              border: "1px solid #e8e3d8",
               padding: getContentPadding(),
-              boxShadow: isMobile ? "0 2px 8px rgba(0, 0, 0, 0.03)" : "0 4px 12px rgba(0, 0, 0, 0.05)",
+              boxShadow: isMobile ? "0 2px 8px rgba(30, 74, 45, 0.03)" : "0 4px 12px rgba(30, 74, 45, 0.05)",
               minHeight: `calc(100vh - ${isMobile ? '160px' : '180px'})`,
             }}
           >
+            {subAlert && (
+              <Alert
+                type={subAlert.type}
+                message={subAlert.msg}
+                banner
+                closable
+                onClose={() => setSubAlert(null)}
+                style={{ marginBottom: 20, borderRadius: '8px' }}
+                action={
+                  <Button size="small" type="primary" ghost onClick={() => navigate('/my-plan')}>
+                    Subscription Details
+                  </Button>
+                }
+              />
+            )}
             <Outlet />
           </div>
         </Content>
 
-        {/* Footer */}
         <Footer
           style={{
             textAlign: 'center',
-            background: "#FFFFFF",
-            color: "#6c757d",
-            borderTop: "1px solid #e9ecef",
+            background: "transparent",
+            color: "#6b7c6b",
             padding: isMobile ? "12px" : "16px 24px",
-            fontSize: isMobile ? "12px" : "14px",
+            fontSize: isMobile ? "12px" : "13px",
           }}
         >
           ©{new Date().getFullYear()}

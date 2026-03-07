@@ -13,13 +13,13 @@
 .demo-logo-vertical {
   height: 80px;
   margin: 20px;
-  background: linear-gradient(135deg, #8B4513, #A0522D);
+  background: linear-gradient(135deg, #1e4a2d, #2d6a42);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.2);
+  box-shadow: 0 4px 12px rgba(30, 74, 45, 0.2);
 }
   /* Profile Container */
 .profile-container {
@@ -166,9 +166,9 @@
 }
 
 .ant-menu-item-selected {
-  background: linear-gradient(135deg, #8B4513, #A0522D) !important;
+  background: linear-gradient(135deg, #1e4a2d, #2d6a42) !important;
   color: white !important;
-  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(30, 74, 45, 0.3) !important;
 }
 
 .ant-menu-item-selected .ant-menu-item-icon {
@@ -183,7 +183,7 @@
 }
 
 .ant-menu-item-selected:hover {
-  background: linear-gradient(135deg, #8B4513, #A0522D) !important;
+  background: linear-gradient(135deg, #1e4a2d, #2d6a42) !important;
   color: white !important;
   transform: translateX(0);
 }
@@ -231,7 +231,7 @@
 }
 
 .ant-menu-sub .ant-menu-item-selected {
-  background: linear-gradient(135deg, #8B4513, #A0522D) !important;
+  background: linear-gradient(135deg, #1e4a2d, #2d6a42) !important;
   color: white !important;
 }
 
@@ -319,7 +319,7 @@
 /* Focus states for accessibility */
 .ant-menu-item:focus,
 .ant-menu-submenu-title:focus {
-  outline: 2px solid #8B4513 !important;
+  outline: 2px solid #1e4a2d !important;
   outline-offset: 2px !important;
 }
 

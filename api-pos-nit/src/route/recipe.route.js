@@ -1,12 +1,8 @@
-const { validate_token } = require("../controller/auth.controller");
-const {
-    getRecipe,
-    saveRecipe,
-    removeRecipe,
-} = require("../controller/recipe.controller");
+const authMiddleware = require("../middleware/auth.middleware");
+const { getRecipe, saveRecipe, removeRecipe } = require("../controller/recipe.controller");
 
 module.exports = (app) => {
-    app.get("/api/recipe", validate_token("recipe.get"), getRecipe);
-    app.post("/api/recipe", validate_token("recipe.create"), saveRecipe);
-    app.delete("/api/recipe", validate_token("recipe.delete"), removeRecipe);
+    app.get("/api/recipe", authMiddleware(), getRecipe);
+    app.post("/api/recipe", authMiddleware(), saveRecipe);
+    app.delete("/api/recipe", authMiddleware(), removeRecipe);
 };

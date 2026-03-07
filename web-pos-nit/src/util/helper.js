@@ -3,9 +3,17 @@ import { Config } from "./config";
 import { setServerSatus } from "../store/server.store";
 import { getAcccessToken, getPermission } from "../store/profile.store";
 import dayjs from "dayjs";
+import { message } from "antd";
 
 export const request = (url = "", method = "get", data = {}) => {
   var access_token = getAcccessToken();
+
+  // Skip requests that require auth if token is missing (except login/register)
+  const isAuthRoute = url.includes("auth/login") || url.includes("auth/register") || url.includes("auth/register-owner");
+  if (!isAuthRoute && (!access_token || access_token === "null" || access_token === "undefined")) {
+    return Promise.resolve(false);
+  }
+
   // in react
   var headers = { "Content-Type": "application/json" };
   if (data instanceof FormData) {
@@ -20,15 +28,22 @@ export const request = (url = "", method = "get", data = {}) => {
       }
     });
   }
-  return axios({
-    url: Config.base_url + url + param_query,
+  const config_req = {
+    url: Config.base_url + url,
     method: method,
-    data: data,
     headers: {
       ...headers,
       Authorization: "Bearer " + access_token,
     },
-  })
+  };
+
+  if (method.toLowerCase() === "get") {
+    config_req.params = data;
+  } else {
+    config_req.data = data;
+  }
+
+  return axios(config_req)
     .then((res) => {
       setServerSatus(200);
       return res.data;
@@ -37,8 +52,16 @@ export const request = (url = "", method = "get", data = {}) => {
       var response = err.response;
       if (response) {
         var status = response.status;
-        if (status == "401") {
-          status = 403;
+        if (status == 401) {
+          // Clear session and redirect to login only on Unauthorized
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("profile");
+          if (window.location.pathname !== "/login") {
+            window.location.href = "/login";
+          }
+        }
+        if (status == 403) {
+          message.error("Access Denied: You don't have permission for this action.");
         }
         setServerSatus(status);
       } else if (err.code == "ERR_NETWORK") {
@@ -59,12 +82,12 @@ export const formatDateServer = (date, format = "YYYY-MM-DD") => {
   return null;
 };
 
-export const isPermission  = (permission_name) =>{
+export const isPermission = (permission_name) => {
   const permision = getPermission();
   const findPermission = permision?.findIndex(
     (item) => item.name == permission_name
   );
-  if(findPermission != -1){
+  if (findPermission != -1) {
     return true;
   }
   return false;
@@ -72,22 +95,22 @@ export const isPermission  = (permission_name) =>{
 
 
 export const updateSize = (itemId, sizeValue, availableSizes) => {
-    const selectedSize = availableSizes.find(s => s.value === sizeValue);
-    setItemSizes(prev => ({
-      ...prev,
-      [itemId]: selectedSize
-    }));
-  };
+  const selectedSize = availableSizes.find(s => s.value === sizeValue);
+  setItemSizes(prev => ({
+    ...prev,
+    [itemId]: selectedSize
+  }));
+};
 
-  export const updateAddons = (itemId, addonValue, checked, availableAddons) => {
-    const addon = availableAddons.find(a => a.value === addonValue);
-    setItemAddons(prev => ({
-      ...prev,
-      [itemId]: checked
-        ? [...(prev[itemId] || []), addon]
-        : (prev[itemId] || []).filter(a => a.value !== addonValue)
-    }));
-  };
+export const updateAddons = (itemId, addonValue, checked, availableAddons) => {
+  const addon = availableAddons.find(a => a.value === addonValue);
+  setItemAddons(prev => ({
+    ...prev,
+    [itemId]: checked
+      ? [...(prev[itemId] || []), addon]
+      : (prev[itemId] || []).filter(a => a.value !== addonValue)
+  }));
+};
 
 
 

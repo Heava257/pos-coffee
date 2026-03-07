@@ -1,144 +1,229 @@
-const {
-    db,
-    isArray,
-    isEmpty,
-    logError,
-} = require("../util/helper");
-
-exports.create = async (req, res) => {
-    const connection = await db.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        const {
-            supplier_id,
-            payment_type,
-            total_amount,
-            paid_amount,
-            note,
-            items, // [{ raw_material_id, qty, cost, unit }]
-        } = req.body;
-
-        const { company_id, name: created_by } = req.auth;
-
-        // 1. Create Purchase Record
-        const purchaseSql = `
-      INSERT INTO purchase 
-      (supplier_id, ref, company_id, total_amount, paid_amount, note, created_at, created_by) 
-      VALUES 
-      (:supplier_id, :ref, :company_id, :total_amount, :paid_amount, :note, NOW(), :created_by)
-    `;
-
-        // Generate simple PO Ref
-        const ref = `PO-${Date.now()}`;
-
-        // Note: 'purchase' table columns might need adjustment based on existing schema. 
-        // Assuming schema is compatible or using dynamic insertion for missing columns.
-        // If 'company_id' doesn't exist in purchase, we skip it or update schema.
-        // Let's assume standard purchase table.
-
-        const [purchaseResult] = await connection.query(purchaseSql, {
-            supplier_id: supplier_id || null,
-            ref,
-            company_id,
-            total_amount: total_amount || 0,
-            paid_amount: paid_amount || 0,
-            note: note || '',
-            created_by
-        });
-
-        const purchaseId = purchaseResult.insertId;
-
-        // 2. Process Items (Raw Materials)
-        if (items && isArray(items)) {
-            for (const item of items) {
-                if (!item.raw_material_id) continue;
-
-                // A. Add to purchase_product
-                await connection.query(`
-          INSERT INTO purchase_product 
-          (purchase_id, raw_material_id, qty, cost, created_at, created_by) 
-          VALUES 
-          (:purchase_id, :raw_material_id, :qty, :cost, NOW(), :created_by)
-        `, {
-                    purchase_id: purchaseId,
-                    raw_material_id: item.raw_material_id,
-                    qty: item.qty,
-                    cost: item.cost,
-                    created_by
-                });
-
-                // B. Update Raw Material Stock (INCREMENT)
-                await connection.query(`
-          UPDATE raw_material 
-          SET qty = qty + :qty, price = :cost 
-          WHERE id = :id
-        `, {
-                    qty: item.qty,
-                    cost: item.cost, // Update last cost price
-                    id: item.raw_material_id
-                });
-
-                // C. Log Stock Movement (IN)
-                await connection.query(`
-          INSERT INTO stock_movement 
-          (stock_type, raw_material_id, qty, description, ref_id, ref_type, created_at, created_by) 
-          VALUES 
-          ('IN', :raw_material_id, :qty, :description, :ref_id, 'purchase', NOW(), :created_by)
-        `, {
-                    raw_material_id: item.raw_material_id,
-                    qty: item.qty,
-                    description: `Purchase ${ref}`,
-                    ref_id: purchaseId,
-                    created_by
-                });
-
-            }
-        }
-
-        await connection.commit();
-
-        res.json({
-            message: "Purchase created successfully!",
-            purchase_id: purchaseId,
-            ref
-        });
-
-    } catch (error) {
-        await connection.rollback();
-        logError("purchase.create", error, res);
-    } finally {
-        connection.release();
-    }
-};
+const { db, logError, isArray } = require("../util/helper");
 
 exports.getList = async (req, res) => {
     try {
-        const { company_id } = req.auth;
-        const { page, pageSize } = req.query;
+        const { business_id, branch_id } = req;
+        const { txtSearch } = req.query;
 
-        const limit = Number(pageSize) || 10;
-        const offset = (Number(page || 1) - 1) * limit;
-
-        const sql = `
-      SELECT p.*, s.name as supplier_name 
+        let sql = `
+      SELECT p.*, s.name as supplier_name, b.name as branch_name
       FROM purchase p
-      LEFT JOIN supplier s ON p.supplier_id = s.id
-      WHERE p.company_id = :company_id
-      ORDER BY p.id DESC
-      LIMIT :limit OFFSET :offset
+      LEFT JOIN suppliers s ON p.supplier_id = s.id
+      LEFT JOIN branches b ON p.branch_id = b.id
+      WHERE p.business_id = ?
     `;
+        let params = [business_id];
 
-        const [list] = await db.query(sql, { company_id, limit, offset });
+        if (branch_id) {
+            sql += " AND p.branch_id = ? ";
+            params.push(branch_id);
+        }
 
-        // Count total
-        const [count] = await db.query("SELECT COUNT(*) as total FROM purchase WHERE company_id = :company_id", { company_id });
+        if (txtSearch) {
+            sql += " AND (p.ref LIKE ? OR s.name LIKE ?)";
+            params.push(`%${txtSearch}%`, `%${txtSearch}%`);
+        }
 
-        res.json({
-            list,
-            total: count[0].total
-        });
+        sql += " ORDER BY p.id DESC";
+        const [list] = await db.query(sql, params);
+        res.json({ list });
     } catch (error) {
         logError("purchase.getList", error, res);
     }
 };
+
+exports.create = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const { business_id, branch_id, user_id } = req;
+        const {
+            supplier_id,
+            total_amount,
+            paid_amount,
+            note,
+            purchase_date,
+            status, // Pending, Received, etc.
+            items // [{ product_id, qty, cost, item_type }]
+        } = req.body;
+
+        const ref = `PO-${Date.now()}`;
+
+        // 1. Create Purchase record
+        const [p_res] = await conn.query(
+            "INSERT INTO purchase (business_id, branch_id, supplier_id, ref, total_amount, paid_amount, note, purchase_date, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [business_id, branch_id, supplier_id, ref, total_amount, paid_amount, note, purchase_date || new Date(), status || 'Pending', user_id]
+        );
+        const purchase_id = p_res.insertId;
+
+        // 2. Add items and update inventory (ONLY if status is Received)
+        if (items && isArray(items)) {
+            for (const item of items) {
+                const type = item.item_type || 'product';
+                const isRM = type === 'raw_material';
+
+                // A. Insert detail
+                await conn.query(
+                    `INSERT INTO purchase_product (purchase_id, product_id, raw_material_id, qty, received_qty, cost) 
+                     VALUES (?, ?, ?, ?, ?, ?)`,
+                    [
+                        purchase_id,
+                        isRM ? null : item.product_id,
+                        isRM ? item.product_id : null,
+                        item.qty,
+                        status === 'Received' ? item.qty : 0,
+                        item.cost
+                    ]
+                );
+
+                // B. Update Stock ONLY if status is Received
+                if (status === 'Received') {
+                    if (isRM) {
+                        const [rm] = await conn.query("SELECT qty FROM raw_material WHERE id = ?", [item.product_id]);
+                        const old_qty = rm[0]?.qty || 0;
+                        const new_qty = old_qty + item.qty;
+
+                        await conn.query(
+                            "UPDATE raw_material SET qty = qty + ? WHERE id = ?",
+                            [item.qty, item.product_id]
+                        );
+
+                        await conn.query(`
+                            INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
+                            VALUES (?, ?, 'raw_material', ?, ?, ?, ?, 'purchase', ?, 'Supplier Purchase', ?)
+                        `, [business_id, branch_id, item.product_id, old_qty, new_qty, item.qty, ref, user_id]);
+
+                    } else {
+                        const [bp] = await conn.query("SELECT stock_qty FROM branch_products WHERE product_id = ? AND branch_id = ?", [item.product_id, branch_id]);
+                        const old_qty = bp[0]?.stock_qty || 0;
+                        const new_qty = old_qty + item.qty;
+
+                        await conn.query(
+                            `INSERT INTO branch_products (branch_id, product_id, price, cost_price, stock_qty) 
+                             VALUES (?, ?, ?, ?, ?) 
+                             ON DUPLICATE KEY UPDATE 
+                             stock_qty = stock_qty + VALUES(stock_qty),
+                             cost_price = VALUES(cost_price)`,
+                            [branch_id, item.product_id, item.cost * 1.5, item.cost, item.qty]
+                        );
+
+                        await conn.query(`
+                            INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
+                            VALUES (?, ?, 'product', ?, ?, ?, ?, 'purchase', ?, 'Supplier Purchase', ?)
+                        `, [business_id, branch_id, item.product_id, old_qty, new_qty, item.qty, ref, user_id]);
+                    }
+                }
+            }
+        }
+
+        await conn.commit();
+        res.json({ success: true, message: "Purchase created and stock updated!", ref });
+    } catch (error) {
+        await conn.rollback();
+        logError("purchase.create", error, res);
+    } finally {
+        conn.release();
+    }
+};
+
+exports.getDetails = async (req, res) => {
+    try {
+        const { id } = req.query;
+        // Fetch items with names from both tables
+        const [items] = await db.query(`
+            SELECT 
+                pp.*,
+                COALESCE(p.name, rm.name) as name,
+                CASE WHEN pp.raw_material_id IS NOT NULL THEN 'raw_material' ELSE 'product' END as item_type
+            FROM purchase_product pp
+            LEFT JOIN products p ON pp.product_id = p.id
+            LEFT JOIN raw_material rm ON pp.raw_material_id = rm.id
+            WHERE pp.purchase_id = ?
+        `, [id]);
+        res.json({ list: items });
+    } catch (error) {
+        logError("purchase.getDetails", error, res);
+    }
+};
+
+exports.receive = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const { business_id, branch_id, user_id } = req;
+        const { purchase_id, items } = req.body; // items: [{ id (pp_id), receive_now, item_type, real_id }]
+
+        const [p_rows] = await conn.query("SELECT ref FROM purchase WHERE id = ?", [purchase_id]);
+        const ref = p_rows[0]?.ref || `RCV-${Date.now()}`;
+
+        for (const item of items) {
+            if (item.receive_now > 0) {
+                // 1. Update purchase_product
+                await conn.query(
+                    "UPDATE purchase_product SET received_qty = received_qty + ? WHERE id = ?",
+                    [item.receive_now, item.id]
+                );
+
+                // 2. Update stock
+                if (item.item_type === 'raw_material') {
+                    const [rm] = await conn.query("SELECT qty FROM raw_material WHERE id = ?", [item.real_id]);
+                    const old_qty = rm[0]?.qty || 0;
+                    const new_qty = old_qty + item.receive_now;
+
+                    await conn.query("UPDATE raw_material SET qty = qty + ? WHERE id = ?", [item.receive_now, item.real_id]);
+
+                    await conn.query(`
+                        INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
+                        VALUES (?, ?, 'raw_material', ?, ?, ?, ?, 'receive', ?, 'Supplier Goods Received', ?)
+                    `, [business_id, branch_id, item.real_id, old_qty, new_qty, item.receive_now, ref, user_id]);
+                } else {
+                    const [bp] = await conn.query("SELECT stock_qty FROM branch_products WHERE product_id = ? AND branch_id = ?", [item.real_id, branch_id]);
+                    const old_qty = bp[0]?.stock_qty || 0;
+                    const new_qty = old_qty + item.receive_now;
+
+                    await conn.query(
+                        `INSERT INTO branch_products (branch_id, product_id, stock_qty) 
+                         VALUES (?, ?, ?) 
+                         ON DUPLICATE KEY UPDATE stock_qty = stock_qty + VALUES(stock_qty)`,
+                        [branch_id, item.real_id, item.receive_now]
+                    );
+
+                    await conn.query(`
+                        INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
+                        VALUES (?, ?, 'product', ?, ?, ?, ?, 'receive', ?, 'Supplier Goods Received', ?)
+                    `, [business_id, branch_id, item.real_id, old_qty, new_qty, item.receive_now, ref, user_id]);
+                }
+            }
+        }
+
+        // Check if all items fully received to update status
+        const [all_items] = await conn.query("SELECT qty, received_qty FROM purchase_product WHERE purchase_id = ?", [purchase_id]);
+        const isFull = all_items.every(i => Number(i.received_qty) >= Number(i.qty));
+        const isSome = all_items.some(i => Number(i.received_qty) > 0);
+
+        let newStatus = 'Pending';
+        if (isFull) newStatus = 'Received';
+        else if (isSome) newStatus = 'Partial';
+
+        await conn.query("UPDATE purchase SET status = ? WHERE id = ?", [newStatus, purchase_id]);
+
+        await conn.commit();
+        res.json({ success: true, message: "Purchase items received and stock updated!" });
+    } catch (error) {
+        await conn.rollback();
+        logError("purchase.receive", error, res);
+    } finally {
+        conn.release();
+    }
+};
+
+exports.remove = async (req, res) => {
+    try {
+        const { business_id } = req;
+        const { id } = req.body;
+        await db.query("DELETE FROM purchase WHERE id = ? AND business_id = ?", [id, business_id]);
+        res.json({ message: "Purchase record removed!" });
+    } catch (error) {
+        logError("purchase.remove", error, res);
+    }
+}

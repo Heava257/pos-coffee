@@ -1,19 +1,14 @@
-const { validate_token } = require("../controller/auth.controller");
+const authMiddleware = require("../middleware/auth.middleware");
 const {
   getList,
   create,
   update,
-  remove,
-  getParentCategories,
-  seedDefaultCategories,
+  remove
 } = require("../controller/category.controller");
 
 module.exports = (app) => {
-  // Main category routes
-  app.get("/api/category", validate_token("category.getlist"), getList); 
-  app.post("/api/category", validate_token("category.create"), create);
-  app.put("/api/category", validate_token("category.update"), update);
-  app.delete("/api/category", validate_token("category.remove"), remove);
-  app.get("/api/category/getParentCategories", validate_token("category.getlist"), getParentCategories);
-  app.get("/api/category/getParentCategoriesWithDefaults", validate_token(), seedDefaultCategories);
+  app.get("/api/category", authMiddleware(), getList);
+  app.post("/api/category", authMiddleware(), create);
+  app.put("/api/category", authMiddleware(), update);
+  app.delete("/api/category", authMiddleware(), remove);
 };

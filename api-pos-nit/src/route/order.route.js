@@ -1,16 +1,12 @@
-// const { validate_token } = require("../controller/auth.controller");
-// const {
-//   getList,
-//   create,
-//   update,
-//   remove,
-//   getone,
-// } = require("../controller/order.controller");
-// module.exports = (app) => {
-//   app.get("/api/order/:user_id", validate_token("order.getlist"), getList);
+const authMiddleware = require("../middleware/auth.middleware");
+const {
+    getList,
+    create,
+    getOrderDetail
+} = require("../controller/order.controller");
 
-//   app.get("/api/order_detail/:id", validate_token("order.getone"),getone ); 
-//   app.post("/api/order", validate_token("order.create"), create);
-//   app.put("/api/order", validate_token("order.update"), update);
-//   app.delete("/api/order", validate_token("order.remove"), remove);
-// };
+module.exports = (app) => {
+    app.get("/api/order", authMiddleware(), getList);
+    app.get("/api/order/:order_id", authMiddleware(), getOrderDetail);
+    app.post("/api/order", authMiddleware(), create);
+};

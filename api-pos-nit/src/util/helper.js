@@ -62,11 +62,12 @@ exports.uploadFile = multer({
     },
     filename: function (req, file, callback) {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      callback(null, file.fieldname + "-" + uniqueSuffix);
+      const ext = file.originalname.split('.').pop();
+      callback(null, file.fieldname + "-" + uniqueSuffix + "." + ext);
     },
   }),
   limits: {
-    fileSize: 1024 * 1024 * 3, // max 3MB
+    fileSize: 1024 * 1024 * 10, // max 10MB
   },
   fileFilter: function (req, file, callback) {
     if (
@@ -177,3 +178,43 @@ exports.sendTelegramMessagenewLogin = async (messageText) => {
     console.error("Telegram Error:", err.message);
   }
 };
+exports.checkPlanLimit = async (business_id, resourceType) => {
+  // 1. Get business plan limits
+  const [plan] = await connection.query(`
+        SELECT p.* 
+        FROM subscription_plans p
+        INNER JOIN businesses b ON b.plan_id = p.id
+        WHERE b.id = ?
+    `, [business_id]);
+
+  if (plan.length === 0) return { allowed: true }; // Fallback
+
+  const limits = plan[0];
+  let currentCount = 0;
+  let maxLimit = 0;
+  let errorMessage = "";
+
+  if (resourceType === 'branch') {
+    const [rows] = await connection.query("SELECT COUNT(id) as total FROM branches WHERE business_id = ?", [business_id]);
+    currentCount = rows[0].total;
+    maxLimit = limits.max_branches;
+    errorMessage = `Your current plan allows only ${maxLimit} branch(es). Please upgrade to add more.`;
+  } else if (resourceType === 'staff') {
+    const [rows] = await connection.query("SELECT COUNT(id) as total FROM users WHERE business_id = ?", [business_id]);
+    currentCount = rows[0].total;
+    maxLimit = limits.max_staff;
+    errorMessage = `Your current plan allows only ${maxLimit} staff members. Please upgrade to add more.`;
+  } else if (resourceType === 'product') {
+    const [rows] = await connection.query("SELECT COUNT(id) as total FROM products WHERE business_id = ?", [business_id]);
+    currentCount = rows[0].total;
+    maxLimit = limits.max_products;
+    errorMessage = `Your current plan allows only ${maxLimit} products. Please upgrade to add more.`;
+  }
+
+  if (currentCount >= maxLimit) {
+    return { allowed: false, message: errorMessage };
+  }
+
+  return { allowed: true };
+};
+
