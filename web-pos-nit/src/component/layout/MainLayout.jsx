@@ -54,6 +54,7 @@ const items_menu = [
     style: { background: '#f0f7f2', margin: '4px 8px', borderRadius: '8px', color: '#1e4a2d', fontWeight: 'bold' }
   },
   {
+    key: "inventory",
     label: "Inventory / 📦 Logistics",
     icon: <ShoppingCartOutlined />,
     children: [
@@ -94,6 +95,7 @@ const items_menu = [
     icon: <FaHistory />,
   },
   {
+    key: "staff",
     label: "Staff & Roles",
     icon: <UsergroupAddOutlined />,
     children: [
@@ -104,6 +106,7 @@ const items_menu = [
     ],
   },
   {
+    key: "reports",
     label: "Reports & Insights",
     icon: <FileOutlined />,
     children: [
@@ -202,7 +205,7 @@ const MainLayout = () => {
         if (item.children) {
           const found = item.children.find(child => child.key === targetKey);
           if (found) {
-            return item.key || item.label;
+            return item.key;
           }
         }
       }
