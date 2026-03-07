@@ -65,5 +65,14 @@ app.listen(PORT, async () => {
   // STEP 3: Start subscription auto-expiry cron job
   const { startSubscriptionCron } = require("./src/util/cron");
   startSubscriptionCron();
+
+  // STEP 4: Ensure orders table allows NULL for user_id (Migration Fix)
+  const { db } = require("./src/util/helper");
+  try {
+    await db.query("ALTER TABLE orders MODIFY user_id INT NULL");
+    console.log("Migration: 'orders.user_id' is now NULLABLE");
+  } catch (err) {
+    console.log("Migration Note: Could not alter table or already fixed");
+  }
 });
 
