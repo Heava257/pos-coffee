@@ -25,11 +25,14 @@ import {
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { getProfile, setPermission } from "../../store/profile.store";
+import { useLanguage, translations } from "../../store/language.store";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const PermissionPage = () => {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [roles, setRoles] = useState([]);
     const [allPermissions, setAllPermissions] = useState([]);
     const [selectedRoleId, setSelectedRoleId] = useState(null);
@@ -55,7 +58,7 @@ const PermissionPage = () => {
                 fetchRolePermissions(roleRes.list[0].id);
             }
         } catch (error) {
-            message.error("Failed to load permission data");
+            message.error(t.failed);
         } finally {
             setLoading(false);
         }
@@ -68,7 +71,7 @@ const PermissionPage = () => {
                 setSelectedPermIds(res.list);
             }
         } catch (error) {
-            message.error("Error fetching role permissions");
+            message.error(t.failed);
         }
     };
 
@@ -104,7 +107,7 @@ const PermissionPage = () => {
                 permission_ids: selectedPermIds
             });
             if (res && !res.error) {
-                message.success("Permissions updated successfully!");
+                message.success(t.success);
 
                 // Reactive Session Update:
                 // If the user just edited THEIR OWN role, we need to refresh their local session
@@ -127,7 +130,7 @@ const PermissionPage = () => {
                 }
             }
         } catch (error) {
-            message.error("Update failed");
+            message.error(t.failed);
         } finally {
             setSaving(false);
         }
@@ -135,19 +138,19 @@ const PermissionPage = () => {
 
     const columns = [
         {
-            title: "Permission Name",
+            title: t.permission_name || "Permission Name",
             dataIndex: "name",
             key: "name",
             render: (text) => <Text strong style={{ color: '#1e4a2d' }}>{text}</Text>
         },
         {
-            title: "Navigation Path",
+            title: t.navigation_path || "Navigation Path",
             dataIndex: "route_key",
             key: "route_key",
             render: (text) => <Badge status="processing" text={text} style={{ opacity: 0.7 }} />
         },
         {
-            title: "Access",
+            title: t.action,
             key: "access",
             align: 'center',
             render: (_, record) => (
@@ -171,9 +174,9 @@ const PermissionPage = () => {
                 <Row justify="space-between" align="middle" gutter={[16, 16]}>
                     <Col>
                         <Title level={2} style={{ margin: 0, color: '#1e4a2d', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <SafetyCertificateOutlined /> Security & Permissions
+                            <SafetyCertificateOutlined /> {t.security_permissions || "Security & Permissions"}
                         </Title>
-                        <Text type="secondary">Control what each user role can access across branches</Text>
+                        <Text type="secondary">{t.security_permissions_desc || "Control what each user role can access across branches"}</Text>
                     </Col>
                     <Col>
                         <Space size="middle">
@@ -182,7 +185,7 @@ const PermissionPage = () => {
                                 onClick={fetchInitialData}
                                 disabled={loading || saving}
                             >
-                                Refresh
+                                {t.refresh}
                             </Button>
                             <Button
                                 type="primary"
@@ -197,7 +200,7 @@ const PermissionPage = () => {
                                     padding: '0 24px'
                                 }}
                             >
-                                Save Changes
+                                {t.save_changes || t.save}
                             </Button>
                         </Space>
                     </Col>
@@ -210,18 +213,18 @@ const PermissionPage = () => {
                         title={
                             <Space>
                                 <UsergroupAddOutlined style={{ color: '#c0a060' }} />
-                                <span>Select User Role</span>
+                                <span>{t.select_user_role || "Select User Role"}</span>
                             </Space>
                         }
                         style={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}
                     >
                         <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
-                            Permissions will apply to all users assigned to this role.
+                            {t.user_role_desc || "Permissions will apply to all users assigned to this role."}
                         </Text>
                         <Select
                             style={{ width: '100%', marginBottom: '16px' }}
                             size="large"
-                            placeholder="Pick a role to configure"
+                            placeholder={t.pick_role_placeholder || t.user_role}
                             value={selectedRoleId}
                             onChange={handleRoleChange}
                             loading={loading}
@@ -236,9 +239,9 @@ const PermissionPage = () => {
                         <Divider />
 
                         <div style={{ background: 'rgba(192, 160, 96, 0.05)', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #c0a060' }}>
-                            <Title level={5} style={{ margin: 0, color: '#c0a060' }}><UnlockOutlined /> Multi-Branch Access</Title>
+                            <Title level={5} style={{ margin: 0, color: '#c0a060' }}><UnlockOutlined /> {t.multi_branch_access || "Multi-Branch Access"}</Title>
                             <Text size="small" type="secondary">
-                                Permissions defined here are universal across all branches. Staff will only see data for their assigned branch.
+                                {t.multi_branch_access_desc || "Permissions defined here are universal across all branches. Staff will only see data for their assigned branch."}
                             </Text>
                         </div>
                     </Card>
@@ -251,7 +254,7 @@ const PermissionPage = () => {
                                 <Col>
                                     <Space>
                                         <ShopOutlined style={{ color: '#1e4a2d' }} />
-                                        <span>Module Permissions</span>
+                                        <span>{t.module_permissions || "Module Permissions"}</span>
                                     </Space>
                                 </Col>
                                 <Col>
@@ -260,7 +263,7 @@ const PermissionPage = () => {
                                         checked={selectedPermIds.length === allPermissions.length && allPermissions.length > 0}
                                         onChange={(e) => handleSelectAll(e.target.checked)}
                                     >
-                                        Select All
+                                        {t.select_all || "Select All"}
                                     </Checkbox>
                                 </Col>
                             </Row>
@@ -279,7 +282,7 @@ const PermissionPage = () => {
                             />
                         ) : (
                             <div style={{ padding: '60px', textAlign: 'center' }}>
-                                <Empty description="No permissions found in database" />
+                                <Empty description={t.no_data} />
                             </div>
                         )}
                     </Card>

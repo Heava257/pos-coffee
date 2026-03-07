@@ -41,7 +41,7 @@ export const request = (url = "", method = "get", data = {}) => {
     },
   };
 
-  if (method.toLowerCase() === "get") {
+  if (method.toLowerCase() === "get" || method.toLowerCase() === "delete") {
     config_req.params = data;
   } else {
     config_req.data = data;

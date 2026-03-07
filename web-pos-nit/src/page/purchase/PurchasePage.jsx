@@ -18,8 +18,11 @@ import { request } from "../../util/helper";
 import { MdAdd, MdDelete, MdRemoveRedEye, MdInventory } from "react-icons/md";
 import MainPage from "../../component/layout/MainPage";
 import dayjs from "dayjs";
+import { useLanguage, translations } from "../../store/language.store";
 
 function PurchasePage() {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [form] = Form.useForm();
     const [state, setState] = useState({
         list: [],
@@ -133,6 +136,8 @@ function PurchasePage() {
             items: [null]
         });
         setState(p => ({ ...p, visibleModal: true }));
+        fetchSuppliers();
+        fetchAllPurchaseItems();
     };
 
     const onCloseModal = () => {
@@ -168,11 +173,11 @@ function PurchasePage() {
 
         const res = await request("purchase", "post", body);
         if (res && !res.error) {
-            message.success("Purchase created successfully");
+            message.success(t.product_saved);
             onCloseModal();
             getList();
         } else {
-            message.error(res.error || "Failed to create purchase");
+            message.error(res.error || t.create_purchase_failed);
         }
     };
 
@@ -209,11 +214,11 @@ function PurchasePage() {
 
         const res = await request("purchase-receive", "post", body);
         if (res && !res.error) {
-            message.success("Goods received and stock updated!");
+            message.success(t.goods_received_success);
             setState(p => ({ ...p, visibleReceiveModal: false, isSavingReceive: false }));
             getList();
         } else {
-            message.error(res.error || "Failed to receive goods");
+            message.error(res.error || t.receive_goods_failed);
             setState(p => ({ ...p, isSavingReceive: false }));
         }
     };
@@ -229,40 +234,40 @@ function PurchasePage() {
 
     const columns = [
         {
-            title: "No",
+            title: t.no,
             width: 60,
             render: (value, item, index) => (filter.page - 1) * filter.pageSize + index + 1,
         },
         {
-            title: "Purchase Date",
+            title: t.purchase_date,
             dataIndex: "purchase_date",
             width: 150,
             render: (val) => dayjs(val).format("YYYY-MM-DD HH:mm")
         },
         {
-            title: "Ref #",
+            title: t.ref_no,
             dataIndex: "ref",
             render: (val) => <Tag color="blue">{val}</Tag>
         },
         {
-            title: "Supplier",
+            title: t.supplier,
             dataIndex: "supplier_name",
-            render: (val) => <span style={{ fontWeight: 500 }}>{val || "N/A"}</span>
+            render: (val) => <span style={{ fontWeight: 500 }}>{val || t.no_data}</span>
         },
         {
-            title: "Total",
+            title: t.total,
             dataIndex: "total_amount",
             align: 'right',
             render: (val) => <span style={{ color: "#2ecc71", fontWeight: "bold" }}>${Number(val).toFixed(2)}</span>
         },
         {
-            title: "Paid",
+            title: t.paid,
             dataIndex: "paid_amount",
             align: 'right',
             render: (val) => <span style={{ color: "#3498db" }}>${Number(val).toFixed(2)}</span>
         },
         {
-            title: "Balance",
+            title: t.balance,
             align: 'right',
             render: (_, item) => {
                 const balance = (Number(item.total_amount) || 0) - (Number(item.paid_amount) || 0);
@@ -270,7 +275,7 @@ function PurchasePage() {
             }
         },
         {
-            title: "Status",
+            title: t.status,
             dataIndex: "status",
             width: 120,
             render: (val) => {
@@ -282,12 +287,12 @@ function PurchasePage() {
             }
         },
         {
-            title: "Created By",
+            title: t.cashier,
             dataIndex: "created_by",
             width: 100,
         },
         {
-            title: "Action",
+            title: t.action,
             width: 100,
             align: 'center',
             render: (item) => (
@@ -300,7 +305,7 @@ function PurchasePage() {
                             style={{ background: '#2ecc71', borderColor: '#2ecc71' }}
                             onClick={() => onClickReceive(item)}
                         >
-                            Receive
+                            {t.paid}
                         </Button>
                     )}
                 </Space>
@@ -314,25 +319,25 @@ function PurchasePage() {
                 <Row gutter={16}>
                     <Col span={6}>
                         <div className="statCard" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Total Purchase</div>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.total_purchase}</div>
                             <div style={{ fontSize: "24px", fontWeight: "bold" }}>${totals.totalAmount.toFixed(2)}</div>
                         </div>
                     </Col>
                     <Col span={6}>
                         <div className="statCard" style={{ background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Total Paid</div>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.total_paid}</div>
                             <div style={{ fontSize: "24px", fontWeight: "bold" }}>${totals.totalPaid.toFixed(2)}</div>
                         </div>
                     </Col>
                     <Col span={6}>
                         <div className="statCard" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Outstanding Balance</div>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.outstanding_balance}</div>
                             <div style={{ fontSize: "24px", fontWeight: "bold" }}>${totals.totalBalance.toFixed(2)}</div>
                         </div>
                     </Col>
                     <Col span={6}>
                         <div className="statCard" style={{ background: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Total Orders</div>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.total_orders}</div>
                             <div style={{ fontSize: "24px", fontWeight: "bold" }}>{state.total}</div>
                         </div>
                     </Col>
@@ -340,16 +345,16 @@ function PurchasePage() {
             </div>
 
             <div className="pageHeader" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <h2>Purchase History</h2>
+                <h2>{t.purchase_history}</h2>
                 <Space>
                     <Input.Search
-                        placeholder="Search Ref#"
+                        placeholder={t.search}
                         style={{ width: 250 }}
                         onSearch={(txt) => setFilter({ ...filter, txt, page: 1 })}
                         allowClear
                     />
                     <Button type="primary" icon={<MdAdd />} onClick={onOpenModal}>
-                        New Purchase
+                        {t.new_purchase}
                     </Button>
                 </Space>
             </div>
@@ -369,7 +374,7 @@ function PurchasePage() {
             />
 
             <Modal
-                title={<b>➕ New Purchase Entry</b>}
+                title={<b>➕ {t.new_purchase}</b>}
                 open={state.visibleModal}
                 onCancel={onCloseModal}
                 width={850}
@@ -380,33 +385,33 @@ function PurchasePage() {
                 <Form layout="vertical" form={form} onFinish={onFinish}>
                     <Row gutter={16}>
                         <Col span={6}>
-                            <Form.Item name="supplier_id" label="Supplier" rules={[{ required: true }]}>
-                                <Select options={state.suppliers} placeholder="Select Supplier" showSearch filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())} />
+                            <Form.Item name="supplier_id" label={t.supplier} rules={[{ required: true }]}>
+                                <Select options={state.suppliers} placeholder={t.supplier} showSearch filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())} />
                             </Form.Item>
                         </Col>
                         <Col span={6}>
-                            <Form.Item name="purchase_date" label="Receive Date" rules={[{ required: true }]}>
+                            <Form.Item name="purchase_date" label={t.receive_date} rules={[{ required: true }]}>
                                 <DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
                             </Form.Item>
                         </Col>
                         <Col span={6}>
-                            <Form.Item name="status" label="Status" rules={[{ required: true }]} initialValue="Received">
+                            <Form.Item name="status" label={t.status} rules={[{ required: true }]} initialValue="Received">
                                 <Select options={[
-                                    { label: "⏳ Pending", value: "Pending" },
-                                    { label: "✅ Received", value: "Received" },
-                                    { label: "❌ Cancelled", value: "Cancelled" }
+                                    { label: "⏳ " + t.pending, value: "Pending" },
+                                    { label: "✅ " + t.paid, value: "Received" },
+                                    { label: "❌ " + t.cancelled, value: "Cancelled" }
                                 ]} />
                             </Form.Item>
                         </Col>
                         <Col span={6}>
-                            <Form.Item name="note" label="Internal Note">
-                                <Input placeholder="Ref invoice, batch info etc." />
+                            <Form.Item name="note" label={t.note}>
+                                <Input placeholder={t.note} />
                             </Form.Item>
                         </Col>
                     </Row>
 
                     <div style={{ background: "#fcfcfc", border: "1px solid #eee", padding: "16px", borderRadius: "8px", marginBottom: "20px" }}>
-                        <div style={{ marginBottom: "12px", fontWeight: 600, color: "#555" }}>Purchase Items</div>
+                        <div style={{ marginBottom: "12px", fontWeight: 600, color: "#555" }}>{t.product}</div>
                         <Form.List name="items">
                             {(fields, { add, remove }) => (
                                 <>
@@ -416,11 +421,11 @@ function PurchasePage() {
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, 'item_composite_id']}
-                                                    rules={[{ required: true, message: 'Select item' }]}
+                                                    rules={[{ required: true, message: t.search }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <Select
-                                                        placeholder="Search Product or Ingredient"
+                                                        placeholder={t.product}
                                                         options={state.allItems}
                                                         loading={state.isFetchingItems}
                                                         showSearch
@@ -448,20 +453,20 @@ function PurchasePage() {
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, 'qty']}
-                                                    rules={[{ required: true, message: 'Qty' }]}
+                                                    rules={[{ required: true, message: t.quantity }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
-                                                    <InputNumber placeholder="Qty" min={0.01} style={{ width: '100%' }} onChange={() => setState({ ...state })} />
+                                                    <InputNumber placeholder={t.quantity} min={0.01} style={{ width: '100%' }} onChange={() => setState({ ...state })} />
                                                 </Form.Item>
                                             </Col>
                                             <Col span={5}>
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, 'cost']}
-                                                    rules={[{ required: true, message: 'Cost' }]}
+                                                    rules={[{ required: true, message: t.price }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
-                                                    <InputNumber placeholder="Unit Cost" min={0} prefix="$" style={{ width: '100%' }} onChange={() => setState({ ...state })} />
+                                                    <InputNumber placeholder={t.price} min={0} prefix="$" style={{ width: '100%' }} onChange={() => setState({ ...state })} />
                                                 </Form.Item>
                                             </Col>
                                             <Col span={3}>
@@ -475,7 +480,7 @@ function PurchasePage() {
                                         </Row>
                                     ))}
                                     <Button type="dashed" onClick={() => add()} block icon={<MdAdd />} style={{ marginTop: 8 }}>
-                                        Add New Ingredient
+                                        {t.add_new}
                                     </Button>
                                 </>
                             )}
@@ -484,18 +489,18 @@ function PurchasePage() {
 
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", paddingTop: 20 }}>
                         <div style={{ fontSize: 18 }}>
-                            Total Amount: <b style={{ color: "#2ecc71" }}>$
+                            {t.total_amount}: <b style={{ color: "#2ecc71" }}>$
                                 {(form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0).toFixed(2)}
                             </b>
                         </div>
                         <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-                            <Form.Item name="paid_amount" label="Amount Paid" style={{ marginBottom: 0 }}>
+                            <Form.Item name="paid_amount" label={t.paid_amount} style={{ marginBottom: 0 }}>
                                 <InputNumber style={{ width: 150 }} min={0} prefix="$" placeholder="0.00" />
                             </Form.Item>
                             <Space style={{ marginTop: 24 }}>
-                                <Button onClick={onCloseModal}>Cancel</Button>
+                                <Button onClick={onCloseModal}>{t.cancel}</Button>
                                 <Button type="primary" size="large" htmlType="submit" style={{ paddingLeft: 30, paddingRight: 30 }}>
-                                    Save Purchase
+                                    {t.save}
                                 </Button>
                             </Space>
                         </div>
@@ -504,18 +509,17 @@ function PurchasePage() {
             </Modal>
             {/* Receive Goods Modal */}
             <Modal
-                title={<b>📥 Receive Goods - {state.selectedPurchase?.ref}</b>}
+                title={<b>📥 {t.receiving_now} - {state.selectedPurchase?.ref}</b>}
                 open={state.visibleReceiveModal}
                 onCancel={() => setState(p => ({ ...p, visibleReceiveModal: false }))}
                 width={800}
                 onOk={onFinishReceive}
                 confirmLoading={state.isSavingReceive}
-                okText="Receive Items"
+                okText={t.save}
                 centered
             >
                 <div style={{ marginBottom: 16 }}>
-                    <b>Supplier:</b> {state.selectedPurchase?.supplier_name} <br />
-                    <small>Ordered Qty vs Received Qty. Enter amount coming in now.</small>
+                    <b>{t.supplier}:</b> {state.selectedPurchase?.supplier_name} <br />
                 </div>
                 <Table
                     dataSource={state.purchaseDetails}
@@ -523,12 +527,12 @@ function PurchasePage() {
                     pagination={false}
                     size="small"
                     columns={[
-                        { title: "Item Name", dataIndex: "name" },
-                        { title: "Type", dataIndex: "item_type", render: (t) => <Tag>{t.replace('_', ' ')}</Tag> },
-                        { title: "Ordered", dataIndex: "qty", align: 'center' },
-                        { title: "Received", dataIndex: "received_qty", align: 'center', render: (v) => <Tag color="green">{v}</Tag> },
+                        { title: t.product_name, dataIndex: "name" },
+                        { title: t.category_name, dataIndex: "item_type", render: (t) => <Tag>{t.replace('_', ' ')}</Tag> },
+                        { title: t.quantity, dataIndex: "qty", align: 'center' },
+                        { title: t.paid, dataIndex: "received_qty", align: 'center', render: (v) => <Tag color="green">{v}</Tag> },
                         {
-                            title: "Receiving Now",
+                            title: t.receiving_now,
                             width: 150,
                             render: (_, record, index) => (
                                 <InputNumber

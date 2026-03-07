@@ -23,7 +23,7 @@ require("./src/route/category.route")(app);
 require("./src/route/product.route")(app);
 require("./src/route/expense.route")(app);
 require("./src/route/order.route")(app);
-require("./src/route/dashbaord.route")(app);
+require("./src/route/dashboard.route")(app);
 require("./src/route/report.route")(app);
 require("./src/route/supplier.route")(app);
 require("./src/route/purchase.route")(app);

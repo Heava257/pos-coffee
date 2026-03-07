@@ -93,7 +93,6 @@
 @media (max-width: 768px) {
   .img-user {
     width: 32px;
-    height: 32px;
   }
 
   .profile-container {
@@ -306,8 +305,6 @@
   }
 }
 
-/* Responsive adjustments */
-
 /* Active state enhancement */
 .ant-menu-item-active {
   background: #f8f9fa !important;
@@ -429,10 +426,6 @@
     padding: 6px 8px !important;
   }
 
-  .txt-username {
-    font-size: 12px !important;
-  }
-
   /* Hide username text on very small screens */
   .txt-username {
     display: none;
@@ -467,4 +460,75 @@
 .ant-dropdown-open .dropdown-arrow {
   transform: rotate(180deg) !important;
   color: #495057 !important;
+}
+
+/* Language Switcher Neo Styling */
+.lang-switcher-container {
+  display: flex !important;
+  align-items: center !important;
+  background: #f0f2f5 !important;
+  padding: 4px !important;
+  border-radius: 50px !important;
+  box-shadow: inset 3px 3px 6px #cbd1d9, inset -3px -3px 6px #ffffff !important;
+  cursor: pointer;
+  position: relative;
+  width: 100px !important;
+  height: 40px !important;
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.lang-toggle-handle {
+  position: absolute;
+  width: 48px !important;
+  height: 32px !important;
+  background: #ffffff !important;
+  border-radius: 50px !important;
+  top: 4px !important;
+  left: 4px !important;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1), -1px -1px 5px #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 2;
+}
+
+.lang-toggle-handle.kh {
+  left: 48px !important;
+}
+
+.lang-labels {
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+  justify-content: space-around !important;
+  align-items: center !important;
+  z-index: 1;
+}
+
+.lang-label {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #a0a0a0 !important;
+  transition: color 0.3s;
+  flex: 1;
+  text-align: center;
+  line-height: 1 !important;
+}
+
+.lang-label.active {
+  color: #1e4a2d !important;
+}
+
+.lang-flag-emoji {
+  font-size: 18px !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.lang-switcher-container:active {
+  transform: scale(0.95);
 }

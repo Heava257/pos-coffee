@@ -4,7 +4,11 @@ import MainPage from "../../component/layout/MainPage";
 import { Button, Form, Input, message, Modal, Space, Table } from "antd";
 import dayjs from "dayjs";
 import { MdOutlineCreateNewFolder } from "react-icons/md";
+import { useLanguage, translations } from "../../store/language.store";
+
 function SupplierPage() {
+  const { lang } = useLanguage();
+  const t = translations[lang];
   const [form] = Form.useForm();
   const [state, setState] = useState({
     list: [],
@@ -73,8 +77,8 @@ function SupplierPage() {
   };
   const onClickBtnDelete = (items) => {
     Modal.confirm({
-      title: "លុបអ្នកផ្គត់ផ្គង់",
-      content: "តើអ្នកប្រាកដថាចង់លុបទិន្នន័យនេះឬ?",
+      title: t.delete + " " + t.supplier,
+      content: t.confirm_delete_supplier,
       onOk: async () => {
         setState((p) => ({
           ...p,
@@ -83,7 +87,7 @@ function SupplierPage() {
         const res = await request("supplier", "delete", {
           id: items.id,
         });
-  
+
         if (res && !res.error) {
           const newList = state.list.filter((item) => item.id !== items.id);
           setState((p) => ({
@@ -91,20 +95,9 @@ function SupplierPage() {
             list: newList,
             loading: false,
           }));
-          message.success("លុបទិន្នន័យដោយជោគជ័យ!");
+          message.success(t.supplier_deleted);
         } else {
-          const errorMessage = res?.message || "";
-          if (
-            errorMessage.includes("Cannot delete or update a parent row") &&
-            errorMessage.includes("foreign key constraint fails")
-          ) {
-            message.error("មានបញ្ហាក្នុងការលុបទិន្នន័យ!");
-           
-          } else {
-            message.error("មិនអាចលុបបានទេ! ទិន្នន័យនេះកំពុងត្រូវបានប្រើនៅក្នុងការទិញ។");
-          }
-  
-          // ✅ Ensure loading state is updated after error
+          message.error(res?.message || "Error deleting supplier");
           setState((p) => ({
             ...p,
             loading: false,
@@ -113,272 +106,156 @@ function SupplierPage() {
       },
     });
   };
-  
+
   return (
     <MainPage loading={state.loading}>
       <div className="pageHeader">
         <Space>
-          <div>Supplier</div>
+          <div style={{ fontWeight: 600, fontSize: 18 }}>{t.supplier_list}</div>
           <Input.Search
             onChange={(value) =>
               setState((p) => ({ ...p, txtSearch: value.target.value }))
             }
             allowClear
             onSearch={getList}
-            placeholder="Search"
+            placeholder={t.search}
           />
         </Space>
         <Button type="primary" onClick={openModal} icon={<MdOutlineCreateNewFolder />}>
-          NEW
+          {t.add_new}
         </Button>
       </div>
       <Modal
-    open={state.visible}
-    title={
-        <div>
-            <span className="khmer-text">
-                {form.getFieldValue("id") ? "កែសម្រួលអ្នកផ្គត់ផ្គង់" : "អ្នកផ្គត់ផ្គង់ថ្មី"}
-            </span>
-          
-        </div>
-    }
-    onCancel={closeModal}
-    footer={null}
->
-    <Form layout="vertical" form={form} onFinish={onFinish}>
-        {/* Name */}
-        <Form.Item
+        open={state.visible}
+        title={<b>{form.getFieldValue("id") ? t.edit_supplier : t.add_new_supplier}</b>}
+        onCancel={closeModal}
+        footer={null}
+      >
+        <Form layout="vertical" form={form} onFinish={onFinish}>
+          <Form.Item
             name="name"
-            label={
-                <div>
-                    <span className="khmer-text">ឈ្មោះ</span>
-                </div>
-            }
-            rules={[
-                {
-                    required: true,
-                    message: "Name is required!",
-                },
-            ]}
-        >
-            <Input placeholder="Name" />
-        </Form.Item>
+            label={t.name}
+            rules={[{ required: true, message: t.name + " is required!" }]}
+          >
+            <Input placeholder={t.name} />
+          </Form.Item>
 
-        {/* Code */}
-        <Form.Item
+          <Form.Item
             name="code"
-            label={
-                <div>
-                    <span className="khmer-text">កូដ</span>
-                </div>
-            }
-            rules={[
-                {
-                    required: true,
-                    message: "Code is required!",
-                },
-            ]}
-        >
-            <Input placeholder="Code" />
-        </Form.Item>
+            label={t.code}
+            rules={[{ required: true, message: t.code + " is required!" }]}
+          >
+            <Input placeholder={t.code} />
+          </Form.Item>
 
-        {/* Tel */}
-        <Form.Item
+          <Form.Item
             name="tel"
-            label={
-                <div>
-                    <span className="khmer-text">ទូរស័ព្ទ</span>
-                </div>
-            }
-            rules={[
-                {
-                    required: true,
-                    message: "Tel is required!",
-                },
-            ]}
-        >
-            <Input placeholder="Tel" />
-        </Form.Item>
+            label={t.tel}
+            rules={[{ required: true, message: t.tel + " is required!" }]}
+          >
+            <Input placeholder={t.tel} />
+          </Form.Item>
 
-        {/* Email */}
-        <Form.Item
+          <Form.Item
             name="email"
-            label={
-                <div>
-                    <span className="khmer-text">អ៊ីមែល</span>
-                </div>
-            }
-            rules={[
-                {
-                    required: true,
-                    message: "Email is required!",
-                },
-            ]}
-        >
-            <Input placeholder="Email" />
-        </Form.Item>
+            label={t.email}
+            rules={[{ required: true, message: t.email + " is required!" }]}
+          >
+            <Input placeholder={t.email} />
+          </Form.Item>
 
-        {/* Address */}
-        <Form.Item
+          <Form.Item
             name="address"
-            label={
-                <div>
-                    <span className="khmer-text">អាសយដ្ឋាន</span>
-                </div>
-            }
-            rules={[
-                {
-                    required: true,
-                    message: "Address is required!",
-                },
-            ]}
-        >
-            <Input placeholder="Address" />
-        </Form.Item>
+            label={t.address}
+            rules={[{ required: true, message: t.address + " is required!" }]}
+          >
+            <Input placeholder={t.address} />
+          </Form.Item>
 
-        {/* Website */}
-        <Form.Item
+          <Form.Item
             name="website"
-            label={
-                <div>
-                    <span className="khmer-text">គេហទំព័រ</span>
-                </div>
-            }
-            rules={[
-                {
-                    required: true,
-                    message: "Website is required!",
-                },
-            ]}
-        >
-            <Input placeholder="Website" />
-        </Form.Item>
+            label={t.website}
+          >
+            <Input placeholder={t.website} />
+          </Form.Item>
 
-        {/* Note */}
-        <Form.Item
+          <Form.Item
             name="note"
-            label={
-                <div>
-                    <span className="khmer-text">កំណត់សម្គាល់</span>
-                </div>
-            }
-        >
-            <Input.TextArea placeholder="Note" />
-        </Form.Item>
+            label={t.note}
+          >
+            <Input.TextArea placeholder={t.note} />
+          </Form.Item>
 
-        {/* Buttons */}
-        <Form.Item style={{ textAlign: "right" }}>
+          <Form.Item style={{ textAlign: "right", marginBottom: 0 }}>
             <Space>
-                <Button onClick={closeModal}>
-                    <span className="khmer-text">បោះបង់</span>
-                </Button>
-                <Button type="primary" htmlType="submit">
-                    <span className="khmer-text">
-                        {form.getFieldValue("id") ? "កែសម្រួល" : "រក្សាទុក"}
-                    </span>
-                  
-                </Button>
+              <Button onClick={closeModal}>{t.cancel}</Button>
+              <Button type="primary" htmlType="submit">
+                {form.getFieldValue("id") ? t.edit : t.save}
+              </Button>
             </Space>
-        </Form.Item>
-    </Form>
-</Modal>
+          </Form.Item>
+        </Form>
+      </Modal>
+
       <Table
-  rowClassName={() => "pos-row"}
-  dataSource={state.list}
-  columns={[
-    {
-      key: "name",
-      title: (
-        <div >
-          <div className="khmer-text">ឈ្មោះ</div>
-          <div className="english-text">Name</div>
-        </div>
-      ),
-      dataIndex: "name",
-    },
-    {
-      key: "code",
-      title: (
-        <div >
-          <div className="khmer-text">កូដ</div>
-          <div className="english-text">Code</div>
-        </div>
-      ),
-      dataIndex: "code",
-    },
-    {
-      key: "tel",
-      title: (
-        <div >
-          <div className="khmer-text">លេខទូរស័ព្ទ</div>
-          <div className="english-text">Tel</div>
-        </div>
-      ),
-      dataIndex: "tel",
-    },
-    {
-      key: "email",
-      title: (
-        <div >
-          <div className="khmer-text">អ៊ីម៉ែល</div>
-          <div className="english-text">Email</div>
-        </div>
-      ),
-      dataIndex: "email",
-    },
-    {
-      key: "address",
-      title: (
-        <div >
-          <div className="khmer-text">អាសយដ្ឋាន</div>
-          <div className="english-text">Address</div>
-        </div>
-      ),
-      dataIndex: "address",
-    },
-    {
-      key: "website",
-      title: (
-        <div >
-          <div className="khmer-text">គេហទំព័រ</div>
-          <div className="english-text">Website</div>
-        </div>
-      ),
-      dataIndex: "website",
-    },
-    {
-      key: "create_at",
-      title: (
-        <div >
-          <div className="khmer-text">កាលបរិច្ឆេទបង្កើត</div>
-          <div className="english-text">Created At</div>
-        </div>
-      ),
-      dataIndex: "create_at",
-      render: (value) => dayjs(value).format("DD/MM/YYYY"),
-    },
-    {
-      key: "action",
-      title: (
-        <div >
-          <div className="khmer-text">សកម្មភាព</div>
-          <div className="english-text">Action</div>
-        </div>
-      ),
-      render: (value, data) => (
-        <Space>
-          <Button type="primary" onClick={() => onClickBtnEdit(data)}>
-            EDIT
-          </Button>
-          <Button type="primary" danger onClick={() => onClickBtnDelete(data)}>
-            DELETE
-          </Button>
-        </Space>
-      ),
-    },
-  ]}
-/>
+        rowClassName={() => "pos-row"}
+        dataSource={state.list}
+        columns={[
+          {
+            key: "name",
+            title: t.name,
+            dataIndex: "name",
+          },
+          {
+            key: "code",
+            title: t.code,
+            dataIndex: "code",
+          },
+          {
+            key: "tel",
+            title: t.tel,
+            dataIndex: "tel",
+          },
+          {
+            key: "email",
+            title: t.email,
+            dataIndex: "email",
+          },
+          {
+            key: "address",
+            title: t.address,
+            dataIndex: "address",
+          },
+          {
+            key: "website",
+            title: t.website,
+            dataIndex: "website",
+          },
+          {
+            key: "create_at",
+            title: t.created_at,
+            dataIndex: "create_at",
+            render: (value) => dayjs(value).format("DD/MM/YYYY"),
+          },
+          {
+            key: "action",
+            title: t.action,
+            align: 'center',
+            render: (value, data) => (
+              <Space>
+                <Button type="primary" onClick={() => onClickBtnEdit(data)}>
+                  {t.edit}
+                </Button>
+                <Button type="primary" danger onClick={() => onClickBtnDelete(data)}>
+                  {t.delete}
+                </Button>
+              </Space>
+            ),
+          },
+        ]}
+      />
     </MainPage>
   );
 }
+
 export default SupplierPage;

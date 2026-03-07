@@ -18,9 +18,13 @@ import {
 import { request } from "../../util/helper";
 import { getProfile } from "../../store/profile.store";
 
+import { useLanguage, translations } from "../../store/language.store";
+
 const { Title, Text } = Typography;
 
 const BranchPage = () => {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [visible, setVisible] = useState(false);
@@ -41,7 +45,7 @@ const BranchPage = () => {
                 setList(res.list);
             }
         } catch (error) {
-            message.error("Failed to fetch branches");
+            message.error(t.fetch_branch_failed);
         } finally {
             setLoading(false);
         }
@@ -54,14 +58,14 @@ const BranchPage = () => {
 
             const res = await request("branch", method, payload);
             if (res) {
-                message.success(res.message || `Branch ${editId ? 'updated' : 'created'} successfully`);
+                message.success(res.message || (editId ? t.update_branch : t.add_new_branch) + " " + t.success);
                 setVisible(false);
                 form.resetFields();
                 setEditId(null);
                 getList();
             }
         } catch (error) {
-            message.error(error.message || "Operation failed");
+            message.error(error.message || t.operation_failed);
         }
     };
 
@@ -78,14 +82,14 @@ const BranchPage = () => {
 
     const onClickDelete = (id) => {
         Modal.confirm({
-            title: "Delete Branch?",
-            content: "Are you sure you want to delete this branch? This might affect linked data like orders and inventory.",
-            okText: "Yes, Delete",
+            title: t.delete_branch_confirm.split('?')[0] + '?',
+            content: t.delete_branch_confirm,
+            okText: t.delete,
             okType: "danger",
             onOk: async () => {
                 const res = await request("branch", "delete", { id });
                 if (res) {
-                    message.success("Branch removed");
+                    message.success(t.success);
                     getList();
                 }
             }
@@ -94,54 +98,54 @@ const BranchPage = () => {
 
     const columns = [
         {
-            title: "Branch Name",
+            title: t.branch_name,
             dataIndex: "name",
             key: "name",
             render: (text, record) => (
                 <Space direction="vertical" size={0}>
                     <Text strong style={{ fontSize: '16px', color: '#1e4a2d' }}>
-                        {text} {record.is_main === '1' && <Tag color="gold" style={{ marginLeft: 8 }}>Main Headquarter</Tag>}
+                        {text} {record.is_main === '1' && <Tag color="gold" style={{ marginLeft: 8 }}>{t.main_headquarter}</Tag>}
                     </Text>
                     <Text type="secondary" style={{ fontSize: '12px' }}>ID: BR-{record.id.toString().padStart(3, '0')}</Text>
                 </Space>
             )
         },
         {
-            title: "Location",
+            title: t.location_address,
             dataIndex: "location",
             key: "location",
             render: (text) => (
                 <Space>
                     <EnvironmentOutlined style={{ color: '#f7c06a' }} />
-                    <Text>{text || "Not Specified"}</Text>
+                    <Text>{text || t.not_specified}</Text>
                 </Space>
             )
         },
         {
-            title: "Contact",
+            title: t.contact_phone,
             dataIndex: "phone",
             key: "phone",
             render: (text) => (
                 <Space>
                     <PhoneOutlined style={{ color: '#1e4a2d' }} />
-                    <Text>{text || "No Phone"}</Text>
+                    <Text>{text || t.no_phone}</Text>
                 </Space>
             )
         },
         {
-            title: "Status",
+            title: t.status,
             key: "status",
             render: () => (
-                <Badge status="processing" text="Active" color="#52c41a" />
+                <Badge status="processing" text={t.active} color="#52c41a" />
             )
         },
         {
-            title: "Actions",
+            title: t.action,
             key: "actions",
             align: 'right',
             render: (record) => (
                 <Space>
-                    <Tooltip title="Edit Branch">
+                    <Tooltip title={t.edit}>
                         <Button
                             type="text"
                             icon={<EditOutlined />}
@@ -150,7 +154,7 @@ const BranchPage = () => {
                         />
                     </Tooltip>
                     {record.is_main !== '1' && (
-                        <Tooltip title="Delete Branch">
+                        <Tooltip title={t.delete}>
                             <Button
                                 type="text"
                                 danger
@@ -183,15 +187,15 @@ const BranchPage = () => {
             }}>
                 <div>
                     <Title level={2} style={{ margin: 0, color: '#1e4a2d', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <ShopOutlined /> Branch Management
+                        <ShopOutlined /> {t.branch_management}
                     </Title>
-                    <Text type="secondary">Manage your business locations and headquarters</Text>
+                    <Text type="secondary">{t.manage_locations}</Text>
                 </div>
 
                 <Space size="middle">
                     <Input
                         prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                        placeholder="Search branches..."
+                        placeholder={t.search}
                         onChange={(e) => setSearchText(e.target.value)}
                         style={{ width: 250, borderRadius: '8px' }}
                     />
@@ -211,7 +215,7 @@ const BranchPage = () => {
                             fontWeight: 600
                         }}
                     >
-                        Add New Branch
+                        {t.add_new_branch}
                     </Button>
                 </Space>
             </div>
@@ -231,7 +235,7 @@ const BranchPage = () => {
             </Card>
 
             <Modal
-                title={<Title level={4} style={{ margin: 0 }}>{editId ? "Update Branch" : "Setup New Branch"}</Title>}
+                title={<Title level={4} style={{ margin: 0 }}>{editId ? t.update_branch : t.setup_new_branch}</Title>}
                 open={visible}
                 onCancel={() => {
                     setVisible(false);
@@ -239,7 +243,7 @@ const BranchPage = () => {
                     form.resetFields();
                 }}
                 onOk={() => form.submit()}
-                okText={editId ? "Update Branch" : "Create Branch"}
+                okText={editId ? t.update_branch : t.create_branch}
                 okButtonProps={{
                     style: { background: '#1e4a2d', borderColor: '#1e4a2d' }
                 }}
@@ -251,8 +255,8 @@ const BranchPage = () => {
                         <WarningOutlined style={{ color: '#f7c06a' }} />
                         <Text style={{ fontSize: '13px' }}>
                             {profile?.plan_type === 'free'
-                                ? "Free Plan users are limited to 1 branch. Upgrade to Pro for multi-location support."
-                                : "You are on the Pro Plan. You can manage multiple branches seamlessly."}
+                                ? t.free_plan_limit
+                                : t.pro_plan_info}
                         </Text>
                     </Space>
                 </div>
@@ -260,24 +264,24 @@ const BranchPage = () => {
                 <Form form={form} layout="vertical" onFinish={onFinish}>
                     <Form.Item
                         name="name"
-                        label="Branch Name"
-                        rules={[{ required: true, message: "Please enter branch name" }]}
+                        label={t.branch_name}
+                        rules={[{ required: true, message: t.branch_name + " is required" }]}
                     >
                         <Input placeholder="e.g. Riverside Coffee, Terminal 2" size="large" />
                     </Form.Item>
 
                     <Form.Item
                         name="location"
-                        label="Location / Address"
+                        label={t.location_address}
                     >
-                        <Input.TextArea placeholder="Enter full address" rows={3} />
+                        <Input.TextArea placeholder={t.location_address} rows={3} />
                     </Form.Item>
 
                     <Row gutter={16}>
                         <Col span={12}>
                             <Form.Item
                                 name="phone"
-                                label="Contact Phone"
+                                label={t.contact_phone}
                             >
                                 <Input placeholder="012 345 678" />
                             </Form.Item>
@@ -285,7 +289,7 @@ const BranchPage = () => {
                         <Col span={12}>
                             <Form.Item
                                 name="is_main"
-                                label="Set as Main HQ?"
+                                label={t.set_as_main_hq}
                                 valuePropName="checked"
                             >
                                 <Switch

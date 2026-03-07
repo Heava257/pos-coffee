@@ -32,9 +32,13 @@ import { IoEyeOutline } from "react-icons/io5";
 import imageExtensions from 'image-extensions';
 import dayjs from "dayjs";
 
+import { useLanguage, translations } from "../../store/language.store";
+
 const { TabPane } = Tabs;
 
 function UserPage() {
+  const { lang } = useLanguage();
+  const t = translations[lang];
   const profile = getProfile();
   const isSuperAdmin = profile?.is_super_admin === 1;
   const isOwner = profile?.role_name?.toUpperCase() === "OWNER" || profile?.role_code === "owner";
@@ -151,18 +155,18 @@ function UserPage() {
   // Handle delete user
   const clickBtnDelete = (item) => {
     Modal.confirm({
-      title: "Confirm Deletion",
-      content: "This action will permanently remove this employee from your business database. Continue?",
-      okText: "Yes, Delete",
-      cancelText: "Cancel",
+      title: t.confirm_delete || "Confirm Deletion",
+      content: t.remove_data,
+      okText: t.delete,
+      cancelText: t.cancel,
       okButtonProps: { danger: true },
       onOk: async () => {
         const res = await request("user", "delete", { id: item.id });
         if (res && !res.error) {
-          message.success("Operational Success: Employee record purged.");
+          message.success(t.success);
           getList();
         } else {
-          message.error(res.message || "Constraint Error: Record is linked to active business data.");
+          message.error(res.message || t.failed);
         }
       },
     });
@@ -184,9 +188,9 @@ function UserPage() {
   // Image Utilities
   const beforeUpload = (file) => {
     const isImg = file.type.startsWith('image/');
-    if (!isImg) message.error('Format Error: Only image files permitted.');
+    if (!isImg) message.error(t.invalid_image_format || 'Format Error: Only image files permitted.');
     const isLt2M = file.size / 1024 / 1024 < 2;
-    if (!isLt2M) message.error('Size Error: Image must be smaller than 2MB.');
+    if (!isLt2M) message.error(t.image_size_too_large || 'Size Error: Image must be smaller than 2MB.');
     return isImg && isLt2M;
   };
 
@@ -232,18 +236,18 @@ function UserPage() {
 
     const res = await request("user", isUpdate ? "put" : "post", params);
     if (res && !res.error) {
-      message.success(res.message);
+      message.success(t.success);
       getList();
       handleCloseModal();
     } else {
-      message.error(res.message || "Operational Error");
+      message.error(res.message || t.failed);
     }
   };
 
   const columns = [
     {
       key: "profile_image",
-      title: "Staff Identity",
+      title: t.staff_identity,
       dataIndex: "profile_image",
       render: (img) => img ? (
         <Image
@@ -256,7 +260,7 @@ function UserPage() {
     },
     {
       key: "name",
-      title: "Full Name",
+      title: t.full_name,
       dataIndex: "name",
       render: (text, row) => (
         <Space direction="vertical" size={0}>
@@ -267,51 +271,51 @@ function UserPage() {
     },
     {
       key: "role",
-      title: "Business Role",
+      title: t.business_role,
       dataIndex: "role_name",
       render: (role, row) => (
         <Space>
           <Tag color={row.is_super_admin ? "gold" : "green"} style={{ borderRadius: '6px', border: 'none' }}>
-            {row.is_super_admin ? "EXECUTIVE" : role || "STAFF"}
+            {row.is_super_admin ? t.executives : role || t.staff}
           </Tag>
         </Space>
       )
     },
     {
       key: "contact",
-      title: "Contact / Branch",
+      title: t.contact_branch,
       render: (_, row) => (
         <Space direction="vertical" size={0}>
-          <Text style={{ fontSize: '13px' }}>{row.tel || "No Tel"}</Text>
-          <Text type="secondary" style={{ fontSize: '11px' }}>Store: {row.branch_name || "Headquarters"}</Text>
+          <Text style={{ fontSize: '13px' }}>{row.tel || t.no_data}</Text>
+          <Text type="secondary" style={{ fontSize: '11px' }}>{t.branch}: {row.branch_name || t.main_headquarter}</Text>
         </Space>
       )
     },
     {
       key: "status",
-      title: "Access Status",
+      title: t.access_status,
       dataIndex: "status",
       render: (status) => (
         <Badge
           status={status === 'active' ? 'success' : 'error'}
-          text={status === 'active' ? "Permitted" : "Suspended"}
+          text={status === 'active' ? t.permitted : t.suspended}
           style={{ fontSize: '12px' }}
         />
       )
     },
     {
       key: "action",
-      title: "Management",
+      title: t.management,
       align: "right",
       render: (_, row) => (
         <Space>
           {(isOwner || !isSuperAdmin) && (
             <>
-              <Button type="text" onClick={() => onClickEdit(row)} style={{ color: '#1e4a2d' }}>Edit</Button>
-              <Button type="text" danger onClick={() => clickBtnDelete(row)}>Purge</Button>
+              <Button type="text" onClick={() => onClickEdit(row)} style={{ color: '#1e4a2d' }}>{t.edit}</Button>
+              <Button type="text" danger onClick={() => clickBtnDelete(row)}>{t.delete}</Button>
             </>
           )}
-          {isSuperAdmin && !isOwner && <Text type="secondary" italic>View Only</Text>}
+          {isSuperAdmin && !isOwner && <Text type="secondary" italic>{t.view_only}</Text>}
         </Space>
       )
     }
@@ -322,12 +326,12 @@ function UserPage() {
       {/* Executive Header */}
       <div style={{ marginBottom: 24 }}>
         <Title level={2} style={{ color: '#1e4a2d', margin: 0 }}>
-          {isSuperAdmin ? "Branch & Access Control" : "Staff & Identity Management"}
+          {isSuperAdmin ? (t.branch_management + " & " + t.access_status) : (t.staff + " & " + t.management)}
         </Title>
         <Text type="secondary">
           {isSuperAdmin
-            ? "Global control center for multi-branch operations and executive oversight."
-            : "Manage your business team, roles, and administrative access."}
+            ? t.branch_management_desc
+            : t.staff_management_desc}
         </Text>
       </div>
 
@@ -338,33 +342,33 @@ function UserPage() {
             {isSuperAdmin && (
               <Card style={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', background: '#f0f7f2' }}>
                 <Space direction="vertical" size={0}>
-                  <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>Active Branches</Text>
+                  <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>{t.active_branches}</Text>
                   <Title level={2} style={{ margin: 0, color: '#1e4a2d' }}>{state.summary.total_branches}</Title>
-                  <Tag color="green" style={{ borderRadius: '10px' }}>Global Network</Tag>
+                  <Tag color="green" style={{ borderRadius: '10px' }}>{t.main_headquarter}</Tag>
                 </Space>
               </Card>
             )}
             <Card style={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
               <Space direction="vertical" size={0}>
-                <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>Total Personnel</Text>
+                <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>{t.total_personnel}</Text>
                 <Title level={2} style={{ margin: 0, color: '#1e4a2d' }}>{state.summary.total_staff}</Title>
-                <Tag color="green" style={{ borderRadius: '10px' }}>+ {state.summary.active_users} Online</Tag>
+                <Tag color="green" style={{ borderRadius: '10px' }}>+ {state.summary.active_users} {t.active}</Tag>
               </Space>
             </Card>
             {!isSuperAdmin && (
               <Card style={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                 <Space direction="vertical" size={0}>
-                  <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>Super Admins</Text>
+                  <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>{t.executives}</Text>
                   <Title level={2} style={{ margin: 0, color: '#c0a060' }}>{state.summary.super_admins}</Title>
-                  <Tag color="gold" style={{ borderRadius: '10px' }}>Executives</Tag>
+                  <Tag color="gold" style={{ borderRadius: '10px' }}>{t.executives}</Tag>
                 </Space>
               </Card>
             )}
             <Card style={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
               <Space direction="vertical" size={0}>
-                <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>Regular Team</Text>
+                <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>{t.regular_team}</Text>
                 <Title level={2} style={{ margin: 0, color: '#1e4a2d' }}>{state.summary.regular_staff}</Title>
-                <Tag color="blue" style={{ borderRadius: '10px' }}>Operation Staff</Tag>
+                <Tag color="blue" style={{ borderRadius: '10px' }}>{t.staff}</Tag>
               </Space>
             </Card>
           </div>
@@ -383,18 +387,18 @@ function UserPage() {
           >
             <Space direction="vertical" style={{ width: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ color: '#c0a060', fontWeight: 700 }}>SUBSCRIPTION</Text>
+                <Text style={{ color: '#c0a060', fontWeight: 700 }}>{t.subscription}</Text>
                 <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>
-                  {state.subscription.sub_status?.toUpperCase() || "ACTIVE"}
+                  {state.subscription.sub_status?.toUpperCase() || t.active}
                 </div>
               </div>
               <Title level={3} style={{ color: 'white', margin: 0 }}>{state.subscription.plan_name}</Title>
               <div style={{ fontSize: '12px', opacity: 0.8 }}>
-                Expires: {state.subscription.deadline && dayjs(state.subscription.deadline).isValid() ? dayjs(state.subscription.deadline).format("DD MMM YYYY") : "Lifetime"}
+                {t.expires}: {state.subscription.deadline && dayjs(state.subscription.deadline).isValid() ? dayjs(state.subscription.deadline).format("DD MMM YYYY") : t.main_headquarter}
               </div>
               <Divider style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '8px 0' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                <span>Staff Nodes:</span>
+                <span>{t.staff_nodes}:</span>
                 <span>{state.summary.total_staff} / {state.subscription.max_staff || "∞"}</span>
               </div>
             </Space>
@@ -412,34 +416,34 @@ function UserPage() {
                 onClick={() => setActiveTab('all')}
                 style={activeTab === 'all' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
               >
-                All Staff
+                {t.all_staff}
               </Button>
               <Button
                 type={activeTab === 'superAdmins' ? 'primary' : 'text'}
                 onClick={() => setActiveTab('superAdmins')}
                 style={activeTab === 'superAdmins' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
               >
-                Executives
+                {t.executives}
               </Button>
               <Button
                 type={activeTab === 'admins' ? 'primary' : 'text'}
                 onClick={() => setActiveTab('admins')}
                 style={activeTab === 'admins' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
               >
-                Admins
+                {t.admins}
               </Button>
             </div>
           </Col>
           <Col xs={24} md={12} style={{ textAlign: 'right', marginTop: '10px' }}>
             <Space>
               <Input.Search
-                placeholder="Lookup by name/id..."
+                placeholder={t.search}
                 onSearch={handleSearch}
                 style={{ width: 250 }}
                 className="premium-search"
               />
               {(isOwner || !isSuperAdmin) && (
-                <Tooltip title={state.subscription.max_staff && state.summary.total_staff >= state.subscription.max_staff ? "Staff limit reached for your plan" : ""}>
+                <Tooltip title={state.subscription.max_staff && state.summary.total_staff >= state.subscription.max_staff ? t.staff_limit_reached : ""}>
                   <Button
                     type="primary"
                     disabled={state.subscription.max_staff && state.summary.total_staff >= state.subscription.max_staff}
@@ -447,7 +451,7 @@ function UserPage() {
                     onClick={handleOpenModal}
                     style={{ background: '#1e4a2d', borderColor: '#1e4a2d', borderRadius: '12px', height: '40px' }}
                   >
-                    + New Staff Member
+                    + {t.add_new}
                   </Button>
                 </Tooltip>
               )}
@@ -467,7 +471,7 @@ function UserPage() {
             pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} employees`,
+            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} ${t.staff}`,
           }}
           scroll={{ x: 1200 }}
         />
@@ -476,7 +480,7 @@ function UserPage() {
       {/* Form and Preview Modals remain exactly as they were code-wise */}
       <Modal
         open={previewOpen}
-        title="Identity Verification Preview"
+        title={t.view_details}
         footer={null}
         onCancel={() => setPreviewOpen(false)}
       >
@@ -490,7 +494,7 @@ function UserPage() {
         footer={null}
         title={
           <Title level={4} style={{ margin: 0, color: '#1e4a2d' }}>
-            {form.getFieldValue("id") ? "កែប្រែអ្នកប្រើប្រាស់ / Update Staff" : "បញ្ចូលអ្នកប្រើប្រាស់ថ្មី / New Staff"}
+            {form.getFieldValue("id") ? t.update_staff : t.add_new}
           </Title>
         }
       >
@@ -500,7 +504,7 @@ function UserPage() {
               <Form.Item
                 name="profile_image"
                 style={{ margin: 0 }}
-                label={<div style={{ textAlign: "center", width: "100%", fontWeight: 600 }}>រូបភាព / Profile Image</div>}
+                label={<div style={{ textAlign: "center", width: "100%", fontWeight: 600 }}>{t.image}</div>}
               >
                 <Upload
                   name="profile_image"
@@ -518,7 +522,7 @@ function UserPage() {
                   {imageDefault.length >= 1 ? null : (
                     <div>
                       <UserOutlined style={{ fontSize: 40, color: "#aaa" }} />
-                      <div style={{ marginTop: 8 }}>Upload</div>
+                      <div style={{ marginTop: 8 }}>{t.upload}</div>
                     </div>
                   )}
                 </Upload>
@@ -532,51 +536,51 @@ function UserPage() {
               {/* Name */}
               <Form.Item
                 name="name"
-                label={<Text strong>ឈ្មោះ / Name</Text>}
-                rules={[{ required: true, message: "Please fill in name" }]}
+                label={<Text strong>{t.full_name}</Text>}
+                rules={[{ required: true, message: t.full_name + " " + t.required }]}
               >
-                <Input placeholder="Enter full name" size="large" />
+                <Input placeholder={t.full_name} size="large" />
               </Form.Item>
 
               {/* Username (Email) */}
               <Form.Item
                 name="username"
-                label={<Text strong>អ៊ីម៉ែល / Email</Text>}
-                rules={[{ required: true, message: "Please fill in email" }]}
+                label={<Text strong>{t.email}</Text>}
+                rules={[{ required: true, message: t.email + " " + t.required }]}
               >
-                <Input placeholder="Enter username or email" size="large" />
+                <Input placeholder={t.email} size="large" />
               </Form.Item>
 
               {/* Tel */}
               <Form.Item
                 name="tel"
-                label={<Text strong>លេខទូរស័ព្ទ / Tel</Text>}
-                rules={[{ required: true, message: "Please fill in Tel" }]}
+                label={<Text strong>{t.tel}</Text>}
+                rules={[{ required: true, message: t.tel + " " + t.required }]}
               >
-                <Input placeholder="Enter phone number" size="large" />
+                <Input placeholder={t.tel} size="large" />
               </Form.Item>
 
               {/* Address */}
               <Form.Item
                 name="address"
-                label={<Text strong>អាសយដ្ឋាន / Address</Text>}
-                rules={[{ required: true, message: "Please fill in Address" }]}
+                label={<Text strong>{t.address}</Text>}
+                rules={[{ required: true, message: t.address + " " + t.required }]}
               >
-                <Input placeholder="Enter address" size="large" />
+                <Input placeholder={t.address} size="large" />
               </Form.Item>
 
               {/* Status */}
               <Form.Item
                 name="is_active"
-                label={<Text strong>ស្ថានភាព / Status</Text>}
-                rules={[{ required: true, message: "Please select status" }]}
+                label={<Text strong>{t.status}</Text>}
+                rules={[{ required: true, message: t.status + " " + t.required }]}
               >
                 <Select
-                  placeholder="Select Status"
+                  placeholder={t.status}
                   size="large"
                   options={[
-                    { label: "Active / សកម្ម", value: 1 },
-                    { label: "InActive / ផ្អាក", value: 0 },
+                    { label: t.active, value: 1 },
+                    { label: t.inactive, value: 0 },
                   ]}
                 />
               </Form.Item>
@@ -587,32 +591,32 @@ function UserPage() {
               {/* Role */}
               <Form.Item
                 name="role_id"
-                label={<Text strong>តួនាទី / Role</Text>}
-                rules={[{ required: true, message: "Please select role" }]}
+                label={<Text strong>{t.user_role}</Text>}
+                rules={[{ required: true, message: t.user_role + " " + t.required }]}
               >
-                <Select placeholder="Select Role" size="large" options={state?.role} />
+                <Select placeholder={t.user_role} size="large" options={state?.role} />
               </Form.Item>
 
               {/* Branch */}
               <Form.Item
                 name="branch_id"
-                label={<Text strong>សាខា / Branch</Text>}
-                rules={[{ required: true, message: "Please select Branch" }]}
+                label={<Text strong>{t.branch}</Text>}
+                rules={[{ required: true, message: t.branch + " " + t.required }]}
               >
-                <Select placeholder="Select Branch" size="large" options={state?.branches} />
+                <Select placeholder={t.branch} size="large" options={state?.branches} />
               </Form.Item>
 
               {profile?.business_id === 1 && (
                 <Form.Item
                   name="is_super_admin"
-                  label={<Text strong>អ្នកគ្រប់គ្រងជាន់ខ្ពស់ / Super Admin</Text>}
+                  label={<Text strong>{t.executives}</Text>}
                 >
                   <Select
-                    placeholder="Is Super Admin?"
+                    placeholder={t.executives}
                     size="large"
                     options={[
-                      { label: "No / ទេ", value: 0 },
-                      { label: "Yes / បាទ/ចាស់", value: 1 }
+                      { label: t.no, value: 0 },
+                      { label: t.yes, value: 1 }
                     ]}
                   />
                 </Form.Item>
@@ -621,30 +625,30 @@ function UserPage() {
               {/* Password */}
               <Form.Item
                 name="password"
-                label={<Text strong>ពាក្យសម្ងាត់ / Password</Text>}
-                rules={form.getFieldValue("id") ? [] : [{ required: true, message: "Please fill in password" }]}
+                label={<Text strong>{t.password}</Text>}
+                rules={form.getFieldValue("id") ? [] : [{ required: true, message: t.password + " " + t.required }]}
               >
-                <Input.Password placeholder="Enter password" size="large" />
+                <Input.Password placeholder={t.password} size="large" />
               </Form.Item>
 
               {/* Confirm Password */}
               <Form.Item
                 name="confirm_password"
-                label={<Text strong>បញ្ជាក់ពាក្យសម្ងាត់ / Confirm Password</Text>}
+                label={<Text strong>{t.confirm_password}</Text>}
                 dependencies={["password"]}
                 rules={form.getFieldValue("id") ? [] : [
-                  { required: true, message: "Please confirm password" },
+                  { required: true, message: t.confirm_password + " " + t.required },
                   ({ getFieldValue }) => ({
                     validator(_, value) {
                       if (!value || getFieldValue("password") === value) {
                         return Promise.resolve();
                       }
-                      return Promise.reject(new Error("Passwords do not match!"));
+                      return Promise.reject(new Error(t.password_not_match || "Passwords do not match!"));
                     },
                   }),
                 ]}
               >
-                <Input.Password placeholder="Confirm password" size="large" />
+                <Input.Password placeholder={t.confirm_password} size="large" />
               </Form.Item>
             </Col>
           </Row>
@@ -653,9 +657,9 @@ function UserPage() {
           <Divider style={{ margin: '16px 0' }} />
           <div style={{ textAlign: "right" }}>
             <Space>
-              <Button onClick={handleCloseModal} size="large" style={{ borderRadius: '8px' }}>Cancel / បោះបង់</Button>
+              <Button onClick={handleCloseModal} size="large" style={{ borderRadius: '8px' }}>{t.cancel}</Button>
               <Button type="primary" htmlType="submit" size="large" style={{ background: '#1e4a2d', borderColor: '#1e4a2d', borderRadius: '8px' }}>
-                {form.getFieldValue("id") ? "Update Account" : "Register Staff / រក្សាទុក"}
+                {form.getFieldValue("id") ? t.update : t.save}
               </Button>
             </Space>
           </div>

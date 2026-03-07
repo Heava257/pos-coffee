@@ -23,6 +23,8 @@ import { Config } from "../../util/config";
 import { getProfile } from "../../store/profile.store";
 import "./Product.css"
 import RecipeModal from "./RecipeModal";
+import { useLanguage, translations } from "../../store/language.store";
+
 const getBase64 = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -30,7 +32,10 @@ const getBase64 = (file) =>
     reader.onload = () => resolve(reader.result);
     reader.onerror = (error) => reject(error);
   });
+
 function ProductPage() {
+  const { lang } = useLanguage();
+  const t = translations[lang];
   const { config } = configStore();
   const [form] = Form.useForm();
   const [state, setState] = useState({
@@ -64,7 +69,6 @@ function ProductPage() {
     setState((pre) => ({ ...pre, loading: true }));
     const res = await request(`product`, "get", param);
     if (res && !res.error) {
-      // Calculate totals for each product category
       const totals = res.list.reduce((acc, item) => {
         if (!acc[item.category_name]) {
           acc[item.category_name] = 0;
@@ -78,7 +82,7 @@ function ProductPage() {
         list: res.list,
         total: refPage.current == 1 ? res.total : pre.total,
         loading: false,
-        totals, // Store totals in state
+        totals,
       }));
     }
   };
@@ -124,7 +128,7 @@ function ProductPage() {
     }
     const res = await request("product", method, params);
     if (res && !res.error) {
-      message.success(res.message);
+      message.success(t.product_saved);
       onCloseModal();
       getList();
     } else {
@@ -183,7 +187,7 @@ function ProductPage() {
     form.setFieldsValue({
       ...item,
     });
-    setState((pre) => ({ ...pre, visibleModal: true }));
+    setState((pre) => ({ ...pre, visibleModal: true, selectedParentId: item.category_id }));
     if (item.image != "" && item.image != null) {
       const imageProduct = [
         {
@@ -199,12 +203,14 @@ function ProductPage() {
   };
   const onClickDelete = (item, index) => {
     Modal.confirm({
-      title: "Remove data",
-      content: "Are you to remove this porduct?",
+      title: t.remove_data,
+      content: t.confirm_remove_product,
+      okText: t.delete,
+      okType: "danger",
       onOk: async () => {
         const res = await request("product", "delete", item);
         if (res && !res.error) {
-          message.success(res.message);
+          message.success(t.product_deleted);
           getList();
         }
       },
@@ -217,22 +223,23 @@ function ProductPage() {
   };
 
   return (
-    <MainPage loading={false}>
+    <MainPage loading={state.loading}>
       <div className="pageHeader">
 
         <Space>
-          <div>Product</div>
+          <div>{t.products} {state.list.length}</div>
           <Input.Search
             onChange={(event) =>
               setFilter((p) => ({ ...p, txt_search: event.target.value }))
             }
             allowClear
-            placeholder="Search"
+            placeholder={t.search}
+            onSearch={onFilter}
           />
           <Select
             allowClear
             style={{ width: 130 }}
-            placeholder="Category"
+            placeholder={t.category}
             options={config.category}
             onChange={(id) => {
               setFilter((pre) => ({ ...pre, category_id: id }));
@@ -241,23 +248,23 @@ function ProductPage() {
           <Select
             allowClear
             style={{ width: 130 }}
-            placeholder="Brand"
+            placeholder={t.brand}
             options={config.brand}
             onChange={(id) => {
               setFilter((pre) => ({ ...pre, brand: id }));
             }}
           />
           <Button onClick={onFilter} type="primary">
-            Filter
+            {t.filter}
           </Button>
         </Space>
         <Button type="primary" onClick={onBtnNew}>
-          NEW
+          {t.add_new}
         </Button>
       </div>
       <Modal
         open={state.visibleModal}
-        title={form.getFieldValue("id") ? "Edit Product" : "New Product"}
+        title={form.getFieldValue("id") ? t.edit_product : t.add_new_product}
         footer={null}
         onCancel={onCloseModal}
         width={800}
@@ -271,10 +278,10 @@ function ProductPage() {
               <div className="form-section">
                 <Form.Item
                   name={"name"}
-                  label="Product Name"
-                  rules={[{ required: true, message: "Please enter product name" }]}
+                  label={t.product_name}
+                  rules={[{ required: true, message: t.product_name + " is required" }]}
                 >
-                  <Input placeholder="Enter product name" />
+                  <Input placeholder={t.product_name} />
                 </Form.Item>
 
                 {state.selectedParentId === 51 && (
@@ -282,19 +289,19 @@ function ProductPage() {
                     <Form.List name="sizes">
                       {(fields, { add, remove }) => (
                         <>
-                          <h3>Sizes</h3>
+                          <h3>{t.sizes}</h3>
                           {fields.map(({ key, name, ...restField }) => (
                             <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
                               <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: 'Label required' }]}>
-                                <Select options={SAMPLE_SIZES} placeholder="Choose Size" style={{ width: 120 }} />
+                                <Select options={SAMPLE_SIZES} placeholder={t.sizes} style={{ width: 120 }} />
                               </Form.Item>
                               <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: 'Price required' }]}>
-                                <InputNumber placeholder="Price" />
+                                <InputNumber placeholder={t.price} />
                               </Form.Item>
-                              <Button danger onClick={() => remove(name)}>Delete</Button>
+                              <Button danger onClick={() => remove(name)}>{t.delete}</Button>
                             </Space>
                           ))}
-                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>Add Size</Button>
+                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>{t.add_size}</Button>
                         </>
                       )}
                     </Form.List>
@@ -302,38 +309,36 @@ function ProductPage() {
                     <Form.List name="addons">
                       {(fields, { add, remove }) => (
                         <>
-                          <h3>Add-ons</h3>
+                          <h3>{t.addons}</h3>
                           {fields.map(({ key, name, ...restField }) => (
                             <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
                               <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: 'Label required' }]}>
-                                <Select options={SAMPLE_ADDONS} placeholder="Choose Add-on" style={{ width: 180 }} />
+                                <Select options={SAMPLE_ADDONS} placeholder={t.addons} style={{ width: 180 }} />
                               </Form.Item>
                               <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: 'Price required' }]}>
-                                <InputNumber placeholder="Price" />
+                                <InputNumber placeholder={t.price} />
                               </Form.Item>
-                              <Button danger onClick={() => remove(name)}>Delete</Button>
+                              <Button danger onClick={() => remove(name)}>{t.delete}</Button>
                             </Space>
                           ))}
-                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>Add Add-on</Button>
+                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>{t.add_addon}</Button>
                         </>
                       )}
                     </Form.List>
                   </>
                 )}
 
-                <Form.Item name={"barcode"} label="Barcode">
-                  <Input disabled placeholder="Barcode" />
+                <Form.Item name={"barcode"} label={t.barcode}>
+                  <Input disabled placeholder={t.barcode} />
                 </Form.Item>
 
-                {/* Always show Quantity field */}
-                <Form.Item name={"qty"} label="Quantity">
-                  <InputNumber placeholder="Quantity" style={{ width: "100%" }} />
+                <Form.Item name={"qty"} label={t.quantity}>
+                  <InputNumber placeholder={t.quantity} style={{ width: "100%" }} />
                 </Form.Item>
 
-                {/* Show Discount for all categories except Rice (55) */}
                 {state.selectedParentId !== 55 && (
-                  <Form.Item name={"discount"} label="Discount">
-                    <InputNumber placeholder="Discount" style={{ width: "100%" }} />
+                  <Form.Item name={"discount"} label={t.discount}>
+                    <InputNumber placeholder={t.discount} style={{ width: "100%" }} />
                   </Form.Item>
                 )}
               </div>
@@ -343,12 +348,12 @@ function ProductPage() {
               <div className="form-section">
                 <Form.Item
                   name={"category_id"}
-                  label="Category"
-                  rules={[{ required: true, message: "Please select category" }]}
+                  label={t.category}
+                  rules={[{ required: true, message: t.category + " is required" }]}
                 >
                   <Select
                     options={config.category}
-                    placeholder="Select category"
+                    placeholder={t.category}
                     onChange={(value) => {
                       form.setFieldValue("category_id", value);
                       setState((prev) => ({ ...prev, selectedParentId: value }));
@@ -357,30 +362,28 @@ function ProductPage() {
                 </Form.Item>
 
                 <Form.Item
-                  label="Price"
+                  label={t.price}
                   name="price"
-                  rules={[{ required: true, message: 'Please enter price' }]}
+                  rules={[{ required: true, message: t.price + ' is required' }]}
                 >
                   <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
                 </Form.Item>
 
-                <Form.Item name={"status"} label="Status">
+                <Form.Item name={"status"} label={t.status}>
                   <Select
                     options={[
-                      { label: "Active", value: 1 },
-                      { label: "Inactive", value: 0 },
+                      { label: t.active, value: 1 },
+                      { label: t.inactive, value: 0 },
                     ]}
-                    placeholder="Select status"
+                    placeholder={t.status}
                   />
                 </Form.Item>
 
-                <Form.Item name={"description"} label="Description">
-                  <Input.TextArea rows={4} placeholder="Enter product description" />
+                <Form.Item name={"description"} label={t.description}>
+                  <Input.TextArea rows={4} placeholder={t.description} />
                 </Form.Item>
 
-                {/* REMOVED: Duplicate Quantity field that was here */}
-
-                <Form.Item name={"image_default"} label="Image">
+                <Form.Item name={"image_default"} label={t.image}>
                   <Upload
                     customRequest={(options) => options.onSuccess()}
                     maxCount={1}
@@ -389,7 +392,7 @@ function ProductPage() {
                     onPreview={handlePreview}
                     onChange={handleChangeImageDefault}
                   >
-                    <div>+Upload</div>
+                    <div>+{t.image}</div>
                   </Upload>
                 </Form.Item>
               </div>
@@ -410,9 +413,9 @@ function ProductPage() {
 
           <div style={{ textAlign: "right", marginTop: 24 }}>
             <Space>
-              <Button onClick={onCloseModal}>Cancel</Button>
+              <Button onClick={onCloseModal}>{t.cancel}</Button>
               <Button type="primary" htmlType="submit">
-                {form.getFieldValue("id") ? "Update" : "Save"}
+                {form.getFieldValue("id") ? t.save : t.add_new}
               </Button>
             </Space>
           </div>
@@ -424,59 +427,59 @@ function ProductPage() {
         columns={[
           {
             key: "name",
-            title: "name",
+            title: t.name,
             dataIndex: "name",
           },
           {
             key: "barcode",
-            title: "barcode",
+            title: t.barcode,
             dataIndex: "barcode",
           },
           {
             key: "description",
-            title: "description",
+            title: t.description,
             dataIndex: "description",
           },
           {
             key: "category_name",
-            title: "category_name",
+            title: t.category,
             dataIndex: "category_name",
           },
           {
             key: "brand",
-            title: "brand",
+            title: t.brand,
             dataIndex: "brand",
           },
           {
             key: "qty",
-            title: "qty",
+            title: t.quantity,
             dataIndex: "qty",
           },
           {
             key: "price",
-            title: "price",
+            title: t.price,
             dataIndex: "price",
           },
           {
             key: "discount",
-            title: "discount",
+            title: t.discount,
             dataIndex: "discount",
           },
 
           {
             key: "status",
-            title: "status",
+            title: t.status,
             dataIndex: "status",
             render: (status) =>
               status == 1 ? (
-                <Tag color="green">Active</Tag>
+                <Tag color="green">{t.active}</Tag>
               ) : (
-                <Tag color="red">InActive</Tag>
+                <Tag color="red">{t.inactive}</Tag>
               ),
           },
           {
             key: "image",
-            title: "image",
+            title: t.image,
             dataIndex: "image",
             render: (value) => (
               <div
@@ -486,19 +489,19 @@ function ProductPage() {
                   alignItems: "center",
                   width: 60,
                   height: 60,
-                  borderRadius: "50%", // Circular shape
-                  overflow: "hidden", // Ensures the image stays within the circular boundary
-                  border: "2px solid #e0e0e0", // Light gray border
-                  boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", // Subtle shadow
-                  transition: "transform 0.3s, box-shadow 0.3s", // Smooth hover effect
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "2px solid #e0e0e0",
+                  boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                  transition: "transform 0.3s, box-shadow 0.3s",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "scale(1.1)"; // Slightly enlarge on hover
-                  e.currentTarget.style.boxShadow = "0 6px 12px rgba(0, 0, 0, 0.2)"; // Enhanced shadow on hover
+                  e.currentTarget.style.transform = "scale(1.1)";
+                  e.currentTarget.style.boxShadow = "0 6px 12px rgba(0, 0, 0, 0.2)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "scale(1)"; // Reset size on hover out
-                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)"; // Reset shadow on hover out
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
                 }}
               >
                 {value ? (
@@ -507,7 +510,7 @@ function ProductPage() {
                     style={{
                       width: "100%",
                       height: "100%",
-                      objectFit: "cover", // Ensures the image covers the circular area
+                      objectFit: "cover",
                     }}
                     preview={{
                       mask: (
@@ -518,12 +521,12 @@ function ProductPage() {
                             alignItems: "center",
                             width: "100%",
                             height: "100%",
-                            backgroundColor: "rgba(0, 0, 0, 0.5)", // Dark overlay for preview
+                            backgroundColor: "rgba(0, 0, 0, 0.5)",
                             color: "#fff",
                             fontSize: 16,
                           }}
                         >
-                          View
+                          {t.view_details}
                         </div>
                       ),
                     }}
@@ -533,15 +536,17 @@ function ProductPage() {
                     style={{
                       width: "100%",
                       height: "100%",
-                      backgroundColor: "#EEE", // Light gray background for placeholder
+                      backgroundColor: "#EEE",
                       display: "flex",
                       justifyContent: "center",
                       alignItems: "center",
-                      fontSize: 14,
-                      color: "#999", // Light gray text
+                      fontSize: 10,
+                      color: "#999",
+                      textAlign: "center",
+                      padding: 2
                     }}
                   >
-                    No Image
+                    {t.no_data}
                   </div>
                 )}
               </div>
@@ -549,12 +554,12 @@ function ProductPage() {
           },
           {
             key: "Action",
-            title: "Action",
+            title: t.action,
             align: "center",
             render: (item, data, index) => (
               <Space>
                 <Button
-                  title="Recipe"
+                  title={t.recipe || "Recipe"}
                   style={{ borderColor: "#faad14", color: "#faad14" }}
                   icon={<MdRestaurantMenu />}
                   onClick={() => onClickRecipe(item)}
@@ -575,7 +580,7 @@ function ProductPage() {
           },
           {
             key: "created_by",
-            title: "បង្កើតដោយ",
+            title: t.staff,
             render: (text, record) => (
               <div>
                 <strong>{record.created_by_name}</strong>

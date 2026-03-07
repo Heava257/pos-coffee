@@ -16,9 +16,13 @@ import {
 import { request } from "../../util/helper";
 import { getProfile } from "../../store/profile.store";
 
+import { useLanguage, translations } from "../../store/language.store";
+
 const { Title, Text } = Typography;
 
 const TablePage = () => {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [list, setList] = useState([]);
     const [branches, setBranches] = useState([]);
     const [selectedBranch, setSelectedBranch] = useState(null);
@@ -46,13 +50,12 @@ const TablePage = () => {
             if (res && res.list) {
                 setBranches(res.list);
                 if (res.list.length > 0) {
-                    // Default to current branch if it exists in list
                     const current = res.list.find(b => b.id === profile.branch_id);
                     setSelectedBranch(current ? current.id : res.list[0].id);
                 }
             }
         } catch (error) {
-            message.error("Failed to fetch branches");
+            message.error(t.fetch_branch_failed);
         }
     };
 
@@ -64,7 +67,7 @@ const TablePage = () => {
                 setList(res.list);
             }
         } catch (error) {
-            message.error("Failed to fetch tables");
+            message.error(t.fetch_table_failed);
         } finally {
             setLoading(false);
         }
@@ -80,20 +83,20 @@ const TablePage = () => {
                 getList();
             }
         } catch (error) {
-            message.error(error.message || "Operation failed");
+            message.error(error.message || t.operation_failed);
         }
     };
 
     const onClickDelete = (id) => {
         Modal.confirm({
-            title: "Remove Table?",
-            content: "This will permanently delete this table's QR setup.",
-            okText: "Delete",
+            title: t.delete + " " + t.table + "?",
+            content: t.remove_table_confirm,
+            okText: t.delete,
             okType: "danger",
             onOk: async () => {
                 const res = await request("table", "delete", { id });
                 if (res) {
-                    message.success("Table removed");
+                    message.success(t.success);
                     getList();
                 }
             }
@@ -110,12 +113,12 @@ const TablePage = () => {
         printWindow.document.write(`
       <html>
         <head>
-          <title>Print QR Code - ${selectedTable.table_name}</title>
+          <title>${t.print_qr_tag} - ${selectedTable.table_name}</title>
           <style>
             body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; margin: 0; }
             .qr-container { padding: 40px; border: 3px dashed #1e4a2d; border-radius: 20px; text-align: center; background: #fff; }
             img { width: 350px; height: 350px; margin-bottom: 20px; }
-            h1 { margin: 0; font-size: 32px; color: #1e4a2d; }
+            <h1> { margin: 0; font-size: 32px; color: #1e4a2d; }
             p { font-size: 18px; color: #666; margin-top: 10px; }
             .logo { font-weight: bold; color: #1e4a2d; font-size: 24px; margin-bottom: 30px; }
           </style>
@@ -124,8 +127,8 @@ const TablePage = () => {
             <div class="qr-container">
             <div class="logo">☕ GREEN GROUNDS POS</div>
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(selectedTable.qr_code_url)}" />
-            <h1>TABLE: ${selectedTable.table_name}</h1>
-            <p>Scan to view Menu & Order</p>
+            <h1>${t.table.toUpperCase()}: ${selectedTable.table_name}</h1>
+            <p>{t.scan_menu_order}</p>
           </div>
           <script>
             window.onload = () => { 
@@ -144,7 +147,7 @@ const TablePage = () => {
     const handleCopy = () => {
         if (selectedTable?.qr_code_url) {
             navigator.clipboard.writeText(selectedTable.qr_code_url);
-            message.success("Scanning link copied to clipboard!");
+            message.success(t.success);
         }
     };
 
@@ -156,41 +159,41 @@ const TablePage = () => {
 
     const columns = [
         {
-            title: "Table / Position",
+            title: t.table + " / " + t.note,
             dataIndex: "table_name",
             key: "table_name",
             render: (text) => <Text strong style={{ fontSize: '16px', color: '#1e4a2d' }}>{text}</Text>
         },
         {
-            title: "QR Status",
+            title: t.qr_status,
             dataIndex: "qr_code_url",
             key: "qr_code_url",
-            render: (url) => url ? <Tag color="green">READY</Tag> : <Tag color="red">MISSING</Tag>
+            render: (url) => url ? <Tag color="green">{t.ready}</Tag> : <Tag color="red">{t.missing}</Tag>
         },
         {
-            title: "Status",
+            title: t.status,
             dataIndex: "status",
             key: "status",
             render: (status) => (
                 <Tag color={status === 'active' ? 'blue' : 'orange'}>
-                    {status.toUpperCase()}
+                    {status === 'active' ? t.active : t.inactive}
                 </Tag>
             )
         },
         {
-            title: "Actions",
+            title: t.action,
             key: "actions",
             align: 'right',
             render: (record) => (
                 <Space>
-                    <Tooltip title="View QR">
+                    <Tooltip title={t.view_qr}>
                         <Button
                             type="primary"
                             icon={<QrcodeOutlined />}
                             onClick={() => showQR(record)}
                             style={{ background: '#1e4a2d', borderColor: '#1e4a2d' }}
                         >
-                            View QR
+                            {t.view_qr}
                         </Button>
                     </Tooltip>
                     <Button
@@ -222,14 +225,14 @@ const TablePage = () => {
             }}>
                 <div>
                     <Title level={2} style={{ margin: 0, color: '#1e4a2d', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <QrcodeOutlined /> Table QR Setup
+                        <QrcodeOutlined /> {t.table_qr_setup}
                     </Title>
-                    <Text type="secondary">Generate and manage unique QR codes for each table</Text>
+                    <Text type="secondary">{t.manage_table_qr}</Text>
                 </div>
 
                 <Space size="middle">
                     <Select
-                        placeholder="Select Branch"
+                        placeholder={t.shop_managment}
                         style={{ width: 200 }}
                         value={selectedBranch}
                         onChange={(val) => setSelectedBranch(val)}
@@ -237,7 +240,7 @@ const TablePage = () => {
                     />
                     <Input
                         prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                        placeholder="Search tables..."
+                        placeholder={t.search}
                         onChange={(e) => setSearchText(e.target.value)}
                         style={{ width: 200, borderRadius: '8px' }}
                     />
@@ -247,7 +250,7 @@ const TablePage = () => {
                         onClick={() => setVisible(true)}
                         style={{ background: '#1e4a2d', borderColor: '#1e4a2d', height: '40px', borderRadius: '8px', fontWeight: 600 }}
                     >
-                        Add Table
+                        {t.add_table}
                     </Button>
                 </Space>
             </div>
@@ -261,53 +264,53 @@ const TablePage = () => {
                     dataSource={filteredList}
                     rowKey="id"
                     loading={loading}
-                    locale={{ emptyText: <Empty description="No tables setup for this branch" /> }}
+                    locale={{ emptyText: <Empty description={t.no_data} /> }}
                     style={{ padding: '8px' }}
                 />
             </Card>
 
             <Modal
-                title={<Title level={4} style={{ margin: 0 }}>Add New Table</Title>}
+                title={<Title level={4} style={{ margin: 0 }}>{t.add_table}</Title>}
                 open={visible}
                 onCancel={() => setVisible(false)}
                 onOk={() => form.submit()}
-                okText="Generate Table QR"
+                okText={t.generate_table_qr}
                 okButtonProps={{ style: { background: '#1e4a2d', borderColor: '#1e4a2d' } }}
                 destroyOnClose
             >
                 <Form form={form} layout="vertical" onFinish={onFinish} style={{ marginTop: 20 }}>
                     <Form.Item
                         name="table_name"
-                        label="Table Number / Name"
-                        rules={[{ required: true, message: "Enter table number or name" }]}
+                        label={t.table_number_name}
+                        rules={[{ required: true, message: t.table_number_name + " is required" }]}
                     >
                         <Input placeholder="e.g. T-01, Rooftop-A1" size="large" />
                     </Form.Item>
                     <Text type="secondary" style={{ fontSize: '12px' }}>
-                        System will automatically create a unique scanning link for this table.
+                        {t.manage_table_qr}
                     </Text>
                 </Form>
             </Modal>
 
             <Modal
-                title={`QR Code Setup - ${selectedTable?.table_name}`}
+                title={`${t.table_qr_setup} - ${selectedTable?.table_name}`}
                 open={qrModalVisible}
                 onCancel={() => setQrModalVisible(false)}
                 footer={[
-                    <Button key="close" onClick={() => setQrModalVisible(false)}>Close</Button>,
+                    <Button key="close" onClick={() => setQrModalVisible(false)}>{t.cancel}</Button>,
                     <Button
                         key="copy"
                         icon={<CopyOutlined />}
                         onClick={handleCopy}
                     >
-                        Copy Link
+                        {t.copy_link}
                     </Button>,
                     <Button
                         key="open"
                         icon={<EyeOutlined />}
                         onClick={handleOpenMenu}
                     >
-                        Open Menu
+                        {t.open_menu}
                     </Button>,
                     <Button
                         key="print"
@@ -316,7 +319,7 @@ const TablePage = () => {
                         onClick={handlePrint}
                         style={{ background: '#1e4a2d', borderColor: '#1e4a2d' }}
                     >
-                        Print QR Tag
+                        {t.print_qr_tag}
                     </Button>
                 ]}
                 centered
@@ -333,7 +336,7 @@ const TablePage = () => {
                         )}
                         <div style={{ marginTop: '16px' }}>
                             <Title level={3} style={{ margin: 0, color: '#1e4a2d' }}>{selectedTable?.table_name}</Title>
-                            <Text strong type="secondary">SCAN TO ORDER</Text>
+                            <Text strong type="secondary">{t.open_menu.toUpperCase()}</Text>
                         </div>
                     </Card>
                 </div>

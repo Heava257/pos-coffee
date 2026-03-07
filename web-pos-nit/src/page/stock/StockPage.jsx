@@ -16,13 +16,16 @@ import {
     Col
 } from "antd";
 import { MdHistory, MdAdd } from "react-icons/md";
-import { request, formatDateClient } from "../../util/helper";
+import { useLanguage, translations } from "../../store/language.store";
 import MainPage from "../../component/layout/MainPage";
+import { request } from "../../util/helper";
 
 const { Title } = Typography;
 const { Option } = Select;
 
 function StockPage() {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [form] = Form.useForm();
     const [state, setState] = useState({
         logs: [],
@@ -60,7 +63,6 @@ function StockPage() {
     };
 
     const getItems = async () => {
-        // Fetch products and raw materials together but handle them separately
         try {
             const [resProd, resRM] = await Promise.all([
                 request("product", "get", { is_list_all: 1 }),
@@ -99,19 +101,19 @@ function StockPage() {
                 <Row gutter={16}>
                     <Col span={6}>
                         <div style={{ background: "linear-gradient(135deg, #1e4a2d 0%, #2d6a42 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Total Products Menu</div>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.total_products_menu}</div>
                             <div style={{ fontSize: "28px", fontWeight: "bold" }}>{state.products.length}</div>
                         </div>
                     </Col>
                     <Col span={6}>
                         <div style={{ background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Raw Materials</div>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.raw_material}</div>
                             <div style={{ fontSize: "28px", fontWeight: "bold" }}>{state.rawMaterials.length}</div>
                         </div>
                     </Col>
                     <Col span={6}>
                         <div style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Low Stock Products</div>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.low_stock_products}</div>
                             <div style={{ fontSize: "28px", fontWeight: "bold" }}>
                                 {state.products.filter(p => Number(p.qty || 0) <= 10).length}
                             </div>
@@ -119,7 +121,7 @@ function StockPage() {
                     </Col>
                     <Col span={6}>
                         <div style={{ background: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>Low Stock Materials</div>
+                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.low_stock_materials}</div>
                             <div style={{ fontSize: "28px", fontWeight: "bold" }}>
                                 {state.rawMaterials.filter(rm => Number(rm.qty || 0) <= 5).length}
                             </div>
@@ -134,45 +136,45 @@ function StockPage() {
                         <div style={{ padding: 8, background: "#e6f4ea", borderRadius: 10, display: 'flex' }}>
                             <MdHistory size={24} style={{ color: "#2d6a42" }} />
                         </div>
-                        <Title level={4} style={{ margin: 0 }}>Stock Logs & Adjustments</Title>
+                        <Title level={4} style={{ margin: 0 }}>{t.stock_logs_adjustments}</Title>
                     </Space>
                     <Button
                         type="primary"
                         icon={<MdAdd />}
                         onClick={() => {
                             setState(s => ({ ...s, visibleModal: true }));
-                            getItems(); // Fetch data when modal opens
+                            getItems();
                         }}
                         style={{ background: "#2d6a42", borderColor: "#2d6a42", borderRadius: 8 }}
                         size="large"
                     >
-                        Manual Adjustment
+                        {t.manual_adjustment}
                     </Button>
                 </div>
 
                 <Row gutter={16} style={{ marginBottom: 20 }}>
                     <Col span={6}>
                         <Select
-                            placeholder="Filter by Item Type"
+                            placeholder={t.filter_by_item_type}
                             allowClear
                             style={{ width: '100%' }}
                             onChange={(v) => setFilters(f => ({ ...f, item_type: v }))}
                         >
-                            <Option value="product">Product</Option>
-                            <Option value="raw_material">Raw Material</Option>
+                            <Option value="product">{t.product}</Option>
+                            <Option value="raw_material">{t.raw_material}</Option>
                         </Select>
                     </Col>
                     <Col span={6}>
                         <Select
-                            placeholder="Filter by Type"
+                            placeholder={t.filter_by_type}
                             allowClear
                             style={{ width: '100%' }}
                             onChange={(v) => setFilters(f => ({ ...f, type: v }))}
                         >
-                            <Option value="purchase">Purchase</Option>
-                            <Option value="sale">Sale / Order</Option>
-                            <Option value="adjustment">Manual Correction</Option>
-                            <Option value="waste">Waste / Expired</Option>
+                            <Option value="purchase">{t.purchase}</Option>
+                            <Option value="sale">{t.sale}</Option>
+                            <Option value="adjustment">{t.adjustment}</Option>
+                            <Option value="waste">{t.waste}</Option>
                         </Select>
                     </Col>
                 </Row>
@@ -183,52 +185,53 @@ function StockPage() {
                     pagination={{ pageSize: 15 }}
                     columns={[
                         {
-                            title: "DateTime",
+                            title: t.date_time,
                             dataIndex: "created_at",
                             render: (d) => formatDateClient(d, "DD/MM HH:mm")
                         },
                         {
-                            title: "Category",
+                            title: t.category,
                             dataIndex: "item_type",
-                            render: (v) => <Tag color={v === 'product' ? 'blue' : 'cyan'}>{v.toUpperCase()}</Tag>
+                            render: (v) => <Tag color={v === 'product' ? 'blue' : 'cyan'}>{(v === 'product' ? t.product : t.raw_material).toUpperCase()}</Tag>
                         },
                         {
-                            title: "Item Name",
+                            title: t.product_name,
                             dataIndex: "item_name",
                             render: (name) => <span style={{ fontWeight: 600 }}>{name}</span>
                         },
                         {
-                            title: "Transaction",
+                            title: t.transaction,
                             dataIndex: "type",
                             render: (v) => {
                                 let color = "grey";
-                                if (v === 'purchase') color = "green";
-                                if (v === 'receive') color = "purple";
-                                if (v === 'sale') color = "blue";
-                                if (v === 'adjustment') color = "orange";
-                                if (v === 'waste') color = "red";
-                                return <Tag color={color}>{v.toUpperCase()}</Tag>
+                                let text = v.toUpperCase();
+                                if (v === 'purchase') { color = "green"; text = t.purchase; }
+                                if (v === 'receive') { color = "purple"; text = t.receive; }
+                                if (v === 'sale') { color = "blue"; text = t.sale; }
+                                if (v === 'adjustment') { color = "orange"; text = t.adjustment; }
+                                if (v === 'waste') { color = "red"; text = t.waste; }
+                                return <Tag color={color}>{text.toUpperCase()}</Tag>
                             }
                         },
                         {
-                            title: "Change",
+                            title: t.change,
                             dataIndex: "qty_changed",
                             align: 'right',
                             render: (v) => <span style={{ color: v > 0 ? '#3f8600' : '#cf1322', fontWeight: 700 }}>{v > 0 ? `+${v}` : v}</span>
                         },
                         {
-                            title: "Balance",
+                            title: t.balance,
                             dataIndex: "new_qty",
                             align: 'right',
                             render: (v) => <span style={{ fontWeight: 600 }}>{v}</span>
                         },
                         {
-                            title: "Staff",
+                            title: t.staff,
                             dataIndex: "staff_name",
                             render: (v) => <span style={{ fontSize: '0.85rem' }}>{v}</span>
                         },
                         {
-                            title: "Reason",
+                            title: t.reason,
                             dataIndex: "reason",
                             ellipsis: true
                         }
@@ -237,7 +240,7 @@ function StockPage() {
             </Card>
 
             <Modal
-                title={<Title level={4}>Stock Correction</Title>}
+                title={<Title level={4}>{t.stock_correction}</Title>}
                 open={state.visibleModal}
                 onCancel={onCloseModal}
                 footer={null}
@@ -245,10 +248,10 @@ function StockPage() {
                 width={450}
             >
                 <Form layout="vertical" form={form} onFinish={onFinish} style={{ marginTop: 15 }}>
-                    <Form.Item name="item_type" label="Inventory Item Type" rules={[{ required: true }]}>
-                        <Select placeholder="Select type..." onChange={() => form.setFieldValue("item_id", undefined)}>
-                            <Option value="product">Global Product (Branch Stock)</Option>
-                            <Option value="raw_material">Raw Material (Global Stock)</Option>
+                    <Form.Item name="item_type" label={t.inventory_item_type} rules={[{ required: true }]}>
+                        <Select placeholder={t.select} onChange={() => form.setFieldValue("item_id", undefined)}>
+                            <Option value="product">{t.product}</Option>
+                            <Option value="raw_material">{t.raw_material}</Option>
                         </Select>
                     </Form.Item>
 
@@ -260,14 +263,14 @@ function StockPage() {
                             const itemType = getFieldValue("item_type");
                             const items = itemType === 'product' ? state.products : state.rawMaterials;
                             const options = items.map(item => ({
-                                label: `${item.name} ${item.code ? `(${item.code})` : ''} - Current: ${item.qty || 0} ${item.unit || ''}`,
+                                label: `${item.name} ${item.code ? `(${item.code})` : ''} - ${t.stock}: ${item.qty || 0} ${item.unit || ''}`,
                                 value: item.id
                             }));
 
                             return (
-                                <Form.Item name="item_id" label="Select Item" rules={[{ required: true }]}>
+                                <Form.Item name="item_id" label={t.select_item} rules={[{ required: true }]}>
                                     <Select
-                                        placeholder="Search item..."
+                                        placeholder={t.search}
                                         showSearch
                                         optionFilterProp="label"
                                         options={options}
@@ -280,26 +283,26 @@ function StockPage() {
 
                     <Row gutter={16}>
                         <Col span={12}>
-                            <Form.Item name="type" label="Action Type" rules={[{ required: true }]}>
-                                <Select placeholder="Correction/Waste">
-                                    <Option value="adjustment">Correction (+/-)</Option>
-                                    <Option value="waste">Waste/Loss (-)</Option>
+                            <Form.Item name="type" label={t.action_type} rules={[{ required: true }]}>
+                                <Select placeholder={t.select}>
+                                    <Option value="adjustment">{t.adjustment} (+/-)</Option>
+                                    <Option value="waste">{t.waste} (-)</Option>
                                 </Select>
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item name="qty_changed" label="Qty Change" rules={[{ required: true }]}>
+                            <Form.Item name="qty_changed" label={t.qty_change} rules={[{ required: true }]}>
                                 <InputNumber style={{ width: '100%' }} placeholder="e.g. 10 or -5" />
                             </Form.Item>
                         </Col>
                     </Row>
 
-                    <Form.Item name="reason" label="Remark / Reason" rules={[{ required: true }]}>
-                        <Input.TextArea rows={2} placeholder="Why this adjustment is needed?" />
+                    <Form.Item name="reason" label={t.remark_reason} rules={[{ required: true }]}>
+                        <Input.TextArea rows={2} placeholder={t.remark_reason} />
                     </Form.Item>
 
                     <Button type="primary" htmlType="submit" block style={{ background: "#2d6a42", height: 45, borderRadius: 8 }}>
-                        Save Inventory Change
+                        {t.save}
                     </Button>
                 </Form>
             </Modal>

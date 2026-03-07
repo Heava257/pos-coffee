@@ -27,10 +27,13 @@ import {
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
 import { getProfile, setProfile } from "../../store/profile.store";
+import { useLanguage, translations } from "../../store/language.store";
 
 const { Title, Text } = Typography;
 
 const ProfilePage = () => {
+  const { lang } = useLanguage();
+  const t = translations[lang];
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -194,7 +197,7 @@ const ProfilePage = () => {
                   {currentUser?.role_name || "Staff"}
                 </Tag>
                 {profileData?.status === 'active' && (
-                  <Tag color="success" style={{ borderRadius: "100px", padding: "2px 12px" }}>Active Account</Tag>
+                  <Tag color="success" style={{ borderRadius: "100px", padding: "2px 12px" }}>{t.active_account}</Tag>
                 )}
               </Space>
 
@@ -205,14 +208,14 @@ const ProfilePage = () => {
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <ShopOutlined style={{ color: "#c0a060", fontSize: "18px" }} />
                     <div>
-                      <Text type="secondary" size="small" style={{ display: "block", fontSize: "11px" }}>BRANCH</Text>
+                      <Text type="secondary" size="small" style={{ display: "block", fontSize: "11px" }}>{t.branch.toUpperCase()}</Text>
                       <Text strong style={{ color: "#1e4a2d" }}>{profileData?.branch_name || "Main Branch"}</Text>
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <SafetyCertificateOutlined style={{ color: "#c0a060", fontSize: "18px" }} />
                     <div>
-                      <Text type="secondary" size="small" style={{ display: "block", fontSize: "11px" }}>BUSINESS</Text>
+                      <Text type="secondary" size="small" style={{ display: "block", fontSize: "11px" }}>{t.business_label.toUpperCase()}</Text>
                       <Text strong style={{ color: "#1e4a2d" }}>{profileData?.business_name || "Green Grounds"}</Text>
                     </div>
                   </div>
@@ -231,7 +234,7 @@ const ProfilePage = () => {
               }}
               title={
                 <Title level={4} style={{ margin: "8px 0", color: "#1e4a2d" }}>
-                  Account Settings / ការកំណត់គណនី
+                  {t.account_settings}
                 </Title>
               }
             >
@@ -244,13 +247,13 @@ const ProfilePage = () => {
                 <Row gutter={24}>
                   <Col xs={24}>
                     <Title level={5} style={{ marginBottom: "20px", color: "#c0a060" }}>
-                      General Information / ព័ត៌មានទូទៅ
+                      {t.general_info}
                     </Title>
                   </Col>
 
                   <Col xs={24} md={12}>
                     <Form.Item
-                      label={<Text strong>FullName / ឈ្មោះពេញ</Text>}
+                      label={<Text strong>{t.full_name}</Text>}
                       name="name"
                       rules={[{ required: true, message: "Please enter your name" }]}
                     >
@@ -265,7 +268,7 @@ const ProfilePage = () => {
 
                   <Col xs={24} md={12}>
                     <Form.Item
-                      label={<Text strong>Email Address / អ៊ីម៉ែល (Login ID)</Text>}
+                      label={<Text strong>{t.email_address}</Text>}
                     >
                       <Input
                         prefix={<MailOutlined style={{ color: "#bfbfbf" }} />}
@@ -280,19 +283,19 @@ const ProfilePage = () => {
                   <Col xs={24}>
                     <Divider style={{ margin: "32px 0 24px" }} />
                     <Title level={5} style={{ marginBottom: "20px", color: "#c0a060" }}>
-                      Security Settings / សុវត្ថិភាព
+                      {t.security_settings}
                     </Title>
                   </Col>
 
                   <Col xs={24} md={12}>
                     <Form.Item
-                      label={<Text strong>New Password / លេខសម្ងាត់ថ្មី</Text>}
+                      label={<Text strong>{t.new_password}</Text>}
                       name="password"
                       rules={[{ min: 6, message: "Minimum 6 characters" }]}
                     >
                       <Input.Password
                         prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
-                        placeholder="Leave blank to keep current"
+                        placeholder={t.leave_blank}
                         size="large"
                         style={{ borderRadius: "8px" }}
                       />
@@ -301,7 +304,7 @@ const ProfilePage = () => {
 
                   <Col xs={24} md={12}>
                     <Form.Item
-                      label={<Text strong>Confirm Password / បញ្ជាក់លេខសម្ងាត់</Text>}
+                      label={<Text strong>{t.confirm_password}</Text>}
                       name="confirm_password"
                       dependencies={['password']}
                       rules={[
@@ -340,7 +343,7 @@ const ProfilePage = () => {
                         boxShadow: "0 8px 20px rgba(30,74,45,0.2)"
                       }}
                     >
-                      Save Changes / រក្សាទុក
+                      {t.save_changes}
                     </Button>
                   </Col>
                 </Row>

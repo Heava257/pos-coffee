@@ -1,48 +1,61 @@
+* {
+  font-family: 'Battambang', system-ui, sans-serif !important;
+}
+
 .pageHeader {
   display: flex;
   justify-content: space-between;
   margin-bottom: 10px;
 }
+
 .truncate-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .row_between_invoice {
   display: flex;
   justify-content: space-between;
   padding: 5px 5px;
   border-bottom: 1px solid gray;
 }
+
 .pos_tbl_invoice {
   width: 100%;
   border-collapse: collapse;
   border: 1pt solid rgb(229, 229, 229);
 }
+
 .pos_tbl_invoice tr {
   border-bottom: 1pt solid rgb(229, 229, 229);
 }
+
 .pos_tbl_invoice th,
 td {
   text-align: left;
   font-size: 9px;
   padding: 2px;
 }
+
 .khmer-text {
-  font-family: 'Khmer OS Battambang', 'Khmer OS Muol', 'Khmer', sans-serif;
+  font-family: 'Battambang', system-ui, sans-serif;
   font-size: 14px;
   font-weight: bold;
-  color: #333; 
+  color: #333;
 }
+
 .khmer-branch {
-  font-family: 'Khmer OS Muol';
+  font-family: 'Battambang', system-ui, sans-serif;
   font-size: 14px;
   font-weight: bold;
-  color: #333; 
+  color: #333;
 }
+
 .pos-row {
-  font-family: "Khmer OS Battambang", sans-serif;
-  font-size: 10px !important; /* Ensure it overrides any default styling */
+  font-family: 'Battambang', system-ui, sans-serif;
+  font-size: 10px !important;
+  /* Ensure it overrides any default styling */
   font-weight: bold;
   color: #000000;
   letter-spacing: 0.5px;
@@ -51,24 +64,24 @@ td {
 
 
 .khmer-oil {
-  font-family: 'Khmer OS Muol';
+  font-family: 'Battambang', system-ui, sans-serif;
   font-size: 14px;
   font-weight: bold;
-  color: #070707; 
+  color: #070707;
 }
-.khmer-category
-{
-  font-family: 'Khmer OS Muol';
+
+.khmer-category {
+  font-family: 'Battambang', system-ui, sans-serif;
   font-size: 14px;
   font-weight: bold;
-  color: #1eafdb; 
+  color: #1eafdb;
 }
-.khmer-total
-{
-  font-family: 'Khmer OS Muol';
+
+.khmer-total {
+  font-family: 'Battambang', system-ui, sans-serif;
   font-size: 14px;
   font-weight: bold;
-  color: #00c257; 
+  color: #00c257;
 }
 
 .english-text {
@@ -77,6 +90,7 @@ td {
   color: #666;
   font-style: italic;
 }
+
 .table-header {
   display: flex;
   flex-direction: column;
@@ -86,8 +100,10 @@ td {
 
 
 
-body {
-  font-family: Arial, sans-serif;
+html,
+body,
+#root {
+  font-family: 'Battambang', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
   margin: 0;
   padding: 0;
   background-color: #f9f9f9;
@@ -108,16 +124,19 @@ body {
   top: 0;
   z-index: 1000;
 }
+
 .logo {
   font-size: 24px;
   font-weight: bold;
 }
+
 .nav-links a {
   margin: 0 10px;
   text-decoration: none;
   color: black;
   font-weight: 500;
 }
+
 .sign-in {
   background-color: green;
   color: white;
@@ -126,16 +145,19 @@ body {
   border-radius: 5px;
   cursor: pointer;
 }
+
 .hero {
 
   position: relative;
   text-align: center;
 }
+
 .hero-image {
   width: 100%;
   height: 500px;
   object-fit: cover;
 }
+
 .hero-text {
   position: absolute;
   top: 50%;
@@ -144,12 +166,14 @@ body {
   color: white;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
 }
+
 .initiatives {
   display: flex;
   justify-content: center;
   gap: 20px;
   padding: 40px;
 }
+
 .initiative {
   background-color: #e0f2f1;
   padding: 20px;
@@ -157,13 +181,15 @@ body {
   width: 30%;
   text-align: center;
 }
+
 .initiative img {
   width: 100%;
   border-radius: 5px;
   overflow: hidden;
   object-fit: cover;
 }
-.title_intitative{
+
+.title_intitative {
   font-size: 30px;
   font-weight: bold;
   margin-bottom: 10px;
@@ -175,7 +201,8 @@ body {
   line-height: 1.5;
   transition: opacity 0.3s ease-in-out;
 }
-.title{
+
+.title {
   font-size: 20px;
   font-weight: bold;
   margin-bottom: 10px;
@@ -187,7 +214,8 @@ body {
   transition: color 0.3s ease-in-out;
   transition: opacity 0.3s ease-in-out;
 }
-.text{
+
+.text {
   font-size: 16px;
   font-weight: 600;
   color: #333;
@@ -195,10 +223,12 @@ body {
   transition: color 0.3s ease-in-out;
   transition: opacity 0.3s ease-in-out
 }
+
 .products-services {
   text-align: center;
   padding: 40px;
 }
+
 .explore-more {
   background-color: green;
   color: white;
@@ -207,6 +237,7 @@ body {
   border-radius: 5px;
   cursor: pointer;
 }
+
 .products-list {
   display: flex;
   justify-content: center;
@@ -214,6 +245,7 @@ body {
   flex-wrap: wrap;
   margin-top: 20px;
 }
+
 .product {
   width: 250px;
   background-color: #fff;
@@ -222,21 +254,25 @@ body {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
+
 .product img {
   width: 100%;
   border-radius: 10px;
 }
+
 .latest-news {
   padding: 40px;
   background-color: #f1f1f1;
   text-align: center;
 }
+
 .news-list {
   display: flex;
   justify-content: center;
   gap: 20px;
   flex-wrap: wrap;
 }
+
 .news-item {
   width: 300px;
   background-color: #fff;
@@ -244,61 +280,74 @@ body {
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
+
 .news-item img {
   width: 100%;
   border-radius: 10px;
 }
+
 .footer {
   text-align: center;
   background-color: #333;
   color: white;
   padding: 20px;
 }
+
 .footer-links a {
   margin: 0 10px;
   text-decoration: none;
   color: #bbb;
 }
+
 .footer-links a:hover {
   color: white;
 }
+
 @media (max-width: 768px) {
+
   .initiatives,
   .products-list,
   .news-list {
     flex-direction: column;
     align-items: center;
   }
+
   .initiative,
   .product,
   .news-item {
     width: 80%;
   }
 }
-.ant-form-item-label > label {
-  color: #333; 
+
+.ant-form-item-label>label {
+  color: #333;
   font-weight: 500;
 }
+
 .ant-input,
 .ant-input-password,
 .ant-select-selector {
-  border: 1px solid #d9d9d9; 
-  transition: border-color 0.3s ease; 
+  border: 1px solid #d9d9d9;
+  transition: border-color 0.3s ease;
 }
+
 .ant-input:hover,
 .ant-input-password:hover,
 .ant-select-selector:hover {
   border-color: #40a9ff;
 }
+
 .ant-btn {
-  transition: all 0.3s ease; 
+  transition: all 0.3s ease;
 }
+
 .ant-btn-primary {
   background-color: #1890ff;
   border-color: #1890ff;
 }
+
 .ant-btn-primary:hover {
-  background-color: #40a9ff; 
+  background-color: #40a9ff;
   border-color: #40a9ff;
 }
 
@@ -476,6 +525,7 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
 /* Grid Layout Fix */
 .initiatives {
   display: flex;
@@ -489,7 +539,8 @@ body {
 /* Initiative Cards */
 .initiative {
   background: white;
-  width: 300px;  /* Fixed width for uniformity */
+  width: 300px;
+  /* Fixed width for uniformity */
   border-radius: 12px;
   padding: 15px;
   text-align: center;
@@ -504,8 +555,9 @@ body {
 
 /* Image Styling */
 .initiative img {
-  width: 100%; 
-  height: 180px; /* Increased height for better proportions */
+  width: 100%;
+  height: 180px;
+  /* Increased height for better proportions */
   border-radius: 10px;
   object-fit: cover;
 }
@@ -535,6 +587,7 @@ body {
     width: 90%;
   }
 }
+
 .carousel-container {
   width: 100%;
   max-width: 100%;
@@ -547,22 +600,24 @@ body {
   justify-content: center;
   align-items: center;
   width: 100%;
-  height: 500px; /* Adjust the height */
+  height: 500px;
+  /* Adjust the height */
 }
 
 .carousel-slide img {
   width: 100%;
   max-height: 500px;
-  object-fit: cover; /* Ensures image covers the area */
+  object-fit: cover;
+  /* Ensures image covers the area */
 }
 
 
 
 .khmrt-branch {
-  font-family: 'Siemreap';
+  font-family: 'Battambang', system-ui, sans-serif;
   font-size: 15px;
   font-weight: bold;
-  color: #333; 
+  color: #333;
 }
 
 
@@ -599,7 +654,7 @@ Boeung Ket (Custom Khmer Style) */
 
 /* Apply Khmer font to the body or the entire app */
 body {
-  font-family: 'Noto Sans Khmer', sans-serif;
+  font-family: 'Battambang', 'Noto Sans Khmer', sans-serif;
 }
 
 /* Add specific classes for different sections */
@@ -623,7 +678,8 @@ body {
 }
 
 /* Style for charts */
-.home-sale-chart, .home-purchase-chart {
+.home-sale-chart,
+.home-purchase-chart {
   margin-top: 20px;
   padding: 20px;
   background-color: #fff;
@@ -642,7 +698,8 @@ body {
   text-align: center;
 }
 
-.sale-chart-section, .purchase-chart-section {
+.sale-chart-section,
+.purchase-chart-section {
   margin-top: 30px;
 }
 
@@ -662,7 +719,8 @@ body {
 
 @font-face {
   font-family: 'Kh Ang Mura';
-  src: url('/fonts/Kh-Ang-Mura.ttf') format('truetype'); /* Ensure correct path */
+  src: url('/fonts/Kh-Ang-Mura.ttf') format('truetype');
+  /* Ensure correct path */
   font-weight: normal;
   font-style: normal;
 }
@@ -673,23 +731,21 @@ body {
 
 
 .khmer-title {
-  font-family: 'Khmer OS Battambang', 'Khmer', sans-serif;
+  font-family: 'Battambang', 'Khmer OS Battambang', 'Khmer', sans-serif;
   font-size: 14px;
   font-weight: bold;
-  color: #333; 
+  color: #333;
 }
 
 
 .App {
-  background: linear-gradient(
-    106.37deg,
-    #ffe1bc 29.63%,
-    #ffcfd1 51.55%,
-    #f3c6f1 90.85%
-  );
+  background: linear-gradient(106.37deg,
+      #ffe1bc 29.63%,
+      #ffcfd1 51.55%,
+      #f3c6f1 90.85%);
   height: 100vh;
   display: flex;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Battambang', 'Inter', sans-serif;
 }
 
 
@@ -765,7 +821,8 @@ body {
 
 .menu-item-text {
   display: inline-block;
-  max-width: 150px; /* Adjust width as needed */
+  max-width: 150px;
+  /* Adjust width as needed */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

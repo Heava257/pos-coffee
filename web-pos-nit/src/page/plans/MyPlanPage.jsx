@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
+import { useLanguage, translations } from "../../store/language.store";
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -32,6 +33,8 @@ const StatusTag = ({ status }) => {
 };
 
 function MyPlanPage() {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [plans, setPlans] = useState([]);
@@ -180,7 +183,7 @@ function MyPlanPage() {
     // Billing History Table columns
     const billingColumns = [
         {
-            title: "Plan",
+            title: t.plans,
             dataIndex: "plan_name",
             key: "plan_name",
             render: (name) => (
@@ -191,31 +194,31 @@ function MyPlanPage() {
             ),
         },
         {
-            title: "Price",
+            title: t.price,
             dataIndex: "plan_price",
             key: "plan_price",
             render: (p) => <Text style={{ color: "#1e4a2d", fontWeight: 700 }}>${p}/mo</Text>,
         },
         {
-            title: "Start Date",
+            title: t.started,
             dataIndex: "start_date",
             key: "start_date",
             render: (d) => dayjs(d).format("DD MMM YYYY"),
         },
         {
-            title: "End Date",
+            title: t.expires_on,
             dataIndex: "end_date",
             key: "end_date",
             render: (d) => (d ? dayjs(d).format("DD MMM YYYY") : "—"),
         },
         {
-            title: "Duration",
+            title: t.duration,
             dataIndex: "duration_days",
             key: "duration_days",
             render: (d) => `${d} days`,
         },
         {
-            title: "Status",
+            title: t.status,
             dataIndex: "status",
             key: "status",
             render: (s) => <StatusTag status={s} />,
@@ -244,7 +247,7 @@ function MyPlanPage() {
     return (
         <div style={{ padding: "0 20px" }}>
             <Title level={2} style={{ color: "#1e4a2d" }}>
-                My Subscription &amp; Limits
+                {t.subscription_limits}
             </Title>
 
             {/* ── Expiration Alert ── */}
@@ -277,7 +280,7 @@ function MyPlanPage() {
                 {/* ══════════════════════════════════════════════
                     TAB 1 — Overview
                 ══════════════════════════════════════════════ */}
-                <TabPane tab={<span><SafetyCertificateOutlined /> Overview</span>} key="overview">
+                <TabPane tab={<span><SafetyCertificateOutlined /> {t.overview}</span>} key="overview">
                     <Row gutter={[24, 24]} style={{ marginTop: 16 }}>
                         {/* Plan Card */}
                         <Col xs={24} lg={10}>
@@ -301,11 +304,11 @@ function MyPlanPage() {
 
                                     <div>
                                         <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: "14px" }}>
-                                            {name === "Free Plan" ? "Current Trial" : "Current Package"}
+                                            {name === "Free Plan" ? t.current_trial : t.current_package}
                                         </Text>
                                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                             <Title level={1} style={{ color: "white", margin: 0 }}>{name}</Title>
-                                            {name === "Free Plan" && <Tag color="orange" style={{ border: "none" }}>30-DAY TRIAL</Tag>}
+                                            {name === "Free Plan" && <Tag color="orange" style={{ border: "none" }}>{t.package_30_day_trial}</Tag>}
                                         </div>
                                     </div>
 
@@ -313,15 +316,15 @@ function MyPlanPage() {
 
                                     <Row gutter={16}>
                                         <Col span={12}>
-                                            <Text style={{ color: "rgba(255,255,255,0.7)", display: "block" }}>Started</Text>
+                                            <Text style={{ color: "rgba(255,255,255,0.7)", display: "block" }}>{t.started}</Text>
                                             <Text strong style={{ color: "white" }}>
                                                 {dayjs(subscription.start_date).format("DD MMM YYYY")}
                                             </Text>
                                         </Col>
                                         <Col span={12}>
-                                            <Text style={{ color: "rgba(255,255,255,0.7)", display: "block" }}>Expires On</Text>
+                                            <Text style={{ color: "rgba(255,255,255,0.7)", display: "block" }}>{t.expires_on}</Text>
                                             <Text strong style={{ color: daysLeft !== null && daysLeft <= 7 ? "#ffcc00" : "white" }}>
-                                                {subscription.end_date ? dayjs(subscription.end_date).format("DD MMM YYYY") : "No Expiry"}
+                                                {subscription.end_date ? dayjs(subscription.end_date).format("DD MMM YYYY") : t.no_expiry}
                                             </Text>
                                         </Col>
                                     </Row>
@@ -334,7 +337,7 @@ function MyPlanPage() {
                                             textAlign: "center",
                                         }}>
                                             <Text style={{ color: isExpired ? "#ff6b6b" : "#c0a060", fontWeight: 700 }}>
-                                                {isExpired ? `Expired ${Math.abs(daysLeft)} days ago` : `${daysLeft} days remaining`}
+                                                {isExpired ? `${t.expired_label} ${Math.abs(daysLeft)} ${t.days_ago}` : `${daysLeft} ${t.days_remaining}`}
                                             </Text>
                                         </div>
                                     )}
@@ -345,7 +348,7 @@ function MyPlanPage() {
                                         style={{ borderRadius: "12px", fontWeight: 600, color: "#1e4a2d", border: "none" }}
                                         onClick={() => setIsUpgradeModalVisible(true)}
                                     >
-                                        Upgrade Plan
+                                        {t.upgrade_plan}
                                     </Button>
                                 </Space>
                             </Card>
@@ -353,18 +356,18 @@ function MyPlanPage() {
 
                         {/* Usage Stats */}
                         <Col xs={24} lg={14}>
-                            <Card title="Resource Utilization" style={{ borderRadius: "24px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+                            <Card title={t.resource_utilization} style={{ borderRadius: "24px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
                                 <Space direction="vertical" style={{ width: "100%" }} size="large">
 
                                     {[
-                                        { label: "Staff Seats", current: usage.staff, max: max_staff },
-                                        { label: "Store Branches", current: usage.branches, max: max_branches },
-                                        { label: "SKU Capacity (Products)", current: usage.products, max: max_products },
+                                        { label: t.staff_seats, current: usage.staff, max: max_staff },
+                                        { label: t.store_branches, current: usage.branches, max: max_branches },
+                                        { label: t.sku_capacity, current: usage.products, max: max_products },
                                     ].map(({ label, current, max }) => (
                                         <div key={label}>
                                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                                                 <Text strong>{label}</Text>
-                                                <Text type="secondary">{current} / {max || "Unlimited"}</Text>
+                                                <Text type="secondary">{current} / {max || t.unlimited}</Text>
                                             </div>
                                             <Progress
                                                 percent={max ? Math.min((current / max) * 100, 100) : 100}
@@ -380,8 +383,8 @@ function MyPlanPage() {
                             <Card style={{ marginTop: 20, borderRadius: "16px", border: "none", background: "#f8fdf9" }}>
                                 <Space>
                                     <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                                    <Text type="secondary">Need more capacity? Upgrading takes less than 1 minute.</Text>
-                                    <Button type="link" onClick={() => setIsUpgradeModalVisible(true)}>Compare Plans</Button>
+                                    <Text type="secondary">{t.need_more_capacity}</Text>
+                                    <Button type="link" onClick={() => setIsUpgradeModalVisible(true)}>{t.compare_plans}</Button>
                                 </Space>
                             </Card>
                         </Col>
@@ -391,19 +394,19 @@ function MyPlanPage() {
                 {/* ══════════════════════════════════════════════
                     TAB 2 — Step 6: Billing History
                 ══════════════════════════════════════════════ */}
-                <TabPane tab={<span><HistoryOutlined /> Billing History</span>} key="billing">
+                <TabPane tab={<span><HistoryOutlined /> {t.billing_history}</span>} key="billing">
                     <div style={{ marginTop: 16 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                             <div>
-                                <Title level={4} style={{ margin: 0, color: "#1e4a2d" }}>Subscription History</Title>
-                                <Text type="secondary">All your past and current subscription periods.</Text>
+                                <Title level={4} style={{ margin: 0, color: "#1e4a2d" }}>{t.subscription_history}</Title>
+                                <Text type="secondary">{t.history_desc}</Text>
                             </div>
                             <Button
                                 icon={<HistoryOutlined />}
                                 onClick={fetchBillingHistory}
                                 loading={billingLoading}
                             >
-                                Refresh
+                                {t.refresh}
                             </Button>
                         </div>
 
@@ -430,14 +433,14 @@ function MyPlanPage() {
                 title={
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <RocketOutlined style={{ color: "#c0a060" }} />
-                        <span>Upgrade Your Business Ecosystem</span>
+                        <span>{t.business}</span>
                     </div>
                 }
                 open={isUpgradeModalVisible}
                 onCancel={() => setIsUpgradeModalVisible(false)}
                 footer={[
                     <Button key="cancel" onClick={() => setIsUpgradeModalVisible(false)}>
-                        Maybe Later
+                        {t.maybe_later}
                     </Button>,
                     <Button
                         key="next"
@@ -447,7 +450,7 @@ function MyPlanPage() {
                         style={{ background: "#1e4a2d", border: "none" }}
                         disabled={!selectedPlanId || selectedPlanId === data.plan_id}
                     >
-                        {selectedPlanId === data.plan_id ? "Currently Active" : "Next: Confirm Upgrade →"}
+                        {selectedPlanId === data.plan_id ? t.currently_active : t.next_confirm}
                     </Button>,
                 ]}
                 width={700}
@@ -455,7 +458,7 @@ function MyPlanPage() {
             >
                 <div style={{ marginBottom: 20 }}>
                     <Text type="secondary">
-                        Select a plan that fits your growing business needs. Permissions and limits will be updated instantly.
+                        {t.upgrade_picker_desc}
                     </Text>
                 </div>
 
@@ -483,11 +486,11 @@ function MyPlanPage() {
                                             <Space direction="vertical" size={0}>
                                                 <Title level={4} style={{ margin: 0, color: isSelected ? "#1e4a2d" : "inherit" }}>
                                                     {plan.name}
-                                                    {isCurrent && <Tag color="blue" style={{ marginLeft: 8 }}>Current</Tag>}
-                                                    {isLower && <Tag color="default" style={{ marginLeft: 8 }}>Not Available</Tag>}
+                                                    {isCurrent && <Tag color="blue" style={{ marginLeft: 8 }}>{t.current}</Tag>}
+                                                    {isLower && <Tag color="default" style={{ marginLeft: 8 }}>{t.not_available}</Tag>}
                                                 </Title>
                                                 <Text type="secondary">
-                                                    {plan.price === "0.00" ? "Free Forever" : `$${plan.price} / month`}
+                                                    {plan.price === "0.00" ? "Free Forever" : `$${plan.price} / ${t.month}`}
                                                 </Text>
                                             </Space>
                                             <Radio value={plan.id} disabled={isLower} />
@@ -497,13 +500,13 @@ function MyPlanPage() {
 
                                         <Row gutter={16}>
                                             <Col span={8}>
-                                                <Statistic title={<span style={{ fontSize: "12px" }}>Branches</span>} value={plan.max_branches || "∞"} valueStyle={{ fontSize: "16px" }} />
+                                                <Statistic title={<span style={{ fontSize: "12px" }}>{t.store_branches}</span>} value={plan.max_branches || "∞"} valueStyle={{ fontSize: "16px" }} />
                                             </Col>
                                             <Col span={8}>
-                                                <Statistic title={<span style={{ fontSize: "12px" }}>Staff</span>} value={plan.max_staff || "∞"} valueStyle={{ fontSize: "16px" }} />
+                                                <Statistic title={<span style={{ fontSize: "12px" }}>{t.staff_seats}</span>} value={plan.max_staff || "∞"} valueStyle={{ fontSize: "16px" }} />
                                             </Col>
                                             <Col span={8}>
-                                                <Statistic title={<span style={{ fontSize: "12px" }}>Products</span>} value={plan.max_products || "∞"} valueStyle={{ fontSize: "16px" }} />
+                                                <Statistic title={<span style={{ fontSize: "12px" }}>{t.sku_capacity}</span>} value={plan.max_products || "∞"} valueStyle={{ fontSize: "16px" }} />
                                             </Col>
                                         </Row>
 
@@ -527,7 +530,7 @@ function MyPlanPage() {
                 title={
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <SafetyCertificateOutlined style={{ color: "#1e4a2d" }} />
-                        <span>Confirm Plan Upgrade</span>
+                        <span>{t.next_confirm}</span>
                     </div>
                 }
                 open={isConfirmModalVisible}
@@ -547,7 +550,7 @@ function MyPlanPage() {
                         disabled={isUpgrading}
                         icon={<CloseCircleOutlined />}
                     >
-                        Go Back
+                        {t.maybe_later}
                     </Button>,
                     <Button
                         key="confirm"
@@ -557,7 +560,7 @@ function MyPlanPage() {
                         icon={<ThunderboltOutlined />}
                         style={{ background: "#1e4a2d", border: "none" }}
                     >
-                        Yes, Upgrade Now!
+                        {t.upgrade_plan}
                     </Button>,
                 ]}
                 width={480}
@@ -575,7 +578,7 @@ function MyPlanPage() {
                         }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <div>
-                                    <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px" }}>Upgrading to</Text>
+                                    <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px" }}>{t.upgrading_to}</Text>
                                     <Title level={3} style={{ color: "white", margin: "0" }}>{selectedPlan.name}</Title>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
@@ -583,7 +586,7 @@ function MyPlanPage() {
                                         ${selectedPlan.price}
                                     </Text>
                                     <br />
-                                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px" }}>/ month</Text>
+                                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px" }}>/ {t.month}</Text>
                                 </div>
                             </div>
 
@@ -591,15 +594,15 @@ function MyPlanPage() {
 
                             <Row gutter={16} style={{ textAlign: "center" }}>
                                 <Col span={8}>
-                                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", display: "block" }}>Branches</Text>
+                                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", display: "block" }}>{t.store_branches}</Text>
                                     <Text style={{ color: "white", fontWeight: 700, fontSize: "18px" }}>{selectedPlan.max_branches}</Text>
                                 </Col>
                                 <Col span={8}>
-                                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", display: "block" }}>Staff</Text>
+                                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", display: "block" }}>{t.staff_seats}</Text>
                                     <Text style={{ color: "white", fontWeight: 700, fontSize: "18px" }}>{selectedPlan.max_staff}</Text>
                                 </Col>
                                 <Col span={8}>
-                                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", display: "block" }}>Products</Text>
+                                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", display: "block" }}>{t.sku_capacity}</Text>
                                     <Text style={{ color: "white", fontWeight: 700, fontSize: "18px" }}>{selectedPlan.max_products}</Text>
                                 </Col>
                             </Row>
@@ -615,12 +618,12 @@ function MyPlanPage() {
                                 <Text strong>{dayjs().format("DD MMM YYYY")}</Text>
                             </List.Item>
                             <List.Item>
-                                <Space><CalendarOutlined style={{ color: "#c0a060" }} /><Text>End Date</Text></Space>
+                                <Space><CalendarOutlined style={{ color: "#c0a060" }} /><Text>{t.expires_on}</Text></Space>
                                 <Text strong>{dayjs().add(30, "day").format("DD MMM YYYY")}</Text>
                             </List.Item>
                             <List.Item>
-                                <Space><CheckCircleOutlined style={{ color: "#52c41a" }} /><Text>Duration</Text></Space>
-                                <Text strong>30 Days</Text>
+                                <Space><CheckCircleOutlined style={{ color: "#52c41a" }} /><Text>{t.duration}</Text></Space>
+                                <Text strong>30 {t.month}</Text>
                             </List.Item>
                         </List>
 
@@ -629,7 +632,7 @@ function MyPlanPage() {
                             type="info"
                             showIcon
                             icon={<InfoCircleOutlined />}
-                            message="After upgrading, please logout and login again to activate your new permissions and features."
+                            message={t.relogin_desc}
                         />
                     </div>
                 )}
@@ -661,10 +664,10 @@ function MyPlanPage() {
                         </div>
 
                         <Title level={2} style={{ color: "#1e4a2d", margin: "0 0 8px" }}>
-                            Upgrade Successful! 🎉
+                            {t.upgrade_success}
                         </Title>
                         <Text type="secondary" style={{ fontSize: "15px" }}>
-                            You now have full access to
+                            {t.full_access_to}
                         </Text>
                         <div style={{ margin: "16px 0" }}>
                             <Tag
@@ -685,14 +688,14 @@ function MyPlanPage() {
                         }}>
                             <Space direction="vertical" style={{ width: "100%" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Text type="secondary">Active Until</Text>
+                                    <Text type="secondary">{t.active_until}</Text>
                                     <Text strong style={{ color: "#1e4a2d" }}>
                                         {upgradeResult.end_date ? dayjs(upgradeResult.end_date).format("DD MMM YYYY") : dayjs().add(30, "day").format("DD MMM YYYY")}
                                     </Text>
                                 </div>
                                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Text type="secondary">Duration</Text>
-                                    <Text strong>30 Days</Text>
+                                    <Text type="secondary">{t.duration}</Text>
+                                    <Text strong>30 {t.month}</Text>
                                 </div>
                             </Space>
                         </div>
@@ -701,8 +704,8 @@ function MyPlanPage() {
                             type="warning"
                             showIcon
                             icon={<LoginOutlined />}
-                            message={<Text strong>Re-login Required</Text>}
-                            description="Please logout and login again to activate your new permissions and features."
+                            message={<Text strong>{t.relogin_required}</Text>}
+                            description={t.relogin_desc}
                             style={{ marginBottom: 20, borderRadius: "10px", textAlign: "left" }}
                         />
 
@@ -721,7 +724,7 @@ function MyPlanPage() {
                             }}
                             onClick={handleSuccessDone}
                         >
-                            Got it! 🚀
+                            {t.got_it}
                         </Button>
                     </div>
                 )}

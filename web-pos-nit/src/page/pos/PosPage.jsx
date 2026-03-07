@@ -43,6 +43,7 @@ import {
 import { FiSettings } from "react-icons/fi";
 import ImgUser from "../../assets/profile.png";
 import useSound from "use-sound";
+import { useLanguage, translations } from "../../store/language.store";
 
 // Public notification sound URL (stable mirror)
 const BELL_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3";
@@ -412,6 +413,8 @@ function BillCartItem({ item, onIncrease, onDecrease, onRemove }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function PosPage() {
+  const { lang } = useLanguage();
+  const t = translations[lang];
   const [isDisabled, setIsDisabled] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(51);
   const [parentCategories, setParentCategories] = useState(defaultParentCategories);
@@ -509,7 +512,7 @@ function PosPage() {
             playBell();
           }
           message.info({
-            content: "🔔 New order received from table!",
+            content: `🔔 ${t.new_order_received}`,
             icon: <BellOutlined style={{ color: COLORS.darkGreen }} />,
             duration: 5,
           });
@@ -825,7 +828,7 @@ function PosPage() {
       }
 
       if (res && !res.error) {
-        message.success(currentOrderId ? "Order completed!" : "Order placed successfully!");
+        message.success(currentOrderId ? t.order_completed : t.order_placed);
         if (res.payment_link) {
           setPaymentData({ paymentLink: res.payment_link, orderNo: res.order_no, total: param.total });
           setQrModalVisible(true);
@@ -840,7 +843,7 @@ function PosPage() {
         message.error(`Order failed! ${res?.message || res?.error || ""}`);
       }
     } catch {
-      message.error("Failed to create order. Please try again.");
+      message.error(t.order_failed || "Order failed!");
     }
   };
 
@@ -922,7 +925,7 @@ function PosPage() {
           >
             <SearchOutlined style={{ fontSize: 16, color: COLORS.textSecondary }} />
             <input
-              placeholder="Search"
+              placeholder={t.search_product}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               style={{
@@ -952,7 +955,7 @@ function PosPage() {
             <Divider type="vertical" />
 
             <div style={{ fontSize: 13, color: COLORS.textSecondary, fontWeight: 500, whiteSpace: "nowrap" }}>
-              Total: <span style={{ fontWeight: 700, color: COLORS.darkGreen }}>{state.cart_list.length}</span>
+              {t.total}: <span style={{ fontWeight: 700, color: COLORS.darkGreen }}>{state.cart_list.length}</span>
             </div>
 
             <Divider type="vertical" />
@@ -979,7 +982,7 @@ function PosPage() {
                 }}
               >
                 <ClockCircleOutlined style={{ fontSize: 16 }} />
-                <span>Pending Table</span>
+                <span>{t.pending_table}</span>
               </button>
             </Badge>
 
@@ -1009,7 +1012,7 @@ function PosPage() {
               }}
             >
               <BellOutlined style={{ fontSize: 16 }} />
-              <span>{isSoundEnabled ? "Sound On" : "Sound Off"}</span>
+              <span>{isSoundEnabled ? t.sound_on : t.sound_off}</span>
             </button>
 
             <button
@@ -1037,7 +1040,7 @@ function PosPage() {
                 (e.currentTarget.style.color = COLORS.textPrimary))
               }
             >
-              <FileTextOutlined /> Report
+              <FileTextOutlined /> {t.report}
             </button>
           </div>
 
@@ -1112,7 +1115,7 @@ function PosPage() {
                     {needsRestock && (
                       <span style={{ width: 6, height: 6, background: COLORS.redBadge, borderRadius: "50%", display: "inline-block" }} />
                     )}
-                    {needsRestock ? "Need to re-stock" : "Available"}
+                    {needsRestock ? t.need_restock : t.available}
                   </div>
 
                   <div
@@ -1132,7 +1135,7 @@ function PosPage() {
                     }}
                   >
                     {selectedCategory == cat.id
-                      ? `${state.list.length} items`
+                      ? `${state.list.length} ${t.items}`
                       : "..."}
                   </div>
 
@@ -1182,7 +1185,7 @@ function PosPage() {
                   style={{ marginTop: 60 }}
                   description={
                     <span style={{ color: COLORS.textSecondary, fontSize: 14 }}>
-                      No products found
+                      {t.no_data}
                     </span>
                   }
                 />
@@ -1229,7 +1232,7 @@ function PosPage() {
             }}
           >
             <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 2 }}>
-              Purchase Receipt
+              {t.purchase_receipt}
             </div>
             <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
               #{String(objSummary.order_no || Math.floor(Math.random() * 90000) + 10000).padStart(5, "0")}
@@ -1249,8 +1252,8 @@ function PosPage() {
               }}
             >
               {[
-                { key: "dine_in", label: "Dine In" },
-                { key: "take_away", label: "Take Away" },
+                { key: "dine_in", label: t.dine_in },
+                { key: "take_away", label: t.take_away },
               ].map((t) => (
                 <button
                   key={t.key}
@@ -1279,7 +1282,7 @@ function PosPage() {
             <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 500 }}>
-                  Customer name
+                  {t.customer_name}
                 </div>
                 <input
                   value={customerName}
@@ -1301,7 +1304,7 @@ function PosPage() {
               </div>
               <div style={{ width: 70 }}>
                 <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 500 }}>
-                  Table
+                  {t.table_label}
                 </div>
                 <input
                   value={tableNo}
@@ -1325,7 +1328,7 @@ function PosPage() {
 
             {/* Order list label */}
             <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 6 }}>
-              Order list
+              {t.order_list}
             </div>
           </div>
 
@@ -1348,9 +1351,9 @@ function PosPage() {
                 }}
               >
                 <div style={{ fontSize: 36, marginBottom: 10 }}>🛒</div>
-                <div style={{ fontSize: 13 }}>Cart is empty</div>
+                <div style={{ fontSize: 13 }}>{t.cart_empty}</div>
                 <div style={{ fontSize: 11, marginTop: 4 }}>
-                  Add items from the menu
+                  {t.add_from_menu}
                 </div>
               </div>
             ) : (
@@ -1382,7 +1385,7 @@ function PosPage() {
                 marginBottom: 10,
               }}
             >
-              Payment Details
+              {t.payment_details}
             </div>
 
             {/* Subtotal */}
@@ -1395,7 +1398,7 @@ function PosPage() {
               }}
             >
               <span style={{ color: COLORS.textSecondary }}>
-                Subtotal ({objSummary.total_qty} items)
+                {t.subtotal} ({objSummary.total_qty} {t.items})
               </span>
               <span style={{ color: COLORS.textPrimary, fontWeight: 500 }}>
                 ${objSummary.sub_total.toFixed(2)}
@@ -1413,7 +1416,7 @@ function PosPage() {
                   color: "#e85d5d",
                 }}
               >
-                <span style={{ fontWeight: 500 }}>Total Savings</span>
+                <span style={{ fontWeight: 500 }}>{t.total_savings}</span>
                 <span style={{ fontWeight: 700 }}>
                   -${objSummary.save_discount.toFixed(2)}
                 </span>
@@ -1428,7 +1431,7 @@ function PosPage() {
                 fontSize: 13,
               }}
             >
-              <span style={{ color: COLORS.textSecondary }}>Tax & Fees</span>
+              <span style={{ color: COLORS.textSecondary }}>{t.tax_fees}</span>
               <span style={{ color: COLORS.textPrimary, fontWeight: 500 }}>$0.00</span>
             </div>
 
@@ -1443,7 +1446,7 @@ function PosPage() {
             >
               <div style={{ textAlign: "right", marginTop: 4 }}>
                 <span style={{ fontWeight: 700, fontSize: 13, color: COLORS.textPrimary, marginRight: 8 }}>
-                  Total
+                  {t.total}
                 </span>
                 <span style={{ fontWeight: 900, fontSize: 22, color: COLORS.darkGreen }}>
                   ${objSummary.total.toFixed(2)}
@@ -1454,12 +1457,12 @@ function PosPage() {
             {/* Payment method */}
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6, fontWeight: 500 }}>
-                Payment Method
+                {t.payment_method}
               </div>
               <Select
                 size="large"
                 style={{ width: "100%", borderRadius: 10 }}
-                placeholder="Select payment"
+                placeholder={t.select_payment}
                 value={objSummary.payment_method}
                 onChange={(v) =>
                   setObjSummary((p) => ({ ...p, payment_method: v }))
@@ -1469,7 +1472,7 @@ function PosPage() {
                   { label: "📱 Wing", value: "Wing" },
                   { label: "🏦 ABA", value: "ABA" },
                   { label: "💳 Card", value: "Card" },
-                  { label: "❤️ Other", value: "Other" },
+                  { label: `❤️ ${t.all}`, value: "Other" },
                 ]}
               />
             </div>
@@ -1492,7 +1495,7 @@ function PosPage() {
                   padding: 0,
                 }}
               >
-                <DeleteOutlined /> Clear cart
+                <DeleteOutlined /> {t.purge}
               </button>
             )}
 
@@ -1525,7 +1528,7 @@ function PosPage() {
                 letterSpacing: 0.3,
               }}
             >
-              Place Order
+              {t.place_order}
             </button>
           </div>
         </div>
@@ -1546,7 +1549,7 @@ function PosPage() {
       <Modal
         title={
           <div style={{ textAlign: 'center', fontSize: 18, color: COLORS.darkGreen }}>
-            ☕ Customize Your Coffee
+            {t.customize_coffee}
           </div>
         }
         open={optionsModalVisible}
@@ -1559,20 +1562,20 @@ function PosPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '10px 0' }}>
           {/* Mood Selector */}
           <div>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Mood</div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>{t.mood}</div>
             <Radio.Group
               value={tempOptions.mood}
               onChange={e => setTempOptions(p => ({ ...p, mood: e.target.value }))}
               buttonStyle="solid"
             >
-              <Radio.Button value="hot">🔥 Hot</Radio.Button>
-              <Radio.Button value="ice">❄️ Cold</Radio.Button>
+              <Radio.Button value="hot">{t.hot}</Radio.Button>
+              <Radio.Button value="ice">{t.ice}</Radio.Button>
             </Radio.Group>
           </div>
 
           {/* Size Selector */}
           <div>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Size</div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>{t.size}</div>
             <Radio.Group
               value={tempOptions.size}
               onChange={e => setTempOptions(p => ({ ...p, size: e.target.value }))}
@@ -1591,7 +1594,7 @@ function PosPage() {
 
           {/* Sugar Selector */}
           <div>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Sugar Level</div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>{t.sugar_level}</div>
             <Radio.Group
               value={tempOptions.sugar}
               onChange={e => setTempOptions(p => ({ ...p, sugar: e.target.value }))}
@@ -1606,7 +1609,7 @@ function PosPage() {
           {/* Add-ons Selector */}
           {(selectedProductForOptions?.addons && JSON.parse(selectedProductForOptions.addons).length > 0) && (
             <div>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>Add-ons</div>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>{t.addons}</div>
               <Checkbox.Group
                 value={tempOptions.addons}
                 onChange={v => setTempOptions(p => ({ ...p, addons: v }))}
@@ -1629,7 +1632,7 @@ function PosPage() {
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: COLORS.darkGreen }}>
             <ClockCircleOutlined />
-            <span>Pending Table Orders</span>
+            <span>{t.pending_orders}</span>
           </div>
         }
         placement="right"
@@ -1643,7 +1646,7 @@ function PosPage() {
       >
         <List
           dataSource={pendingOrders}
-          locale={{ emptyText: <Empty description="No pending table orders" /> }}
+          locale={{ emptyText: <Empty description={t.no_pending} /> }}
           renderItem={(order) => (
             <List.Item
               onClick={() => handleSelectPendingOrder(order)}
@@ -1658,7 +1661,7 @@ function PosPage() {
               <div style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <Text strong style={{ fontSize: 15 }}>
-                    {order.table_no ? `Table ${order.table_no}` : 'Walk-in'}
+                    {order.table_no ? `${t.table_label} ${order.table_no}` : t.walk_in}
                   </Text>
                   <Tag color={order.status === 'unpaid' ? 'volcano' : 'blue'}>
                     {order.status.toUpperCase()}
@@ -1667,7 +1670,7 @@ function PosPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      {order.customer_name || 'Guest'}
+                      {order.customer_name || t.guest}
                     </Text>
                     <Text type="secondary" style={{ fontSize: 11 }}>
                       {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1681,7 +1684,7 @@ function PosPage() {
                 {/* Show Order Items Summary */}
                 {order.details && (
                   <div style={{ marginTop: 8, padding: '8px', background: '#f9f9f9', borderRadius: 8 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textSecondary, marginBottom: 4 }}>ITEMS:</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textSecondary, marginBottom: 4 }}>{t.items.toUpperCase()}:</div>
                     {order.details.map((d, i) => (
                       <div key={i} style={{ fontSize: 11, display: 'flex', justifyContent: 'space-between' }}>
                         <span>• {d.product_name} x {d.qty}</span>
@@ -1695,7 +1698,7 @@ function PosPage() {
           )}
         />
         <div style={{ padding: 20 }}>
-          <Button block onClick={getPendingOrders} icon={<ClockCircleOutlined />}>Refresh List</Button>
+          <Button block onClick={getPendingOrders} icon={<ClockCircleOutlined />}>{t.refresh_list}</Button>
         </div>
       </Drawer>
     </div>

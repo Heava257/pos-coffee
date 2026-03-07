@@ -17,9 +17,13 @@ import { SearchOutlined } from "@ant-design/icons";
 import { request, getIconForCategory, getColorForCategory } from "../../util/helper";
 import MainPage from "../../component/layout/MainPage";
 
+import { useLanguage, translations } from "../../store/language.store";
+
 const { Title } = Typography;
 
 function CategoryPage() {
+  const { lang } = useLanguage();
+  const t = translations[lang];
   const [form] = Form.useForm();
   const [state, setState] = useState({
     list: [],
@@ -42,7 +46,7 @@ function CategoryPage() {
         loading: false,
       }));
     } else {
-      message.error("Failed to fetch categories");
+      message.error(t.no_data);
       setState((pre) => ({ ...pre, loading: false }));
     }
   };
@@ -55,11 +59,11 @@ function CategoryPage() {
   const onFinish = async (values) => {
     const res = await request("category", values.id ? "put" : "post", values);
     if (res && !res.error) {
-      message.success("Category saved!");
+      message.success(t.success);
       onCloseModal();
       getList();
     } else {
-      message.error("Failed to save category");
+      message.error(t.failed);
     }
   };
 
@@ -70,17 +74,17 @@ function CategoryPage() {
 
   const onClickDelete = (item) => {
     Modal.confirm({
-      title: "Delete Category",
-      content: `Remove category "${item.name}"?`,
-      okText: "Delete",
+      title: t.delete + " " + t.category,
+      content: `${t.remove_data} "${item.name}"?`,
+      okText: t.delete,
       okType: "danger",
       onOk: async () => {
         const res = await request("category", "delete", { id: item.id });
         if (res && !res.error) {
-          message.success("Removed successfuly");
+          message.success(t.success);
           getList();
         } else {
-          message.error(res?.message || "Error deleting category");
+          message.error(res?.message || t.failed);
         }
       },
     });
@@ -102,7 +106,7 @@ function CategoryPage() {
             }}>
               <MdCategory size={24} />
             </div>
-            <Title level={4} style={{ margin: 0 }}>Category Setup</Title>
+            <Title level={4} style={{ margin: 0 }}>{t.categories}</Title>
           </Space>
           <Button
             type="primary"
@@ -111,13 +115,13 @@ function CategoryPage() {
             size="large"
             style={{ borderRadius: 10, background: "#2d6a42", borderColor: "#2d6a42" }}
           >
-            New Category
+            {t.add_new}
           </Button>
         </div>
 
         <Input
           prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-          placeholder="Search categories..."
+          placeholder={t.search}
           size="large"
           allowClear
           onChange={(e) => setSearchText(e.target.value)}
@@ -129,7 +133,7 @@ function CategoryPage() {
           rowKey="id"
           columns={[
             {
-              title: "Category",
+              title: t.category,
               dataIndex: "name",
               render: (name) => (
                 <Space>
@@ -139,12 +143,12 @@ function CategoryPage() {
               )
             },
             {
-              title: "Badge",
+              title: t.status,
               dataIndex: "name",
               render: (name) => <Tag color={getColorForCategory(name)}>{name.toUpperCase()}</Tag>
             },
             {
-              title: "Action",
+              title: t.action,
               align: "center",
               render: (_, record) => (
                 <Space>
@@ -159,7 +163,7 @@ function CategoryPage() {
 
       <Modal
         open={state.visibleModal}
-        title={form.getFieldValue("id") ? "Edit Category" : "New Category"}
+        title={form.getFieldValue("id") ? t.edit : t.add_new}
         onCancel={onCloseModal}
         footer={null}
         centered
@@ -169,8 +173,8 @@ function CategoryPage() {
           <Form.Item name="id" hidden><Input /></Form.Item>
           <Form.Item
             name="name"
-            label="Category Name"
-            rules={[{ required: true, message: "Enter name" }]}
+            label={t.name}
+            rules={[{ required: true, message: t.name + " is required" }]}
           >
             <Input placeholder="e.g. Hot Drinks" size="large" />
           </Form.Item>
@@ -181,7 +185,7 @@ function CategoryPage() {
             size="large"
             style={{ marginTop: 10, background: "#2d6a42", height: 50, borderRadius: 10 }}
           >
-            Save Category
+            {t.save}
           </Button>
         </Form>
       </Modal>

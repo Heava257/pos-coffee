@@ -25,6 +25,7 @@ import { Config } from "../../util/config";
 import { getProfile } from "../../store/profile.store";
 import "./Product.css"
 import RecipeModal from "./RecipeModal";
+import { useLanguage, translations } from "../../store/language.store";
 const getBase64 = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -46,6 +47,8 @@ const COLORS = {
   redBadge: "#e85d5d",
 };
 function ProductPage() {
+  const { lang } = useLanguage();
+  const t = translations[lang];
   const { config } = configStore();
   const [form] = Form.useForm();
   const [state, setState] = useState({
@@ -214,12 +217,12 @@ function ProductPage() {
   };
   const onClickDelete = (item, index) => {
     Modal.confirm({
-      title: "Remove data",
-      content: "Are you to remove this porduct?",
+      title: t.remove_data,
+      content: t.confirm_remove_product,
       onOk: async () => {
         const res = await request("product", "delete", item);
         if (res && !res.error) {
-          message.success(res.message);
+          message.success(t.product_deleted);
           getList();
         }
       },
@@ -244,7 +247,7 @@ function ProductPage() {
               borderRadius: "16px",
               boxShadow: "0 4px 15px rgba(30,74,45,0.2)"
             }}>
-              <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase", letterSpacing: 0.5 }}>Total Products</div>
+              <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase", letterSpacing: 0.5 }}>{t.total_products}</div>
               <div style={{ fontSize: "28px", fontWeight: "bold" }}>{state.total}</div>
             </div>
           </Col>
@@ -256,7 +259,7 @@ function ProductPage() {
               borderRadius: "16px",
               boxShadow: "0 4px 15px rgba(45,106,66,0.2)"
             }}>
-              <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase", letterSpacing: 0.5 }}>Categories</div>
+              <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase", letterSpacing: 0.5 }}>{t.categories}</div>
               <div style={{ fontSize: "28px", fontWeight: "bold" }}>{config.category?.length || 0}</div>
             </div>
           </Col>
@@ -289,7 +292,7 @@ function ProductPage() {
         marginBottom: 24
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.textPrimary }}>Menu Inventory</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.textPrimary }}>{t.menu_inventory}</div>
           <Button
             type="primary"
             size="large"
@@ -305,7 +308,7 @@ function ProductPage() {
               boxShadow: '0 4px 12px rgba(30,74,45,0.3)'
             }}
           >
-            NEW PRODUCT
+            {t.add_new_product}
           </Button>
         </div>
 
@@ -313,7 +316,7 @@ function ProductPage() {
           <Col span={8}>
             <Input
               prefix={<SearchOutlined style={{ color: COLORS.textSecondary }} />}
-              placeholder="Search products by name or code..."
+              placeholder={t.search_product}
               size="large"
               style={{ borderRadius: 12 }}
               onChange={(e) => setFilter(p => ({ ...p, txt_search: e.target.value }))}
@@ -321,7 +324,7 @@ function ProductPage() {
           </Col>
           <Col span={5}>
             <Select
-              placeholder="Category"
+              placeholder={t.category_name}
               size="large"
               allowClear
               style={{ width: '100%' }}
@@ -331,7 +334,7 @@ function ProductPage() {
           </Col>
           <Col span={5}>
             <Select
-              placeholder="Brand"
+              placeholder={t.brand}
               size="large"
               allowClear
               style={{ width: '100%' }}
@@ -347,7 +350,7 @@ function ProductPage() {
               onClick={onFilter}
               style={{ background: COLORS.midGreen, borderRadius: 12, fontWeight: 600 }}
             >
-              APPLY FILTER
+              {t.apply_filters.toUpperCase()}
             </Button>
           </Col>
         </Row>
@@ -356,7 +359,7 @@ function ProductPage() {
         open={state.visibleModal}
         title={
           <div style={{ fontSize: 18, color: COLORS.darkGreen, fontWeight: 700 }}>
-            {form.getFieldValue("id") ? "☕ Edit Product" : "☕ New Menu Item"}
+            {form.getFieldValue("id") ? t.edit_product_title : t.new_menu_item}
           </div>
         }
         footer={null}
@@ -376,10 +379,10 @@ function ProductPage() {
               <div className="form-section">
                 <Form.Item
                   name={"name"}
-                  label="Product Name"
-                  rules={[{ required: true, message: "Please enter product name" }]}
+                  label={t.product_name}
+                  rules={[{ required: true, message: t.product_name }]}
                 >
-                  <Input placeholder="Enter product name" />
+                  <Input placeholder={t.product_name} />
                 </Form.Item>
 
                 {state.selectedParentId === 51 && (
@@ -387,19 +390,19 @@ function ProductPage() {
                     <Form.List name="sizes">
                       {(fields, { add, remove }) => (
                         <>
-                          <h3>Sizes</h3>
+                          <h3>{t.sizes}</h3>
                           {fields.map(({ key, name, ...restField }) => (
                             <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
-                              <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: 'Label required' }]}>
-                                <Select options={SAMPLE_SIZES} placeholder="Choose Size" style={{ width: 120 }} />
+                              <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: t.label_required }]}>
+                                <Select options={SAMPLE_SIZES} placeholder={t.choose_size} style={{ width: 120 }} />
                               </Form.Item>
-                              <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: 'Price required' }]}>
-                                <InputNumber placeholder="Price" />
+                              <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: t.price_required }]}>
+                                <InputNumber placeholder={t.price} />
                               </Form.Item>
-                              <Button danger onClick={() => remove(name)}>Delete</Button>
+                              <Button danger onClick={() => remove(name)}>{t.delete}</Button>
                             </Space>
                           ))}
-                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>Add Size</Button>
+                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>{t.add_size}</Button>
                         </>
                       )}
                     </Form.List>
@@ -407,38 +410,38 @@ function ProductPage() {
                     <Form.List name="addons">
                       {(fields, { add, remove }) => (
                         <>
-                          <h3>Add-ons</h3>
+                          <h3>{t.addons}</h3>
                           {fields.map(({ key, name, ...restField }) => (
                             <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
-                              <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: 'Label required' }]}>
-                                <Select options={SAMPLE_ADDONS} placeholder="Choose Add-on" style={{ width: 180 }} />
+                              <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: t.required }]}>
+                                <Select options={SAMPLE_ADDONS} placeholder={t.addons} style={{ width: 180 }} />
                               </Form.Item>
-                              <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: 'Price required' }]}>
-                                <InputNumber placeholder="Price" />
+                              <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: t.price }]}>
+                                <InputNumber placeholder={t.price} />
                               </Form.Item>
-                              <Button danger onClick={() => remove(name)}>Delete</Button>
+                              <Button danger onClick={() => remove(name)}>{t.delete}</Button>
                             </Space>
                           ))}
-                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>Add Add-on</Button>
+                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>{t.add_addon}</Button>
                         </>
                       )}
                     </Form.List>
                   </>
                 )}
 
-                <Form.Item name={"barcode"} label="Barcode">
-                  <Input disabled placeholder="Barcode" />
+                <Form.Item name={"barcode"} label={t.barcode}>
+                  <Input disabled placeholder={t.barcode} />
                 </Form.Item>
 
                 {/* Always show Quantity field */}
-                <Form.Item name={"qty"} label="Quantity">
-                  <InputNumber placeholder="Quantity" style={{ width: "100%" }} />
+                <Form.Item name={"qty"} label={t.quantity}>
+                  <InputNumber placeholder={t.quantity} style={{ width: "100%" }} />
                 </Form.Item>
 
                 {/* Show Discount for all categories except Rice (55) */}
                 {state.selectedParentId !== 55 && (
-                  <Form.Item name={"discount"} label="Discount">
-                    <InputNumber placeholder="Discount" style={{ width: "100%" }} />
+                  <Form.Item name={"discount"} label={t.discount}>
+                    <InputNumber placeholder={t.discount} style={{ width: "100%" }} />
                   </Form.Item>
                 )}
               </div>
@@ -448,12 +451,12 @@ function ProductPage() {
               <div className="form-section">
                 <Form.Item
                   name={"category_id"}
-                  label="Category"
-                  rules={[{ required: true, message: "Please select category" }]}
+                  label={t.category}
+                  rules={[{ required: true, message: t.category_required }]}
                 >
                   <Select
                     options={config.category}
-                    placeholder="Select category"
+                    placeholder={t.category_name}
                     onChange={(value) => {
                       form.setFieldValue("category_id", value);
                       setState((prev) => ({ ...prev, selectedParentId: value }));
@@ -462,30 +465,30 @@ function ProductPage() {
                 </Form.Item>
 
                 <Form.Item
-                  label="Price"
+                  label={t.price}
                   name="price"
-                  rules={[{ required: true, message: 'Please enter price' }]}
+                  rules={[{ required: true, message: t.price_required }]}
                 >
                   <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
                 </Form.Item>
 
-                <Form.Item name={"status"} label="Status">
+                <Form.Item name={"status"} label={t.status}>
                   <Select
                     options={[
-                      { label: "Active", value: 1 },
-                      { label: "Inactive", value: 0 },
+                      { label: t.active, value: 1 },
+                      { label: t.inactive, value: 0 },
                     ]}
-                    placeholder="Select status"
+                    placeholder={t.status}
                   />
                 </Form.Item>
 
-                <Form.Item name={"description"} label="Description">
-                  <Input.TextArea rows={4} placeholder="Enter product description" />
+                <Form.Item name={"description"} label={t.description}>
+                  <Input.TextArea rows={4} placeholder={t.enter_description} />
                 </Form.Item>
 
                 {/* REMOVED: Duplicate Quantity field that was here */}
 
-                <Form.Item name={"image_default"} label="Image">
+                <Form.Item name={"image_default"} label={t.image}>
                   <Upload
                     customRequest={(options) => options.onSuccess()}
                     maxCount={1}
@@ -494,7 +497,7 @@ function ProductPage() {
                     onPreview={handlePreview}
                     onChange={handleChangeImageDefault}
                   >
-                    <div>+Upload</div>
+                    <div>+{t.upload}</div>
                   </Upload>
                 </Form.Item>
               </div>
@@ -516,7 +519,7 @@ function ProductPage() {
           <div style={{ textAlign: "right", marginTop: 30, borderTop: `1px solid ${COLORS.softBorder}`, paddingTop: 20 }}>
             <Space size="middle">
               <Button size="large" onClick={onCloseModal} style={{ borderRadius: 10, padding: '0 25px' }}>
-                Cancel
+                {t.cancel}
               </Button>
               <Button
                 type="primary"
@@ -530,7 +533,7 @@ function ProductPage() {
                   height: 45
                 }}
               >
-                {form.getFieldValue("id") ? "Update Item" : "Save Item"}
+                {form.getFieldValue("id") ? t.update_item : t.save_item}
               </Button>
             </Space>
           </div>
@@ -555,7 +558,7 @@ function ProductPage() {
         columns={[
           {
             key: "image",
-            title: "IMAGE",
+            title: t.image.toUpperCase(),
             dataIndex: "image",
             width: 90,
             render: (value) => (
@@ -574,7 +577,7 @@ function ProductPage() {
                     src={Config.getFullImagePath(value)}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     preview={{
-                      mask: <div style={{ fontSize: 10 }}>VIEW</div>,
+                      mask: <div style={{ fontSize: 10 }}>{t.view.toUpperCase()}</div>,
                     }}
                   />
                 ) : (
@@ -585,7 +588,7 @@ function ProductPage() {
           },
           {
             key: "name",
-            title: "PRODUCT NAME",
+            title: t.product_name.toUpperCase(),
             dataIndex: "name",
             render: (val, item) => (
               <div style={{ fontWeight: 600, color: COLORS.textPrimary }}>
@@ -596,13 +599,13 @@ function ProductPage() {
           },
           {
             key: "category_name",
-            title: "CATEGORY",
+            title: t.category.toUpperCase(),
             dataIndex: "category_name",
             render: (val) => <Tag color="default" style={{ borderRadius: 6, padding: '2px 10px', fontWeight: 500 }}>{val}</Tag>
           },
           {
             key: "qty",
-            title: "STOCK",
+            title: t.stock.toUpperCase(),
             dataIndex: "qty",
             align: 'center',
             render: (qty) => (
@@ -617,38 +620,38 @@ function ProductPage() {
           },
           {
             key: "price",
-            title: "PRICE",
+            title: t.price.toUpperCase(),
             dataIndex: "price",
             align: 'right',
             render: (val) => <span style={{ fontWeight: 800, color: COLORS.darkGreen }}>${Number(val).toFixed(2)}</span>
           },
           {
             key: "discount",
-            title: "DISC",
+            title: t.discount.toUpperCase(),
             dataIndex: "discount",
             align: 'center',
             render: (val) => val > 0 ? <Tag color="volcano">-{val}%</Tag> : "-"
           },
           {
             key: "status",
-            title: "STATUS",
+            title: t.status.toUpperCase(),
             dataIndex: "status",
             render: (status) =>
               status == 1 ? (
-                <Tag color="success" style={{ borderRadius: 50, padding: '0 12px' }}>Active</Tag>
+                <Tag color="success" style={{ borderRadius: 50, padding: '0 12px' }}>{t.active}</Tag>
               ) : (
-                <Tag color="error" style={{ borderRadius: 50, padding: '0 12px' }}>Off</Tag>
+                <Tag color="error" style={{ borderRadius: 50, padding: '0 12px' }}>{t.off}</Tag>
               ),
           },
           {
             key: "Action",
-            title: "ACTION",
+            title: t.action.toUpperCase(),
             align: "center",
             width: 150,
             render: (item, data, index) => (
               <Space>
                 <Button
-                  title="Recipe"
+                  title={t.recipe}
                   type="text"
                   style={{ color: "#faad14", background: '#fffbe6', borderRadius: 10 }}
                   icon={<MdRestaurantMenu size={18} />}
@@ -672,7 +675,7 @@ function ProductPage() {
           },
           {
             key: "created_by",
-            title: "AUDIT",
+            title: t.audit.toUpperCase(),
             render: (text, record) => (
               <div style={{ fontSize: 11 }}>
                 <div style={{ fontWeight: 600 }}>{record.created_by_name}</div>

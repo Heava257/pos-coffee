@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Breadcrumb, Button, Dropdown, Input, Layout, Menu, Tag, theme, Drawer, Divider } from "antd";
+import { Breadcrumb, Button, Dropdown, Input, Layout, Menu, Tag, theme, Drawer, Divider, Space } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import "./MainLayout.css";
 import logo from "../../assets/coffee.png";
@@ -38,92 +38,91 @@ import {
 } from "@ant-design/icons";
 import { Config } from "../../util/config";
 import { FaHistory } from "react-icons/fa";
-import { Alert } from "antd";
+import { Alert, Select } from "antd";
 import dayjs from "dayjs";
+import { useLanguage, translations } from "../../store/language.store";
 const { Header, Content, Footer, Sider } = Layout;
 
-const items_menu = [
+// Menu keys used for mapping translations
+const MENU_STRUCTURE = [
   {
     key: "dashboard",
-    label: "Dashboard",
+    labelKey: "dashboard",
     icon: <PieChartOutlined />,
   },
   {
-    key: "my-plan",
-    label: "My Subscription",
-    icon: <CreditCardOutlined />,
-    style: { background: '#f0f7f2', margin: '4px 8px', borderRadius: '8px', color: '#1e4a2d', fontWeight: 'bold' }
-  },
-  {
-    key: "inventory",
-    label: "Inventory / 📦 Logistics",
-    icon: <ShoppingCartOutlined />,
-    children: [
-      { key: "purchase", label: "Purchases", icon: <ShoppingCartOutlined /> },
-      { key: "supplier", label: "Suppliers", icon: <TeamOutlined /> },
-      { key: "raw_material", label: "Inventory Stock", icon: <FileProtectOutlined /> },
-      { key: "stock", label: "Stock Logs & Adjust", icon: <FileProtectOutlined /> },
-    ]
-  },
-  {
     key: "invoices",
-    label: "POS / Sales",
+    labelKey: "invoices",
     icon: <MdRestaurantMenu />,
   },
   {
+    key: "order",
+    labelKey: "order",
+    icon: <FaHistory />,
+  },
+
+  {
+    key: "inventory",
+    labelKey: "inventory",
+    icon: <ShoppingCartOutlined />,
+    children: [
+      { key: "purchase", labelKey: "purchase", icon: <ShoppingCartOutlined /> },
+      { key: "supplier", labelKey: "supplier", icon: <TeamOutlined /> },
+      { key: "raw_material", labelKey: "raw_material", icon: <FileProtectOutlined /> },
+      { key: "stock", labelKey: "stock", icon: <FileProtectOutlined /> },
+    ]
+  },
+
+  {
     key: "shop_managment",
-    label: "My Branches",
+    labelKey: "shop_managment",
     icon: <FaShop />,
   },
   {
     key: "table",
-    label: "Tables & QR Setup",
+    labelKey: "table",
     icon: <DesktopOutlined />,
   },
   {
     key: "product",
-    label: "Products",
+    labelKey: "product",
     icon: <ShopOutlined />,
   },
   {
     key: "category",
-    label: "Categories",
+    labelKey: "category",
     icon: <SolutionOutlined />,
   },
-  {
-    key: "order",
-    label: "Order History",
-    icon: <FaHistory />,
-  },
+
   {
     key: "staff",
-    label: "Staff & Roles",
+    labelKey: "staff_roles",
     icon: <UsergroupAddOutlined />,
     children: [
-      { key: "user", label: "Users / Staff", icon: <UserOutlined /> },
-      { key: "role", label: "Roles", icon: <SafetyCertificateOutlined /> },
-      { key: "permission", label: "Role Permissions", icon: <UnlockOutlined /> },
-      { key: "plans", label: "Subscription Plans", icon: <CreditCardOutlined /> },
+      { key: "user", labelKey: "user", icon: <UserOutlined /> },
+      { key: "role", labelKey: "roles", icon: <SafetyCertificateOutlined /> },
+      { key: "permission", labelKey: "permission", icon: <UnlockOutlined /> },
+      { key: "plans", labelKey: "plans", icon: <CreditCardOutlined /> },
     ],
   },
   {
     key: "reports",
-    label: "Reports & Insights",
+    labelKey: "reports",
     icon: <FileOutlined />,
     children: [
-      { key: "report_Sale_Summary", label: "Sales Report", icon: <PieChartOutlined /> },
-      { key: "expense", label: "Expenses", icon: <DollarOutlined /> },
-      { key: "Top_Sale", label: "Best Sellers", icon: <TrophyOutlined /> },
+      { key: "report_Sale_Summary", labelKey: "sales_report", icon: <PieChartOutlined /> },
+      { key: "expense", labelKey: "expenses", icon: <DollarOutlined /> },
+      { key: "Top_Sale", labelKey: "best_sellers", icon: <TrophyOutlined /> },
     ],
   },
   {
     key: "settings",
-    label: "Settings",
+    labelKey: "settings",
     icon: <SettingOutlined />,
   },
   {
     key: "business",
-    label: "Business Ecosystem",
+    labelKey: "business",
     icon: <GlobalOutlined />,
     style: { background: '#fff9ef', margin: '4px 8px', borderRadius: '8px', color: '#c0a060', fontWeight: 'bold' }
   },
@@ -131,6 +130,8 @@ const items_menu = [
 
 
 const MainLayout = () => {
+  const { lang, setLang } = useLanguage();
+  const t = translations[lang];
   const [permision, setPermision] = useState([]);
   const [subAlert, setSubAlert] = useState(null);
   const { setConfig } = configStore();
@@ -219,11 +220,20 @@ const MainLayout = () => {
       return null;
     };
 
+    const items_menu = MENU_STRUCTURE.map(item => ({
+      ...item,
+      label: t[item.labelKey],
+      children: item.children ? item.children.map(child => ({
+        ...child,
+        label: t[child.labelKey]
+      })) : undefined
+    }));
+
     const parentKey = findParentKey(items_menu, currentPath);
     if (parentKey) {
       setOpenKeys([parentKey]);
     }
-  }, [location.pathname]);
+  }, [location.pathname, lang]);
 
   const checkISnotPermissionViewPage = () => {
     // Guard: if no permissions loaded yet, don't redirect
@@ -258,6 +268,15 @@ const MainLayout = () => {
   // Reactive menu filtering
   const items = React.useMemo(() => {
     if (!permision || !Array.isArray(permision)) return [];
+
+    const items_menu = MENU_STRUCTURE.map(item => ({
+      ...item,
+      label: t[item.labelKey],
+      children: item.children ? item.children.map(child => ({
+        ...child,
+        label: t[child.labelKey]
+      })) : undefined
+    }));
 
     return items_menu.map(item => {
       const newItem = { ...item };
@@ -307,7 +326,7 @@ const MainLayout = () => {
 
       return null;
     }).filter(Boolean);
-  }, [permision, profile]);
+  }, [permision, profile, lang]);
 
   const getMenuByUser = () => {
     // This function is now redundant due to useMemo
@@ -353,7 +372,7 @@ const MainLayout = () => {
   const itemsDropdown = [
     {
       key: "profile",
-      label: "My Profile / ព័ត៌មានផ្ទាល់ខ្លួន",
+      label: `${t.profile} / ${translations.kh.profile}`,
       icon: <UserOutlined />,
     },
     {
@@ -362,7 +381,7 @@ const MainLayout = () => {
     {
       key: "logout",
       danger: true,
-      label: "Logout / ចាកចេញ",
+      label: `${t.logout} / ${translations.kh.logout}`,
       icon: <LockOutlined />,
     },
   ];
@@ -536,6 +555,29 @@ const MainLayout = () => {
               </>
             )}
 
+            {/* Upgrade Button */}
+            {!isMobile && profile?.business_id !== 1 && (
+              <Button
+                type="primary"
+                icon={<CreditCardOutlined />}
+                onClick={() => navigate('/my-plan')}
+                style={{
+                  background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+                  border: 'none',
+                  borderRadius: '20px',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 10px rgba(253, 160, 133, 0.4)',
+                  color: '#fff',
+                  marginRight: 8,
+                  textTransform: 'uppercase',
+                  fontSize: 12,
+                  letterSpacing: 0.5
+                }}
+              >
+                Upgrade to Pro
+              </Button>
+            )}
+
             {/* User info - hide text on mobile */}
             {!isMobile && (
               <div style={{ textAlign: "right", marginRight: "12px" }}>
@@ -550,6 +592,22 @@ const MainLayout = () => {
                 </div>
               </div>
             )}
+
+            {/* Premium Custom Language Switcher */}
+            <div
+              className="lang-switcher-container"
+              onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
+            >
+              <div className={`lang-toggle-handle ${lang}`}>
+                <span className="lang-flag-emoji">
+                  {lang === 'en' ? '🇺🇸' : '🇰🇭'}
+                </span>
+              </div>
+              <div className="lang-labels">
+                <span className={`lang-label ${lang === 'en' ? 'active' : ''}`}>EN</span>
+                <span className={`lang-label ${lang === 'kh' ? 'active' : ''}`}>KH</span>
+              </div>
+            </div>
 
             <Dropdown
               menu={{

@@ -28,7 +28,11 @@ const getBase64 = (file) =>
         reader.onerror = (error) => reject(error);
     });
 
+import { useLanguage, translations } from "../../store/language.store";
+
 function RawMaterialPage() {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [form] = Form.useForm();
     const [state, setState] = useState({
         list: [],
@@ -84,7 +88,6 @@ function RawMaterialPage() {
         params.append("status", items.status);
         params.append("id", form.getFieldValue("id"));
 
-        // Handle Image
         if (items.image_default) {
             if (items.image_default.file.status === "removed") {
                 params.append("image_remove", "1");
@@ -107,7 +110,7 @@ function RawMaterialPage() {
             onCloseModal();
             getList();
         } else {
-            message.error(res.message || "Something went wrong");
+            message.error(res.message || t.something_went_wrong);
         }
     };
 
@@ -154,8 +157,8 @@ function RawMaterialPage() {
 
     const onClickDelete = (item) => {
         Modal.confirm({
-            title: "Remove Data",
-            content: "Are you sure you want to remove this raw material?",
+            title: t.delete + " " + t.raw_material,
+            content: t.confirm_remove_raw_material,
             onOk: async () => {
                 const res = await request("raw_material", "delete", { id: item.id });
                 if (res && !res.error) {
@@ -169,13 +172,13 @@ function RawMaterialPage() {
     const columns = [
         {
             key: "no",
-            title: "No",
+            title: t.no,
             width: 60,
             render: (value, data, index) => index + 1,
         },
         {
             key: "image",
-            title: "Item",
+            title: t.product,
             width: 80,
             render: (record) => (
                 <div style={{ width: 45, height: 45, borderRadius: "8px", overflow: "hidden", border: "1px solid #f0f0f0" }}>
@@ -186,44 +189,45 @@ function RawMaterialPage() {
                             preview={true}
                         />
                     ) : (
-                        <div style={{ width: "100%", height: "100%", background: "#f9f9f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#ccc" }}>No Img</div>
+                        <div style={{ width: "100%", height: "100%", background: "#f9f9f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#ccc" }}>{t.no_image}</div>
                     )}
                 </div>
             ),
         },
         {
             key: "name",
-            title: "Name / Code",
+            title: t.name + " / " + t.code,
             render: (record) => (
                 <div>
                     <div style={{ fontWeight: 600, color: "#333" }}>{record.name}</div>
-                    <div style={{ fontSize: 11, color: "#999" }}>CODE: {record.code || 'N/A'}</div>
+                    <div style={{ fontSize: 11, color: "#999" }}>{t.code}: {record.code || 'N/A'}</div>
                 </div>
             )
         },
         {
             key: "unit",
-            title: "Unit",
+            title: t.unit,
             dataIndex: "unit",
             width: 80,
             render: (unit) => <Tag>{unit}</Tag>
         },
         {
             key: "qty",
-            title: "Stock Status",
+            title: t.stock_status,
             width: 250,
             render: (record) => {
                 const isLow = Number(record.qty) <= Number(record.min_stock);
                 const isOut = Number(record.qty) <= 0;
                 let color = "#2ecc71"; // Green
-                if (isLow) color = "#f1c40f"; // Yellow
-                if (isOut) color = "#e74c3c"; // Red
+                let statusText = t.in_stock;
+                if (isLow) { color = "#f1c40f"; statusText = t.low_stock; }
+                if (isOut) { color = "#e74c3c"; statusText = t.out_of_stock; }
 
                 return (
                     <div style={{ width: "100%" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
                             <span style={{ fontWeight: 600, color }}>
-                                {isOut ? "OUT OF STOCK" : isLow ? "LOW STOCK" : "IN STOCK"}
+                                {statusText}
                             </span>
                             <span style={{ fontWeight: 600 }}>{record.qty} {record.unit}</span>
                         </div>
@@ -241,26 +245,26 @@ function RawMaterialPage() {
         },
         {
             key: "price",
-            title: "Last Cost",
+            title: t.last_cost,
             dataIndex: "price",
             align: 'right',
             render: (val) => <b style={{ color: "#333" }}>${Number(val).toFixed(2)}</b>
         },
         {
             key: "status",
-            title: "Status",
+            title: t.status,
             dataIndex: "status",
             width: 100,
             render: (status) =>
                 status == 1 ? (
-                    <BadgeStatus color="#52c41a" text="Active" />
+                    <BadgeStatus color="#52c41a" text={t.active} />
                 ) : (
-                    <BadgeStatus color="#ff4d4f" text="Disabled" />
+                    <BadgeStatus color="#ff4d4f" text={t.inactive} />
                 ),
         },
         {
             key: "Action",
-            title: "Action",
+            title: t.action,
             width: 100,
             align: "center",
             render: (item, data) => (
@@ -282,7 +286,6 @@ function RawMaterialPage() {
         },
     ];
 
-    // Helper component for clean status
     const BadgeStatus = ({ color, text }) => (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
@@ -294,22 +297,22 @@ function RawMaterialPage() {
         <MainPage loading={state.loading}>
             <div className="pageHeader">
                 <Space>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>Raw Materials</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{t.raw_material_list}</div>
                     <Input.Search
                         onChange={(event) =>
                             setFilter((p) => ({ ...p, txt_search: event.target.value }))
                         }
                         onSearch={onFilter}
                         allowClear
-                        placeholder="Search by name or code"
+                        placeholder={t.search}
                     />
                     <Select
                         allowClear
                         style={{ width: 130 }}
-                        placeholder="Status"
+                        placeholder={t.status}
                         options={[
-                            { label: "Active", value: 1 },
-                            { label: "Inactive", value: 0 },
+                            { label: t.active, value: 1 },
+                            { label: t.inactive, value: 0 },
                         ]}
                         onChange={(val) => {
                             setFilter((pre) => ({ ...pre, status: val }));
@@ -318,7 +321,7 @@ function RawMaterialPage() {
                     />
                 </Space>
                 <Button type="primary" onClick={onBtnNew} icon={<MdAdd />}>
-                    New Material
+                    {t.add_new_material}
                 </Button>
             </div>
 
@@ -331,7 +334,7 @@ function RawMaterialPage() {
 
             <Modal
                 open={state.visibleModal}
-                title={form.getFieldValue("id") ? "Edit Raw Material" : "New Raw Material"}
+                title={<b>{form.getFieldValue("id") ? t.edit_material : t.add_new_material}</b>}
                 footer={null}
                 onCancel={onCloseModal}
                 width={700}
@@ -341,23 +344,23 @@ function RawMaterialPage() {
                         <Col span={12}>
                             <Form.Item
                                 name="name"
-                                label="Material Name"
-                                rules={[{ required: true, message: "Please enter name" }]}
+                                label={t.material_name}
+                                rules={[{ required: true, message: t.material_name + " is required" }]}
                             >
                                 <Input placeholder="e.g. Coffee Beans" />
                             </Form.Item>
 
-                            <Form.Item name="code" label="Code / SKU">
+                            <Form.Item name="code" label={t.code}>
                                 <Input placeholder="e.g. RM-001" />
                             </Form.Item>
 
                             <Form.Item
                                 name="unit"
-                                label="Unit of Measure"
-                                rules={[{ required: true, message: "Please enter unit" }]}
+                                label={t.unit}
+                                rules={[{ required: true, message: t.unit + " is required" }]}
                             >
                                 <Select
-                                    placeholder="Select or type unit"
+                                    placeholder={t.unit}
                                     options={[
                                         { label: "Gram (g)", value: "g" },
                                         { label: "Kilogram (kg)", value: "kg" },
@@ -370,30 +373,30 @@ function RawMaterialPage() {
                                 />
                             </Form.Item>
 
-                            <Form.Item name="status" label="Status" initialValue={1}>
+                            <Form.Item name="status" label={t.status} initialValue={1}>
                                 <Select
                                     options={[
-                                        { label: "Active", value: 1 },
-                                        { label: "Inactive", value: 0 },
+                                        { label: t.active, value: 1 },
+                                        { label: t.inactive, value: 0 },
                                     ]}
                                 />
                             </Form.Item>
                         </Col>
 
                         <Col span={12}>
-                            <Form.Item name="price" label="Cost Price (per unit)" initialValue={0}>
+                            <Form.Item name="price" label={t.last_cost} initialValue={0}>
                                 <InputNumber style={{ width: "100%" }} min={0} step={0.01} addonBefore="$" />
                             </Form.Item>
 
-                            <Form.Item name="qty" label="Initial Stock" initialValue={0}>
+                            <Form.Item name="qty" label={t.initial_stock} initialValue={0}>
                                 <InputNumber style={{ width: "100%" }} min={0} />
                             </Form.Item>
 
-                            <Form.Item name="min_stock" label="Min Stock Alert" initialValue={10}>
+                            <Form.Item name="min_stock" label={t.min_stock_alert} initialValue={10}>
                                 <InputNumber style={{ width: "100%" }} min={0} />
                             </Form.Item>
 
-                            <Form.Item name="image_default" label="Image">
+                            <Form.Item name="image_default" label={t.image}>
                                 <Upload
                                     customRequest={(options) => options.onSuccess()}
                                     maxCount={1}
@@ -403,7 +406,7 @@ function RawMaterialPage() {
                                     onChange={handleChangeImageDefault}
                                     onRemove={() => setImageDefault([])}
                                 >
-                                    {imageDefault.length >= 1 ? null : <div>+ Upload</div>}
+                                    {imageDefault.length >= 1 ? null : <div>+ {t.upload}</div>}
                                 </Upload>
                             </Form.Item>
                         </Col>
@@ -411,9 +414,9 @@ function RawMaterialPage() {
 
                     <div style={{ textAlign: "right", marginTop: 20 }}>
                         <Space>
-                            <Button onClick={onCloseModal}>Cancel</Button>
+                            <Button onClick={onCloseModal}>{t.cancel}</Button>
                             <Button type="primary" htmlType="submit">
-                                {form.getFieldValue("id") ? "Update" : "Save"}
+                                {form.getFieldValue("id") ? t.edit : t.save}
                             </Button>
                         </Space>
                     </div>

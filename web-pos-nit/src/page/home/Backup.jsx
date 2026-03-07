@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { request } from "../../util/helper";
 import { Button, Card, Row, Col, Statistic, Divider, Select, DatePicker, Empty, Spin, Typography, Space, Badge } from "antd";
-import { 
-  DownloadOutlined, 
-  PrinterOutlined, 
-  BarChartOutlined, 
-  LineChartOutlined, 
-  PieChartOutlined, 
-  UserOutlined, 
+import {
+  DownloadOutlined,
+  PrinterOutlined,
+  BarChartOutlined,
+  LineChartOutlined,
+  PieChartOutlined,
+  UserOutlined,
   DollarOutlined,
   ShoppingCartOutlined,
   CreditCardOutlined,
@@ -16,19 +16,19 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined
 } from "@ant-design/icons";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  CartesianGrid, 
-  PieChart, 
-  Pie, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  PieChart,
+  Pie,
   Cell,
   Area,
   AreaChart
@@ -98,7 +98,7 @@ function HomePage() {
   const getList = async () => {
     setIsLoading(true);
     try {
-      let apiUrl = 'dashbaord';
+      let apiUrl = 'dashboard';
       if (dateRange && dateRange[0] && dateRange[1]) {
         const [fromDate, toDate] = dateRange;
         apiUrl += `?from_date=${fromDate.format('YYYY-MM-DD')}&to_date=${toDate.format('YYYY-MM-DD')}`;
@@ -121,25 +121,25 @@ function HomePage() {
   };
 
   const getCardIcon = (index) => {
-  const icons = [
-    <UserOutlined />,
-    <ShoppingCartOutlined />,
-    <CreditCardOutlined />,
-    <DollarOutlined />
-  ];
-  return icons[index % icons.length] || <BarChartOutlined />;
-};
+    const icons = [
+      <UserOutlined />,
+      <ShoppingCartOutlined />,
+      <CreditCardOutlined />,
+      <DollarOutlined />
+    ];
+    return icons[index % icons.length] || <BarChartOutlined />;
+  };
 
-const handlePrint = () => {
-  const printContent = document.getElementById("dashboard-content");
-  if (!printContent) return;
+  const handlePrint = () => {
+    const printContent = document.getElementById("dashboard-content");
+    if (!printContent) return;
 
-  const originalContents = document.body.innerHTML;
-  document.body.innerHTML = printContent.innerHTML;
-  window.print();
-  document.body.innerHTML = originalContents;
-  window.location.reload();
-};
+    const originalContents = document.body.innerHTML;
+    document.body.innerHTML = printContent.innerHTML;
+    window.print();
+    document.body.innerHTML = originalContents;
+    window.location.reload();
+  };
 
   const fetchTopSales = async () => {
     try {
@@ -161,21 +161,21 @@ const handlePrint = () => {
       console.error("Top sales fetch error:", error);
     }
   };
-const handleDownloadPDF = () => {
-  const input = document.getElementById("dashboard-content");
-  if (!input) return;
+  const handleDownloadPDF = () => {
+    const input = document.getElementById("dashboard-content");
+    if (!input) return;
 
-  html2canvas(input, { scale: 2 }).then((canvas) => {
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("landscape", "mm", "a4");
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+    html2canvas(input, { scale: 2 }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("landscape", "mm", "a4");
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save("dashboard.pdf");
-  });
-};
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save("dashboard.pdf");
+    });
+  };
   const handleDateRangeChange = (dates) => setDateRange(dates);
   const handleSearch = () => fetchAllData();
 
@@ -202,7 +202,7 @@ const handleDownloadPDF = () => {
   };
 
   return (
-    <div style={{ 
+    <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
       padding: '20px'
@@ -218,8 +218,8 @@ const handleDownloadPDF = () => {
       }}>
         <Row align="middle" justify="space-between">
           <Col>
-            <Title level={1} style={{ 
-              color: 'white', 
+            <Title level={1} style={{
+              color: 'white',
               margin: 0,
               fontFamily: "'Khmer OS', 'Khmer OS System', 'Khmer OS Battambang', sans-serif",
               fontSize: '2.5rem',
@@ -227,8 +227,8 @@ const handleDownloadPDF = () => {
             }}>
               ផ្ទាំងគ្រប់គ្រងអាជីវកម្ម
             </Title>
-            <Text style={{ 
-              color: 'rgba(255,255,255,0.9)', 
+            <Text style={{
+              color: 'rgba(255,255,255,0.9)',
               fontSize: '1.1rem',
               fontFamily: "'Khmer OS', 'Khmer OS System', 'Khmer OS Battambang', sans-serif"
             }}>
@@ -242,7 +242,7 @@ const handleDownloadPDF = () => {
                 icon={<DownloadOutlined />}
                 onClick={handleDownloadPDF}
                 size="large"
-                style={{ 
+                style={{
                   background: 'rgba(255,255,255,0.2)',
                   border: '1px solid rgba(255,255,255,0.3)',
                   backdropFilter: 'blur(10px)',
@@ -259,7 +259,7 @@ const handleDownloadPDF = () => {
                 icon={<PrinterOutlined />}
                 onClick={handlePrint}
                 size="large"
-                style={{ 
+                style={{
                   background: 'rgba(255,255,255,0.2)',
                   border: '1px solid rgba(255,255,255,0.3)',
                   backdropFilter: 'blur(10px)',
@@ -278,8 +278,8 @@ const handleDownloadPDF = () => {
       </div>
 
       {/* Enhanced Filters */}
-      <Card style={{ 
-        marginBottom: '24px', 
+      <Card style={{
+        marginBottom: '24px',
         borderRadius: '16px',
         border: 'none',
         boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
@@ -293,7 +293,7 @@ const handleDownloadPDF = () => {
             <RangePicker
               value={dateRange}
               onChange={handleDateRangeChange}
-              style={{ 
+              style={{
                 width: "300px",
                 borderRadius: '8px',
                 border: '2px solid #f0f0f0'
@@ -304,9 +304,9 @@ const handleDownloadPDF = () => {
             />
           </Col>
           <Col>
-            <Button 
-              type="primary" 
-              onClick={handleSearch} 
+            <Button
+              type="primary"
+              onClick={handleSearch}
               icon={<FilterOutlined />}
               loading={isLoading}
               size="large"
@@ -331,8 +331,8 @@ const handleDownloadPDF = () => {
         <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
           {dashboard.map((item, index) => (
             <Col xs={24} sm={12} lg={6} key={index}>
-              <Card 
-                style={{ 
+              <Card
+                style={{
                   borderRadius: '20px',
                   border: 'none',
                   background: `linear-gradient(135deg, ${COLORS[index]}22, ${COLORS[index]}11)`,
@@ -364,7 +364,7 @@ const handleDownloadPDF = () => {
                   borderRadius: '50%',
                   zIndex: 0
                 }} />
-                
+
                 <div style={{ position: 'relative', zIndex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", marginBottom: '16px' }}>
                     <div style={{
@@ -377,8 +377,8 @@ const handleDownloadPDF = () => {
                     }}>
                       {getCardIcon(index)}
                     </div>
-                    <Text style={{ 
-                      color: "#1a3353", 
+                    <Text style={{
+                      color: "#1a3353",
                       fontFamily: "'Khmer OS', sans-serif",
                       fontWeight: "600",
                       fontSize: '16px'
@@ -386,11 +386,11 @@ const handleDownloadPDF = () => {
                       {item.title}
                     </Text>
                   </div>
-                  
+
                   <div style={{ display: "flex", flexDirection: "column", gap: '12px' }}>
                     {Object.entries(item.Summary).map(([key, value], idx) => (
                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ 
+                        <Text style={{
                           color: "#666",
                           fontFamily: "'Khmer OS', sans-serif",
                           fontSize: '14px'
@@ -398,8 +398,8 @@ const handleDownloadPDF = () => {
                           {key}:
                         </Text>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <Text style={{ 
-                            fontSize: idx === 0 ? '20px' : '16px', 
+                          <Text style={{
+                            fontSize: idx === 0 ? '20px' : '16px',
                             fontWeight: idx === 0 ? "bold" : "600",
                             color: idx === 0 ? COLORS[index] : "#1a3353"
                           }}>
@@ -420,7 +420,7 @@ const handleDownloadPDF = () => {
         <Row gutter={[24, 24]}>
           {/* Combined Chart */}
           <Col span={24}>
-            <Card 
+            <Card
               title={
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <div style={{
@@ -432,7 +432,7 @@ const handleDownloadPDF = () => {
                   }}>
                     <BarChartOutlined style={{ fontSize: '16px' }} />
                   </div>
-                  <span style={{ 
+                  <span style={{
                     fontFamily: "'Khmer OS', sans-serif",
                     fontWeight: "600",
                     fontSize: '18px'
@@ -441,7 +441,7 @@ const handleDownloadPDF = () => {
                   </span>
                 </div>
               }
-              style={{ 
+              style={{
                 borderRadius: '16px',
                 border: 'none',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
@@ -453,22 +453,22 @@ const handleDownloadPDF = () => {
                   <AreaChart data={combinedChartData}>
                     <defs>
                       <linearGradient id="colorSale" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#667eea" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#667eea" stopOpacity={0.1}/>
+                        <stop offset="5%" stopColor="#667eea" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#667eea" stopOpacity={0.1} />
                       </linearGradient>
                       <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f5576c" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#f5576c" stopOpacity={0.1}/>
+                        <stop offset="5%" stopColor="#f5576c" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#f5576c" stopOpacity={0.1} />
                       </linearGradient>
                       <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#43e97b" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#43e97b" stopOpacity={0.1}/>
+                        <stop offset="5%" stopColor="#43e97b" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#43e97b" stopOpacity={0.1} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                     <YAxis tickFormatter={(value) => `$${value.toLocaleString()}`} tick={{ fontSize: 12 }} />
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{
                         background: 'rgba(255,255,255,0.95)',
                         border: 'none',
@@ -507,14 +507,14 @@ const handleDownloadPDF = () => {
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <Empty 
+                <Empty
                   description={
-                    <span style={{ 
+                    <span style={{
                       fontFamily: "'Khmer OS', sans-serif"
                     }}>
                       មិនមានទិន្នន័យ
                     </span>
-                  } 
+                  }
                 />
               )}
             </Card>
@@ -524,7 +524,7 @@ const handleDownloadPDF = () => {
         <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
           {/* Sales Trend */}
           <Col xs={24} lg={12}>
-            <Card 
+            <Card
               title={
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <div style={{
@@ -536,7 +536,7 @@ const handleDownloadPDF = () => {
                   }}>
                     <LineChartOutlined style={{ fontSize: '16px' }} />
                   </div>
-                  <span style={{ 
+                  <span style={{
                     fontFamily: "'Khmer OS', sans-serif",
                     fontWeight: "600",
                     fontSize: '18px'
@@ -545,7 +545,7 @@ const handleDownloadPDF = () => {
                   </span>
                 </div>
               }
-              style={{ 
+              style={{
                 borderRadius: '16px',
                 border: 'none',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
@@ -557,7 +557,7 @@ const handleDownloadPDF = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                     <YAxis tickFormatter={(value) => `$${value.toLocaleString()}`} tick={{ fontSize: 12 }} />
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{
                         background: 'rgba(255,255,255,0.95)',
                         border: 'none',
@@ -565,14 +565,14 @@ const handleDownloadPDF = () => {
                         boxShadow: '0 8px 30px rgba(0,0,0,0.12)'
                       }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="sale" 
-                      name="ការលក់" 
-                      stroke="#4facfe" 
+                    <Line
+                      type="monotone"
+                      dataKey="sale"
+                      name="ការលក់"
+                      stroke="#4facfe"
                       strokeWidth={4}
                       dot={{ fill: '#4facfe', strokeWidth: 2, r: 6 }}
-                      activeDot={{ r: 8, stroke: '#4facfe', strokeWidth: 2 }} 
+                      activeDot={{ r: 8, stroke: '#4facfe', strokeWidth: 2 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -584,7 +584,7 @@ const handleDownloadPDF = () => {
 
           {/* Top Products Pie Chart */}
           <Col xs={24} lg={12}>
-            <Card 
+            <Card
               title={
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <div style={{
@@ -596,7 +596,7 @@ const handleDownloadPDF = () => {
                   }}>
                     <PieChartOutlined style={{ fontSize: '16px' }} />
                   </div>
-                  <span style={{ 
+                  <span style={{
                     fontFamily: "'Khmer OS', sans-serif",
                     fontWeight: "600",
                     fontSize: '18px'
@@ -605,7 +605,7 @@ const handleDownloadPDF = () => {
                   </span>
                 </div>
               }
-              style={{ 
+              style={{
                 borderRadius: '16px',
                 border: 'none',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
@@ -666,7 +666,7 @@ const handleDownloadPDF = () => {
   );
 }
 
-export default HomePage  ;
+export default HomePage;
 
 
 
@@ -727,12 +727,12 @@ function HomePage() {
   // Format numbers with commas for thousands separator
   const formatNumber = (value) => {
     if (value === null || value === undefined) return '';
-    
+
     // If the value already contains a currency symbol or is formatted
     if (typeof value === 'string') {
       // Check if it's already formatted properly
       if (value.includes(',')) return value;
-      
+
       // Extract number from string that might contain "$" or other characters
       const numericValue = value.replace(/[^\d.-]/g, '');
       if (!isNaN(numericValue) && numericValue !== '') {
@@ -745,29 +745,29 @@ function HomePage() {
       }
       return value;
     }
-    
+
     // For numeric values
     if (typeof value === 'number') {
       return value.toLocaleString();
     }
-    
+
     return value;
   };
 
   // Process dashboard data to ensure all numeric values are properly formatted
   const processDashboardData = (data) => {
     if (!data || !Array.isArray(data)) return [];
-    
+
     return data.map(item => {
       const processedSummary = {};
-      
+
       if (item.Summary) {
         Object.entries(item.Summary).forEach(([key, value]) => {
           // Format only if it's a number or contains a number
           processedSummary[key] = formatNumber(value);
         });
       }
-      
+
       return {
         ...item,
         Summary: processedSummary
@@ -786,7 +786,7 @@ function HomePage() {
     setIsLoading(true);
     try {
       let apiUrl = 'dashbaord';
-      
+
       // Only add date parameters if dateRange is not null
       if (dateRange && dateRange[0] && dateRange[1]) {
         const [fromDate, toDate] = dateRange;
@@ -794,13 +794,13 @@ function HomePage() {
         const formattedToDate = toDate.format('YYYY-MM-DD');
         apiUrl += `?from_date=${formattedFromDate}&to_date=${formattedToDate}`;
       }
-      
+
       // Update API call with or without date parameters
       const res = await request(apiUrl, "get");
       if (res && !res.error) {
         // Process dashboard data to ensure proper formatting
         setDashboard(processDashboardData(res.dashboard));
-        
+
         if (res.Sale_Summary_By_Month) {
           const saleData = res.Sale_Summary_By_Month.map(item => ({
             month: item.title,
@@ -808,7 +808,7 @@ function HomePage() {
           }));
           setSaleByMonth(saleData);
         }
-        
+
         if (res.Expense_Summary_By_Month) {
           const expenseData = res.Expense_Summary_By_Month.map(item => ({
             month: item.title,
@@ -827,7 +827,7 @@ function HomePage() {
   const fetchTopSales = async () => {
     try {
       let apiUrl = 'report/top_sale';
-      
+
       // Only add date parameters if dateRange is not null
       if (dateRange && dateRange[0] && dateRange[1]) {
         const [fromDate, toDate] = dateRange;
@@ -835,7 +835,7 @@ function HomePage() {
         const formattedToDate = toDate.format('YYYY-MM-DD');
         apiUrl += `?from_date=${formattedFromDate}&to_date=${formattedToDate}`;
       }
-      
+
       // Update API call with or without date parameters
       const res = await request(apiUrl, "get");
       if (res && res.list) {
@@ -855,7 +855,7 @@ function HomePage() {
   const fetchReports = async () => {
     try {
       let apiUrl = 'report/customer';
-      
+
       // Only add date parameters if dateRange is not null
       if (dateRange && dateRange[0] && dateRange[1]) {
         const [fromDate, toDate] = dateRange;
@@ -863,7 +863,7 @@ function HomePage() {
         const formattedToDate = toDate.format('YYYY-MM-DD');
         apiUrl += `?from_date=${formattedFromDate}&to_date=${formattedToDate}`;
       }
-      
+
       // Fetch customer data with or without date filters
       const customerRes = await request(apiUrl, "get");
       if (customerRes && customerRes.list) {

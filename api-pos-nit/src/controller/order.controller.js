@@ -49,51 +49,25 @@ exports.create = async (req, res) => {
 
             // 2. Fetch Recipe if exists
             const [recipe] = await conn.query(
-                "SELECT raw_material_id, qty FROM recipe_detail WHERE product_id = ?",
+                "SELECT raw_material_id, quantity FROM recipes WHERE product_id = ?",
                 [item.product_id]
             );
 
-            if (recipe && recipe.length > 0) {
-                // CASE A: Deduced via Ingredients
-                for (const ing of recipe) {
-                    const totalDeduct = ing.qty * item.qty;
-
-                    // Fetch current RM stock for logging
-                    const [rmData] = await conn.query("SELECT qty FROM raw_material WHERE id = ?", [ing.raw_material_id]);
-                    const old_qty = rmData[0]?.qty || 0;
-                    const new_qty = old_qty - totalDeduct;
-
-                    // Update RM stock
+            if (recipe.length > 0) {
+                // Deduct materials
+                for (const ingredient of recipe) {
                     await conn.query(
-                        "UPDATE raw_material SET qty = qty - ? WHERE id = ?",
-                        [totalDeduct, ing.raw_material_id]
+                        "UPDATE raw_materials SET quantity = quantity - ? WHERE id = ?",
+                        [ingredient.quantity * item.qty, ingredient.raw_material_id]
                     );
-
-                    // LOG RM Movement
-                    await conn.query(`
-                        INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
-                        VALUES (?, ?, 'raw_material', ?, ?, ?, ?, 'sale', ?, 'POS Sale (Recipe)', ?)
-                    `, [business_id, branch_id, ing.raw_material_id, old_qty, new_qty, -totalDeduct, `INV-${order_id}`, user_id]);
                 }
             } else {
-                // CASE B: Direct Product Stock (e.g. bottled drinks)
-                const [bpData] = await conn.query(
-                    "SELECT stock_qty FROM branch_products WHERE product_id = ? AND branch_id = ?",
-                    [item.product_id, branch_id]
-                );
-                const old_qty = bpData[0]?.stock_qty || 0;
-                const new_qty = old_qty - item.qty;
-
-                await conn.query(
-                    "UPDATE branch_products SET stock_qty = stock_qty - ? WHERE product_id = ? AND branch_id = ?",
-                    [item.qty, item.product_id, branch_id]
-                );
-
-                // LOG Product Movement
-                await conn.query(`
-                    INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
-                    VALUES (?, ?, 'product', ?, ?, ?, ?, 'sale', ?, 'POS Sale', ?)
-                `, [business_id, branch_id, item.product_id, old_qty, new_qty, -item.qty, `INV-${order_id}`, user_id]);
+                // If no recipe, assume product itself is tracked as stock item (simple inventory)
+                // Check if product is set to track stock
+                const [product] = await conn.query("SELECT is_track_stock FROM products WHERE id = ?", [item.product_id]);
+                if (product.length > 0 && product[0].is_track_stock) {
+                    // Logic for simple stock deduction could be here
+                }
             }
         }
 
@@ -108,30 +82,66 @@ exports.create = async (req, res) => {
     }
 };
 
-// 2. Get Order History (Branch Specific)
+// 2. Get Order History (SaaS Scope)
 exports.getList = async (req, res) => {
     try {
-        const { business_id, branch_id } = req;
-        const { from_date, to_date } = req.query;
+        const { business_id, branch_id, user_id: session_user_id } = req;
+        let { from_date, to_date, user_id, txtSearch } = req.query;
 
-        let params = [business_id, branch_id];
+        // Scoping: 
+        // 1. Admin/Owner can see all orders in business or filter by branch
+        // 2. Regular staff can only see their branch orders
+        let params = [business_id];
         let sql = `
-            SELECT o.*, u.name as staff_name
+            SELECT 
+                o.*, 
+                u.name as staff_name, 
+                b.name as branch_name,
+                (SELECT GROUP_CONCAT(p.name SEPARATOR ', ') FROM order_details od JOIN products p ON od.product_id = p.id WHERE od.order_id = o.id) as product_names,
+                (SELECT SUM(qty) FROM order_details WHERE order_id = o.id) as total_quantity
             FROM orders o
             LEFT JOIN users u ON o.user_id = u.id
-            WHERE o.business_id = ? AND o.branch_id = ?
+            LEFT JOIN branches b ON o.branch_id = b.id
+            WHERE o.business_id = ? 
         `;
 
+        if (branch_id) {
+            sql += " AND o.branch_id = ? ";
+            params.push(branch_id);
+        }
+
+        if (user_id) {
+            sql += " AND o.user_id = ? ";
+            params.push(user_id);
+        }
+
         if (from_date && to_date) {
-            sql += " AND DATE(o.created_at) BETWEEN ? AND ?";
+            sql += " AND DATE(o.created_at) BETWEEN ? AND ? ";
             params.push(from_date, to_date);
         }
 
-        sql += " AND o.status != 'cancelled'";
-        sql += " ORDER BY o.id DESC LIMIT 100";
+        if (txtSearch) {
+            sql += " AND (o.order_no LIKE ? OR o.customer_name LIKE ?) ";
+            params.push(`%${txtSearch}%`, `%${txtSearch}%`);
+        }
+
+        sql += " AND o.status != 'cancelled' ";
+        sql += " ORDER BY o.id DESC LIMIT 100 ";
 
         const [list] = await db.query(sql, params);
-        res.json({ list });
+
+        // Summary calculations
+        const [sum] = await db.query(
+            `SELECT COUNT(id) as total_order, SUM(total_amount) as total_amount FROM orders 
+             WHERE business_id = ? ${branch_id ? 'AND branch_id = ?' : ''} AND status != 'cancelled'
+             ${from_date && to_date ? 'AND DATE(created_at) BETWEEN ? AND ?' : ''}`,
+            [business_id, ...(branch_id ? [branch_id] : []), ...(from_date && to_date ? [from_date, to_date] : [])]
+        );
+
+        res.json({
+            list,
+            summary: sum[0] || { total_order: 0, total_amount: 0 }
+        });
     } catch (error) {
         logError("order.getList", error, res);
     }
@@ -141,50 +151,50 @@ exports.getList = async (req, res) => {
 exports.getOrderDetail = async (req, res) => {
     try {
         const { order_id } = req.params;
-        const sql = `
-            SELECT od.*, p.name as product_name, p.image
-            FROM order_details od
-            INNER JOIN products p ON od.product_id = p.id
-            WHERE od.order_id = ?
-        `;
-        const [details] = await db.query(sql, [order_id]);
-        res.json({ details });
+        const { business_id } = req;
+
+        const [list] = await db.query(
+            `SELECT od.*, p.name as product_name, p.image, c.name as category_name
+             FROM order_details od
+             LEFT JOIN products p ON od.product_id = p.id
+             LEFT JOIN categories c ON p.category_id = c.id
+             JOIN orders o ON od.order_id = o.id
+             WHERE od.order_id = ? AND o.business_id = ?`,
+            [order_id, business_id]
+        );
+
+        const [order] = await db.query("SELECT * FROM orders WHERE id = ? AND business_id = ?", [order_id, business_id]);
+
+        res.json({
+            list,
+            order: order[0]
+        });
     } catch (error) {
         logError("order.getOrderDetail", error, res);
     }
 };
 
-// 4. Get Pending Orders (For POS Table ordering)
+// 4. Get Pending Orders (Dine In)
 exports.getPendingOrders = async (req, res) => {
     try {
         const { business_id, branch_id } = req;
-        const sql = `
-            SELECT o.* 
-            FROM orders o
-            WHERE o.business_id = ? AND o.branch_id = ? AND o.status IN ('ordered', 'unpaid')
-            ORDER BY o.id DESC
-        `;
-        const [list] = await db.query(sql, [business_id, branch_id]);
+        const [list] = await db.query(
+            "SELECT * FROM orders WHERE business_id = ? AND branch_id = ? AND status = 'unpaid' AND order_type = 'Dine In' ORDER BY id DESC",
+            [business_id, branch_id]
+        );
         res.json({ list });
     } catch (error) {
         logError("order.getPendingOrders", error, res);
     }
 };
 
-// 5. Update Order Status (e.g. from table ordering to paid)
+// 5. Update Status
 exports.updateStatus = async (req, res) => {
     try {
-        const { order_id, status, payment_method } = req.body;
+        const { id, status } = req.body;
         const { business_id } = req;
-
-        // Verify ownership
-        const [order] = await db.query("SELECT id FROM orders WHERE id = ? AND business_id = ?", [order_id, business_id]);
-        if (order.length === 0) return res.status(403).json({ message: "Order not found" });
-
-        const sql = "UPDATE orders SET status = ?, payment_method = ? WHERE id = ?";
-        await db.query(sql, [status || 'completed', payment_method || 'Cash', order_id]);
-
-        res.json({ success: true, message: "Order status updated successfully!" });
+        await db.query("UPDATE orders SET status = ? WHERE id = ? AND business_id = ?", [status, id, business_id]);
+        res.json({ success: true, message: "Status Updated" });
     } catch (error) {
         logError("order.updateStatus", error, res);
     }

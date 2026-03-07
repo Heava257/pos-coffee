@@ -46,12 +46,15 @@ import { formatDateClient, formatDateServer, isPermission, request } from "../..
 import { configStore } from "../../store/configStore";
 import { getProfile } from "../../store/profile.store";
 import { Config } from "../../util/config";
+import { useLanguage, translations } from "../../store/language.store";
 
 const { RangePicker } = DatePicker;
 const { TabPane } = Tabs;
 const { Title, Text } = Typography;
 
 function OrderPage() {
+  const { lang } = useLanguage();
+  const t = translations[lang];
   const { config } = configStore();
   const [formRef] = Form.useForm();
   const [list, setList] = useState([]);
@@ -76,15 +79,16 @@ function OrderPage() {
   const getList = async () => {
     setLoading(true);
     try {
-      const user_id = filter.user_id || getProfile()?.id;
+      const user_id = filter.user_id;
       const params = {
         from_date: formatDateServer(filter.from_date),
         to_date: formatDateServer(filter.to_date),
         txtSearch: state.txtSearch,
+        user_id: user_id
       };
 
-      // Fixed API endpoint to match backend route
-      const res = await request(`orders/user/${user_id}`, "get", params);
+      // Standardized API endpoint to match backend route
+      const res = await request(`order`, "get", params);
       if (res && res.list) {
         setList(res.list || []);
         setSummary(res.summary || { total_order: 0, total_amount: 0 });
@@ -95,7 +99,7 @@ function OrderPage() {
       }
     } catch (err) {
       console.error("Error fetching orders:", err);
-      message.error("Failed to fetch orders. Please check your connection.");
+      message.error(t.no_data);
       setList([]);
       setSummary({ total_order: 0, total_amount: 0 });
     } finally {
@@ -107,24 +111,25 @@ function OrderPage() {
   const getOrderDetail = async (data) => {
     setLoading(true);
     try {
-      // Use the correct API endpoint - based on your Postman it should be /orders/{id}
-      const res = await request(`orders/${data.id}`, "get");
+      const res = await request(`order/${data.id}`, "get");
 
       if (res) {
-        // Based on your API response structure
-        const orderItems = res.list || res.items || [];
-        const orderInfo = res.order || data;
+        const orderItems = res.list || res.items || res.details || [];
+        const orderInfo = res.order || res.data || data;
 
-        setOrderDetail(orderItems);
-        setCurrentOrder(orderInfo);
-        setState(prev => ({ ...prev, visibleModal: true }));
+        if (orderItems.length > 0 || orderInfo) {
+          setOrderDetail(orderItems);
+          setCurrentOrder(orderInfo);
+          setState(prev => ({ ...prev, visibleModal: true }));
+        } else {
+          message.warning(t.no_data);
+        }
       } else {
-        console.warn("Unexpected order detail response:", res);
-        message.warning("Order details not found");
+        message.warning(t.no_data);
       }
     } catch (err) {
       console.error("Error fetching order details:", err);
-      message.error("Failed to fetch order details");
+      message.error(t.failed);
     } finally {
       setLoading(false);
     }
@@ -158,24 +163,31 @@ function OrderPage() {
   };
 
   const getStatusText = (status) => {
-    if (!status) return 'Unknown';
-    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    if (!status) return t.unknown;
+    const statusMap = {
+      pending: t.pending,
+      paid: t.paid,
+      cancelled: t.cancelled,
+      completed: t.paid,
+      processing: t.pending
+    };
+    return statusMap[status.toLowerCase()] || status;
   };
 
   return (
     <div style={{
       padding: '24px',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: '#f4f6f8',
       minHeight: '100vh'
     }}>
       {/* Header Section */}
       <div style={{ marginBottom: 32 }}>
-        <Title level={2} style={{ color: 'white', margin: 0 }}>
+        <Title level={2} style={{ color: '#2d3748', margin: 0 }}>
           <ShopOutlined style={{ marginRight: 12 }} />
-          Order Management
+          {t.order_management}
         </Title>
-        <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 16 }}>
-          Track and manage your orders efficiently
+        <Text style={{ color: '#6b7280', fontSize: 16 }}>
+          {t.track_orders}
         </Text>
       </div>
 
@@ -184,22 +196,22 @@ function OrderPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card
             style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: '#fff',
               border: 'none',
               borderRadius: 16,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
             }}
             bodyStyle={{ padding: 24 }}
           >
             <Statistic
-              title={<span style={{ color: 'rgba(255,255,255,0.8)' }}>Total Orders</span>}
+              title={<span style={{ color: '#6b7280' }}>{t.total_sales}</span>}
               value={summary.total_order}
-              prefix={<ShoppingCartOutlined style={{ color: '#fff' }} />}
-              valueStyle={{ color: '#fff', fontSize: 32, fontWeight: 'bold' }}
+              prefix={<ShoppingCartOutlined style={{ color: '#1e4a2d' }} />}
+              valueStyle={{ color: '#1e4a2d', fontSize: 32, fontWeight: 'bold' }}
             />
             <div style={{ marginTop: 8 }}>
               <ArrowUpOutlined style={{ color: '#4ade80', marginRight: 4 }} />
-              <Text style={{ color: '#4ade80' }}>+12% from last month</Text>
+              <Text style={{ color: '#4ade80' }}>+12% {t.this_month}</Text>
             </div>
           </Card>
         </Col>
@@ -207,23 +219,23 @@ function OrderPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card
             style={{
-              background: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+              background: '#fff',
               border: 'none',
               borderRadius: 16,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
             }}
             bodyStyle={{ padding: 24 }}
           >
             <Statistic
-              title={<span style={{ color: 'rgba(0,0,0,0.7)' }}>Total Revenue</span>}
+              title={<span style={{ color: '#6b7280' }}>{t.total_revenue}</span>}
               value={summary.total_amount}
-              prefix={<DollarOutlined style={{ color: '#ff6b6b' }} />}
+              prefix={<DollarOutlined style={{ color: '#1e4a2d' }} />}
               precision={2}
-              valueStyle={{ color: '#2d3748', fontSize: 32, fontWeight: 'bold' }}
+              valueStyle={{ color: '#1e4a2d', fontSize: 32, fontWeight: 'bold' }}
             />
             <div style={{ marginTop: 8 }}>
               <ArrowUpOutlined style={{ color: '#4ade80', marginRight: 4 }} />
-              <Text style={{ color: '#4ade80' }}>+8% from last month</Text>
+              <Text style={{ color: '#4ade80' }}>+8% {t.this_month}</Text>
             </div>
           </Card>
         </Col>
@@ -231,23 +243,23 @@ function OrderPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card
             style={{
-              background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+              background: '#fff',
               border: 'none',
               borderRadius: 16,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
             }}
             bodyStyle={{ padding: 24 }}
           >
             <Statistic
-              title={<span style={{ color: 'rgba(0,0,0,0.7)' }}>Avg Order Value</span>}
+              title={<span style={{ color: '#6b7280' }}>{t.avg_order_value}</span>}
               value={summary.total_order > 0 ? summary.total_amount / summary.total_order : 0}
-              prefix={<DollarOutlined style={{ color: '#8b5cf6' }} />}
+              prefix={<DollarOutlined style={{ color: '#1e4a2d' }} />}
               precision={2}
-              valueStyle={{ color: '#2d3748', fontSize: 32, fontWeight: 'bold' }}
+              valueStyle={{ color: '#1e4a2d', fontSize: 32, fontWeight: 'bold' }}
             />
             <div style={{ marginTop: 8 }}>
               <ArrowUpOutlined style={{ color: '#4ade80', marginRight: 4 }} />
-              <Text style={{ color: '#4ade80' }}>+5% from last month</Text>
+              <Text style={{ color: '#4ade80' }}>+5% {t.this_month}</Text>
             </div>
           </Card>
         </Col>
@@ -255,22 +267,22 @@ function OrderPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card
             style={{
-              background: 'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)',
+              background: '#fff',
               border: 'none',
               borderRadius: 16,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
             }}
             bodyStyle={{ padding: 24 }}
           >
             <Statistic
-              title={<span style={{ color: 'rgba(0,0,0,0.7)' }}>This Month</span>}
+              title={<span style={{ color: '#6b7280' }}>{t.this_month}</span>}
               value={Math.floor(summary.total_order * 0.7)}
-              prefix={<CheckCircleOutlined style={{ color: '#10b981' }} />}
-              valueStyle={{ color: '#2d3748', fontSize: 32, fontWeight: 'bold' }}
+              prefix={<CheckCircleOutlined style={{ color: '#1e4a2d' }} />}
+              valueStyle={{ color: '#1e4a2d', fontSize: 32, fontWeight: 'bold' }}
             />
             <div style={{ marginTop: 8 }}>
               <ArrowUpOutlined style={{ color: '#4ade80', marginRight: 4 }} />
-              <Text style={{ color: '#4ade80' }}>+15% from last month</Text>
+              <Text style={{ color: '#4ade80' }}>+15% {t.this_month}</Text>
             </div>
           </Card>
         </Col>
@@ -316,14 +328,11 @@ function OrderPage() {
             type="primary"
             icon={<ExportOutlined />}
             style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              border: 'none',
               borderRadius: 8,
               height: 40,
-              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
             }}
           >
-            Export Data
+            {t.export}
           </Button>
         </div>
 
@@ -341,7 +350,7 @@ function OrderPage() {
               <Input.Search
                 size="large"
                 allowClear
-                placeholder="Search orders, products..."
+                placeholder={t.search}
                 value={state.txtSearch}
                 onChange={(e) => setState(prev => ({ ...prev, txtSearch: e.target.value }))}
                 onSearch={handleSearch}
@@ -355,7 +364,7 @@ function OrderPage() {
                 size="large"
                 allowClear
                 style={{ width: '100%', borderRadius: 8 }}
-                placeholder="Select User"
+                placeholder={t.user}
                 value={filter.user_id}
                 options={config?.user || []}
                 onChange={(val) => setFilter(prev => ({ ...prev, user_id: val }))}
@@ -371,13 +380,10 @@ function OrderPage() {
                 onClick={handleSearch}
                 style={{
                   width: '100%',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  border: 'none',
                   borderRadius: 8,
-                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
                 }}
               >
-                Apply Filters
+                {t.apply_filters}
               </Button>
             </Col>
           </Row>
@@ -397,14 +403,14 @@ function OrderPage() {
             emptyText: (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="No orders found"
+                description={t.no_orders}
                 style={{ padding: 40 }}
               />
             )
           }}
           columns={[
             {
-              title: "Order Details",
+              title: t.order_details,
               dataIndex: "order_no",
               width: 200,
               render: (val, record) => (
@@ -424,21 +430,21 @@ function OrderPage() {
                   </div>
                   {record.table_number && (
                     <div style={{ fontSize: 12, color: '#6b7280' }}>
-                      Table: {record.table_number}
+                      {t.table}: {record.table_number}
                     </div>
                   )}
                 </div>
               )
             },
             {
-              title: "Products",
-              dataIndex: "category_name",
+              title: t.product,
+              dataIndex: "order_type",
               width: 300,
               render: (val, record) => (
                 <div>
-                  <Text strong style={{ color: '#2d3748' }}>
-                    {val || 'No items'}
-                  </Text>
+                  <Tag color="purple" style={{ borderRadius: 6, fontWeight: 'bold' }}>
+                    {val || "Order"}
+                  </Tag>
                   {record.product_names && (
                     <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
                       <Tooltip title={record.product_names}>
@@ -451,7 +457,7 @@ function OrderPage() {
                   )}
                   {record.total_quantity && (
                     <Badge
-                      count={`${record.total_quantity} items`}
+                      count={`${record.total_quantity} ${t.items}`}
                       style={{ backgroundColor: '#f0f9ff', color: '#0369a1', marginTop: 4 }}
                     />
                   )}
@@ -459,7 +465,7 @@ function OrderPage() {
               )
             },
             {
-              title: "Amount",
+              title: t.amount,
               dataIndex: "total_amount",
               align: "right",
               width: 120,
@@ -470,7 +476,7 @@ function OrderPage() {
               )
             },
             {
-              title: "Status",
+              title: t.status,
               dataIndex: "status",
               width: 100,
               render: val => (
@@ -487,7 +493,7 @@ function OrderPage() {
               )
             },
             {
-              title: "Payment",
+              title: t.payment_method,
               dataIndex: "payment_method",
               width: 120,
               render: val => (
@@ -499,12 +505,12 @@ function OrderPage() {
                     textTransform: 'capitalize'
                   }}
                 >
-                  {val || 'Cash'}
+                  {val || t.paid}
                 </Tag>
               )
             },
             {
-              title: "Time",
+              title: t.date,
               dataIndex: "timestamp",
               width: 120,
               render: (val, record) => (
@@ -516,20 +522,17 @@ function OrderPage() {
               )
             },
             {
-              title: "Action",
+              title: t.action,
               width: 80,
               align: 'center',
               render: (_, rec) => (
-                <Tooltip title="View Details">
+                <Tooltip title={t.view_details}>
                   <Button
                     type="primary"
                     icon={<EyeOutlined />}
                     onClick={() => getOrderDetail(rec)}
                     style={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      border: 'none',
                       borderRadius: 8,
-                      boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
                     }}
                   />
                 </Tooltip>
@@ -548,7 +551,7 @@ function OrderPage() {
           <div style={{ padding: '8px 0' }}>
             <Title level={3} style={{ margin: 0, color: '#2d3748' }}>
               <ShoppingCartOutlined style={{ marginRight: 8, color: '#667eea' }} />
-              Order Details
+              {t.order_details}
               {currentOrder?.order_no && (
                 <Text style={{ fontSize: 14, color: '#6b7280', marginLeft: 8 }}>
                   ({currentOrder.order_no})
@@ -561,7 +564,7 @@ function OrderPage() {
         style={{ top: 20 }}
         bodyStyle={{
           padding: 0,
-          background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
+          background: '#f8fafc'
         }}
       >
         <div style={{ padding: 24 }}>
@@ -570,26 +573,26 @@ function OrderPage() {
             <Card style={{ marginBottom: 16, borderRadius: 8 }}>
               <Row gutter={16}>
                 <Col span={6}>
-                  <Text strong>Order No:</Text>
+                  <Text strong>{t.order_no}:</Text>
                   <br />
                   <Text>{currentOrder.order_no || `#${currentOrder.id}`}</Text>
                 </Col>
                 <Col span={6}>
-                  <Text strong>Date:</Text>
+                  <Text strong>{t.date}:</Text>
                   <br />
                   <Text>{formatDateClient(currentOrder.created_at, "MMM DD, YYYY h:mm A")}</Text>
                 </Col>
                 <Col span={6}>
-                  <Text strong>Status:</Text>
+                  <Text strong>{t.status}:</Text>
                   <br />
                   <Tag color={getStatusColor(currentOrder.status)}>
                     {getStatusText(currentOrder.status)}
                   </Tag>
                 </Col>
                 <Col span={6}>
-                  <Text strong>Payment:</Text>
+                  <Text strong>{t.payment_method}:</Text>
                   <br />
-                  <Text>{currentOrder.payment_method || 'Cash'}</Text>
+                  <Text>{currentOrder.payment_method || t.paid}</Text>
                 </Col>
               </Row>
             </Card>
@@ -609,7 +612,7 @@ function OrderPage() {
             columns={[
               {
                 key: "image",
-                title: "Image",
+                title: t.image,
                 dataIndex: "image",
                 width: 80,
                 render: (value) => (
@@ -649,7 +652,7 @@ function OrderPage() {
                                 fontSize: 16,
                               }}
                             >
-                              View
+                              {t.view_details}
                             </div>
                           ),
                         }}
@@ -663,22 +666,28 @@ function OrderPage() {
                           display: "flex",
                           justifyContent: "center",
                           alignItems: "center",
-                          fontSize: 14,
+                          fontSize: 10,
                           color: "#999",
+                          textAlign: "center"
                         }}
                       >
-                        No Image
+                        {t.no_data}
                       </div>
                     )}
                   </div>
                 ),
               },
               {
-                title: "Product Name",
+                title: t.product_name,
                 dataIndex: "product_name",
                 render: (name, record) => (
                   <div>
                     <Text strong style={{ color: '#2d3748' }}>{name}</Text>
+                    {record.note && (
+                      <div style={{ color: '#6b7280', fontSize: 13, marginTop: 4 }}>
+                        {record.note}
+                      </div>
+                    )}
                     {record.category_name && (
                       <div>
                         <Tag size="small" color="blue" style={{ marginTop: 4 }}>
@@ -690,8 +699,8 @@ function OrderPage() {
                 )
               },
               {
-                title: "Quantity",
-                dataIndex: "total_quantity",
+                title: t.quantity,
+                dataIndex: "qty",
                 align: "center",
                 width: 100,
                 render: val => (
@@ -706,7 +715,7 @@ function OrderPage() {
                 )
               },
               {
-                title: "Discount",
+                title: t.discount,
                 dataIndex: "discount_percent",
                 align: "center",
                 width: 100,
@@ -735,14 +744,14 @@ function OrderPage() {
                         borderRadius: '10px',
                       }}
                     >
-                      No Discount
+                      {t.no_discount}
                     </Tag>
                   );
                 }
               }
               ,
               {
-                title: "Price",
+                title: t.price,
                 dataIndex: "price",
                 align: "right",
                 width: 120,
@@ -753,13 +762,12 @@ function OrderPage() {
                 )
               },
               {
-                title: "Total Amount",
+                title: t.total,
                 dataIndex: "total",
                 align: "right",
                 width: 140,
                 render: (val, record) => {
-                  // FIXED: Use the correct field names from your API response
-                  const totalAmount = record.grand_total || record.line_total || record.total || 0;
+                  const totalAmount = record.grand_total || record.line_total || record.total || (record.qty * record.price) || 0;
                   return (
                     <Text strong style={{ fontSize: 16, color: '#10b981' }}>
                       ${Number(totalAmount).toFixed(2)}
@@ -769,16 +777,15 @@ function OrderPage() {
               }
             ]}
             summary={(pageData) => {
-              // FIXED: Calculate total using the correct field names
               const total = pageData.reduce((sum, item) => {
-                const itemTotal = item.grand_total || item.line_total || item.total || 0;
+                const itemTotal = item.grand_total || item.line_total || item.total || (item.qty * item.price) || 0;
                 return sum + Number(itemTotal);
               }, 0);
 
               return (
                 <Table.Summary.Row style={{ background: '#f8fafc' }}>
                   <Table.Summary.Cell colSpan={4}>
-                    <Text strong style={{ fontSize: 16 }}>Total Order Amount</Text>
+                    <Text strong style={{ fontSize: 16 }}>{t.total_amount}</Text>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell align="right">
                     <Text strong style={{ fontSize: 18, color: '#667eea' }}>

@@ -3,7 +3,7 @@ const { getAllPlans, updatePlan, getBusinessPlan, getSystemSubscriptions, selfUp
 
 module.exports = (app) => {
     app.get("/api/plans", authMiddleware(), getAllPlans);
-    app.get("/api/my-plan", authMiddleware("my-plan"), getBusinessPlan);
+    app.get("/api/my-plan", authMiddleware(), getBusinessPlan);
     app.get("/api/my-plan/billing-history", authMiddleware("my-plan"), getBillingHistory);
     app.get("/api/system-subscriptions", authMiddleware(), getSystemSubscriptions);
     app.put("/api/plans", authMiddleware(), updatePlan);

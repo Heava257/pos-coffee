@@ -2,11 +2,23 @@ const { db, logError, isEmpty } = require("../util/helper");
 
 exports.getList = async (req, res) => {
   try {
-    const { business_id, branch_id } = req;
+    const { business_id, branch_id, user_id } = req;
     let { from_date, to_date, branch_id: query_branch_id } = req.query;
 
-    // Scoping: Use query_branch_id if provided (for owners), otherwise use user's branch_id
-    const target_branch_id = query_branch_id || branch_id;
+    // Check if user is Super Admin or Owner to allow seeing all branches
+    const [user] = await db.query("SELECT is_super_admin FROM users WHERE id = ?", [user_id]);
+    const isOwner = user.length > 0 && user[0].is_super_admin === 1;
+
+    // Scoping: 
+    // 1. If query_branch_id is provided, use it (specific branch).
+    // 2. If NO query_branch_id and NOT owner, use session branch_id.
+    // 3. If NO query_branch_id and IS owner, use NULL (to see all branches).
+    let target_branch_id = null;
+    if (query_branch_id) {
+      target_branch_id = query_branch_id;
+    } else if (!isOwner) {
+      target_branch_id = branch_id;
+    }
 
     if (!from_date || !to_date) {
       const currentDate = new Date();
@@ -14,14 +26,9 @@ exports.getList = async (req, res) => {
       from_date = `${currentDate.getFullYear()}-01-01`;
     }
 
-    // Common WHERE clause for tenant isolation
-    let baseFilter = " WHERE business_id = ? ";
-    let baseParams = [business_id];
-
-    if (target_branch_id) {
-      baseFilter += " AND branch_id = ? ";
-      baseParams.push(target_branch_id);
-    }
+    // Common WHERE clause builder helper
+    const getBranchFilter = () => target_branch_id ? 'AND branch_id = ?' : '';
+    const getBranchParams = () => target_branch_id ? [target_branch_id] : [];
 
     // 1. Top Sale Query
     const topSaleQuery = `
@@ -38,15 +45,12 @@ exports.getList = async (req, res) => {
       AND DATE(o.created_at) BETWEEN ? AND ?
       GROUP BY od.product_id, p.name, c.name
       ORDER BY total_sale_amount DESC
-      LIMIT 5
+      LIMIT 10
     `;
-    const topSaleParams = target_branch_id
-      ? [business_id, target_branch_id, from_date, to_date]
-      : [business_id, from_date, to_date];
-
+    const topSaleParams = [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date];
     const [Top_Sale] = await db.query(topSaleQuery, topSaleParams);
 
-    // 2. Customer count
+    // 2. Customer count (Business wide or branch wide)
     const customerQuery = `
       SELECT COUNT(id) AS total 
       FROM customers
@@ -65,9 +69,7 @@ exports.getList = async (req, res) => {
       ${target_branch_id ? 'AND branch_id = ?' : ''}
       AND DATE(expense_date) BETWEEN ? AND ?
     `;
-    const expenseParams = target_branch_id
-      ? [business_id, target_branch_id, from_date, to_date]
-      : [business_id, from_date, to_date];
+    const expenseParams = [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date];
     const [expanse] = await db.query(expenseQuery, expenseParams);
 
     // 4. Sales data
@@ -80,9 +82,7 @@ exports.getList = async (req, res) => {
       ${target_branch_id ? 'AND branch_id = ?' : ''}
       AND DATE(created_at) BETWEEN ? AND ?
     `;
-    const saleParams = target_branch_id
-      ? [business_id, target_branch_id, from_date, to_date]
-      : [business_id, from_date, to_date];
+    const saleParams = [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date];
     const [sale] = await db.query(saleQuery, saleParams);
 
     // 5. Sales summary by month
@@ -127,7 +127,7 @@ exports.getList = async (req, res) => {
       ORDER BY o.created_at DESC
       LIMIT 10
     `;
-    const [recentOrders] = await db.query(recentOrdersQuery, target_branch_id ? [business_id, target_branch_id] : [business_id]);
+    const [recentOrders] = await db.query(recentOrdersQuery, [business_id, ...(target_branch_id ? [target_branch_id] : [])]);
 
     const totalSale = Number(sale[0].total_amount) || 0;
     const totalOrder = Number(sale[0].total_order) || 0;
@@ -168,7 +168,8 @@ exports.getList = async (req, res) => {
       Sale_Summary_By_Month,
       Expense_Summary_By_Month,
       recentOrders,
-      success: true
+      success: true,
+      scope: target_branch_id ? 'branch' : 'business'
     });
 
   } catch (error) {
