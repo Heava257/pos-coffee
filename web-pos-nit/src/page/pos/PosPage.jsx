@@ -43,7 +43,9 @@ import {
 import { FiSettings } from "react-icons/fi";
 import ImgUser from "../../assets/profile.png";
 import useSound from "use-sound";
-import bellSound from "../../assets/bell.mp3";
+
+// Public notification sound URL
+const BELL_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
 
 const { Text } = Typography;
 
@@ -373,7 +375,7 @@ function PosPage() {
   const [orderType, setOrderType] = useState("dine_in");
   const [customerName, setCustomerName] = useState("");
   const [tableNo, setTableNo] = useState("");
-  const [playBell] = useSound(bellSound);
+  const [playBell] = useSound(BELL_SOUND_URL);
   const prevPendingCountRef = useRef(0);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
