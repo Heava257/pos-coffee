@@ -274,7 +274,7 @@ const MainLayout = () => {
 
       // Case 1: Simple menu item (no children)
       if (newItem.hasOwnProperty('key') && !newItem.children) {
-        if (newItem.key === "business" && profile?.business_id === 1) return newItem;
+        if (newItem.key === "business") return profile?.business_id === 1 ? newItem : null;
 
         // Let Dashboard ("") be shown ONLY if they have explicit permission OR they are the owner/Super Admin
         if (newItem.key === "") {
@@ -288,7 +288,10 @@ const MainLayout = () => {
 
       // Case 2: Parent menu with children
       if (newItem.children) {
-        const filteredChildren = newItem.children.filter(child => checkPath(child.key));
+        const filteredChildren = newItem.children.filter(child => {
+          if (child.key === "plans") return profile?.business_id === 1;
+          return checkPath(child.key);
+        });
 
         if (filteredChildren.length > 0) {
           return { ...newItem, children: filteredChildren };
