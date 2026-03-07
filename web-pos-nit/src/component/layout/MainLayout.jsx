@@ -44,7 +44,7 @@ const { Header, Content, Footer, Sider } = Layout;
 
 const items_menu = [
   {
-    key: "",
+    key: "dashboard",
     label: "Dashboard",
     icon: <PieChartOutlined />,
   },
@@ -204,7 +204,7 @@ const MainLayout = () => {
 
     // Set selected menu item based on current path
     const currentPath = location.pathname.replace('/', '');
-    setSelectedKeys([currentPath || ""]);
+    setSelectedKeys([currentPath || "dashboard"]);
 
     // Auto-expand parent menus for selected item
     const findParentKey = (menuItems, targetKey) => {
@@ -242,7 +242,7 @@ const MainLayout = () => {
     );
 
     if (findIndex === -1) {
-      if (currentPath === "/" && (profile?.business_id === 1 || profile?.is_super_admin === 1 || profile?.role_name?.toUpperCase() === "OWNER")) {
+      if ((currentPath === "/" || currentPath === "/dashboard") && (profile?.business_id === 1 || profile?.is_super_admin === 1 || profile?.role_name?.toUpperCase() === "OWNER")) {
         return;
       }
       // Current page not in permissions — redirect to first allowed page
@@ -269,13 +269,13 @@ const MainLayout = () => {
       // Helper to check permission safely
       const checkPath = (key) => {
         if (!key && key !== "") return false;
-        const targetPath = key === "" ? "/" : "/" + key;
+        const targetPath = "/" + key;
         return permision.some(p => {
           if (!p.web_route_key) return false;
           // Normalize both paths: lowercase and remove trailing/leading slashes for comparison
           const p1 = p.web_route_key.toLowerCase().replace(/^\/+|\/+$/g, '');
           const p2 = targetPath.toLowerCase().replace(/^\/+|\/+$/g, '');
-          return p1 === p2 || (p.web_route_key === "/" && targetPath === "/");
+          return p1 === p2;
         });
       };
 
@@ -283,8 +283,8 @@ const MainLayout = () => {
       if (newItem.hasOwnProperty('key') && !newItem.children) {
         if (newItem.key === "business") return profile?.business_id === 1 ? newItem : null;
 
-        // Let Dashboard ("") be shown ONLY if they have explicit permission OR they are the owner/Super Admin
-        if (newItem.key === "") {
+        // Let Dashboard be shown ONLY if they have explicit permission OR they are the owner/Super Admin
+        if (newItem.key === "dashboard") {
           if (profile?.business_id === 1 || profile?.is_super_admin === 1 || profile?.role_name?.toUpperCase() === "OWNER") {
             return newItem;
           }

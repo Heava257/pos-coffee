@@ -1,6 +1,6 @@
 
 import "./App.css";
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
 import HomePage from "./page/home/HomePage";
 import LogingPage from "./page/auth/LogingPage";
 import RegisterPage from "./page/auth/RegisterPage";
@@ -54,7 +54,8 @@ function App() {
           <Route path="/scan" element={<ScanPage />} />
 
           <Route element={<MainLayout />}>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<HomePage />} />
             <Route path="/invoices" element={<PosPage />} />
             <Route path="/table" element={<TablePage />} />
             <Route path="/category" element={<CategoryPage />} />
