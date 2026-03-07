@@ -471,7 +471,18 @@ const CoffeeMenuApp = () => {
           closeIcon={<X className="text-[#1e4a2d]" />}
           centered
           width={450}
+          maskClosable={true}
           className="premium-modal"
+          modalRender={(modal) => (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            >
+              {modal}
+            </motion.div>
+          )}
         >
           {optionsModalItem && (
             <div className="space-y-6 pt-2">
@@ -641,9 +652,28 @@ const CoffeeMenuApp = () => {
           .custom-scrollbar::-webkit-scrollbar { width: 6px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e4a2d20; border-radius: 10px; }
-          .premium-modal .ant-modal-content { border-radius: 40px; padding: 24px; }
-          .premium-drawer .ant-drawer-content { border-radius: 40px 0 0 40px; }
-          .premium-drawer .ant-drawer-header { border-bottom: none; padding: 32px 24px 16px; }
+          
+          /* Premium Modal & Blur */
+          .ant-modal-mask {
+            backdrop-filter: blur(8px) !important;
+            background: rgba(30, 74, 45, 0.2) !important;
+          }
+          .premium-modal .ant-modal-content { 
+            border-radius: 40px; 
+            padding: 24px; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255,255,255,0.2);
+          }
+          
+          /* Premium Drawer & Blur */
+          .ant-drawer-mask {
+            backdrop-filter: blur(8px) !important;
+          }
+          .premium-drawer .ant-drawer-content { 
+            border-radius: 40px 0 0 40px; 
+            background: #f8f7f2 !important;
+          }
+          .premium-drawer .ant-drawer-header { border-bottom: none; padding: 32px 24px 16px; background: transparent; }
         `}</style>
       </div>
     );

@@ -40,13 +40,6 @@ exports.getList = async (req, res) => {
 
         const [list] = await db.query(sql, params);
 
-        console.log("=== PRODUCT API LOG ===");
-        console.log("Query Params:", req.query);
-        console.log("Business/Branch:", business_id, branch_id);
-        console.log("SQL executing:", sql);
-        console.log("Params:", params);
-        console.log("Found Items:", list.length);
-        console.log("=======================");
 
         res.json({ list });
     } catch (error) {
@@ -59,7 +52,7 @@ exports.create = async (req, res) => {
     try {
         await conn.beginTransaction();
         const { business_id, branch_id } = req;
-        const { name, category_id, barcode, price, cost_price, description, status, qty, sizes, addons, discount } = req.body;
+        const { name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, discount } = req.body;
         const image = req.file?.filename || null;
 
         // Optimized Subscription Limit Check
