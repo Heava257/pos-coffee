@@ -18,7 +18,7 @@ import {
 import { MdHistory, MdAdd } from "react-icons/md";
 import { useLanguage, translations } from "../../store/language.store";
 import MainPage from "../../component/layout/MainPage";
-import { request } from "../../util/helper";
+import { formatDateClient, request } from "../../util/helper";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -204,13 +204,13 @@ function StockPage() {
                             dataIndex: "type",
                             render: (v) => {
                                 let color = "grey";
-                                let text = v.toUpperCase();
+                                let text = v?.toUpperCase() || "";
                                 if (v === 'purchase') { color = "green"; text = t.purchase; }
                                 if (v === 'receive') { color = "purple"; text = t.receive; }
-                                if (v === 'sale') { color = "blue"; text = t.sale; }
+                                if (v === 'sale') { color = "blue"; text = t.sale || "Sale"; }
                                 if (v === 'adjustment') { color = "orange"; text = t.adjustment; }
                                 if (v === 'waste') { color = "red"; text = t.waste; }
-                                return <Tag color={color}>{text.toUpperCase()}</Tag>
+                                return <Tag color={color}>{(text || "").toUpperCase()}</Tag>
                             }
                         },
                         {
