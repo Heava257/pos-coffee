@@ -104,9 +104,25 @@ app.listen(PORT, async () => {
   try {
     await db.query("ALTER TABLE orders MODIFY payment_method VARCHAR(100) DEFAULT 'cash'");
     await db.query("ALTER TABLE orders MODIFY status VARCHAR(100) DEFAULT 'ordered'");
-    console.log("Migration: 'orders.payment_method' and 'orders.status' are now flexible VARCHARs");
+    await db.query("ALTER TABLE orders MODIFY order_type VARCHAR(100) DEFAULT 'dine_in'");
+    console.log("Migration: 'orders' table columns are now flexible VARCHARs");
   } catch (err) {
     console.error("Migration Error (orders table):", err.message);
+  }
+
+  // Migration Fix: Create favorites table if missing
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS favorites (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        product_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log("Migration: 'favorites' table is ready");
+  } catch (err) {
+    console.error("Migration Error (favorites table):", err.message);
   }
 
   // Seeder: Add 25 products seeds (5 per new category)
