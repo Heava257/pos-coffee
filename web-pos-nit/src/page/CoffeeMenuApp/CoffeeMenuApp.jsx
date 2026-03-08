@@ -198,7 +198,7 @@ const StarredView = ({ starredItems, onToggleStar, setOptionsModalItem }) => (
   </motion.div>
 );
 
-const ProfileView = ({ selectedShop, selectedTable }) => {
+const ProfileView = ({ selectedShop, selectedTable, setActiveTab }) => {
   const profile = getProfile();
   const navigate = useNavigate();
 
@@ -269,13 +269,14 @@ const ProfileView = ({ selectedShop, selectedTable }) => {
       {/* Menu Options */}
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
-          { icon: History, label: 'Order History', color: 'text-blue-500', bg: 'bg-blue-50' },
-          { icon: Star, label: 'My Favorites', color: 'text-amber-500', bg: 'bg-amber-50' },
-          { icon: Globe, label: 'Language', color: 'text-purple-500', bg: 'bg-purple-50', detail: 'English' },
-          { icon: Settings, label: 'App Settings', color: 'text-gray-500', bg: 'bg-gray-100' },
+          { icon: History, label: 'Order History', color: 'text-blue-500', bg: 'bg-blue-50', action: () => message.info("Order History coming soon!") },
+          { icon: Star, label: 'My Favorites', color: 'text-amber-500', bg: 'bg-amber-50', action: () => setActiveTab('starred') },
+          { icon: Globe, label: 'Language', color: 'text-purple-500', bg: 'bg-purple-50', detail: 'English', action: () => message.info("Language selection coming soon!") },
+          { icon: Settings, label: 'App Settings', color: 'text-gray-500', bg: 'bg-gray-100', action: () => message.info("Settings coming soon!") },
         ].map((item, i) => (
           <button
             key={i}
+            onClick={item.action}
             className="flex justify-between items-center p-6 bg-white border border-gray-50 rounded-[24px] hover:border-gray-200 hover:shadow-lg hover:shadow-gray-100/50 transition-all active:scale-[0.98] group"
           >
             <div className="flex items-center gap-5">
@@ -423,7 +424,7 @@ const CoffeeMenuApp = () => {
               <div className="w-8 h-8 border-3 border-gray-100 border-t-[#1A3C28] rounded-full animate-spin"></div>
             </motion.div>
           ) : activeTab === 'profile' ? (
-            <ProfileView selectedShop={selectedShop} selectedTable={selectedTable} />
+            <ProfileView selectedShop={selectedShop} selectedTable={selectedTable} setActiveTab={setActiveTab} />
           ) : activeTab === 'starred' ? (
             <StarredView starredItems={starredItems} onToggleStar={onToggleStar} setOptionsModalItem={setOptionsModalItem} />
           ) : currentCategory ? (
