@@ -40,6 +40,8 @@ require("./src/route/payment.route")(app);
 require("./src/route/stock.route")(app);
 require("./src/route/table.route")(app);
 require("./src/route/settings.route")(app);
+require("./src/route/favorite.route")(app);
+
 
 app.use((err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {

@@ -437,14 +437,38 @@ const CoffeeMenuApp = () => {
     } catch (e) { message.error("Failed to fetch history"); }
   };
 
+  const fetchStarredItems = async () => {
+    if (!getProfile()) return;
+    try {
+      const res = await request("favorite", "get");
+      if (res?.list) setStarredItems(res.list);
+    } catch (e) { console.error("Failed to sync favorites"); }
+  };
 
-  const onToggleStar = (item) => {
-    if (starredItems.some(s => s.id === item.id)) {
+  useEffect(() => {
+    fetchStarredItems();
+  }, []);
+
+
+  const onToggleStar = async (item) => {
+    const profile = getProfile();
+    const isStarred = starredItems.some(s => s.id === item.id);
+
+    // Optimistic UI update
+    if (isStarred) {
       setStarredItems(starredItems.filter(s => s.id !== item.id));
-      message.info("Removed from Starred");
     } else {
       setStarredItems([...starredItems, item]);
-      message.success("Added to Starred!");
+    }
+
+    if (profile) {
+      try {
+        await request("favorite", "post", { product_id: item.id });
+        message.success(isStarred ? "Removed from Starred" : "Added to Starred!");
+        fetchStarredItems(); // Final sync
+      } catch (e) { message.error("Failed to sync Starred"); }
+    } else {
+      message.info(isStarred ? "Removed from local Starred" : "Added to local Starred!");
     }
   };
 
