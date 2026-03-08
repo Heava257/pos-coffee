@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Bell, Menu, Search, ShoppingCart, Plus, Minus, X,
-  Home, FileText, Star, User, ChevronLeft, LogOut, Settings, History, Globe,SplashView
+  Home, FileText, Star, User, ChevronLeft, LogOut, Settings, History, Globe
 } from 'lucide-react';
 import { request } from '../../util/helper';
 import { Config } from '../../util/config';
@@ -36,6 +36,34 @@ const MainWrapper = ({ children, bgClass = "bg-[#F8F9FA]" }) => (
     `}</style>
   </div>
 );
+
+const SplashView = ({ businessName }) => (
+  <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center"
+    >
+      <div className="w-20 h-20 bg-[#1A3C28] rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-[#1A3C28]/20">
+        <ShoppingCart size={36} color="white" />
+      </div>
+      <h1 className="text-2xl font-extrabold tracking-tight text-[#1A3C28]">
+        {businessName || "MINGLY COFFEE"}
+      </h1>
+      <div className="mt-4 flex gap-1">
+        {[0, 1, 2].map(i => (
+          <motion.div
+            key={i}
+            animate={{ scale: [1, 1.5, 1] }}
+            transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
+            className="w-1.5 h-1.5 bg-[#1A3C28]/20 rounded-full"
+          />
+        ))}
+      </div>
+    </motion.div>
+  </div>
+);
+
 
 // --- VIEW COMPONENTS ---
 
