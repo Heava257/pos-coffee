@@ -97,6 +97,7 @@ const CoffeeMenuApp = () => {
   const [currentCategory, setCurrentCategory] = useState(null);
   const [optionsModalItem, setOptionsModalItem] = useState(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
     localStorage.setItem('coffee_pos_table', selectedTable);
@@ -126,28 +127,37 @@ const CoffeeMenuApp = () => {
     if (selectedShop?.id) {
       fetchShopProducts();
     }
-  }, [selectedShop]);
+  }, [selectedShop, currentCategory?.id]);
 
   const fetchShopProducts = async () => {
     try {
-      const res = await request("product", "get");
-      if (res && res.list) {
-        setMenuItems(res.list || []);
-        const uniqueCats = Array.from(new Set(res.list.map(i => i.category_name))).map(name => {
-          const item = res.list.find(i => i.category_name === name);
-          return { id: item.category_id, name: name };
-        });
-        // Ensure "Snack" is available for demo purposes if not from DB
-        if (!uniqueCats.find(c => c.name?.toLowerCase().includes('snack'))) {
-          uniqueCats.push({ id: 'mock-snack', name: 'Snack' });
+      // 1. Fetch Categories
+      const catRes = await request("category", "get");
+      if (catRes && catRes.list) {
+        setCategories(catRes.list);
+        if (catRes.list.length > 0 && !currentCategory) {
+          setCurrentCategory(catRes.list[0]);
         }
-        setCategories(uniqueCats);
+      }
+
+      // 2. Fetch Products for current category
+      const productRes = await request("product", "get", {
+        branch_id: selectedShop?.id,
+        category_id: currentCategory?.id
+      });
+
+      if (productRes && productRes.list) {
+        setMenuItems(productRes.list);
 
         let sizesMap = {};
-        res.list.forEach(p => {
+        productRes.list.forEach(p => {
           if (p.sizes) {
-            const parsed = typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes;
-            sizesMap[p.id] = parsed.map(s => ({ ...s, price: parseFloat(s.price || 0) }));
+            try {
+              const parsed = typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes;
+              sizesMap[p.id] = parsed.map(s => ({ ...s, price: parseFloat(s.price || 0) }));
+            } catch (e) {
+              console.error("Size parse error for product", p.id);
+            }
           }
         });
         setProductSizes(sizesMap);
@@ -243,13 +253,13 @@ const CoffeeMenuApp = () => {
   }
 
   // --- COMPONENT VIEWS ---
-
   const HomeViewComponent = () => (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col px-5 pb-[100px]">
-      {/* Header */}
+
       <div className="flex justify-between items-center mt-4">
         <h1 className="text-[20px] font-black uppercase leading-[0.95] tracking-tight text-[#1a3c28]">
-          GREEN<br />GROUNDS<br />COFFEE
+          {selectedShop?.business_name?.toUpperCase() || "GREEN GROUND"}<br />
+          COFFEE
         </h1>
         <div className="flex items-center gap-3">
           <button className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center relative bg-white">
@@ -262,55 +272,77 @@ const CoffeeMenuApp = () => {
         </div>
       </div>
 
+      {/* Global Search Bar */}
+      <div className="mt-6 relative">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+          <Search size={18} />
+        </div>
+        <input
+          type="text"
+          placeholder="Search your favorite coffee..."
+          className="w-full bg-white border border-gray-100 rounded-[20px] py-4 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1a3c28]/5 transition-all shadow-sm"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+        />
+      </div>
+
       {/* Refer Banner */}
       <div className="mt-8 bg-[#fffcf5] border border-[#f0ead2] rounded-[24px] overflow-hidden flex shadow-sm relative">
         <div className="p-5 flex-1 pr-24 relative z-10">
           <h3 className="font-extrabold text-[#1a3c28] text-base mb-1 tracking-tight">REFER & EARN</h3>
-          <p className="text-xs text-[#1a3c28] opacity-70 mb-4 leading-snug font-medium">Win Cashback of up to 10% our product. Share Yours!</p>
-          <button className="bg-[#1a3c28] text-white px-5 py-2.5 rounded-full text-xs font-bold tracking-wide">Refer Now</button>
+          <p className="text-xs text-[#1a3c28] opacity-70 mb-4 leading-snug font-medium">Win Cashback of up to 10% on your next visit to {selectedShop?.name || 'us'}.</p>
+          <button className="bg-[#1a3c28] text-white px-5 py-2.5 rounded-full text-xs font-bold tracking-wide shadow-lg shadow-[#1a3c28]/20 active:scale-95 transition-transform">Invite Friends</button>
         </div>
         <div className="absolute right-0 bottom-0 w-[140px] h-[140px] translate-x-8 translate-y-4">
           <div className="absolute inset-0 bg-yellow-400 rounded-full opacity-20 blur-2xl"></div>
-          {/* Mock barista image */}
-          <div className="w-32 h-32 rounded-full overflow-hidden absolute bottom-2 left-0 border-4 border-white shadow-lg bg-green-900">
-            <img src="https://i.pravatar.cc/150?img=5" className="w-full h-full object-cover" />
+          <div className="w-32 h-32 rounded-full overflow-hidden absolute bottom-2 left-0 border-4 border-white shadow-lg bg-[#1a3c28]">
+            <img src="https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=300&auto=format&fit=crop" className="w-full h-full object-cover opacity-80" />
           </div>
         </div>
       </div>
 
-      {/* Active Order Tracker */}
-      <div className="mt-5 bg-[#1a3c28] rounded-[28px] p-5 text-white shadow-lg shadow-[#1a3c28]/20">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-lg">Your Order</span>
-            <span className="w-5 h-5 rounded-full border border-white/30 flex items-center justify-center text-xs">+</span>
+      {/* Active Order Tracker - Only show if there's an active process or cart */}
+      {
+        cart.length > 0 && (
+          <div className="mt-5 bg-[#1a3c28] rounded-[28px] p-5 text-white shadow-lg shadow-[#1a3c28]/20 cursor-pointer group" onClick={() => setIsCartOpen(true)}>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-lg">In Your Cart</span>
+                <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">{cart.length}</span>
+              </div>
+              <span className="font-black text-[10px] tracking-widest opacity-60">READY</span>
+            </div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-white/70">Estimated Total</span>
+              <span className="font-black text-lg">${getTotalPrice().toFixed(2)}</span>
+            </div>
+            <div className="w-full py-3 bg-white/10 group-hover:bg-white/20 rounded-xl text-xs font-bold transition-all text-center">Place Your Order Now</div>
           </div>
-          <span className="font-black">#27362</span>
-        </div>
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-white/70">Estimated Time</span>
-          <span className="font-bold">1:02</span>
-        </div>
-        <div className="w-full h-2 bg-white/20 rounded-full mb-3 flex relative overflow-hidden">
-          <div className="absolute left-0 top-0 bottom-0 bg-[#00c257] w-[65%] rounded-full"></div>
-          {/* Dashed background overlay */}
-          <div className="absolute inset-0" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)' }}></div>
-        </div>
-        <p className="text-[11px] text-white/50">Your order is being prepared, please wait.</p>
-      </div>
+        )
+      }
 
       {/* Categories Horizontal */}
       <div className="mt-8">
         <div className="flex justify-between items-end mb-4 pr-1">
           <h3 className="text-lg font-bold text-[#1a3c28]">Categories</h3>
-          <span className="text-sm font-bold text-[#1a3c28] opacity-50">See all</span>
+          <span className="text-sm font-bold text-[#1a3c28] opacity-50 cursor-pointer hover:opacity-100" onClick={() => setCurrentCategory({ name: 'All' })}>See all</span>
         </div>
         <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-5 px-5 pb-2">
+          <button
+            onClick={() => setCurrentCategory({ name: 'All' })}
+            className={cn(
+              "px-5 py-2.5 rounded-full border border-gray-100 font-bold text-sm whitespace-nowrap shadow-sm active:scale-95 transition-all",
+              currentCategory?.name === 'All' ? "bg-[#1a3c28] text-white" : "bg-white text-[#1a3c28]"
+            )}
+          > All Items </button>
           {categories.map((cat, i) => (
             <button
               key={cat.id || i}
               onClick={() => setCurrentCategory(cat)}
-              className="bg-white px-5 py-2.5 rounded-full border border-gray-100 text-[#1a3c28] font-bold text-sm whitespace-nowrap shadow-sm active:scale-95 transition-transform"
+              className={cn(
+                "px-5 py-2.5 rounded-full border border-gray-100 font-bold text-sm whitespace-nowrap shadow-sm active:scale-95 transition-all text-[#1a3c28]",
+                currentCategory?.id === cat.id ? "bg-[#1a3c28] text-white" : "bg-white"
+              )}
             >
               {cat.name}
             </button>
@@ -318,52 +350,49 @@ const CoffeeMenuApp = () => {
         </div>
       </div>
 
-      {/* People Choice */}
+      {/* Featured/Search Results */}
       <div className="mt-6">
         <div className="flex justify-between items-end mb-5">
-          <h3 className="text-lg font-bold text-[#1a3c28]">People Choice(4)</h3>
+          <h3 className="text-lg font-bold text-[#1a3c28]">
+            {searchText ? `Results (${menuItems.filter(i => i.name.toLowerCase().includes(searchText.toLowerCase())).length})` : 'Popular Items'}
+          </h3>
           <span onClick={() => setCurrentCategory({ name: 'All' })} className="text-sm font-bold text-[#1a3c28] opacity-50 hover:opacity-100 cursor-pointer transition-opacity">See all</span>
         </div>
         <div className="space-y-4">
-          {menuItems.slice(0, 4).map((item, index) => (
-            <div key={item.id || index} className="bg-white p-3 pr-4 rounded-[28px] border border-gray-100 flex gap-4 shadow-[0_4px_15px_rgba(0,0,0,0.02)] items-center">
-              <div className="flex-1 pl-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-bold text-[#1a3c28] text-base truncate">{item.name}</h4>
-                  {item.rating && (
+          {menuItems
+            .filter(i => !searchText || i.name.toLowerCase().includes(searchText.toLowerCase()))
+            .slice(0, searchText ? 20 : 6)
+            .map((item, index) => (
+              <div key={item.id || index} className="bg-white p-3 pr-4 rounded-[28px] border border-gray-100 flex gap-4 shadow-[0_4px_15px_rgba(0,0,0,0.02)] items-center cursor-pointer hover:border-gray-200 transition-colors" onClick={() => setOptionsModalItem(item)}>
+                <div className="flex-1 pl-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-bold text-[#1a3c28] text-base truncate">{item.name}</h4>
                     <span className="bg-yellow-100 flex items-center gap-1 text-[10px] text-yellow-700 px-1.5 py-0.5 rounded-md font-bold">
-                      <Star size={10} className="fill-yellow-500 text-yellow-500" /> {item.rating}
+                      <Star size={10} className="fill-yellow-500 text-yellow-500" /> 4.9
                     </span>
-                  )}
+                  </div>
+                  <p className="text-[11px] text-gray-400 font-medium leading-tight mb-3 line-clamp-2">
+                    {item.description || "Freshly brewed using our premium signature house blend."}
+                  </p>
+                  <span className="font-black text-[#1a3c28] text-lg">${parseFloat(item.price).toFixed(2)}</span>
                 </div>
-                <p className="text-[11px] text-gray-400 font-medium leading-tight mb-3 line-clamp-2">
-                  {item.description || "A balanced mix of espresso, steamed milk, and milk foam."}
-                </p>
-                <span className="font-black text-[#1a3c28]">${parseFloat(item.price).toFixed(2)}</span>
-              </div>
-              <div className="flex flex-col items-center gap-2 relative">
-                <div className="w-20 h-20 rounded-[20px] bg-[#f8f7f2] overflow-hidden -mr-1">
-                  {item.image ? (
-                    <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xl">☕</div>
-                  )}
+                <div className="flex flex-col items-center gap-2 relative">
+                  <div className="w-20 h-20 rounded-[20px] bg-[#f8f7f2] overflow-hidden -mr-1 shadow-inner border border-gray-50">
+                    {item.image ? (
+                      <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xl bg-gray-50">☕</div>
+                    )}
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 w-9 h-9 bg-[#1a3c28] text-white rounded-xl flex items-center justify-center shadow-lg shadow-[#1a3c28]/20 active:scale-90 transition-transform z-10">
+                    <Plus size={18} strokeWidth={3} />
+                  </div>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOptionsModalItem(item);
-                  }}
-                  className="absolute -bottom-2 -right-2 w-9 h-9 bg-[#1a3c28] text-white rounded-xl flex items-center justify-center shadow-lg shadow-[#1a3c28]/30 active:scale-90 transition-transform z-10"
-                >
-                  <Plus size={18} strokeWidth={3} />
-                </button>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
-    </motion.div>
+    </motion.div >
   );
 
   const CategoryViewComponent = () => {
