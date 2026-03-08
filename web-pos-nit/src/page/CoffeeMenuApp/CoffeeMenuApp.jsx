@@ -20,8 +20,8 @@ function cn(...inputs) {
 
 const MainWrapper = ({ children, bgClass = "bg-[#faf9f5]" }) => (
   <div className={cn("min-h-screen font-sans tracking-tight", bgClass)}>
-    <div className="max-w-[1200px] mx-auto min-h-screen relative flex flex-col shadow-sm bg-white sm:bg-transparent">
-      <div className="w-full h-full relative flex flex-col no-scrollbar">
+    <div className="max-w-[1400px] mx-auto min-h-screen relative flex flex-col sm:px-6 lg:px-8">
+      <div className="w-full h-full relative flex flex-col no-scrollbar bg-white sm:bg-transparent sm:shadow-none shadow-sm min-h-screen">
         {children}
       </div>
     </div>
@@ -119,7 +119,7 @@ const ProductOptionsModal = ({ item, onAdd, onClose, productSizes, calculateItem
   );
 };
 
-// --- VIEW COMPONENTS (DEFINED OUTSIDE FOR PERFORMANCE) ---
+// --- VIEW COMPONENTS ---
 
 const HomeView = ({
   selectedShop, categories, currentCategory, setCurrentCategory,
@@ -128,120 +128,127 @@ const HomeView = ({
 }) => (
   <motion.div
     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-    className="flex-1 flex flex-col px-5 pb-[130px]"
+    className="flex-1 flex flex-col px-5 pb-[130px] pt-4"
   >
-    <div className="flex justify-between items-center mt-4">
-      <h1 className="text-[20px] font-black uppercase leading-[0.95] tracking-tight text-[#1a3c28]">
+    <div className="flex justify-between items-center mb-6">
+      <h1 className="text-[24px] font-black uppercase leading-[0.95] tracking-tight text-[#1a3c28]">
         {selectedShop?.business_name?.toUpperCase() || "GREEN GROUND"}<br />
         COFFEE
       </h1>
       <div className="flex items-center gap-3">
-        <button className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center bg-white shadow-sm">
-          <Bell size={18} className="text-[#1a3c28]" />
+        <button className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center bg-white shadow-sm hover:bg-gray-50">
+          <Bell size={20} className="text-[#1a3c28]" />
         </button>
-        <button className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center bg-white shadow-sm">
-          <Menu size={18} className="text-[#1a3c28]" />
+        <button className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center bg-white shadow-sm hover:bg-gray-50">
+          <Menu size={20} className="text-[#1a3c28]" />
         </button>
       </div>
     </div>
 
-    <div className="mt-6 relative">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-        <Search size={18} />
-      </div>
-      <input
-        type="text" placeholder="Search your favorite coffee..."
-        className="w-full bg-white border border-gray-100 rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1a3c28]/10 shadow-sm"
-        value={searchText} onChange={(e) => setSearchText(e.target.value)}
-      />
-    </div>
-
-    <div className="mt-8 bg-[#fffcf5] border border-[#f0ead2] rounded-[32px] overflow-hidden flex shadow-sm relative min-h-[140px]">
-      <div className="p-6 flex-1 pr-24 relative z-10">
-        <h3 className="font-extrabold text-[#1a3c28] text-base mb-1 tracking-tight">REFER & EARN</h3>
-        <p className="text-xs text-[#1a3c28] opacity-70 mb-4 font-medium">Win Cashback of up to 10% on your next visit to {selectedShop?.name || 'us'}.</p>
-        <button className="bg-[#1a3c28] text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-lg shadow-[#1a3c28]/20">Invite Friends</button>
-      </div>
-      <div className="absolute right-0 bottom-0 w-[140px] h-[140px] translate-x-8 translate-y-4">
-        <div className="absolute inset-0 bg-yellow-400 rounded-full opacity-20 blur-2xl"></div>
-        <div className="w-32 h-32 rounded-full overflow-hidden absolute bottom-2 left-0 border-4 border-white shadow-lg bg-[#1a3c28]">
-          <img src="https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=300&auto=format&fit=crop" className="w-full h-full object-cover opacity-80" />
+    <div className="max-w-[800px] w-full mx-auto">
+      <div className="relative mb-8">
+        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+          <Search size={22} />
         </div>
+        <input
+          type="text" placeholder="Search your favorite coffee..."
+          className="w-full bg-white border border-gray-100 rounded-2xl py-5 pl-14 pr-6 text-base font-medium focus:outline-none focus:ring-4 focus:ring-[#1a3c28]/5 shadow-sm transition-all"
+          value={searchText} onChange={(e) => setSearchText(e.target.value)}
+        />
       </div>
-    </div>
 
-    {cart.length > 0 && (
-      <div className="mt-5 bg-[#1a3c28] rounded-[32px] p-6 text-white shadow-xl shadow-[#1a3c28]/20 cursor-pointer group" onClick={() => setIsCartOpen(true)}>
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-lg">In Your Cart</span>
-            <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">{cart.length}</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <div className="bg-[#fffcf5] border border-[#f0ead2] rounded-[40px] overflow-hidden flex shadow-sm relative min-h-[160px] group cursor-pointer hover:shadow-md transition-all">
+          <div className="p-8 flex-1 pr-32 relative z-10">
+            <h3 className="font-black text-[#1a3c28] text-lg mb-2 tracking-tight">REFER & EARN</h3>
+            <p className="text-sm text-[#1a3c28] opacity-70 mb-5 font-medium">Win Cashback of up to 10% on your next visit.</p>
+            <button className="bg-[#1a3c28] text-white px-6 py-3 rounded-full text-xs font-bold shadow-lg shadow-[#1a3c28]/20 group-hover:scale-105 transition-transform">Invite Friends</button>
           </div>
-          <span className="font-black text-[10px] tracking-widest opacity-60">READY</span>
+          <div className="absolute right-0 bottom-0 w-[160px] h-[160px] translate-x-4 translate-y-4">
+            <div className="absolute inset-0 bg-yellow-400 rounded-full opacity-20 blur-3xl"></div>
+            <div className="w-36 h-36 rounded-full overflow-hidden absolute bottom-4 right-4 border-4 border-white shadow-xl bg-[#1a3c28]">
+              <img src="https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=300&auto=format&fit=crop" className="w-full h-full object-cover opacity-80" />
+            </div>
+          </div>
         </div>
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-white/70">Estimated Total</span>
-          <span className="font-black text-xl">${getTotalPrice().toFixed(2)}</span>
-        </div>
-        <div className="w-full py-3 bg-white/10 group-hover:bg-white/20 rounded-xl text-xs font-bold transition-all text-center">Place Your Order Now</div>
-      </div>
-    )}
 
-    <div className="mt-8">
-      <div className="flex justify-between items-end mb-4 pr-1">
-        <h3 className="text-lg font-bold text-[#1a3c28]">Categories</h3>
-        <span className="text-sm font-bold text-[#1a3c28] opacity-50 cursor-pointer hover:opacity-100" onClick={() => setCurrentCategory({ name: 'All' })}>See all</span>
+        {cart.length > 0 && (
+          <div className="bg-[#1a3c28] rounded-[40px] p-8 text-white shadow-xl shadow-[#1a3c28]/20 cursor-pointer group flex flex-col justify-between" onClick={() => setIsCartOpen(true)}>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-3">
+                <span className="font-black text-xl">In Your Cart</span>
+                <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-black">{cart.length}</span>
+              </div>
+              <span className="font-black text-[10px] tracking-widest opacity-60">CHECKOUT</span>
+            </div>
+            <div className="flex justify-between items-end">
+              <div>
+                <span className="text-xs font-bold text-white/50 block mb-1">TOTAL</span>
+                <span className="font-black text-3xl">${getTotalPrice().toFixed(2)}</span>
+              </div>
+              <div className="px-6 py-3 bg-white/10 group-hover:bg-white/20 rounded-2xl text-sm font-black transition-all">Place Order</div>
+            </div>
+          </div>
+        )}
       </div>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-5 px-5 pb-2">
+    </div>
+
+    <div className="mt-4">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-black text-[#1a3c28]">Categories</h3>
+        <span className="text-sm font-bold text-[#1a3c28] opacity-40 hover:opacity-100 cursor-pointer transition-opacity" onClick={() => setCurrentCategory({ name: 'All' })}>See all items</span>
+      </div>
+      <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-5 px-5 pb-4">
         <button
-          onClick={() => setCurrentCategory({ name: 'All' })}
+          onClick={() => setCurrentCategory(null)}
           className={cn(
-            "px-6 py-3 rounded-full border border-gray-100 font-bold text-sm shadow-sm transition-all",
-            currentCategory?.name === 'All' ? "bg-[#1a3c28] text-white" : "bg-white text-[#1a3c28]"
+            "px-8 py-4 rounded-full border border-gray-100 font-black text-sm shadow-sm transition-all whitespace-nowrap",
+            currentCategory === null ? "bg-[#1a3c28] text-white scale-105" : "bg-white text-[#1a3c28] hover:bg-gray-50"
           )}
         > All Items </button>
         {categories.map((cat, i) => (
           <button
             key={cat.id || i} onClick={() => setCurrentCategory(cat)}
             className={cn(
-              "px-6 py-3 rounded-full border border-gray-100 font-bold text-sm shadow-sm transition-all text-[#1a3c28]",
-              currentCategory?.id === cat.id ? "bg-[#1a3c28] text-white" : "bg-white"
+              "px-8 py-4 rounded-full border border-gray-100 font-black text-sm shadow-sm transition-all whitespace-nowrap",
+              currentCategory?.id === cat.id ? "bg-[#1a3c28] text-white scale-105" : "bg-white text-[#1a3c28] hover:bg-gray-50"
             )}
           > {cat.name} </button>
         ))}
       </div>
     </div>
 
-    <div className="mt-8">
-      <h3 className="text-lg font-bold text-[#1a3c28] mb-5">
+    <div className="mt-10">
+      <h3 className="text-xl font-black text-[#1a3c28] mb-8">
         {searchText ? `Results (${menuItems.filter(i => i.name.toLowerCase().includes(searchText.toLowerCase())).length})` : 'Popular Items'}
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
         {menuItems
           .filter(i => !searchText || i.name.toLowerCase().includes(searchText.toLowerCase()))
-          .slice(0, searchText ? 20 : 12)
+          .slice(0, searchText ? 40 : 16)
           .map((item, index) => (
-            <div key={item.id || index} className="bg-white p-4 pr-5 rounded-[32px] border border-gray-50 flex gap-4 shadow-sm items-center cursor-pointer hover:border-[#1a3c28]/20 hover:shadow-md transition-all group" onClick={() => setOptionsModalItem(item)}>
-              <div className="flex-1 pl-2">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-bold text-[#1a3c28] text-base truncate">{item.name}</h4>
-                  <span className="bg-amber-100 flex items-center gap-0.5 text-[9px] text-amber-700 px-1.5 py-0.5 rounded-md font-bold">
-                    <Star size={10} className="fill-amber-500 text-amber-500" /> 4.9
-                  </span>
+            <div key={item.id || index} className="bg-white p-5 rounded-[40px] border border-gray-50 flex flex-col gap-5 shadow-sm hover:shadow-xl hover:border-[#1a3c28]/10 transition-all group cursor-pointer" onClick={() => setOptionsModalItem(item)}>
+              <div className="relative aspect-square w-full rounded-[30px] bg-[#f8f7f2] overflow-hidden shadow-inner flex-shrink-0">
+                {item.image ? (
+                  <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                ) : (<div className="w-full h-full flex items-center justify-center text-5xl">☕</div>)}
+                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-sm">
+                  <Star size={14} className="fill-amber-500 text-amber-500" />
+                  <span className="text-xs font-black text-[#1a3c28]">4.9</span>
                 </div>
-                <p className="text-[11px] text-gray-400 font-medium leading-tight mb-3 line-clamp-2">
-                  {item.description || "Freshly brewed using our premium signature house blend."}
-                </p>
-                <span className="font-black text-[#1a3c28] text-lg">${parseFloat(item.price).toFixed(2)}</span>
               </div>
-              <div className="relative">
-                <div className="w-24 h-24 rounded-3xl bg-[#f8f7f2] overflow-hidden shadow-inner group-hover:scale-105 transition-transform">
-                  {item.image ? (
-                    <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" />
-                  ) : (<div className="w-full h-full flex items-center justify-center text-3xl bg-gray-50">☕</div>)}
+              <div className="flex-1 flex flex-col justify-between px-1">
+                <div>
+                  <h4 className="font-black text-[#1a3c28] text-lg mb-2 group-hover:text-[#1a3c28]/80 transition-colors uppercase tracking-tight">{item.name}</h4>
+                  <p className="text-xs text-gray-400 font-medium line-clamp-2 leading-relaxed h-[36px] mb-4">
+                    {item.description || "Freshly brewed using our signature house blend for a perfect start to your day."}
+                  </p>
                 </div>
-                <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#1a3c28] text-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 active:scale-90 transition-all z-10">
-                  <Plus size={20} strokeWidth={3} />
+                <div className="flex justify-between items-center">
+                  <span className="font-black text-[#1a3c28] text-2xl">${parseFloat(item.price).toFixed(2)}</span>
+                  <div className="w-12 h-12 bg-[#1a3c28] text-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 active:scale-90 transition-all">
+                    <Plus size={24} strokeWidth={3} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -266,71 +273,72 @@ const CategoryView = ({
       initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
       className="flex-1 flex flex-col bg-[#faf9f5] pb-[130px]"
     >
-      <div className="relative bg-[#1a3c28] pt-14 pb-20 px-6" style={{ borderBottomLeftRadius: '48px', borderBottomRightRadius: '48px' }}>
+      <div className="relative bg-[#1a3c28] pt-16 pb-24 px-8" style={{ borderBottomLeftRadius: '60px', borderBottomRightRadius: '60px' }}>
         <div className="absolute inset-0 opacity-10 overflow-hidden pointer-events-none">
           <svg viewBox="0 0 400 300" className="w-full h-full object-cover mix-blend-overlay">
             <path fill="#ffffff" d="M0,100 C150,200 250,0 400,100 L400,0 L0,0 Z"></path>
           </svg>
         </div>
 
-        <div className="relative z-10 max-w-[800px] mx-auto w-full">
-          <div className="flex justify-between items-center text-white mb-8 px-1">
-            <button onClick={() => setCurrentCategory(null)} className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95">
-              <ChevronLeft size={30} />
+        <div className="relative z-10 max-w-[1000px] mx-auto w-full">
+          <div className="flex justify-between items-center text-white mb-10 px-1">
+            <button onClick={() => setCurrentCategory(null)} className="w-14 h-14 flex items-center justify-center hover:bg-white/10 rounded-2xl transition-all active:scale-95 bg-white/5 border border-white/10 backdrop-blur-sm">
+              <ChevronLeft size={32} strokeWidth={3} />
             </button>
-            <h1 className="text-2xl font-black uppercase tracking-widest">{currentCategory.name}</h1>
-            <button onClick={() => setIsCartOpen(true)} className="w-12 h-12 flex items-center justify-center relative bg-white/10 rounded-full">
-              <ShoppingCart size={24} />
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-[#1a3c28] flex items-center justify-center text-[10px] font-bold">{cart.length}</span>}
+            <div className="text-center">
+              <span className="text-[10px] font-black tracking-[0.3em] opacity-50 block mb-1 uppercase">Selection</span>
+              <h1 className="text-3xl font-black uppercase tracking-widest">{currentCategory.name}</h1>
+            </div>
+            <button onClick={() => setIsCartOpen(true)} className="w-14 h-14 flex items-center justify-center relative bg-white/10 rounded-2xl border border-white/10">
+              <ShoppingCart size={28} />
+              {cart.length > 0 && <span className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 rounded-full border-4 border-[#1a3c28] flex items-center justify-center text-[11px] font-black">{cart.length}</span>}
             </button>
           </div>
 
-          <div className="relative">
-            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-white/50">
-              <Search size={20} />
+          <div className="relative max-w-[700px] mx-auto">
+            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-white/40">
+              <Search size={22} />
             </div>
             <input
               type="text" placeholder={`Search in ${currentCategory.name}...`}
-              className="w-full bg-white/10 border border-white/20 rounded-2xl py-5 pl-14 pr-6 text-white placeholder:text-white/40 font-medium focus:outline-none focus:bg-white/20 transition-all backdrop-blur-md"
+              className="w-full bg-white/10 border border-white/10 rounded-[28px] py-6 pl-16 pr-8 text-white text-lg placeholder:text-white/30 font-bold focus:outline-none focus:bg-white/15 focus:ring-4 focus:ring-white/5 transition-all backdrop-blur-xl"
               value={searchText} onChange={(e) => setSearchText(e.target.value)}
             />
           </div>
         </div>
       </div>
 
-      <div className="flex-1 px-6 -mt-8 overflow-y-auto no-scrollbar max-w-[1200px] mx-auto w-full">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex-1 px-8 -mt-12 overflow-y-auto no-scrollbar max-w-[1400px] mx-auto w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filtered.map((item, index) => (
-            <div key={item.id || index} className="bg-white p-5 rounded-[40px] border border-gray-50 flex flex-col shadow-sm hover:shadow-xl hover:border-[#1a3c28]/10 transition-all group overflow-hidden" onClick={() => setOptionsModalItem(item)}>
-              <div className="flex gap-5 items-center">
-                <div className="w-28 h-28 rounded-[35px] bg-[#f4f2ea] overflow-hidden shadow-inner group-hover:scale-105 transition-transform border border-gray-50 flex-shrink-0">
-                  {item.image ? (
-                    <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" />
-                  ) : (<div className="w-full h-full flex items-center justify-center text-4xl">☕</div>)}
+            <div key={item.id || index} className="bg-white p-6 rounded-[50px] border border-gray-50 flex flex-col shadow-sm hover:shadow-2xl hover:border-[#1a3c28]/10 transition-all group overflow-hidden cursor-pointer" onClick={() => setOptionsModalItem(item)}>
+              <div className="relative aspect-[4/5] w-full rounded-[40px] bg-[#f4f2ea] overflow-hidden shadow-inner group-hover:scale-[1.02] transition-transform duration-700 border border-gray-100 mb-6">
+                {item.image ? (
+                  <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                ) : (<div className="w-full h-full flex items-center justify-center text-5xl">☕</div>)}
+                <div className="absolute top-5 left-5">
+                  <Tag color="gold" className="text-[10px] border-none font-black rounded-xl px-3 py-1 shadow-sm backdrop-blur-md bg-amber-400 text-[#1a3c28]">PREMIUM</Tag>
                 </div>
-                <div className="flex-1 flex flex-col justify-between py-1 overflow-hidden">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-bold text-[#1a3c28] text-lg truncate">{item.name}</h4>
-                      <Tag color="gold" className="text-[9px] border-none font-extrabold rounded-md px-1.5 ml-auto">NEW</Tag>
-                    </div>
-                    <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed font-medium">{item.description || "Our signature premium offering."}</p>
-                  </div>
-                  <div className="flex justify-between items-center mt-3">
-                    <span className="font-black text-[#1a3c28] text-2xl">${parseFloat(item.price).toFixed(2)}</span>
-                    <div className="bg-amber-50 text-amber-600 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1"><Star size={12} className="fill-amber-600" /> 4.9</div>
+              </div>
+              <div className="flex-1 flex flex-col justify-between px-2">
+                <div>
+                  <h4 className="font-black text-[#1a3c28] text-xl mb-2 uppercase tracking-tight">{item.name}</h4>
+                  <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed font-bold h-[32px] mb-6">{item.description || "Experience the richness of our expert crafted brew."}</p>
+                </div>
+                <div className="flex justify-between items-center bg-[#faf9f5] p-3 rounded-3xl group-hover:bg-[#1a3c28] transition-colors duration-500">
+                  <span className="font-black text-[#1a3c28] group-hover:text-white text-2xl transition-colors ml-2">${parseFloat(item.price).toFixed(2)}</span>
+                  <div className="w-12 h-12 bg-[#1a3c28] group-hover:bg-white text-white group-hover:text-[#1a3c28] rounded-2xl flex items-center justify-center shadow-md transition-all">
+                    <Plus size={24} strokeWidth={4} />
                   </div>
                 </div>
               </div>
-              <button className="mt-5 w-full bg-[#1a3c28] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-[#12281a] active:scale-[0.97] transition-all shadow-lg shadow-[#1a3c28]/10">
-                <Plus size={20} strokeWidth={3} /> Add to Order
-              </button>
             </div>
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-24 text-[#1a3c28]/30 font-bold flex flex-col items-center gap-4">
-              <ShoppingCart size={64} className="opacity-10" />
-              <p className="text-lg">No products found.</p>
+            <div className="col-span-full text-center py-32 text-[#1a3c28]/20 font-black flex flex-col items-center gap-6">
+              <ShoppingCart size={80} className="opacity-10" />
+              <p className="text-2xl tracking-tighter uppercase opacity-40">No products found</p>
+              <button onClick={() => setSearchText("")} className="px-8 py-3 bg-[#1a3c28] text-white rounded-full text-sm font-black shadow-lg shadow-[#1a3c28]/20 active:scale-95 transition-all">Clear Search</button>
             </div>
           )}
         </div>
@@ -376,7 +384,7 @@ const CoffeeMenuApp = () => {
         id: profile.branch_id,
         business_id: profile.business_id,
         name: profile.branch_name || "Branch",
-        business_name: profile.business_name || "Green Grounds Coffee",
+        business_name: profile.branch_name || "Mingly Coffee",
       });
       setSelectedTable(profile.table_no || null);
       localStorage.removeItem("is_guest");
@@ -396,7 +404,8 @@ const CoffeeMenuApp = () => {
         const catRes = await request("category", "get");
         if (catRes?.list) {
           setCategories(catRes.list);
-          if (catRes.list.length > 0 && !currentCategory) setCurrentCategory(catRes.list[0]);
+          // Changed: Do NOT auto-set the first category as currentCategory anymore
+          // This fixes the "Dessert category showing first" issue
         }
       }
       const productRes = await request("product", "get", {
@@ -411,7 +420,7 @@ const CoffeeMenuApp = () => {
             try {
               const parsed = typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes;
               sizesMap[p.id] = parsed.map(s => ({ ...s, price: parseFloat(s.price || 0) }));
-            } catch (e) {}
+            } catch (e) { }
           }
         });
         setProductSizes(sizesMap);
@@ -451,7 +460,7 @@ const CoffeeMenuApp = () => {
       <AnimatePresence mode="wait">
         {loading ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex items-center justify-center">
-            <div className="w-10 h-10 border-4 border-[#1a3c28]/10 border-t-[#1a3c28] rounded-full animate-spin"></div>
+            <div className="w-12 h-12 border-4 border-[#1a3c28]/10 border-t-[#1a3c28] rounded-full animate-spin"></div>
           </motion.div>
         ) : currentCategory && activeTab === 'home' ? (
           <CategoryView
@@ -472,32 +481,32 @@ const CoffeeMenuApp = () => {
         )}
       </AnimatePresence>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-[500px] h-[75px] bg-[#0c2b18] rounded-[35px] flex justify-between items-center px-8 shadow-2xl z-50">
-        <button onClick={() => { setActiveTab('home'); setCurrentCategory(null); }} className={cn("flex flex-col items-center gap-1", activeTab === 'home' ? "text-white" : "text-white/40")}>
-          <Home size={22} className={activeTab === 'home' ? "fill-white" : ""} />
-          <span className="text-[10px] font-bold">Home</span>
+      {/* Bottom Navigation - Improved for Laptop */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[calc(100%-64px)] max-w-[600px] h-[85px] bg-[#0c2b18] rounded-[42px] flex justify-between items-center px-12 shadow-[0_20px_50px_rgba(0,0,0,0.4)] z-50 border border-white/5 backdrop-blur-md">
+        <button onClick={() => { setActiveTab('home'); setCurrentCategory(null); }} className={cn("flex flex-col items-center gap-1 transition-all active:scale-90", activeTab === 'home' ? "text-white" : "text-white/30 hover:text-white/50")}>
+          <Home size={26} className={activeTab === 'home' ? "fill-white" : ""} />
+          <span className="text-[11px] font-black uppercase tracking-wider">Home</span>
         </button>
-        <button onClick={() => { setActiveTab('order'); setIsCartOpen(true); }} className={cn("flex flex-col items-center gap-1 relative", activeTab === 'order' ? "text-white" : "text-white/40")}>
-          <FileText size={22} className={activeTab === 'order' ? "fill-white" : ""} />
-          <span className="text-[10px] font-bold">Order</span>
-          {cart.length > 0 && <span className="absolute -top-1 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0c2b18]"></span>}
+        <button onClick={() => { setActiveTab('order'); setIsCartOpen(true); }} className={cn("flex flex-col items-center gap-1 relative transition-all active:scale-90", activeTab === 'order' ? "text-white" : "text-white/30 hover:text-white/50")}>
+          <FileText size={26} className={activeTab === 'order' ? "fill-white" : ""} />
+          <span className="text-[11px] font-black uppercase tracking-wider">Order</span>
+          {cart.length > 0 && <span className="absolute -top-1 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0c2b18] shadow-sm"></span>}
         </button>
-        <button onClick={() => setActiveTab('starred')} className={cn("flex flex-col items-center gap-1", activeTab === 'starred' ? "text-white" : "text-white/40")}>
-          <Star size={22} className={activeTab === 'starred' ? "fill-white" : ""} />
-          <span className="text-[10px] font-bold">Starred</span>
+        <button onClick={() => setActiveTab('starred')} className={cn("flex flex-col items-center gap-1 transition-all active:scale-90", activeTab === 'starred' ? "text-white" : "text-white/30 hover:text-white/50")}>
+          <Star size={26} className={activeTab === 'starred' ? "fill-white" : ""} />
+          <span className="text-[11px] font-black uppercase tracking-wider">Starred</span>
         </button>
-        <button onClick={() => setActiveTab('profile')} className={cn("flex flex-col items-center gap-1", activeTab === 'profile' ? "text-white" : "text-white/40")}>
-          <User size={22} className={activeTab === 'profile' ? "fill-white" : ""} />
-          <span className="text-[10px] font-bold">Profile</span>
+        <button onClick={() => setActiveTab('profile')} className={cn("flex flex-col items-center gap-1 transition-all active:scale-90", activeTab === 'profile' ? "text-white" : "text-white/30 hover:text-white/50")}>
+          <User size={26} className={activeTab === 'profile' ? "fill-white" : ""} />
+          <span className="text-[11px] font-black uppercase tracking-wider">Profile</span>
         </button>
       </div>
 
       {/* Modals */}
       <Modal
         open={!!optionsModalItem} onCancel={() => setOptionsModalItem(null)}
-        footer={null} centered width={350} destroyOnClose className="mobile-modal"
-        closeIcon={<div className="bg-gray-100 p-2 rounded-full"><X size={16} /></div>}
+        footer={null} centered width={400} destroyOnClose className="mobile-modal"
+        closeIcon={<div className="bg-gray-100 p-2.5 rounded-full hover:bg-gray-200 transition-colors"><X size={18} /></div>}
       >
         <ProductOptionsModal
           item={optionsModalItem} productSizes={productSizes} calculateItemPrice={calculateItemPrice}
@@ -506,33 +515,53 @@ const CoffeeMenuApp = () => {
       </Modal>
 
       <Modal
-        open={isCartOpen && activeTab !== 'order'} onCancel={() => setIsCartOpen(false)}
-        footer={null} title="Your Cart" centered width={350} className="mobile-modal font-sans"
+        open={isCartOpen}
+        onCancel={() => { setIsCartOpen(false); if (activeTab === 'order') setActiveTab('home'); }}
+        footer={null} title={<span className="font-black text-xl text-[#1a3c28] uppercase tracking-widest px-2">Your Basket</span>} centered width={450} className="mobile-modal font-sans"
       >
         {cart.length === 0 ? (
-          <div className="py-10 text-center text-[#1a3c28]/40 font-bold">Your cart is empty.</div>
+          <div className="py-20 text-center flex flex-col items-center gap-4">
+            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-2">
+              <ShoppingCart size={32} className="text-gray-200" />
+            </div>
+            <p className="text-gray-400 font-bold tracking-tight">Your basket is currently empty.</p>
+            <button onClick={() => setIsCartOpen(false)} className="mt-4 px-8 py-3 bg-[#1a3c28] text-white rounded-full text-xs font-black shadow-lg active:scale-95 transition-all">Start Shopping</button>
+          </div>
         ) : (
-          <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
+          <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2 no-scrollbar px-2">
             {cart.map((item, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-2xl">
-                <div>
-                  <h4 className="font-bold text-[#1a3c28] text-sm">{item.name}</h4>
-                  <span className="text-xs font-bold text-[#1a3c28]/50">x{item.quantity} {item.size?.name ? `(${item.size.name})` : ''}</span>
+              <div key={idx} className="flex justify-between items-center bg-[#faf9f5] p-5 rounded-[32px] border border-gray-100 group">
+                <div className="flex gap-4 items-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white overflow-hidden shadow-sm flex-shrink-0">
+                    {item.image ? <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-gray-50">☕</div>}
+                  </div>
+                  <div>
+                    <h4 className="font-black text-[#1a3c28] text-base leading-tight mb-1">{item.name}</h4>
+                    <div className="flex gap-2">
+                      <span className="text-[10px] bg-white px-2 py-0.5 rounded-lg font-black text-[#1a3c28]/40 border border-gray-100 uppercase tracking-tighter">Qty: {item.quantity}</span>
+                      {item.size?.name && <span className="text-[10px] bg-[#1a3c28]/5 px-2 py-0.5 rounded-lg font-black text-[#1a3c28]/60 border border-[#1a3c28]/10 uppercase tracking-tighter">{item.size.name}</span>}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-black text-[#1a3c28]">${item.totalPrice.toFixed(2)}</span>
-                  <button onClick={() => setCart(cart.filter((_, i) => i !== idx))} className="text-red-400"><X size={16} /></button>
+                <div className="flex items-center gap-4">
+                  <span className="font-black text-[#1a3c28] text-lg">${item.totalPrice.toFixed(2)}</span>
+                  <button onClick={() => setCart(cart.filter((_, i) => i !== idx))} className="w-10 h-10 bg-white text-red-500 rounded-xl flex items-center justify-center shadow-sm hover:bg-red-50 transition-colors"><X size={18} /></button>
                 </div>
               </div>
             ))}
-            <div className="pt-4 border-t flex justify-between items-center">
-              <span className="font-bold text-[#1a3c28]">Total:</span>
-              <span className="font-black text-xl text-[#1a3c28]">${getTotalPrice().toFixed(2)}</span>
+            <div className="pt-8 border-t border-dashed border-gray-200 flex justify-between items-baseline px-2">
+              <span className="font-black text-gray-400 text-sm tracking-widest uppercase">Subtotal</span>
+              <span className="font-black text-4xl text-[#1a3c28] tracking-tighter">${getTotalPrice().toFixed(2)}</span>
             </div>
             <button
-              onClick={() => { message.success("Order Placed!"); setCart([]); setIsCartOpen(false); }}
-              className="w-full bg-[#1a3c28] text-white py-4 rounded-[20px] font-bold text-lg mt-4 shadow-lg active:scale-95"
-            > Checkout </button>
+              onClick={() => { message.success("Order Placed Successfully!"); setCart([]); setIsCartOpen(false); setActiveTab('home'); }}
+              className="w-full bg-[#1a3c28] text-white py-6 rounded-[30px] font-black text-xl mt-6 shadow-2xl shadow-[#1a3c28]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 uppercase tracking-widest"
+            >
+              Confirm Order
+              <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                <ChevronLeft size={20} className="rotate-180" />
+              </div>
+            </button>
           </div>
         )}
       </Modal>
