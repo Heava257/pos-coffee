@@ -209,6 +209,7 @@ const ProfileView = ({ selectedShop, selectedTable }) => {
       okText: 'Sign Out',
       okType: 'danger',
       cancelText: 'Cancel',
+      centered: true,
       onOk: () => {
         setLogout();
         navigate("/login");
@@ -217,42 +218,95 @@ const ProfileView = ({ selectedShop, selectedTable }) => {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col px-6 pb-24 pt-8">
-      <h1 className="text-2xl font-extrabold text-[#1A3C28] mb-8">My Profile</h1>
-
-      <div className="bg-gray-50 rounded-3xl p-6 flex flex-col items-center mb-8 border border-gray-100">
-        <div className="w-20 h-20 bg-[#1A3C28] rounded-full flex items-center justify-center text-white text-2xl font-bold mb-4 shadow-xl shadow-[#1A3C28]/20 uppercase">
-          {profile?.firstname?.charAt(0) || "C"}
-        </div>
-        <h3 className="text-lg font-bold text-gray-800">{profile?.firstname || "Guest"} {profile?.lastname || ""}</h3>
-        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Customer @ {selectedShop?.business_name}</p>
-        <div className="mt-4 px-4 py-1.5 bg-white rounded-full text-[10px] font-black border border-gray-100 shadow-sm text-[#1A3C28]">TABLE NUMBER: {selectedTable || 'N/A'}</div>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex-1 flex flex-col items-center px-6 pb-32 pt-12 max-w-[800px] mx-auto w-full"
+    >
+      <div className="w-full mb-10 text-center md:text-left">
+        <h1 className="text-3xl font-extrabold text-[#1A3C28] tracking-tight">My Profile</h1>
+        <p className="text-sm text-gray-400 font-medium mt-1">Manage your account and preferences</p>
       </div>
 
-      <div className="space-y-3">
+      {/* Profile Card */}
+      <div className="w-full bg-white rounded-[32px] p-8 flex flex-col items-center mb-10 border border-gray-100 shadow-xl shadow-gray-100/40 relative overflow-hidden group">
+        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-[#1A3C28] to-[#2D5A41] opacity-[0.03] group-hover:opacity-[0.06] transition-opacity"></div>
+
+        <div className="relative">
+          <div className="w-24 h-24 bg-[#1A3C28] rounded-full flex items-center justify-center text-white text-3xl font-bold mb-6 shadow-2xl shadow-[#1A3C28]/30 uppercase border-4 border-white">
+            {profile?.firstname?.charAt(0) || "G"}
+          </div>
+          <div className="absolute bottom-6 right-0 w-6 h-6 bg-green-500 border-4 border-white rounded-full"></div>
+        </div>
+
+        <h3 className="text-xl font-extrabold text-gray-800 mb-1">
+          {profile?.firstname ? `${profile.firstname} ${profile.lastname || ''}` : "Guest User"}
+        </h3>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-6">
+          {profile ? 'Registered Customer' : 'Limited Access'}
+        </p>
+
+        <div className="flex gap-3">
+          <div className="px-5 py-2 bg-[#faf9f5] rounded-2xl text-[11px] font-black border border-gray-100 text-[#1A3C28] uppercase tracking-wider flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-[#1A3C28] rounded-full"></div>
+            TABLE {selectedTable || 'N/A'}
+          </div>
+          <div className="px-5 py-2 bg-[#faf9f5] rounded-2xl text-[11px] font-black border border-gray-100 text-[#1A3C28] uppercase tracking-wider flex items-center gap-2">
+            {selectedShop?.business_name || 'Mingly'}
+          </div>
+        </div>
+
+        {!profile && (
+          <button
+            onClick={() => navigate("/login")}
+            className="mt-8 px-8 py-3 bg-[#1A3C28] text-white rounded-xl text-xs font-black shadow-lg shadow-[#1A3C28]/20 hover:scale-105 transition-all"
+          >
+            SIGN IN FOR FULL ACCESS
+          </button>
+        )}
+      </div>
+
+      {/* Menu Options */}
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
-          { icon: History, label: 'Order History', color: 'text-blue-500' },
-          { icon: Globe, label: 'Language', color: 'text-purple-500', detail: 'English' },
-          { icon: Settings, label: 'Settings', color: 'text-gray-500' },
-          { icon: LogOut, label: 'Sign Out', color: 'text-red-500', action: handleLogout },
+          { icon: History, label: 'Order History', color: 'text-blue-500', bg: 'bg-blue-50' },
+          { icon: Star, label: 'My Favorites', color: 'text-amber-500', bg: 'bg-amber-50' },
+          { icon: Globe, label: 'Language', color: 'text-purple-500', bg: 'bg-purple-50', detail: 'English' },
+          { icon: Settings, label: 'App Settings', color: 'text-gray-500', bg: 'bg-gray-100' },
         ].map((item, i) => (
           <button
-            key={i} onClick={item.action}
-            className="w-full flex justify-between items-center p-5 bg-white border border-gray-50 rounded-2xl hover:bg-gray-50 transition-all active:scale-[0.99]"
+            key={i}
+            className="flex justify-between items-center p-6 bg-white border border-gray-50 rounded-[24px] hover:border-gray-200 hover:shadow-lg hover:shadow-gray-100/50 transition-all active:scale-[0.98] group"
           >
-            <div className="flex items-center gap-4">
-              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-gray-50", item.color.replace('text', 'bg').replace('500', '50'))}>
-                <item.icon size={20} className={item.color} />
+            <div className="flex items-center gap-5">
+              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110", item.bg)}>
+                <item.icon size={22} className={item.color} />
               </div>
-              <span className="text-sm font-bold text-gray-700">{item.label}</span>
+              <div className="text-left">
+                <span className="text-sm font-extrabold text-gray-700 block">{item.label}</span>
+                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">View or change</span>
+              </div>
             </div>
-            {item.detail && <span className="text-xs font-bold text-gray-400">{item.detail}</span>}
+            {item.detail && <span className="text-xs font-black text-[#1A3C28]/30">{item.detail}</span>}
           </button>
         ))}
       </div>
 
-      <div className="mt-auto py-10 text-center">
-        <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.3em]">Mingly Coffee App v1.2.0</p>
+      {profile && (
+        <button
+          onClick={handleLogout}
+          className="w-full mt-10 flex items-center justify-center gap-3 p-6 border-2 border-red-50 rounded-[24px] text-red-500 font-extrabold text-sm hover:bg-red-50 hover:border-red-100 transition-all active:scale-[0.98]"
+        >
+          <LogOut size={20} />
+          SIGN OUT FROM SESSION
+        </button>
+      )}
+
+      <div className="mt-16 text-center">
+        <div className="inline-block px-4 py-1 bg-gray-50 rounded-full border border-gray-100 mb-2">
+          <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.4em]">Secure Encryption Active</p>
+        </div>
+        <p className="text-[10px] font-bold text-gray-200 uppercase tracking-[0.2em]">Mingly Coffee App v1.2.0 r2</p>
       </div>
     </motion.div>
   );
