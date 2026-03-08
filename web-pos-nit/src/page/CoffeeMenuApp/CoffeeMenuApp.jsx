@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Bell, Menu, Search, ShoppingCart, Plus, Minus, X,
-  MapPin, Clock, Home, FileText, Star, User, ChevronLeft
+  MapPin, Clock, Home, FileText, Star, User, ChevronLeft,
+  Tag
 } from 'lucide-react';
 import { request } from '../../util/helper';
 import { Config } from '../../util/config';
