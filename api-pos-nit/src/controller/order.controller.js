@@ -179,7 +179,7 @@ exports.getPendingOrders = async (req, res) => {
     try {
         const { business_id, branch_id } = req;
         const [list] = await db.query(
-            "SELECT * FROM orders WHERE business_id = ? AND branch_id = ? AND status = 'unpaid' AND order_type = 'Dine In' ORDER BY id DESC",
+            "SELECT * FROM orders WHERE business_id = ? AND branch_id = ? AND status = 'unpaid' AND order_type = 'dine_in' ORDER BY id DESC",
             [business_id, branch_id]
         );
         res.json({ list });

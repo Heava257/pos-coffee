@@ -529,7 +529,7 @@ const CoffeeMenuApp = () => {
       sub_total: sub_total,
       total_amount: sub_total,
       payment_method: "Cash",
-      order_type: "Dine In",
+      order_type: "dine_in",
       cart_items: cart.map(item => ({
         product_id: item.id,
         qty: item.quantity,
