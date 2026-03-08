@@ -46,7 +46,7 @@ export const Config = {
   },
   getProductImagePath: (imagePart) => {
     if (!imagePart) return "";
-    if (imagePart.startsWith('http')) return imagePart;
+    if (imagePart.startsWith('http') || Config.image_path.includes('cloudinary')) return Config.getFullImagePath(imagePart);
     const base = Config.image_path.endsWith('/') ? Config.image_path : `${Config.image_path}/`;
     return `${base}image_pos/${imagePart}`;
   },

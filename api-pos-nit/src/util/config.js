@@ -15,6 +15,12 @@ module.exports = {
   image_path: process.env.IMAGE_PATH || "public/images/",
   flutter_secret_key: process.env.FLUTTER_SECRET_KEY || "FLWSECK_TEST-51f96fcfc9d06ac2d35ed8a01a523fae-X",
 
+  cloudinary: {
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  },
+
   // ─── PayWay (ABA Bank Cambodia) ───────────────────────────────
   payway: {
     merchant_id: process.env.PAYWAY_MERCHANT_ID || "demo_merchant",
