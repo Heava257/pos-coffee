@@ -28,10 +28,10 @@ exports.create = async (req, res) => {
 
         // Format: [FrontendURL]/scan?biz=[business_id]&branch=[branch_id]&table=[table_name]
         // Try to get frontend URL from Referer/Origin or use a fallback for local testing
-        let frontendUrl = "http://172.16.20.14:5173";
-        if (req.headers.origin && !req.headers.origin.includes("localhost")) {
+        let frontendUrl = "http://localhost:5173";
+        if (req.headers.origin) {
             frontendUrl = req.headers.origin;
-        } else if (req.headers.referer && !req.headers.referer.includes("localhost")) {
+        } else if (req.headers.referer) {
             try { frontendUrl = new URL(req.headers.referer).origin; } catch (e) { }
         }
 

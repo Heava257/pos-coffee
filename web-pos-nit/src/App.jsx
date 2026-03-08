@@ -39,6 +39,17 @@ import MyPlanPage from "./page/plans/MyPlanPage";
 import PaymentResultPage from "./page/plans/PaymentResultPage";
 import TablePage from "./page/table/TablePage";
 import SettingsPage from "./page/settings/SettingsPage";
+import { getProfile } from "./store/profile.store";
+
+const RootRedirect = () => {
+  const profile = getProfile();
+  // If we have a profile and it's NOT a guest, go to dashboard admin
+  if (profile && profile.role_code !== "guest" && profile.role_id) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  // Otherwise (Guest or Not logged in), go to customer menu
+  return <Navigate to="/customer" replace />;
+};
 
 function App() {
   const MainLayoutWrapper = () => (
@@ -54,7 +65,7 @@ function App() {
           <Route path="/scan" element={<ScanPage />} />
 
           <Route element={<MainLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<RootRedirect />} />
             <Route path="/dashboard" element={<HomePage />} />
             <Route path="/invoices" element={<PosPage />} />
             <Route path="/table" element={<TablePage />} />
