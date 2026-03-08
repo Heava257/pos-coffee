@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Bell, Menu, Search, ShoppingCart, Plus, Minus, X,
-  Home, FileText, Star, User, ChevronLeft, LogOut, Settings, History, Globe
+  Home, FileText, Star, User, ChevronLeft, LogOut, Settings, History, Globe,SplashView
 } from 'lucide-react';
 import { request } from '../../util/helper';
 import { Config } from '../../util/config';
