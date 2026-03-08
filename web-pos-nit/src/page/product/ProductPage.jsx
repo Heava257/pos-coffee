@@ -116,7 +116,9 @@ function ProductPage() {
     params.append("brand", items.brand || "");
     params.append("description", items.description || "");
     params.append("qty", items.qty || 0);
+    params.append("min_stock_alert", items.min_stock_alert || 0);
     params.append("price", items.price || 0);
+    params.append("cost_price", items.cost_price || 0);
     params.append("discount", items.discount || 0);
     params.append("status", items.status === 0 ? 0 : 1);
     params.append("image", form.getFieldValue("image") || "");
@@ -444,6 +446,10 @@ function ProductPage() {
                     <InputNumber placeholder={t.discount} style={{ width: "100%" }} />
                   </Form.Item>
                 )}
+
+                <Form.Item name={"min_stock_alert"} label={t.min_stock_alert || "Min Stock Alert"}>
+                  <InputNumber placeholder="Alert when stock < X" style={{ width: "100%" }} />
+                </Form.Item>
               </div>
             </Col>
 
@@ -469,7 +475,14 @@ function ProductPage() {
                   name="price"
                   rules={[{ required: true, message: t.price_required }]}
                 >
-                  <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+                  <InputNumber min={0} step={0.01} style={{ width: '100%' }} placeholder="Selling Price (ex: 2.50)" />
+                </Form.Item>
+
+                <Form.Item
+                  label={t.last_cost || "Cost Price"}
+                  name="cost_price"
+                >
+                  <InputNumber min={0} step={0.01} style={{ width: '100%' }} placeholder="Purchase Cost (ex: 1.20)" />
                 </Form.Item>
 
                 <Form.Item name={"status"} label={t.status}>
@@ -608,15 +621,23 @@ function ProductPage() {
             title: t.stock.toUpperCase(),
             dataIndex: "qty",
             align: 'center',
-            render: (qty) => (
+            render: (qty, record) => (
               <div style={{
-                color: qty <= 5 ? COLORS.redBadge : COLORS.midGreen,
+                color: qty <= (record.min_stock_alert || 5) ? COLORS.redBadge : COLORS.midGreen,
                 fontWeight: 700,
                 fontSize: 15
               }}>
                 {qty}
+                {qty <= (record.min_stock_alert || 5) && <div style={{ fontSize: 9, fontWeight: 400 }}>LOW</div>}
               </div>
             )
+          },
+          {
+            key: "cost_price",
+            title: (t.last_cost || "Cost").toUpperCase(),
+            dataIndex: "cost_price",
+            align: 'right',
+            render: (val) => <span style={{ color: COLORS.textSecondary }}>${Number(val || 0).toFixed(2)}</span>
           },
           {
             key: "price",

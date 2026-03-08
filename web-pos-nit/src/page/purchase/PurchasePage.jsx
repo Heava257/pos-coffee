@@ -223,6 +223,22 @@ function PurchasePage() {
         }
     };
 
+    const onClickDelete = (item) => {
+        Modal.confirm({
+            title: t.confirm_delete || "Confirm Delete",
+            content: "Are you sure you want to remove this purchase record?",
+            onOk: async () => {
+                const res = await request("purchase", "delete", { id: item.id });
+                if (res && !res.error) {
+                    message.success("Purchase record removed!");
+                    getList();
+                } else {
+                    message.error(res?.message || "Delete failed");
+                }
+            }
+        });
+    };
+
     const calculateTotal = () => {
         const items = form.getFieldValue("items") || [];
         let total = 0;
@@ -305,8 +321,17 @@ function PurchasePage() {
                             style={{ background: '#2ecc71', borderColor: '#2ecc71' }}
                             onClick={() => onClickReceive(item)}
                         >
-                            {t.paid}
+                            {t.receiving_now || "Receive"}
                         </Button>
+                    )}
+                    {(item.status === 'Pending' || item.status === 'Cancelled') && (
+                        <Button
+                            type="text"
+                            danger
+                            size="small"
+                            icon={<MdDelete />}
+                            onClick={() => onClickDelete(item)}
+                        />
                     )}
                 </Space>
             )
