@@ -438,7 +438,8 @@ const CoffeeMenuApp = () => {
   };
 
   const fetchStarredItems = async () => {
-    if (!getProfile()) return;
+    const profile = getProfile();
+    if (!profile || !profile.id) return; // Only fetch if we have a real user ID
     try {
       const res = await request("favorite", "get");
       if (res?.list) setStarredItems(res.list);

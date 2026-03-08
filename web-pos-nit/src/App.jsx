@@ -43,11 +43,10 @@ import { getProfile } from "./store/profile.store";
 
 const RootRedirect = () => {
   const profile = getProfile();
-  // If we have a profile and it's NOT a guest, go to dashboard admin
-  if (profile && profile.role_code !== "guest" && profile.role_id) {
+  // We strictly check for user_id AND role_code to distinguish between Admin and Guest
+  if (profile && profile.id && profile.role_code !== "guest") {
     return <Navigate to="/dashboard" replace />;
   }
-  // Otherwise (Guest or Not logged in), go to customer menu
   return <Navigate to="/customer" replace />;
 };
 
@@ -65,7 +64,6 @@ function App() {
           <Route path="/scan" element={<ScanPage />} />
 
           <Route element={<MainLayout />}>
-            <Route path="/" element={<RootRedirect />} />
             <Route path="/dashboard" element={<HomePage />} />
             <Route path="/invoices" element={<PosPage />} />
             <Route path="/table" element={<TablePage />} />
@@ -98,11 +96,9 @@ function App() {
             <Route path="*" element={<Navigate to="/customer" replace />} />
           </Route>
 
-          <Route element={<MainLayoutAuth />}>
-            {/* <Route path="/about" element={<AboutHomepage />} /> */}
-            <Route path="/login" element={<LogingPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
+          <Route path="/login" element={<LogingPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/" element={<RootRedirect />} />
         </Routes>
       </BrowserRouter>
 
