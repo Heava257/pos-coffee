@@ -514,6 +514,50 @@ const CoffeeMenuApp = () => {
     setOptionsModalItem(null);
   };
 
+  const handlePlaceOrder = async () => {
+    if (cart.length === 0) {
+      message.warning("Your basket is empty!");
+      return;
+    }
+
+    const sub_total = cart.reduce((s, i) => s + (i.totalPrice || 0), 0);
+    const orderData = {
+      business_id: selectedShop?.business_id,
+      branch_id: selectedShop?.id,
+      customer_name: "Guest",
+      table_no: selectedTable || "",
+      sub_total: sub_total,
+      total_amount: sub_total,
+      payment_method: "Cash",
+      order_type: "Dine In",
+      cart_items: cart.map(item => ({
+        product_id: item.id,
+        qty: item.quantity,
+        price: item.basePrice,
+        note: item.customization || item.note || ""
+      })),
+      status: "unpaid"
+    };
+
+    setLoading(true);
+    try {
+      const res = await request("order", "post", orderData);
+      if (res && res.success) {
+        message.success("Order Placed Successfully!");
+        setCart([]);
+        localStorage.setItem('coffee_pos_cart', JSON.stringify([]));
+        setIsCartOpen(false);
+        setActiveTab('home');
+      } else {
+        message.error(res?.message || "Failed to place order.");
+      }
+    } catch (error) {
+      message.error("Error connecting to server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateCartQty = (cartId, delta) => {
     setCart(prevCart => prevCart.map(item => {
       if (item.cartId === cartId) {
@@ -767,10 +811,14 @@ const CoffeeMenuApp = () => {
               </div>
 
               <button
-                className="w-full mt-8 h-14 bg-[#1A3C28] text-white rounded-2xl font-black shadow-xl shadow-[#1A3C28]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-                onClick={() => { message.success("Order Placed Successfully!"); setCart([]); setIsCartOpen(false); setActiveTab('home'); }}
+                className={cn(
+                  "w-full mt-8 h-14 bg-[#1A3C28] text-white rounded-2xl font-black shadow-xl shadow-[#1A3C28]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3",
+                  loading && "opacity-70 cursor-not-allowed"
+                )}
+                onClick={handlePlaceOrder}
+                disabled={loading}
               >
-                PLACE ORDER NOW ☕
+                {loading ? "PLACING ORDER..." : "PLACE ORDER NOW ☕"}
               </button>
             </div>
           )}
