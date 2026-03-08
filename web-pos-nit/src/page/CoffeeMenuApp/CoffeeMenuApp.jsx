@@ -190,36 +190,14 @@ const CoffeeMenuApp = () => {
 
   const getTotalPrice = () => cart.reduce((sum, item) => sum + item.totalPrice, 0);
 
-  // Layout Wrapper for Mobile Constraints
-  const MobileWrapper = ({ children, bgClass = "bg-[#faf9f5]" }) => (
-    <div className="min-h-screen bg-black/10 flex items-center justify-center font-sans tracking-tight">
-      <div className={cn(`w-full h-[100dvh] sm:h-[844px] sm:w-[390px] sm:rounded-[40px] overflow-hidden relative shadow-2xl`, bgClass)}>
-        {/* Dynamic Island Mock */}
-        <div className="absolute top-0 inset-x-0 h-14 flex items-center justify-center pointer-events-none z-50">
-          <div className="w-[120px] h-7 bg-black rounded-full mt-2"></div>
-        </div>
-
-        {/* Time and Battery mock */}
-        <div className="absolute top-0 inset-x-0 h-14 px-6 flex items-center justify-between text-[#1a3c28] font-bold text-sm pointer-events-none z-40">
-          <span className="mt-1">9:41</span>
-          <div className="flex items-center gap-1.5 mt-1">
-            <div className="flex gap-0.5">
-              <div className="w-1 h-2 bg-[#1a3c28] rounded-full"></div>
-              <div className="w-1 h-3 bg-[#1a3c28] rounded-full"></div>
-              <div className="w-1 h-3 bg-[#1a3c28] opacity-30 rounded-full"></div>
-            </div>
-            <div className="w-[20px] h-[10px] border border-[#1a3c28] rounded-sm relative ml-1">
-              <div className="absolute inset-[1px] bg-[#1a3c28] w-[70%] rounded-sm"></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full h-full overflow-y-auto overflow-x-hidden pt-12 no-scrollbar relative flex flex-col">
+  // Layout Wrapper - Responsive for all devices
+  const MainWrapper = ({ children, bgClass = "bg-[#faf9f5]" }) => (
+    <div className={cn("min-h-screen font-sans tracking-tight", bgClass)}>
+      <div className="max-w-[1200px] mx-auto min-h-screen relative flex flex-col shadow-sm bg-white sm:bg-transparent">
+        <div className="w-full h-full relative flex flex-col no-scrollbar">
           {children}
         </div>
       </div>
-
-      {/* Global minimal styles */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
         .font-sans { font-family: 'Outfit', sans-serif; }
@@ -231,12 +209,12 @@ const CoffeeMenuApp = () => {
 
   if (splash) {
     return (
-      <MobileWrapper bgClass="bg-[#f2f1e9]">
+      <MainWrapper bgClass="bg-[#f2f1e9]">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8 }}
-          className="w-full h-full flex flex-col items-center justify-center text-[#1a3c28]"
+          className="w-full grow flex flex-col items-center justify-center text-[#1a3c28]"
         >
           <div className="flex flex-col items-center">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="mb-4 text-[#1a3c28]">
@@ -244,11 +222,12 @@ const CoffeeMenuApp = () => {
               <path d="M15 4.5V2m-6 2.5V2" />
             </svg>
             <h1 className="text-[28px] font-black uppercase text-center leading-[0.9] tracking-tight">
-              GREEN<br />GROUNDS<br />COFFEE
+              {selectedShop?.business_name?.toUpperCase() || "GREEN GROUND"}<br />
+              COFFEE
             </h1>
           </div>
         </motion.div>
-      </MobileWrapper>
+      </MainWrapper>
     );
   }
 
@@ -358,12 +337,12 @@ const CoffeeMenuApp = () => {
           </h3>
           <span onClick={() => setCurrentCategory({ name: 'All' })} className="text-sm font-bold text-[#1a3c28] opacity-50 hover:opacity-100 cursor-pointer transition-opacity">See all</span>
         </div>
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {menuItems
             .filter(i => !searchText || i.name.toLowerCase().includes(searchText.toLowerCase()))
-            .slice(0, searchText ? 20 : 6)
+            .slice(0, searchText ? 20 : 12)
             .map((item, index) => (
-              <div key={item.id || index} className="bg-white p-3 pr-4 rounded-[28px] border border-gray-100 flex gap-4 shadow-[0_4px_15px_rgba(0,0,0,0.02)] items-center cursor-pointer hover:border-gray-200 transition-colors" onClick={() => setOptionsModalItem(item)}>
+              <div key={item.id || index} className="bg-white p-3 pr-4 rounded-[28px] border border-gray-100 flex gap-4 shadow-[0_4px_15px_rgba(0,0,0,0.02)] items-center cursor-pointer hover:border-[#1a3c28]/20 hover:shadow-md transition-all group" onClick={() => setOptionsModalItem(item)}>
                 <div className="flex-1 pl-3">
                   <div className="flex items-center gap-2 mb-1">
                     <h4 className="font-bold text-[#1a3c28] text-base truncate">{item.name}</h4>
@@ -377,14 +356,14 @@ const CoffeeMenuApp = () => {
                   <span className="font-black text-[#1a3c28] text-lg">${parseFloat(item.price).toFixed(2)}</span>
                 </div>
                 <div className="flex flex-col items-center gap-2 relative">
-                  <div className="w-20 h-20 rounded-[20px] bg-[#f8f7f2] overflow-hidden -mr-1 shadow-inner border border-gray-50">
+                  <div className="w-20 h-20 rounded-[20px] bg-[#f8f7f2] overflow-hidden -mr-1 shadow-inner border border-gray-50 group-hover:scale-105 transition-transform">
                     {item.image ? (
                       <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-xl bg-gray-50">☕</div>
                     )}
                   </div>
-                  <div className="absolute -bottom-2 -right-2 w-9 h-9 bg-[#1a3c28] text-white rounded-xl flex items-center justify-center shadow-lg shadow-[#1a3c28]/20 active:scale-90 transition-transform z-10">
+                  <div className="absolute -bottom-2 -right-2 w-9 h-9 bg-[#1a3c28] text-white rounded-xl flex items-center justify-center shadow-lg shadow-[#1a3c28]/20 group-hover:scale-110 active:scale-90 transition-all z-10">
                     <Plus size={18} strokeWidth={3} />
                   </div>
                 </div>
@@ -392,7 +371,7 @@ const CoffeeMenuApp = () => {
             ))}
         </div>
       </div>
-    </motion.div >
+    </motion.div>
   );
 
   const CategoryViewComponent = () => {
@@ -400,92 +379,89 @@ const CoffeeMenuApp = () => {
     const catItems = currentCategory.name === 'All' ? menuItems : menuItems.filter(i => i.category_name === currentCategory.name);
 
     return (
-      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex-1 flex flex-col bg-[#faf9f5]">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex-1 flex flex-col bg-[#faf9f5] pb-[120px]">
         {/* Wavy Header */}
-        <div className="relative bg-[#d3a652] pt-4 pb-16 px-5" style={{ borderBottomLeftRadius: '40px', borderBottomRightRadius: '40px' }}>
-          <div className="absolute inset-0 opacity-20 overflow-hidden" style={{ borderBottomLeftRadius: '40px', borderBottomRightRadius: '40px' }}>
+        <div className="relative bg-[#1a3c28] pt-12 pb-20 px-5" style={{ borderBottomLeftRadius: '40px', borderBottomRightRadius: '40px' }}>
+          <div className="absolute inset-0 opacity-10 overflow-hidden">
             <svg viewBox="0 0 400 300" className="w-full h-full object-cover mix-blend-overlay">
               <path fill="#ffffff" d="M0,100 C150,200 250,0 400,100 L400,0 L0,0 Z"></path>
-              <path fill="#000000" opacity="0.1" d="M0,150 C100,250 300,50 400,200 L400,0 L0,0 Z"></path>
             </svg>
           </div>
 
-          <div className="relative z-10">
-            <div className="flex justify-between items-center text-white mb-6">
-              <button onClick={() => setCurrentCategory(null)} className="w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors active:scale-95">
-                <ChevronLeft size={24} />
+          <div className="relative z-10 max-w-[800px] mx-auto w-full">
+            <div className="flex justify-between items-center text-white mb-8">
+              <button onClick={() => setCurrentCategory(null)} className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95">
+                <ChevronLeft size={28} />
               </button>
-              <h1 className="text-xl font-black">{currentCategory.name}</h1>
-              <button onClick={() => setIsCartOpen(true)} className="w-10 h-10 flex items-center justify-center relative">
-                <ShoppingCart size={22} />
+              <h1 className="text-2xl font-black uppercase tracking-wider">{currentCategory.name}</h1>
+              <button onClick={() => setIsCartOpen(true)} className="w-12 h-12 flex items-center justify-center relative bg-white/10 rounded-full">
+                <ShoppingCart size={24} />
                 {cart.length > 0 && (
-                  <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-[#d3a652] text-transparent text-[0px]"></span>
+                  <span className="absolute top-2 right-2 w-4 h-4 bg-red-500 rounded-full border-2 border-[#1a3c28] flex items-center justify-center text-[10px] font-bold">
+                    {cart.length}
+                  </span>
                 )}
               </button>
             </div>
 
             <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/60">
-                <Search size={18} />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">
+                <Search size={20} />
               </div>
               <input
                 type="text"
-                placeholder="Search"
-                className="w-full bg-white/20 border border-white/30 rounded-full py-3 pl-11 pr-4 text-white placeholder:text-white/60 font-medium focus:outline-none focus:bg-white/30 transition-colors backdrop-blur-sm shadow-sm"
+                placeholder={`Search in ${currentCategory.name}...`}
+                className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/40 font-medium focus:outline-none focus:bg-white/20 transition-all backdrop-blur-md"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
               />
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="px-5 -mt-6 relative z-20 overflow-x-auto no-scrollbar pb-2">
-          <div className="flex gap-2">
-            <button className="bg-[#1a3c28] text-white px-5 py-2.5 rounded-full font-bold text-xs shadow-md whitespace-nowrap">All</button>
-            <button className="bg-white text-[#1a3c28] px-5 py-2.5 rounded-full font-bold text-xs shadow-sm shadow-gray-200 border border-gray-100 whitespace-nowrap">Special</button>
-            <button className="bg-white text-[#1a3c28] px-5 py-2.5 rounded-full font-bold text-xs shadow-sm shadow-gray-200 border border-gray-100 whitespace-nowrap">Snacks</button>
-            <button className="bg-white text-[#1a3c28] px-5 py-2.5 rounded-full font-bold text-xs shadow-sm shadow-gray-200 border border-gray-100 whitespace-nowrap">Salad</button>
-          </div>
-        </div>
-
-        {/* Items List */}
-        <div className="flex-1 px-5 mt-4 overflow-y-auto pb-[100px] no-scrollbar">
-          <div className="space-y-4">
-            {catItems.map((item, index) => (
-              <div key={item.id || index} className="bg-white p-3 pr-4 rounded-[28px] border border-gray-100 flex justify-between shadow-[0_4px_15px_rgba(0,0,0,0.02)] items-center h-[120px]">
-                <div className="flex-1 pl-3 py-1 flex flex-col justify-between h-full">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-[#1a3c28] text-base truncate max-w-[120px]">{item.name}</h4>
-                      <span className="flex text-[9px] text-amber-500 font-bold gap-0.5"><Star size={10} className="fill-amber-500" />4.8</span>
+        {/* Items Grid */}
+        <div className="flex-1 px-5 -mt-8 overflow-y-auto no-scrollbar max-w-[1200px] mx-auto w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {catItems.filter(i => !searchText || i.name.toLowerCase().includes(searchText.toLowerCase())).map((item, index) => (
+              <div key={item.id || index} className="bg-white p-4 rounded-[32px] border border-gray-100 flex flex-col shadow-sm hover:shadow-md hover:border-[#1a3c28]/10 transition-all group relative overflow-hidden">
+                <div className="flex gap-4 items-center">
+                  <div className="relative">
+                    <div className="w-24 h-24 rounded-3xl bg-[#f4f2ea] overflow-hidden shadow-inner group-hover:scale-105 transition-transform">
+                      {item.image ? (
+                        <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-3xl">☕</div>
+                      )}
                     </div>
-                    <p className="text-[10px] text-gray-400 font-medium leading-tight mt-1 line-clamp-3 w-[85%]">
-                      {item.description || "A balanced mix of espresso, steamed milk, and milk foam."}
-                    </p>
                   </div>
-                  <span className="font-black text-[#1a3c28] text-base">${parseFloat(item.price).toFixed(1)}</span>
-                </div>
-
-                <div className="relative">
-                  <div className="w-[85px] h-[85px] rounded-full bg-[#f4f2ea] overflow-hidden shadow-inner border-[3px] border-white">
-                    {item.image ? (
-                      <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xl">🥗</div>
-                    )}
+                  <div className="flex-1 flex flex-col justify-between py-1">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-[#1a3c28] text-lg truncate">{item.name}</h4>
+                        <Tag color="gold" className="text-[10px] border-none font-bold rounded-md">NEW</Tag>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                        {item.description || "Our signature premium offering."}
+                      </p>
+                    </div>
+                    <div className="flex items-baseline gap-1 mt-2">
+                      <span className="font-black text-[#1a3c28] text-xl">${parseFloat(item.price).toFixed(2)}</span>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setOptionsModalItem(item)}
-                    className="absolute top-1/2 -right-3 -translate-y-1/2 w-[30px] h-[30px] bg-[#1a3c28] text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform border-[3px] border-white z-10"
-                  >
-                    <Plus size={16} strokeWidth={3} />
-                  </button>
                 </div>
+                <button
+                  onClick={() => setOptionsModalItem(item)}
+                  className="mt-4 w-full bg-[#1a3c28] text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#12281a] active:scale-[0.98] transition-all"
+                >
+                  <Plus size={18} /> Add to Order
+                </button>
               </div>
             ))}
 
             {catItems.length === 0 && (
-              <div className="text-center py-20 text-[#1a3c28]/30 font-bold">
-                No items in this category.
+              <div className="col-span-full text-center py-20 text-[#1a3c28]/30 font-bold flex flex-col items-center gap-4">
+                <ShoppingCart size={48} className="opacity-20" />
+                No products found in this category.
               </div>
             )}
           </div>
@@ -495,12 +471,12 @@ const CoffeeMenuApp = () => {
   };
 
   return (
-    <MobileWrapper bgClass="bg-[#faf9f5]">
+    <MainWrapper bgClass="bg-[#faf9f5]">
 
       {currentCategory ? CategoryViewComponent() : HomeViewComponent()}
 
-      {/* Bottom Navigation */}
-      <div className="absolute bottom-4 inset-x-4 h-[70px] bg-[#0c2b18] rounded-[30px] flex justify-between items-center px-6 shadow-2xl z-40">
+      {/* Bottom Navigation - Center aligned and floating for large screens */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-[500px] h-[75px] bg-[#0c2b18] rounded-[35px] flex justify-between items-center px-8 shadow-[0_15px_40px_rgba(12,43,24,0.4)] z-50">
         <button onClick={() => { setActiveTab('home'); setCurrentCategory(null); }} className={cn("flex flex-col items-center gap-1 transition-colors", activeTab === 'home' ? "text-white" : "text-white/40 hover:text-white/70")}>
           <Home size={22} className={activeTab === 'home' ? "fill-white" : ""} />
           <span className="text-[10px] font-bold">Home</span>
@@ -601,7 +577,7 @@ const CoffeeMenuApp = () => {
         }
       `}</style>
 
-    </MobileWrapper>
+    </MainWrapper>
   );
 };
 
