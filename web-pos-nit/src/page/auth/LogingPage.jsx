@@ -31,7 +31,7 @@ function LoginPage() {
         setProfile(res.profile || {});
         setPermission(res.permission || []);
         message.success("Logged in successfully!");
-        navigate("/");
+        navigate("/dashboard");
       } else {
         message.error(res.message || "Login failed. Check your credentials.");
       }

@@ -43,8 +43,10 @@ import { getProfile } from "./store/profile.store";
 
 const RootRedirect = () => {
   const profile = getProfile();
-  // We strictly check for user_id AND role_code to distinguish between Admin and Guest
-  if (profile && profile.id && profile.role_code !== "guest") {
+  // Safe check for admin session using multiple common ID properties
+  const isAdmin = profile && (profile.id || profile.user_id) && profile.role_code !== "guest";
+
+  if (isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
   return <Navigate to="/customer" replace />;
