@@ -388,9 +388,18 @@ const CoffeeMenuApp = () => {
   const [loading, setLoading] = useState(false);
   const [profileSubView, setProfileSubView] = useState(null);
   const [orderHistory, setOrderHistory] = useState([]);
-  const [optionQty, setOptionQty] = useState(1);
+  const [selectedTemp, setSelectedTemp] = useState('Iced');
+  const [selectedSugar, setSelectedSugar] = useState('100%');
 
-  useEffect(() => { if (!optionsModalItem) setOptionQty(1); }, [optionsModalItem]);
+  useEffect(() => { if (!optionsModalItem) { setOptionQty(1); setSelectedTemp('Iced'); setSelectedSugar('100%'); } }, [optionsModalItem]);
+
+  const isDrink = useMemo(() => {
+    if (!optionsModalItem) return false;
+    const cat = categories.find(c => c.id === optionsModalItem.category_id);
+    if (!cat) return false;
+    const name = cat.name.toLowerCase();
+    return name.includes('coffee') || name.includes('juice') || name.includes('milk') || name.includes('drink') || name.includes('tea');
+  }, [optionsModalItem, categories]);
 
 
   useEffect(() => {
@@ -439,7 +448,7 @@ const CoffeeMenuApp = () => {
 
   const fetchStarredItems = async () => {
     const profile = getProfile();
-    if (!profile || !profile.id) return; // Only fetch if we have a real user ID
+    if (!profile || (!(profile.id || profile.user_id)) || profile.role_code === "guest") return;
     try {
       const res = await request("favorite", "get");
       if (res?.list) setStarredItems(res.list);
@@ -462,7 +471,9 @@ const CoffeeMenuApp = () => {
       setStarredItems([...starredItems, item]);
     }
 
-    if (profile) {
+    const isAuthenticated = profile && (profile.id || profile.user_id) && profile.role_code !== "guest";
+
+    if (isAuthenticated) {
       try {
         await request("favorite", "post", { product_id: item.id });
         message.success(isStarred ? "Removed from Starred" : "Added to Starred!");
@@ -475,7 +486,8 @@ const CoffeeMenuApp = () => {
 
   const addToCart = (item, size, qty, note = "") => {
     const price = size ? parseFloat(size.price) : parseFloat(item.price);
-    const cartId = `${item.id}-${size?.id || 'base'}-${note}`;
+    const optionsText = isDrink ? `${selectedTemp}, ${selectedSugar} Sugar` : "";
+    const cartId = `${item.id}-${size?.id || 'base'}-${selectedTemp}-${selectedSugar}-${note}`;
 
     setCart(prevCart => {
       const existingItem = prevCart.find(i => i.cartId === cartId);
@@ -485,7 +497,16 @@ const CoffeeMenuApp = () => {
           : i
         );
       }
-      return [...prevCart, { ...item, cartId, size, quantity: qty, note, totalPrice: price * qty, basePrice: price }];
+      return [...prevCart, {
+        ...item,
+        cartId,
+        size,
+        quantity: qty,
+        note,
+        totalPrice: price * qty,
+        basePrice: price,
+        customization: optionsText
+      }];
     });
 
     message.success("Added to cart!");
@@ -595,6 +616,45 @@ const CoffeeMenuApp = () => {
             </div>
             <p className="text-sm text-gray-400 mb-6 leading-relaxed">Customize your drink to perfection. Select your preferred options below.</p>
 
+            {isDrink && (
+              <div className="space-y-6 mb-8">
+                <div>
+                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Temperature</h4>
+                  <div className="flex gap-2">
+                    {['Hot', 'Iced', 'Frappe'].map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setSelectedTemp(t)}
+                        className={cn(
+                          "px-4 py-2 rounded-xl text-xs font-bold transition-all border",
+                          selectedTemp === t ? "bg-[#1A3C28] text-white border-[#1A3C28]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
+                        )}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Sugar Level</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {['0%', '25%', '50%', '75%', '100%', '120%'].map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setSelectedSugar(s)}
+                        className={cn(
+                          "px-3 py-2 rounded-xl text-xs font-bold transition-all border",
+                          selectedSugar === s ? "bg-[#1A3C28] text-white border-[#1A3C28]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-8 pb-8 border-b border-gray-50">
               <div className="flex flex-col">
                 <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Unit Price</span>
@@ -665,6 +725,7 @@ const CoffeeMenuApp = () => {
                       </div>
                       <div>
                         <h4 className="font-bold text-sm text-gray-800">{item.name}</h4>
+                        {item.customization && <p className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">{item.customization}</p>}
                         <div className="flex items-center gap-3 mt-1">
                           <span className="text-xs font-black text-[#1A3C28]">${(item.basePrice || 0).toFixed(2)}</span>
                           <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-lg">
