@@ -37,9 +37,12 @@ export const request = (url = "", method = "get", data = {}) => {
     method: method,
     headers: {
       ...headers,
-      Authorization: "Bearer " + access_token,
     },
   };
+
+  if (access_token && access_token !== "null" && access_token !== "undefined") {
+    config_req.headers.Authorization = "Bearer " + access_token;
+  }
 
   if (method.toLowerCase() === "get" || method.toLowerCase() === "delete") {
     config_req.params = data;
