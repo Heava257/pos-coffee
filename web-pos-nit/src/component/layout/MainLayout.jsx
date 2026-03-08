@@ -196,7 +196,7 @@ const MainLayout = () => {
 
   useEffect(() => {
     if (!profile || profile === "" || profile === "null") {
-      navigate("/login");
+      navigate("/customer");
       return;
     }
     checkISnotPermissionViewPage();

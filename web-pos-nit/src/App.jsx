@@ -54,7 +54,7 @@ function App() {
           <Route path="/scan" element={<ScanPage />} />
 
           <Route element={<MainLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Navigate to="/customer" replace />} />
             <Route path="/dashboard" element={<HomePage />} />
             <Route path="/invoices" element={<PosPage />} />
             <Route path="/table" element={<TablePage />} />
@@ -84,13 +84,17 @@ function App() {
             <Route path="/raw_material" element={<RawMaterialPage />} />
             <Route path="/purchase" element={<PurchasePage />} />
             <Route path="/stock" element={<StockPage />} />
-            <Route path="*" element={<h1>404-Route Not Found!</h1>} />
+            <Route path="*" element={<Navigate to="/customer" replace />} />
           </Route>
 
           <Route element={<MainLayoutAuth />}>
             {/* <Route path="/about" element={<AboutHomepage />} /> */}
-            <Route path="/login" element={<LogingPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={
+              window.location.search.includes('admin=true') ? <LogingPage /> : <Navigate to="/customer" replace />
+            } />
+            <Route path="/register" element={
+              window.location.search.includes('admin=true') ? <RegisterPage /> : <Navigate to="/customer" replace />
+            } />
           </Route>
         </Routes>
       </BrowserRouter>
