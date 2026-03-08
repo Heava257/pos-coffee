@@ -39,3 +39,10 @@ export const getUserId = () => {
   const userId = localStorage.getItem("user_id");
   return userId ? Number(userId) : null;
 };
+
+export const setLogout = () => {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("profile");
+  localStorage.removeItem("permission");
+  localStorage.removeItem("user_id");
+};
