@@ -388,6 +388,9 @@ const CoffeeMenuApp = () => {
   const [loading, setLoading] = useState(false);
   const [profileSubView, setProfileSubView] = useState(null);
   const [orderHistory, setOrderHistory] = useState([]);
+  const [optionQty, setOptionQty] = useState(1);
+
+  useEffect(() => { if (!optionsModalItem) setOptionQty(1); }, [optionsModalItem]);
 
 
   useEffect(() => {
@@ -445,11 +448,38 @@ const CoffeeMenuApp = () => {
     }
   };
 
-  const addToCart = (item, size, qty) => {
+  const addToCart = (item, size, qty, note = "") => {
     const price = size ? parseFloat(size.price) : parseFloat(item.price);
-    setCart([...cart, { ...item, size, quantity: qty, totalPrice: price * qty }]);
+    const cartId = `${item.id}-${size?.id || 'base'}-${note}`;
+
+    setCart(prevCart => {
+      const existingItem = prevCart.find(i => i.cartId === cartId);
+      if (existingItem) {
+        return prevCart.map(i => i.cartId === cartId
+          ? { ...i, quantity: i.quantity + qty, totalPrice: (i.quantity + qty) * price }
+          : i
+        );
+      }
+      return [...prevCart, { ...item, cartId, size, quantity: qty, note, totalPrice: price * qty, basePrice: price }];
+    });
+
     message.success("Added to cart!");
-    setIsCartOpen(true);
+    setOptionsModalItem(null);
+  };
+
+  const updateCartQty = (cartId, delta) => {
+    setCart(prevCart => prevCart.map(item => {
+      if (item.cartId === cartId) {
+        const newQty = Math.max(1, item.quantity + delta);
+        return { ...item, quantity: newQty, totalPrice: newQty * item.basePrice };
+      }
+      return item;
+    }));
+  };
+
+  const removeFromCart = (cartId) => {
+    setCart(prevCart => prevCart.filter(item => item.cartId !== cartId));
+    message.info("Item removed");
   };
 
   if (splash) return <SplashView businessName={selectedShop?.business_name} />;
@@ -509,39 +539,152 @@ const CoffeeMenuApp = () => {
         </div>
       </div>
 
-      <Modal open={!!optionsModalItem} onCancel={() => setOptionsModalItem(null)} footer={null} centered width={450} className="premium-modal font-sans" destroyOnClose>
+      <Modal
+        open={!!optionsModalItem}
+        onCancel={() => setOptionsModalItem(null)}
+        footer={null}
+        centered
+        width={450}
+        className="premium-modal"
+        destroyOnClose
+      >
         <div className="font-sans">
-          <div className="relative h-48 bg-gray-50 overflow-hidden">
-            {optionsModalItem?.image ? <img src={Config.getFullImagePath(optionsModalItem.image)} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-6xl">☕</div>}
+          <div className="relative h-64 bg-gray-50 overflow-hidden">
+            {optionsModalItem?.image ? (
+              <img src={Config.getFullImagePath(optionsModalItem.image)} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-7xl bg-gray-100">☕</div>
+            )}
+            <button
+              onClick={() => setOptionsModalItem(null)}
+              className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors"
+            >
+              <X size={20} />
+            </button>
           </div>
+
           <div className="p-8">
-            <h2 className="text-xl font-extrabold text-[#1A3C28] mb-1">{optionsModalItem?.name}</h2>
-            <p className="text-2xl font-extrabold text-[#1A3C28] mb-8">${parseFloat(optionsModalItem?.price || 0).toFixed(2)}</p>
-            <div className="flex items-center gap-4">
-              <Button className="h-12 flex-1 bg-[#1A3C28] text-white rounded-xl font-bold border-none" onClick={() => addToCart(optionsModalItem, null, 1)}>Add to Basket</Button>
+            <div className="flex justify-between items-start mb-2">
+              <h2 className="text-2xl font-extrabold text-[#1A3C28]">{optionsModalItem?.name}</h2>
+              <span className="bg-amber-50 text-amber-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Most Loved</span>
             </div>
+            <p className="text-sm text-gray-400 mb-6 leading-relaxed">Customize your drink to perfection. Select your preferred options below.</p>
+
+            <div className="flex items-center justify-between mb-8 pb-8 border-b border-gray-50">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Unit Price</span>
+                <span className="text-2xl font-black text-[#1A3C28]">${parseFloat(optionsModalItem?.price || 0).toFixed(2)}</span>
+              </div>
+
+              <div className="flex items-center gap-4 bg-gray-50 p-2 rounded-2xl border border-gray-100">
+                <button
+                  onClick={() => setOptionQty(prev => Math.max(1, prev - 1))}
+                  className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-[#1A3C28] active:scale-90 transition-all"
+                >
+                  <Minus size={18} strokeWidth={3} />
+                </button>
+                <span className="text-lg font-bold w-6 text-center">{optionQty}</span>
+                <button
+                  onClick={() => setOptionQty(prev => prev + 1)}
+                  className="w-10 h-10 bg-[#1A3C28] text-white shadow-md shadow-[#1A3C28]/20 rounded-xl flex items-center justify-center active:scale-90 transition-all"
+                >
+                  <Plus size={18} strokeWidth={3} />
+                </button>
+              </div>
+            </div>
+
+            <button
+              className="w-full h-16 bg-[#1A3C28] text-white rounded-2xl font-black shadow-xl shadow-[#1A3C28]/20 hover:shadow-[#1A3C28]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+              onClick={() => addToCart(optionsModalItem, null, optionQty)}
+            >
+              <ShoppingCart size={20} strokeWidth={2.5} />
+              <span>ADD TO BASKET — ${(parseFloat(optionsModalItem?.price || 0) * optionQty).toFixed(2)}</span>
+            </button>
           </div>
         </div>
       </Modal>
 
-      <Modal open={isCartOpen} onCancel={() => { setIsCartOpen(false); setActiveTab('home'); }} footer={null} centered width={500} className="premium-modal" title={<span className="text-lg font-extrabold text-gray-800 uppercase">Order Details</span>}>
+      <Modal
+        open={isCartOpen}
+        onCancel={() => { setIsCartOpen(false); setActiveTab('home'); }}
+        footer={null}
+        centered
+        width={500}
+        className="premium-modal"
+        title={
+          <div className="flex items-center gap-3">
+            <span className="w-2 h-2 bg-[#1A3C28] rounded-full"></span>
+            <span className="text-base font-black text-gray-800 uppercase tracking-tight">Your Order Checkout</span>
+          </div>
+        }
+      >
         <div className="p-6 font-sans">
-          {cart.length === 0 ? <Empty description="Your basket is empty" /> : (
-            <div className="space-y-4">
-              {cart.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                  <div className="flex gap-4 items-center">
-                    <img src={Config.getFullImagePath(item.image)} className="w-12 h-12 rounded-xl object-cover" />
-                    <div><h4 className="font-bold text-sm">{item.name}</h4><span className="text-[10px] text-gray-400">x{item.quantity}</span></div>
-                  </div>
-                  <span className="font-extrabold text-[#1A3C28]">${item.totalPrice.toFixed(2)}</span>
-                </div>
-              ))}
-              <div className="pt-6 border-t border-dashed flex justify-between items-baseline">
-                <span className="text-sm font-bold text-gray-400">Total Amount</span>
-                <span className="text-3xl font-extrabold text-[#1A3C28]">${cart.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)}</span>
+          {cart.length === 0 ? (
+            <div className="py-12 flex flex-col items-center">
+              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+                <ShoppingCart size={32} className="text-gray-200" />
               </div>
-              <Button block size="large" className="mt-8 bg-[#1A3C28] text-white rounded-xl font-bold border-none" onClick={() => { message.success("Order Placed!"); setCart([]); setIsCartOpen(false); setActiveTab('home'); }}>Place Order</Button>
+              <h3 className="text-lg font-bold text-gray-400">Your basket is empty</h3>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 no-scrollbar mb-8">
+                {cart.map((item, idx) => (
+                  <div key={item.cartId} className="group flex justify-between items-center bg-white p-4 rounded-3xl border border-gray-100 hover:border-gray-200 transition-all">
+                    <div className="flex gap-4 items-center">
+                      <div className="relative">
+                        <img src={Config.getFullImagePath(item.image)} className="w-14 h-14 rounded-2xl object-cover shadow-sm" />
+                        <span className="absolute -top-1 -right-1 bg-[#1A3C28] text-white text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
+                          {item.quantity}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-gray-800">{item.name}</h4>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-xs font-black text-[#1A3C28]">${item.basePrice.toFixed(2)}</span>
+                          <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-lg">
+                            <button onClick={() => updateCartQty(item.cartId, -1)} className="text-gray-400 hover:text-red-500 transition-colors"><Minus size={12} strokeWidth={3} /></button>
+                            <span className="text-[10px] font-black w-4 text-center">{item.quantity}</span>
+                            <button onClick={() => updateCartQty(item.cartId, 1)} className="text-gray-400 hover:text-[#1A3C28] transition-colors"><Plus size={12} strokeWidth={3} /></button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="font-black text-gray-800 text-sm">${item.totalPrice.toFixed(2)}</span>
+                      <button
+                        onClick={() => removeFromCart(item.cartId)}
+                        className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all"
+                      >
+                        <X size={14} strokeWidth={3} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-[#1A3C28]/[0.02] p-6 rounded-3xl border border-dashed border-gray-100">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Subtotal</span>
+                  <span className="text-sm font-bold text-gray-600">${cart.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Service Fee</span>
+                  <span className="text-sm font-bold text-green-600 uppercase">Free</span>
+                </div>
+                <div className="flex justify-between items-end border-t border-gray-100 pt-4">
+                  <span className="text-sm font-black text-[#1A3C28]">GRAND TOTAL</span>
+                  <span className="text-3xl font-black text-[#1A3C28]">${cart.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <button
+                className="w-full mt-8 h-14 bg-[#1A3C28] text-white rounded-2xl font-black shadow-xl shadow-[#1A3C28]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                onClick={() => { message.success("Order Placed Successfully!"); setCart([]); setIsCartOpen(false); setActiveTab('home'); }}
+              >
+                PLACE ORDER NOW ☕
+              </button>
             </div>
           )}
         </div>
