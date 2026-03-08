@@ -513,7 +513,7 @@ const CoffeeMenuApp = () => {
               selectedShop={selectedShop} categories={categories} currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
               menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
               cart={cart} setIsCartOpen={setIsCartOpen} searchText={searchText} setSearchText={setSearchText}
-              getTotalPrice={() => cart.reduce((sum, item) => sum + item.totalPrice, 0)} setOptionsModalItem={setOptionsModalItem}
+              getTotalPrice={() => cart.reduce((sum, item) => sum + (item.totalPrice || 0), 0)} setOptionsModalItem={setOptionsModalItem}
             />
           )}
         </AnimatePresence>
@@ -641,7 +641,7 @@ const CoffeeMenuApp = () => {
                       <div>
                         <h4 className="font-bold text-sm text-gray-800">{item.name}</h4>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs font-black text-[#1A3C28]">${item.basePrice.toFixed(2)}</span>
+                          <span className="text-xs font-black text-[#1A3C28]">${(item.basePrice || 0).toFixed(2)}</span>
                           <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-lg">
                             <button onClick={() => updateCartQty(item.cartId, -1)} className="text-gray-400 hover:text-red-500 transition-colors"><Minus size={12} strokeWidth={3} /></button>
                             <span className="text-[10px] font-black w-4 text-center">{item.quantity}</span>
@@ -652,7 +652,7 @@ const CoffeeMenuApp = () => {
                     </div>
 
                     <div className="flex flex-col items-end gap-2">
-                      <span className="font-black text-gray-800 text-sm">${item.totalPrice.toFixed(2)}</span>
+                      <span className="font-black text-gray-800 text-sm">${(item.totalPrice || 0).toFixed(2)}</span>
                       <button
                         onClick={() => removeFromCart(item.cartId)}
                         className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all"
@@ -667,7 +667,7 @@ const CoffeeMenuApp = () => {
               <div className="bg-[#1A3C28]/[0.02] p-6 rounded-3xl border border-dashed border-gray-100">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Subtotal</span>
-                  <span className="text-sm font-bold text-gray-600">${cart.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)}</span>
+                  <span className="text-sm font-bold text-gray-600">${(cart.reduce((s, i) => s + (i.totalPrice || 0), 0)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Service Fee</span>
@@ -675,7 +675,7 @@ const CoffeeMenuApp = () => {
                 </div>
                 <div className="flex justify-between items-end border-t border-gray-100 pt-4">
                   <span className="text-sm font-black text-[#1A3C28]">GRAND TOTAL</span>
-                  <span className="text-3xl font-black text-[#1A3C28]">${cart.reduce((s, i) => s + i.totalPrice, 0).toFixed(2)}</span>
+                  <span className="text-3xl font-black text-[#1A3C28]">${(cart.reduce((s, i) => s + (i.totalPrice || 0), 0)).toFixed(2)}</span>
                 </div>
               </div>
 
