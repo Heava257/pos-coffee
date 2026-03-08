@@ -388,6 +388,7 @@ const CoffeeMenuApp = () => {
   const [loading, setLoading] = useState(false);
   const [profileSubView, setProfileSubView] = useState(null);
   const [orderHistory, setOrderHistory] = useState([]);
+  const [optionQty, setOptionQty] = useState(1);
   const [selectedTemp, setSelectedTemp] = useState('Iced');
   const [selectedSugar, setSelectedSugar] = useState('100%');
 
