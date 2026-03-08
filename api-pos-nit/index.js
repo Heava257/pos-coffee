@@ -110,6 +110,15 @@ app.listen(PORT, async () => {
     console.error("Migration Error (orders table):", err.message);
   }
 
+  // Migration Fix: Ensure branch_products has default values for price/cost to prevent crashes
+  try {
+    await db.query("ALTER TABLE branch_products MODIFY price DOUBLE DEFAULT 0");
+    await db.query("ALTER TABLE branch_products MODIFY cost_price DOUBLE DEFAULT 0");
+    console.log("Migration: 'branch_products' default values set");
+  } catch (err) {
+    console.error("Migration Error (branch_products):", err.message);
+  }
+
   // Migration Fix: Create favorites table if missing
   try {
     await db.query(`

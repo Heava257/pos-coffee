@@ -181,11 +181,15 @@ exports.receive = async (req, res) => {
                     const old_qty = bp[0]?.stock_qty || 0;
                     const new_qty = old_qty + item.receive_now;
 
+                    const [pp_rows] = await conn.query("SELECT cost FROM purchase_product WHERE id = ?", [item.id]);
+                    const cost = pp_rows[0]?.cost || 0;
                     await conn.query(
-                        `INSERT INTO branch_products (branch_id, product_id, stock_qty) 
-                         VALUES (?, ?, ?) 
-                         ON DUPLICATE KEY UPDATE stock_qty = stock_qty + VALUES(stock_qty)`,
-                        [branch_id, item.real_id, item.receive_now]
+                        `INSERT INTO branch_products (branch_id, product_id, price, cost_price, stock_qty) 
+                         VALUES (?, ?, ?, ?, ?) 
+                         ON DUPLICATE KEY UPDATE 
+                         stock_qty = stock_qty + VALUES(stock_qty),
+                         cost_price = VALUES(cost_price)`,
+                        [branch_id, item.real_id, cost * 1.5, cost, item.receive_now]
                     );
 
                     await conn.query(`
