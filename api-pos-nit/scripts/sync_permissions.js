@@ -1,13 +1,27 @@
+require('dotenv').config();
 const mysql = require("mysql2/promise");
 
 async function syncPermissions() {
-    console.log("Connecting to Railway Database...");
-    // Connection string from your Railway configuration
-    const connectionString = "mysql://root:YqQSkpUuUStPjQjscjEAnxTfGbeXUjZJ@roundhouse.proxy.rlwy.net:47416/railway";
+    const isRailway = process.argv.includes('--railway');
 
-    const connection = await mysql.createConnection(connectionString);
+    let connection;
     try {
-        console.log("Starting Permission Sync on Railway...");
+        if (isRailway) {
+            console.log("Connecting to Railway Database...");
+            const connectionString = "mysql://root:YqQSkpUuUStPjQjscjEAnxTfGbeXUjZJ@roundhouse.proxy.rlwy.net:47416/railway";
+            connection = await mysql.createConnection(connectionString);
+        } else {
+            console.log("Connecting to Local Database...");
+            connection = await mysql.createConnection({
+                host: process.env.DB_HOST || 'localhost',
+                user: process.env.DB_USER || 'root',
+                password: process.env.DB_PASSWORD || '',
+                database: process.env.DB_DATABASE || 'coffee_saas',
+                port: process.env.DB_PORT || 3306
+            });
+        }
+
+        console.log(`Starting Permission Sync on ${isRailway ? 'Railway' : 'Local'}...`);
 
         // 1. Ensure System Settings exists
         const [settingsCheck] = await connection.execute(
@@ -20,7 +34,7 @@ async function syncPermissions() {
                 ["System Settings", "/settings", 1]
             );
         } else {
-            // Update name and route_key to be standard
+            console.log("Updating System Settings permission...");
             await connection.execute(
                 "UPDATE permissions SET name = 'System Settings', route_key = '/settings' WHERE id = ?",
                 [settingsCheck[0].id]
@@ -39,28 +53,26 @@ async function syncPermissions() {
             "SELECT id FROM roles WHERE name IN ('Owner', 'Super Admin') OR code IN ('owner', 'super_admin')"
         );
 
-        for (const role of roles) {
-            // Get all permission IDs
-            const [allPerms] = await connection.execute("SELECT id FROM permissions");
-            const permIds = allPerms.map(p => p.id);
+        const [allPerms] = await connection.execute("SELECT id FROM permissions");
+        const permIds = allPerms.map(p => p.id);
 
+        for (const role of roles) {
+            console.log(`Syncing role ID: ${role.id}`);
             for (const pId of permIds) {
                 try {
                     await connection.execute(
                         "INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
                         [role.id, pId]
                     );
-                } catch (err) {
-                    // Ignore duplicates
-                }
+                } catch (err) { }
             }
         }
 
         console.log("Permission Sync completed successfully!");
     } catch (error) {
-        console.error("Sync failed:", error);
+        console.error("Sync failed:", error.message);
     } finally {
-        await connection.end();
+        if (connection) await connection.end();
         process.exit();
     }
 }
