@@ -93,9 +93,10 @@ function getCategoryEmoji(catId) {
   return map[catId] || "🍽️";
 }
 
-// ─── Mini ProductCard ─────────────────────────────────────────────────────────
-function ProductCard({ product, onAdd, cartQty }) {
+// ─── Mini ProductCard (Memoized for performance) ──────────────────────────────
+const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
   const [hovered, setHovered] = useState(false);
+  const [isImgLoaded, setIsImgLoaded] = useState(false);
   const price = Number(
     product.unit_price || product.price || product.actual_price || 0
   );
@@ -106,6 +107,7 @@ function ProductCard({ product, onAdd, cartQty }) {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => !isOOS && onAdd(product)}
       style={{
         background: COLORS.white,
         borderRadius: 18,
@@ -125,6 +127,19 @@ function ProductCard({ product, onAdd, cartQty }) {
         gap: 8,
       }}
     >
+      {/* progress shimmer effect placeholder */}
+      {!isImgLoaded && imgUrl && (
+        <div style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "linear-gradient(90deg, #f0ede6 25%, #f8f7f2 50%, #f0ede6 75%)",
+          backgroundSize: "200% 100%",
+          animation: "shimmer 1.5s infinite",
+          borderRadius: 18,
+          zIndex: 1
+        }} />
+      )}
+
       {/* discount badge */}
       {product.discount > 0 && (
         <div
@@ -189,12 +204,15 @@ function ProductCard({ product, onAdd, cartQty }) {
           <img
             src={imgUrl}
             alt={product.name}
+            loading="lazy"
+            onLoad={() => setIsImgLoaded(true)}
             style={{
               width: "100%",
               height: "100%",
               objectFit: "cover",
+              opacity: isImgLoaded ? 1 : 0,
               transform: hovered ? "scale(1.1)" : "scale(1)",
-              transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
+              transition: "opacity 0.4s ease, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
             }}
           />
         ) : (
@@ -265,12 +283,19 @@ function ProductCard({ product, onAdd, cartQty }) {
       >
         +
       </button>
+      {/* styles */}
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+      `}</style>
     </div>
   );
-}
+});
 
-// ─── Bill Cart Item ───────────────────────────────────────────────────────────
-function BillCartItem({ item, onIncrease, onDecrease, onRemove }) {
+// ─── Bill Cart Item (Memoized) ────────────────────────────────────────────────
+const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove }) => {
   const price =
     Number(item.unit_price || item.price || 0) * Number(item.cart_qty || 1);
   const imgUrl = item.image ? Config.getFullImagePath(item.image) : null;
@@ -302,6 +327,7 @@ function BillCartItem({ item, onIncrease, onDecrease, onRemove }) {
           <img
             src={imgUrl}
             alt={item.name}
+            loading="lazy"
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         ) : (
@@ -412,7 +438,7 @@ function BillCartItem({ item, onIncrease, onDecrease, onRemove }) {
       </div>
     </div>
   );
-}
+});
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function PosPage() {
@@ -628,7 +654,7 @@ function PosPage() {
   }, [state.cart_list]);
 
   // ── cart helpers ──
-  const handleAdd = (product) => {
+  const handleAdd = useCallback((product) => {
     setState((prev) => {
       const cart = [...prev.cart_list];
       const idx = cart.findIndex((c) => c.id === product.id);
@@ -660,11 +686,11 @@ function PosPage() {
           notification.warning({ message: `Only ${product.qty} available` });
           return prev;
         }
-        cart[idx] = { ...cart[idx], cart_qty: cart[idx].cart_qty + 1 };
+        cart[idx] = { ...cart[idx], cart_qty: (cart[idx].cart_qty || 0) + 1 };
       }
       return { ...prev, cart_list: cart };
     });
-  };
+  }, []);
 
   const handleConfirmOptions = () => {
     const product = selectedProductForOptions;
@@ -720,40 +746,40 @@ function PosPage() {
     setSelectedProductForOptions(null);
   };
 
-  const handleIncrease = (item) => {
+  const handleIncrease = useCallback((item) => {
     setState((prev) => {
       const cart = prev.cart_list.map((c) =>
-        c.id === item.id && c.name === item.name
-          ? { ...c, cart_qty: Math.min(c.cart_qty + 1, item.qty || 999) }
+        (c.id === item.id && c.name === item.name) || (c.unique_id && c.unique_id === item.unique_id)
+          ? { ...c, cart_qty: Math.min((c.cart_qty || 0) + 1, item.qty || 999) }
           : c
       );
       return { ...prev, cart_list: cart };
     });
-  };
+  }, []);
 
-  const handleDecrease = (item) => {
+  const handleDecrease = useCallback((item) => {
     setState((prev) => {
       const cart = prev.cart_list
         .map((c) =>
-          c.id === item.id && c.name === item.name
-            ? { ...c, cart_qty: c.cart_qty - 1 }
+          (c.id === item.id && c.name === item.name) || (c.unique_id && c.unique_id === item.unique_id)
+            ? { ...c, cart_qty: (c.cart_qty || 1) - 1 }
             : c
         )
         .filter((c) => c.cart_qty > 0);
       return { ...prev, cart_list: cart };
     });
-  };
+  }, []);
 
-  const handleRemoveItem = (item) => {
+  const handleRemoveItem = useCallback((item) => {
     setState((prev) => ({
       ...prev,
       cart_list: prev.cart_list.filter(
-        (c) => !(c.id === item.id && c.name === item.name)
+        (c) => !((c.id === item.id && c.name === item.name) || (c.unique_id && c.unique_id === item.unique_id))
       ),
     }));
-  };
+  }, []);
 
-  const handleClearCart = () => {
+  const handleClearCart = useCallback(() => {
     setState((p) => ({ ...p, cart_list: [] }));
     setObjSummary((p) => ({
       ...p,
@@ -765,15 +791,14 @@ function PosPage() {
     setTableNo("");
     setCurrentOrderId(null);
     form.resetFields();
-    getPendingOrders(); // Refresh pending list immediately after clearing
-  };
+    getPendingOrders();
+  }, []);
 
-  const handleSelectPendingOrder = async (order) => {
+  const handleSelectPendingOrder = useCallback(async (order) => {
     setState((p) => ({ ...p, loading: true }));
     try {
       const res = await request(`order/${order.id}`, "get");
       if (res && res.details) {
-        // Map details back to cart format
         const cart = res.details.map((d) => ({
           id: d.product_id,
           name: d.product_name,
@@ -781,6 +806,8 @@ function PosPage() {
           cart_qty: d.qty,
           image: d.image,
           note: d.note || "",
+          display_name: d.product_name + (d.note ? ` [${d.note}]` : ""),
+          unique_id: `${d.product_id}-${d.note || ""}`
         }));
 
         setState((p) => ({
@@ -802,7 +829,7 @@ function PosPage() {
       console.error("Error loading pending order:", error);
       setState((p) => ({ ...p, loading: false }));
     }
-  };
+  }, []);
 
   // ── place order ──
   const handleClickOut = async () => {
@@ -877,18 +904,25 @@ function PosPage() {
     onAfterPrint: () => handleClearCart(),
   });
 
-  // ── filtered products ──
-  const filteredProducts = state.list.filter((p) =>
-    (p.name || "").toLowerCase().includes((searchText || "").toLowerCase())
-  );
-  const inStock = filteredProducts.filter((p) => p.qty > 0);
-  const outOfStock = filteredProducts.filter((p) => p.qty <= 0);
-  const allVisible = [...inStock, ...outOfStock];
+  // ── filtered products (Memoized for performance) ──
+  const filteredProducts = React.useMemo(() => {
+    const list = state.list || [];
+    const search = (searchText || "").toLowerCase();
+    return list.filter((p) =>
+      (p.name || "").toLowerCase().includes(search)
+    );
+  }, [state.list, searchText]);
 
-  const getCartQty = (productId) => {
+  const allVisible = React.useMemo(() => {
+    const inStock = filteredProducts.filter((p) => p.qty > 0);
+    const outOfStock = filteredProducts.filter((p) => p.qty <= 0);
+    return [...inStock, ...outOfStock];
+  }, [filteredProducts]);
+
+  const getCartQty = useCallback((productId) => {
     const item = state.cart_list.find((c) => c.id === productId);
     return item ? item.cart_qty : 0;
-  };
+  }, [state.cart_list]);
 
   // ── category availability ──
   const getCategoryStock = (catId) => {
