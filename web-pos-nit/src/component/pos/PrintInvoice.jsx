@@ -1,4 +1,5 @@
 import React from "react";
+import "./fonts.css";
 import { getProfile } from "../../store/profile.store";
 import { Config } from "../../util/config";
 

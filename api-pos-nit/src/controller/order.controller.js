@@ -125,17 +125,31 @@ exports.getList = async (req, res) => {
 
         const [list] = await db.query(sql, params);
 
-        // Summary calculations
+        // Detailed Summary: Total, Qty, and Breakdown by Payment Method
         const [sum] = await db.query(
-            `SELECT COUNT(id) as total_order, SUM(total_amount) as total_amount FROM orders 
-             WHERE business_id = ? ${branch_id ? 'AND branch_id = ?' : ''} AND status != 'cancelled'
-             ${from_date && to_date ? 'AND DATE(created_at) BETWEEN ? AND ?' : ''}`,
-            [business_id, ...(branch_id ? [branch_id] : []), ...(from_date && to_date ? [from_date, to_date] : [])]
+            `SELECT 
+                COUNT(o.id) as total_order, 
+                SUM(o.total_amount) as total_amount,
+                SUM(CASE WHEN o.payment_method = 'Cash' THEN o.total_amount ELSE 0 END) as total_cash,
+                SUM(CASE WHEN o.payment_method = 'ABA' THEN o.total_amount ELSE 0 END) as total_aba,
+                SUM(CASE WHEN o.payment_method = 'Wing' THEN o.total_amount ELSE 0 END) as total_wing,
+                SUM(CASE WHEN o.payment_method NOT IN ('Cash', 'ABA', 'Wing') THEN o.total_amount ELSE 0 END) as total_other,
+                (SELECT SUM(qty) FROM order_details od JOIN orders o2 ON od.order_id = o2.id 
+                 WHERE o2.business_id = ? ${branch_id ? 'AND o2.branch_id = ?' : ''} AND o2.status != 'cancelled'
+                 ${from_date && to_date ? 'AND DATE(o2.created_at) BETWEEN ? AND ?' : ''}
+                ) as total_qty
+             FROM orders o
+             WHERE o.business_id = ? ${branch_id ? 'AND o.branch_id = ?' : ''} AND o.status != 'cancelled'
+             ${from_date && to_date ? 'AND DATE(o.created_at) BETWEEN ? AND ?' : ''}`,
+            [
+                business_id, ...(branch_id ? [branch_id] : []), ...(from_date && to_date ? [from_date, to_date] : []),
+                business_id, ...(branch_id ? [branch_id] : []), ...(from_date && to_date ? [from_date, to_date] : [])
+            ]
         );
 
         res.json({
             list,
-            summary: sum[0] || { total_order: 0, total_amount: 0 }
+            summary: sum[0] || { total_order: 0, total_amount: 0, total_cash: 0, total_aba: 0, total_wing: 0, total_other: 0, total_qty: 0 }
         });
     } catch (error) {
         logError("order.getList", error, res);

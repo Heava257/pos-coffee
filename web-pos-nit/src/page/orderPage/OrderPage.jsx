@@ -60,7 +60,14 @@ function OrderPage() {
   const [list, setList] = useState([]);
   const [orderDetail, setOrderDetail] = useState([]);
   const [currentOrder, setCurrentOrder] = useState(null);
-  const [summary, setSummary] = useState({ total_order: 0, total_amount: 0 });
+  const [summary, setSummary] = useState({
+    total_order: 0,
+    total_amount: 0,
+    total_cash: 0,
+    total_aba: 0,
+    total_wing: 0,
+    total_qty: 0
+  });
   const [loading, setLoading] = useState(false);
 
   const [state, setState] = useState({
@@ -70,7 +77,7 @@ function OrderPage() {
   });
 
   const [filter, setFilter] = useState({
-    from_date: dayjs().subtract(7, "day"),
+    from_date: dayjs(), // Default to Today
     to_date: dayjs(),
     user_id: "",
   });
@@ -184,106 +191,71 @@ function OrderPage() {
       <div style={{ marginBottom: 32 }}>
         <Title level={2} style={{ color: '#2d3748', margin: 0 }}>
           <ShopOutlined style={{ marginRight: 12 }} />
-          {t.order_management}
+          Daily Closing & Orders / ការបិទបញ្ជីប្រចាំថ្ងៃ និងការបញ្ជាទិញ
         </Title>
         <Text style={{ color: '#6b7280', fontSize: 16 }}>
-          {t.track_orders}
+          Review daily sales and reconcile your accounts / ពិនិត្យមើលការលក់ប្រចាំថ្ងៃ និងផ្ទៀងផ្ទាត់បញ្ជី
         </Text>
       </div>
 
       {/* Summary Cards */}
       <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            style={{
-              background: '#fff',
-              border: 'none',
-              borderRadius: 16,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-            }}
-            bodyStyle={{ padding: 24 }}
-          >
+        <Col xs={24} sm={12} lg={4}>
+          <Card className="summary-card" bodyStyle={{ padding: 20 }}>
             <Statistic
-              title={<span style={{ color: '#6b7280' }}>{t.total_sales}</span>}
+              title={<span style={{ color: '#6b7280' }}>Total Orders / សរុបបុង</span>}
               value={summary.total_order}
               prefix={<ShoppingCartOutlined style={{ color: '#1e4a2d' }} />}
-              valueStyle={{ color: '#1e4a2d', fontSize: 32, fontWeight: 'bold' }}
+              valueStyle={{ color: '#1e4a2d', fontWeight: 'bold' }}
             />
-            <div style={{ marginTop: 8 }}>
-              <ArrowUpOutlined style={{ color: '#4ade80', marginRight: 4 }} />
-              <Text style={{ color: '#4ade80' }}>+12% {t.this_month}</Text>
-            </div>
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            style={{
-              background: '#fff',
-              border: 'none',
-              borderRadius: 16,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-            }}
-            bodyStyle={{ padding: 24 }}
-          >
+        <Col xs={24} sm={12} lg={5}>
+          <Card className="summary-card" bodyStyle={{ padding: 20 }}>
             <Statistic
-              title={<span style={{ color: '#6b7280' }}>{t.total_revenue}</span>}
+              title={<span style={{ color: '#6b7280' }}>Cash / សាច់ប្រាក់</span>}
+              value={summary.total_cash}
+              prefix={<DollarOutlined style={{ color: '#059669' }} />}
+              precision={2}
+              valueStyle={{ color: '#059669', fontWeight: 'bold' }}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={5}>
+          <Card className="summary-card" bodyStyle={{ padding: 20 }}>
+            <Statistic
+              title={<span style={{ color: '#6b7280' }}>ABA / QR</span>}
+              value={summary.total_aba}
+              prefix={<CheckCircleOutlined style={{ color: '#2563eb' }} />}
+              precision={2}
+              valueStyle={{ color: '#2563eb', fontWeight: 'bold' }}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={5}>
+          <Card className="summary-card" bodyStyle={{ padding: 20 }}>
+            <Statistic
+              title={<span style={{ color: '#6b7280' }}>Wing / ផ្សេងៗ</span>}
+              value={Number(summary.total_wing) + Number(summary.total_other || 0)}
+              prefix={<div style={{ color: '#ca8a04' }}>W</div>}
+              precision={2}
+              valueStyle={{ color: '#ca8a04', fontWeight: 'bold' }}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={5}>
+          <Card className="summary-card" style={{ background: '#1e4a2d' }} bodyStyle={{ padding: 20 }}>
+            <Statistic
+              title={<span style={{ color: '#ffffffcc' }}>Total Sales / សរុបលក់</span>}
               value={summary.total_amount}
-              prefix={<DollarOutlined style={{ color: '#1e4a2d' }} />}
+              prefix={<DollarOutlined style={{ color: '#fff' }} />}
               precision={2}
-              valueStyle={{ color: '#1e4a2d', fontSize: 32, fontWeight: 'bold' }}
+              valueStyle={{ color: '#fff', fontWeight: 'bold' }}
             />
-            <div style={{ marginTop: 8 }}>
-              <ArrowUpOutlined style={{ color: '#4ade80', marginRight: 4 }} />
-              <Text style={{ color: '#4ade80' }}>+8% {t.this_month}</Text>
-            </div>
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            style={{
-              background: '#fff',
-              border: 'none',
-              borderRadius: 16,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-            }}
-            bodyStyle={{ padding: 24 }}
-          >
-            <Statistic
-              title={<span style={{ color: '#6b7280' }}>{t.avg_order_value}</span>}
-              value={summary.total_order > 0 ? summary.total_amount / summary.total_order : 0}
-              prefix={<DollarOutlined style={{ color: '#1e4a2d' }} />}
-              precision={2}
-              valueStyle={{ color: '#1e4a2d', fontSize: 32, fontWeight: 'bold' }}
-            />
-            <div style={{ marginTop: 8 }}>
-              <ArrowUpOutlined style={{ color: '#4ade80', marginRight: 4 }} />
-              <Text style={{ color: '#4ade80' }}>+5% {t.this_month}</Text>
-            </div>
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            style={{
-              background: '#fff',
-              border: 'none',
-              borderRadius: 16,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-            }}
-            bodyStyle={{ padding: 24 }}
-          >
-            <Statistic
-              title={<span style={{ color: '#6b7280' }}>{t.this_month}</span>}
-              value={Math.floor(summary.total_order * 0.7)}
-              prefix={<CheckCircleOutlined style={{ color: '#1e4a2d' }} />}
-              valueStyle={{ color: '#1e4a2d', fontSize: 32, fontWeight: 'bold' }}
-            />
-            <div style={{ marginTop: 8 }}>
-              <ArrowUpOutlined style={{ color: '#4ade80', marginRight: 4 }} />
-              <Text style={{ color: '#4ade80' }}>+15% {t.this_month}</Text>
-            </div>
           </Card>
         </Col>
       </Row>
