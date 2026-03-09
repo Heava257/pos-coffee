@@ -599,13 +599,29 @@ const MainLayout = () => {
                 <div style={{ fontWeight: "700", color: "#1e4a2d", fontSize: "14px" }}>
                   {profile?.business_name || "Green Grounds Business"}
                 </div>
-                <div style={{ fontSize: "12px", color: "#6c757d", display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                  <FaShop size={10} color="#f7c06a" />
-                  <span style={{ fontWeight: 500 }}>{profile?.branch_name || "Main Terminal"}</span>
-                  <Divider type="vertical" />
-                  <span style={{ fontStyle: 'italic', fontWeight: 'bold', color: profile?.business_id === 1 ? '#d4af37' : '#1e4a2d' }}>
-                    {profile?.business_id === 1 ? (t.executives || "Super Admin") : (profile?.role_name || "Owner")}
-                  </span>
+                <div style={{ fontSize: "12px", color: "#6c757d", display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <FaShop size={10} color="#f7c06a" />
+                    <span style={{ fontWeight: 500 }}>{profile?.branch_name || "Main Branch"}</span>
+                  </div>
+                  <Divider type="vertical" style={{ margin: '0 4px' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontWeight: 600, color: '#1e4a2d' }}>{profile?.name}</span>
+                    <Tag
+                      color={profile?.business_id === 1 ? "gold" : (profile?.role_code === 'owner' ? "blue" : "green")}
+                      style={{
+                        fontSize: '10px',
+                        lineHeight: '16px',
+                        borderRadius: '4px',
+                        border: 'none',
+                        margin: 0,
+                        fontWeight: 700,
+                        textTransform: 'uppercase'
+                      }}
+                    >
+                      {profile?.business_id === 1 ? (t.executives || "Super Admin") : (profile?.role_name || "Staff")}
+                    </Tag>
+                  </div>
                 </div>
               </div>
             )}
