@@ -10,10 +10,11 @@ import { IoMdNotificationsOutline } from "react-icons/io";
 import { LockOutlined, MenuOutlined, UnlockOutlined } from "@ant-design/icons";
 import {
   getPermission,
-  getProfile,
+  getProfile, // Keep getProfile from profile.store.js for initial load if needed
   setAcccessToken,
-  setProfile,
+  setPermission, // Keep setPermission from profile.store.js
 } from "../../store/profile.store";
+import { useProfileStore } from "../../store/profileStore"; // Import the new store
 import { request } from "../../util/helper";
 import { configStore } from "../../store/configStore";
 import { FaShop } from "react-icons/fa6";
@@ -129,20 +130,19 @@ const MENU_STRUCTURE = [
 ];
 
 
-import { useProfileStore } from "../../store/profileStore";
-
 const MainLayout = () => {
   const { lang, setLang } = useLanguage();
   const t = translations[lang];
   const [permision, setPermision] = useState([]);
   const [subAlert, setSubAlert] = useState(null);
   const { setConfig } = configStore();
-  const { profile } = useProfileStore(); // Use reactive profile from the store
+  const { profile, setProfile: setProfileStore } = useProfileStore(); // Use reactive profile from the store
   const [collapsed, setCollapsed] = useState(false);
   const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [openKeys, setOpenKeys] = useState([]);
 
@@ -176,7 +176,6 @@ const MainLayout = () => {
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
-  const navigate = useNavigate();
 
   // Check screen size
   useEffect(() => {
@@ -368,7 +367,7 @@ const MainLayout = () => {
   };
 
   const onLoginOut = () => {
-    setProfile("");
+    setProfileStore(null); // Updated: Clear Zustand store (which also clears localStorage)
     setAcccessToken("");
     localStorage.removeItem("permission");
     localStorage.removeItem("user_id");

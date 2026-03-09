@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Form, Button, Input, message, ConfigProvider, Typography } from "antd";
 import { request } from "../../util/helper";
-import { setAcccessToken, setProfile, setPermission } from "../../store/profile.store";
+import { setAcccessToken, setPermission } from "../../store/profile.store";
+import { useProfileStore } from "../../store/profileStore";
 import { useNavigate, Link } from "react-router-dom";
 import {
   LockOutlined,
@@ -27,6 +28,7 @@ const COFFEE_ASSET = "/luxury_matcha_v2.png";
 function LoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { setProfile } = useProfileStore();
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -37,7 +39,7 @@ function LoginPage() {
       });
       if (res && res.access_token) {
         setAcccessToken(res.access_token);
-        setProfile(res.profile || {});
+        setProfile(res.profile || {}); // Now using Zustand setProfile
         setPermission(res.permission || []);
         message.success("Logged in successfully!");
         navigate("/dashboard");
