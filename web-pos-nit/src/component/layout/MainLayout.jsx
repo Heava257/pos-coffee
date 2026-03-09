@@ -206,7 +206,7 @@ const MainLayout = () => {
     getConfig();
 
     // Set selected menu item based on current path
-    const currentPath = location.pathname.replace('/', '');
+    const currentPath = location.pathname.replace(/^\/+|\/+$/g, '');
     setSelectedKeys([currentPath || "dashboard"]);
 
     // Auto-expand parent menus for selected item
@@ -243,26 +243,34 @@ const MainLayout = () => {
 
     const currentPath = location.pathname;
 
-    // always allow profile and settings page
-    if (currentPath === '/profile' || currentPath === '/settings') return;
+    // always allow profile page for everyone (they need to edit their own info)
+    if (currentPath === '/profile') return;
 
     // Special Case: always allow business page for system admin (Business ID 1)
     if (currentPath === '/business' && profile?.business_id === 1) return;
 
-    const findIndex = permision.findIndex(
-      (item) => item.web_route_key === currentPath
-    );
+    const findIndex = permision.findIndex((item) => {
+      if (!item.web_route_key) return false;
+      const p1 = item.web_route_key.toLowerCase().replace(/^\/+|\/+$/g, '');
+      const p2 = currentPath.toLowerCase().replace(/^\/+|\/+$/g, '');
+
+      // Special Case: "" (root) and "dashboard" equivalence
+      if ((p1 === "" || p1 === "dashboard") && (p2 === "" || p2 === "dashboard")) return true;
+
+      return p1 === p2;
+    });
 
     if (findIndex === -1) {
+      // If it's the root/dashboard, allow if they are OWNER/SuperAdmin by default
       if ((currentPath === "/" || currentPath === "/dashboard") && (profile?.business_id === 1 || profile?.is_super_admin === 1 || profile?.role_name?.toUpperCase() === "OWNER")) {
         return;
       }
+
       // Current page not in permissions — redirect to first allowed page
-      // Ensure we have a valid route to redirect to
       if (permision[0] && permision[0].web_route_key) {
         navigate(permision[0].web_route_key);
       } else {
-        navigate("/invoices"); // Fallback to POS if no permissions found
+        navigate("/invoices"); // Fallback to POS
       }
     }
   };
@@ -290,12 +298,16 @@ const MainLayout = () => {
       // Helper to check permission safely
       const checkPath = (key) => {
         if (!key && key !== "") return false;
-        const targetPath = "/" + key;
+        const targetPath = (key === "" || key === "dashboard") ? "/" : "/" + key;
         return permision.some(p => {
           if (!p.web_route_key) return false;
           // Normalize both paths: lowercase and remove trailing/leading slashes for comparison
           const p1 = p.web_route_key.toLowerCase().replace(/^\/+|\/+$/g, '');
           const p2 = targetPath.toLowerCase().replace(/^\/+|\/+$/g, '');
+
+          // Special Case: "" (root) and "dashboard" are often used interchangeably
+          if ((p1 === "" || p1 === "dashboard") && (p2 === "" || p2 === "dashboard")) return true;
+
           return p1 === p2;
         });
       };
