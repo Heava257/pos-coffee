@@ -78,7 +78,7 @@ exports.login = async (req, res) => {
     const sql = `
         SELECT u.*, 
                r.name as role_name, r.code as role_code,
-               b.name as business_name, b.status as business_status,
+               b.name as business_name, b.status as business_status, b.logo as business_logo,
                p.name as plan_name, p.max_branches, p.max_staff, p.max_products
         FROM users u
         INNER JOIN roles r ON u.role_id = r.id

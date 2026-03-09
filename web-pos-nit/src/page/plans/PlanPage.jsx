@@ -26,10 +26,18 @@ import {
     CrownOutlined,
     TeamOutlined,
     MonitorOutlined,
-    SyncOutlined
+    SyncOutlined,
+    SettingOutlined,
+    KeyOutlined,
+    BankOutlined,
+    PlusOutlined,
+    QrcodeOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { Tabs } from "antd";
+import { Config } from "../../util/config";
+import dayjs from "dayjs";
+import { Upload } from "lucide-react";
 const { TabPane } = Tabs;
 
 const { Title, Text } = Typography;
@@ -40,12 +48,17 @@ const PlanPage = () => {
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
+    const [systemForm] = Form.useForm();
     const [editingPlan, setEditingPlan] = useState(null);
     const [activeTab, setActiveTab] = useState("plans");
+    const [systemSettings, setSystemSettings] = useState({});
+    const [sysLoading, setSysLoading] = useState(false);
+    const [fileList, setFileList] = useState([]);
 
     useEffect(() => {
         fetchPlans();
         fetchSubscriptions();
+        fetchSystemSettings();
     }, []);
 
     const fetchPlans = async () => {
@@ -62,6 +75,45 @@ const PlanPage = () => {
         if (res && res.success) {
             setSubscriptions(res.list);
         }
+    };
+
+    const fetchSystemSettings = async () => {
+        setSysLoading(true);
+        const res = await request("system-settings", "get");
+        if (res && res.success) {
+            setSystemSettings(res.settings);
+            systemForm.setFieldsValue(res.settings);
+            if (res.settings.payway_khqr_image) {
+                setFileList([{
+                    uid: '-1',
+                    name: 'khqr.png',
+                    status: 'done',
+                    url: Config.getFullImagePath(res.settings.payway_khqr_image),
+                }]);
+            }
+        }
+        setSysLoading(false);
+    };
+
+    const handleSaveSystemSettings = async (values) => {
+        setSysLoading(true);
+        const formData = new FormData();
+        Object.keys(values).forEach(key => {
+            if (values[key] !== undefined) formData.append(key, values[key]);
+        });
+
+        if (fileList.length > 0 && fileList[0].originFileObj) {
+            formData.append("khqr_image", fileList[0].originFileObj);
+        } else if (fileList.length === 0 && systemSettings.payway_khqr_image) {
+            formData.append("image_remove", "1");
+        }
+
+        const res = await request("system-settings", "put", formData);
+        if (res && res.success) {
+            message.success("Master payment settings updated!");
+            fetchSystemSettings();
+        }
+        setSysLoading(false);
     };
 
     const handleEdit = (record) => {
@@ -251,6 +303,80 @@ const PlanPage = () => {
                             rowKey="business_id"
                             loading={loading}
                         />
+                    </TabPane>
+
+                    <TabPane
+                        tab={<span><SettingOutlined />Master Payment API</span>}
+                        key="payment_api"
+                    >
+                        <div style={{ padding: '0 10px' }}>
+                            <div style={{ marginBottom: 20 }}>
+                                <Title level={4}>Platform Master Payment Setup</Title>
+                                <Text type="secondary">Configure your bank credentials to receive plan upgrade payments from all clients.</Text>
+                            </div>
+
+                            <Card style={{ borderRadius: 16, border: '1px solid #f0f0f0', background: '#fdfdfd' }}>
+                                <Form form={systemForm} layout="vertical" onFinish={handleSaveSystemSettings}>
+                                    <Row gutter={24}>
+                                        <Col span={12}>
+                                            <Form.Item name="payway_merchant_id" label="Merchant ID" tooltip="Your ABA PayWay or Bank Merchant ID">
+                                                <Input prefix={<BankOutlined />} placeholder="e.g. M123456" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={12}>
+                                            <Form.Item name="payway_receiver_name" label="Receiver Name" tooltip="The name displayed to customers in bank apps">
+                                                <Input prefix={<TeamOutlined />} placeholder="e.g. COFFEE SaaS PLATFORM" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={24}>
+                                            <Form.Item name="payway_api_key" label="API Token Key (Master)" tooltip="The secret API key for dynamic transaction generation">
+                                                <Input.Password prefix={<KeyOutlined />} placeholder="Your Secret API Key" />
+                                            </Form.Item>
+                                        </Col>
+
+                                        <Col span={24}>
+                                            <Divider orientation="left" style={{ fontSize: 13, color: '#999' }}>Master KHQR Image (Fallback)</Divider>
+                                            <Form.Item label="Upload Platform QR">
+                                                <Upload
+                                                    listType="picture-card"
+                                                    fileList={fileList}
+                                                    onChange={({ fileList }) => setFileList(fileList)}
+                                                    beforeUpload={() => false}
+                                                    maxCount={1}
+                                                >
+                                                    {fileList.length < 1 && (
+                                                        <div>
+                                                            <PlusOutlined />
+                                                            <div style={{ marginTop: 8 }}>Upload QR</div>
+                                                        </div>
+                                                    )}
+                                                </Upload>
+                                                <Text type="secondary" style={{ fontSize: 11 }}>This image will be shown if dynamic QR generation is disabled or fails.</Text>
+                                            </Form.Item>
+                                        </Col>
+                                    </Row>
+                                    <Button
+                                        type="primary"
+                                        htmlType="submit"
+                                        loading={sysLoading}
+                                        icon={<CheckCircleOutlined />}
+                                        style={{ height: 40, borderRadius: 8, background: '#1e4a2d' }}
+                                    >
+                                        Save Master Configuration
+                                    </Button>
+                                </Form>
+                            </Card>
+
+                            <div style={{ marginTop: 24, padding: 16, background: '#e6f7ff', borderRadius: 12, border: '1px solid #91d5ff' }}>
+                                <Space align="start">
+                                    <QrcodeOutlined style={{ fontSize: 20, color: '#1890ff', marginTop: 4 }} />
+                                    <div>
+                                        <Text strong>Automatic Amount Detection</Text><br />
+                                        <Text size="small" type="secondary">When configured, the system will automatically generate a dynamic KHQR with the exact plan price (e.g. $29.00) when a client clicks upgrade. This prevents manual entry errors and speeds up the checkout process.</Text>
+                                    </div>
+                                </Space>
+                            </div>
+                        </div>
                     </TabPane>
                 </Tabs>
             </Card>

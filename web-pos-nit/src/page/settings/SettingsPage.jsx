@@ -30,6 +30,7 @@ import {
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
+import { getProfile, setProfile } from "../../store/profile.store";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -82,7 +83,19 @@ const SettingsPage = () => {
             const res = await request("settings", "put", formData);
             if (res && res.success) {
                 message.success("Settings updated successfully!");
-                fetchSettings(); // Refresh
+
+                // Update Local Profile for real-time logo change in sidebar
+                const currentProfile = getProfile();
+                if (currentProfile) {
+                    const updatedProfile = {
+                        ...currentProfile,
+                        business_name: values.name,
+                        business_logo: res.logo || currentProfile.business_logo // Assume API returns new filename
+                    };
+                    setProfile(updatedProfile);
+                }
+
+                fetchSettings(); // Refresh UI
             }
         } catch (error) {
             console.error("Update settings error:", error);

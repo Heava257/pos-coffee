@@ -51,7 +51,11 @@ exports.updateSettings = async (req, res) => {
 
         await db.query(sql, params);
 
-        res.json({ success: true, message: "Settings updated successfully" });
+        res.json({
+            success: true,
+            message: "Settings updated successfully",
+            logo: logo // return the new logo filename
+        });
     } catch (error) {
         logError("settings.updateSettings", error, res);
     }

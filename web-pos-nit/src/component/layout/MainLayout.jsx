@@ -302,8 +302,8 @@ const MainLayout = () => {
       if (newItem.hasOwnProperty('key') && !newItem.children) {
         if (newItem.key === "business") return profile?.business_id === 1 ? newItem : null;
 
-        // Let Dashboard be shown ONLY if they have explicit permission OR they are the owner/Super Admin
-        if (newItem.key === "dashboard") {
+        // Let Dashboard and Settings be shown ONLY if they have explicit permission OR they are the owner/Super Admin
+        if (newItem.key === "dashboard" || newItem.key === "settings") {
           if (profile?.business_id === 1 || profile?.is_super_admin === 1 || profile?.role_name?.toUpperCase() === "OWNER") {
             return newItem;
           }
@@ -415,11 +415,12 @@ const MainLayout = () => {
     <>
       <div className="admin-header-g1">
         <img
-          src={logo}
+          src={profile?.business_logo ? Config.getFullImagePath(profile.business_logo) : logo}
           alt="Logo"
           className="admin-logo"
           style={{
             height: isMobile ? "80px" : collapsed ? "60px" : "130px",
+            objectFit: "contain",
             transition: "height 0.3s"
           }}
         />

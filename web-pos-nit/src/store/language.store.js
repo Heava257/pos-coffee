@@ -376,6 +376,9 @@ export const translations = {
         something_went_wrong: "Something went wrong",
         confirm_remove_raw_material: "Are you sure you want to remove this raw material?",
         no_image: "No Img",
+        khqr_setting: "KHQR Setting",
+        upload_khqr: "Upload KHQR",
+        khqr_image: "KHQR Image",
     },
     kh: {
         dashboard: "ផ្ទាំងគ្រប់គ្រង",
@@ -744,5 +747,8 @@ export const translations = {
         something_went_wrong: "មានបញ្ហាអ្វីមួយបានកើតឡើង",
         confirm_remove_raw_material: "តើអ្នកប្រាកដថាចង់លុបគ្រឿងផ្សំនេះមែនទេ?",
         no_image: "គ្មានរូបភាព",
+        khqr_setting: "កំណត់កូដ QR ទូទាត់",
+        upload_khqr: "បង្ហោះកូដ QR (KHQR)",
+        khqr_image: "រូបភាពកូដ QR",
     },
 };

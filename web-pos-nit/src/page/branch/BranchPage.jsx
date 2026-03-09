@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space,
-    Typography, Divider, Badge, Switch, Tooltip
+    Typography, Divider, Badge, Switch, Tooltip, Image, Upload
 } from "antd";
 import {
     PlusOutlined,
@@ -13,14 +13,22 @@ import {
     EnvironmentOutlined,
     PhoneOutlined,
     CheckCircleOutlined,
-    WarningOutlined
+    WarningOutlined,
+    QrcodeOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
+import { Config } from "../../util/config";
 import { getProfile } from "../../store/profile.store";
 
 import { useLanguage, translations } from "../../store/language.store";
 
 const { Title, Text } = Typography;
+
+const COLORS = {
+    darkGreen: "#1e4a2d",
+    midGreen: "#2d6a42",
+    textSecondary: "#6b7c6b",
+};
 
 const BranchPage = () => {
     const { lang } = useLanguage();
@@ -31,6 +39,7 @@ const BranchPage = () => {
     const [form] = Form.useForm();
     const [editId, setEditId] = useState(null);
     const [searchText, setSearchText] = useState("");
+    const [fileList, setFileList] = useState([]);
     const profile = getProfile();
 
     useEffect(() => {
@@ -53,15 +62,33 @@ const BranchPage = () => {
 
     const onFinish = async (values) => {
         try {
-            const method = editId ? "put" : "post";
-            const payload = editId ? { ...values, id: editId } : values;
+            const formData = new FormData();
+            formData.append("name", values.name);
+            formData.append("location", values.location || "");
+            formData.append("phone", values.phone || "");
+            formData.append("is_main", values.is_main ? "1" : "0");
+            formData.append("payment_merchant_id", values.payment_merchant_id || "");
+            formData.append("payment_api_key", values.payment_api_key || "");
+            formData.append("payment_receiver_name", values.payment_receiver_name || "");
 
-            const res = await request("branch", method, payload);
+            if (fileList.length > 0 && fileList[0].originFileObj) {
+                formData.append("khqr_image", fileList[0].originFileObj);
+            } else if (fileList.length === 0 && editId) {
+                formData.append("image_remove", "1");
+            }
+
+            if (editId) {
+                formData.append("id", editId);
+            }
+
+            const method = editId ? "put" : "post";
+            const res = await request("branch", method, formData);
             if (res) {
                 message.success(res.message || (editId ? t.update_branch : t.add_new_branch) + " " + t.success);
                 setVisible(false);
                 form.resetFields();
                 setEditId(null);
+                setFileList([]);
                 getList();
             }
         } catch (error) {
@@ -75,8 +102,23 @@ const BranchPage = () => {
             name: item.name,
             location: item.location,
             phone: item.phone,
-            is_main: item.is_main === '1'
+            is_main: item.is_main === '1',
+            payment_merchant_id: item.payment_merchant_id,
+            payment_api_key: item.payment_api_key,
+            payment_receiver_name: item.payment_receiver_name,
         });
+        if (item.khqr_image) {
+            setFileList([
+                {
+                    uid: "-1",
+                    name: "khqr.png",
+                    status: "done",
+                    url: Config.getFullImagePath(item.khqr_image),
+                },
+            ]);
+        } else {
+            setFileList([]);
+        }
         setVisible(true);
     };
 
@@ -138,6 +180,19 @@ const BranchPage = () => {
             render: () => (
                 <Badge status="processing" text={t.active} color="#52c41a" />
             )
+        },
+        {
+            title: "KHQR",
+            dataIndex: "khqr_image",
+            key: "khqr_image",
+            render: (text) => text ? (
+                <Image
+                    src={Config.getFullImagePath(text)}
+                    width={40}
+                    height={40}
+                    style={{ borderRadius: 8, objectFit: 'cover' }}
+                />
+            ) : <Tag color="default">{t.no_image}</Tag>
         },
         {
             title: t.action,
@@ -298,6 +353,50 @@ const BranchPage = () => {
                             </Form.Item>
                         </Col>
                     </Row>
+
+                    <Divider orientation="left" style={{ fontSize: '13px', color: COLORS.textSecondary }}>{t.khqr_setting}</Divider>
+
+                    <Row gutter={16}>
+                        <Col span={24}>
+                            <div style={{ marginBottom: 16, padding: 12, background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8 }}>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    <QrcodeOutlined /> {t.khqr_setup_tip || "Setup your bank API for dynamic QR with automatic amount."}
+                                </Text>
+                            </div>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="payment_merchant_id" label={t.merchant_id || "Merchant ID"}>
+                                <Input placeholder="e.g. M12345" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="payment_receiver_name" label={t.receiver_name || "Receiver Name"}>
+                                <Input placeholder="e.g. COFFEE SHOP" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={24}>
+                            <Form.Item name="payment_api_key" label={t.api_key_label || "API Token Key"}>
+                                <Input.Password placeholder="Your Secret API Key" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <Form.Item label={t.upload_khqr + " (Fallback)"}>
+                        <Upload
+                            listType="picture-card"
+                            fileList={fileList}
+                            onChange={({ fileList }) => setFileList(fileList)}
+                            beforeUpload={() => false}
+                            maxCount={1}
+                        >
+                            {fileList.length < 1 && (
+                                <div>
+                                    <PlusOutlined />
+                                    <div style={{ marginTop: 8 }}>{t.upload}</div>
+                                </div>
+                            )}
+                        </Upload>
+                    </Form.Item>
                 </Form>
             </Modal>
         </div>

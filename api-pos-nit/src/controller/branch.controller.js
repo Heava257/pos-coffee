@@ -26,8 +26,9 @@ exports.create = async (req, res) => {
             });
         }
 
-        const sql = "INSERT INTO branches (business_id, name, location, phone) VALUES (?, ?, ?, ?)";
-        const [data] = await db.query(sql, [business_id, name, location, phone]);
+        const khqr_image = req.file?.filename || null;
+        const sql = "INSERT INTO branches (business_id, name, location, phone, khqr_image, payment_merchant_id, payment_api_key, payment_receiver_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        const [data] = await db.query(sql, [business_id, name, location, phone, khqr_image, payment_merchant_id || null, payment_api_key || null, payment_receiver_name || null]);
 
         res.json({
             success: true,
@@ -42,10 +43,27 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         const { business_id } = req;
-        const { id, name, location, phone } = req.body;
+        const { id, name, location, phone, image_remove, payment_merchant_id, payment_api_key, payment_receiver_name } = req.body;
+        let khqr_image = req.file?.filename;
 
-        const sql = "UPDATE branches SET name = ?, location = ?, phone = ? WHERE id = ? AND business_id = ?";
-        await db.query(sql, [name, location, phone, id, business_id]);
+        // Fetch current branch to handle image replacement
+        const [current] = await db.query("SELECT khqr_image FROM branches WHERE id = ?", [id]);
+        const oldImage = current[0]?.khqr_image;
+
+        if (image_remove === "1" || khqr_image) {
+            if (oldImage) {
+                const { removeFile } = require("../util/helper");
+                await removeFile(oldImage);
+            }
+            if (image_remove === "1" && !khqr_image) {
+                khqr_image = null;
+            }
+        } else {
+            khqr_image = oldImage; // Keep existing if no change
+        }
+
+        const sql = "UPDATE branches SET name = ?, location = ?, phone = ?, khqr_image = ?, payment_merchant_id = ?, payment_api_key = ?, payment_receiver_name = ? WHERE id = ? AND business_id = ?";
+        await db.query(sql, [name, location, phone, khqr_image, payment_merchant_id || null, payment_api_key || null, payment_receiver_name || null, id, business_id]);
 
         res.json({ message: "Branch updated successfully!" });
     } catch (error) {

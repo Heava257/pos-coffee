@@ -119,6 +119,40 @@ app.listen(PORT, async () => {
     console.error("Migration Error (branch_products):", err.message);
   }
 
+  // Migration Fix: Add khqr_image to branches table
+  try {
+    await db.query("ALTER TABLE branches ADD COLUMN IF NOT EXISTS khqr_image VARCHAR(255) DEFAULT NULL");
+    await db.query("ALTER TABLE branches ADD COLUMN IF NOT EXISTS payment_merchant_id VARCHAR(255) DEFAULT NULL");
+    await db.query("ALTER TABLE branches ADD COLUMN IF NOT EXISTS payment_api_key VARCHAR(255) DEFAULT NULL");
+    await db.query("ALTER TABLE branches ADD COLUMN IF NOT EXISTS payment_receiver_name VARCHAR(255) DEFAULT NULL");
+    console.log("Migration: 'branches' payment fields added");
+  } catch (err) {
+    console.error("Migration Error (branches table):", err.message);
+  }
+
+  // Migration Fix: Create system_settings table for platform-wide config
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sett_key VARCHAR(100) UNIQUE NOT NULL,
+        sett_value TEXT DEFAULT NULL,
+        description TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Seed default payment keys if missing
+    const keys = ['payway_merchant_id', 'payway_api_key', 'payway_receiver_name', 'payway_khqr_image'];
+    for (const key of keys) {
+      await db.query("INSERT IGNORE INTO system_settings (sett_key) VALUES (?)", [key]);
+    }
+
+    console.log("Migration: 'system_settings' table ready");
+  } catch (err) {
+    console.error("Migration Error (system_settings):", err.message);
+  }
+
   // Migration Fix: Create favorites table if missing
   try {
     await db.query(`

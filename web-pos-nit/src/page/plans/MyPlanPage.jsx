@@ -15,6 +15,35 @@ import { useNavigate } from "react-router-dom";
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
 import { useLanguage, translations } from "../../store/language.store";
+import QRCode from 'react-qr-code';
+import { Image as AntImage } from 'antd'; // Rename to avoid conflict with potential other Image components
+
+const CRC16 = (data) => {
+    let crc = 0xFFFF;
+    for (let i = 0; i < data.length; i++) {
+        let x = ((crc >> 8) ^ data.charCodeAt(i)) & 0xFF;
+        x ^= x >> 4;
+        crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
+    }
+    return crc.toString(16).toUpperCase().padStart(4, '0');
+};
+
+const generateKHQR = (merchantId, name, amount, currency = "USD") => {
+    const f = (id, val) => id + val.length.toString().padStart(2, '0') + val;
+    const merchantInfo = f("00", merchantId);
+    let payload =
+        f("00", "01") +
+        f("01", "12") +
+        f("29", merchantInfo) +
+        f("52", "5999") +
+        f("53", currency === "USD" ? "840" : "116") +
+        f("54", parseFloat(amount).toFixed(2)) +
+        f("58", "KH") +
+        f("59", name.substring(0, 25)) +
+        f("60", "PHNOM PENH");
+    payload += "6304";
+    return payload + CRC16(payload);
+};
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -744,60 +773,92 @@ function MyPlanPage() {
                 width={440}
                 centered
             >
-                {paymentSession && (
-                    <div style={{ textAlign: "center", padding: "8px 0" }}>
-                        <div style={{
-                            background: "linear-gradient(135deg, #1e4a2d, #2d6a3e)",
-                            borderRadius: 16, padding: "24px",
-                            color: "white", marginBottom: 20,
-                        }}>
-                            <Text style={{ color: "rgba(255,255,255,0.7)", display: "block", marginBottom: 4 }}>
-                                You are paying for
-                            </Text>
-                            <Title level={3} style={{ color: "white", margin: "0 0 4px" }}>
-                                {paymentSession.plan_name}
-                            </Title>
-                            <div style={{ fontSize: 36, fontWeight: 800, color: "#c0a060" }}>
-                                ${paymentSession.amount}
+                {paymentSession && (() => {
+                    const sys = paymentSession.system_settings || {};
+                    const merchantId = sys.payway_merchant_id;
+                    const receiverName = sys.payway_receiver_name || "Platform Subscription";
+                    const staticQR = sys.payway_khqr_image;
+
+                    let dynamicKHQR = null;
+                    if (merchantId && paymentSession.amount > 0) {
+                        dynamicKHQR = generateKHQR(merchantId, receiverName, paymentSession.amount);
+                    }
+
+                    return (
+                        <div style={{ textAlign: "center", padding: "8px 0" }}>
+                            <div style={{
+                                background: "linear-gradient(135deg, #1e4a2d, #2d6a3e)",
+                                borderRadius: 16, padding: "20px",
+                                color: "white", marginBottom: 20,
+                            }}>
+                                <Title level={4} style={{ color: "white", margin: "0 0 4px" }}>
+                                    {paymentSession.plan_name}
+                                </Title>
+                                <div style={{ fontSize: 32, fontWeight: 800, color: "#c0a060" }}>
+                                    ${paymentSession.amount}
+                                </div>
+                                <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>30-Day Subscription Upgrade</Text>
                             </div>
-                            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>USD / 30 days</Text>
+
+                            {dynamicKHQR ? (
+                                <div style={{ marginBottom: 24 }}>
+                                    <div style={{
+                                        background: '#fff',
+                                        padding: '16px',
+                                        borderRadius: '16px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                        display: 'inline-block',
+                                        border: '1px solid #f0f0f0'
+                                    }}>
+                                        <QRCode value={dynamicKHQR} size={220} />
+                                    </div>
+                                    <div style={{ marginTop: 12 }}>
+                                        <Text strong style={{ display: 'block', color: '#1e4a2d' }}>Scan to Pay ${paymentSession.amount}</Text>
+                                        <Text type="secondary" style={{ fontSize: 11 }}>{receiverName}</Text>
+                                    </div>
+                                </div>
+                            ) : staticQR ? (
+                                <div style={{ marginBottom: 24 }}>
+                                    <AntImage
+                                        src={Config.getFullImagePath(staticQR)}
+                                        style={{ width: '100%', maxWidth: 220, borderRadius: 12, border: '1px solid #eee' }}
+                                    />
+                                    <div style={{ marginTop: 12 }}>
+                                        <Text strong style={{ display: 'block', color: '#1e4a2d' }}>Scan to Pay</Text>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            <Button
+                                type="primary" size="large" block
+                                style={{ background: "#c0392b", border: "none", borderRadius: 12, height: 52, fontWeight: 700, fontSize: 16, marginBottom: 12 }}
+                                onClick={handleProceedToPayWay}
+                            >
+                                🏦 Checkout with ABA PayWay
+                            </Button>
+
+                            <div style={{ background: "#f8fdf9", borderRadius: 10, padding: "8px 16px", marginBottom: 16, fontSize: 11 }}>
+                                <Text type="secondary">Trans ID: </Text>
+                                <Text code style={{ fontSize: 10 }}>{paymentSession.tran_id}</Text>
+                            </div>
+
+                            <Divider plain style={{ color: "#999", fontSize: 12 }}>Developer Testing</Divider>
+
+                            <Button
+                                block type="dashed"
+                                style={{ borderRadius: 12, height: 40, marginBottom: 16 }}
+                                onClick={handleSimulatePayment}
+                            >
+                                🧪 Simulate Success
+                            </Button>
+
+                            <Button type="link" block
+                                onClick={() => { setIsPaymentModalVisible(false); setIsConfirmModalVisible(true); }}>
+                                ← Back to Selection
+                            </Button>
                         </div>
-
-                        <div style={{ background: "#f8fdf9", borderRadius: 10, padding: "10px 16px", marginBottom: 20, fontSize: 12 }}>
-                            <Text type="secondary">Transaction ID: </Text>
-                            <Text code style={{ fontSize: 11 }}>{paymentSession.tran_id}</Text>
-                        </div>
-
-                        <Button
-                            type="primary" size="large" block
-                            style={{ background: "#c0392b", border: "none", borderRadius: 12, height: 52, fontWeight: 700, fontSize: 16, marginBottom: 12 }}
-                            onClick={handleProceedToPayWay}
-                        >
-                            🏦 Pay via ABA PayWay
-                        </Button>
-
-                        <Divider plain style={{ color: "#999", fontSize: 12 }}>or</Divider>
-
-                        <Alert
-                            style={{ borderRadius: 10, marginBottom: 12, textAlign: "left" }}
-                            type="warning" showIcon
-                            message={<Text strong>Developer Mode</Text>}
-                            description="No real PayWay credentials yet? Use the simulate button to test the full upgrade flow."
-                        />
-                        <Button
-                            block type="dashed" size="large"
-                            style={{ borderRadius: 12, height: 48 }}
-                            onClick={handleSimulatePayment}
-                        >
-                            🧪 Simulate Successful Payment
-                        </Button>
-
-                        <Button type="link" block style={{ marginTop: 8 }}
-                            onClick={() => { setIsPaymentModalVisible(false); setIsConfirmModalVisible(true); }}>
-                            ← Go Back
-                        </Button>
-                    </div>
-                )}
+                    )
+                })()}
             </Modal>
 
             {/* Pop-in animation */}

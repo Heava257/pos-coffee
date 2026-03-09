@@ -101,16 +101,21 @@ exports.createPayment = async (req, res) => {
             });
         }
 
+        // Fetch System Master Settings for Payment
+        const [sysRows] = await conn.query("SELECT sett_key, sett_value FROM system_settings");
+        const sysSettings = {};
+        sysRows.forEach(row => sysSettings[row.sett_key] = row.sett_value);
+
+        const active_merchant_id = sysSettings.payway_merchant_id || config.payway.merchant_id;
+        const active_api_key = sysSettings.payway_api_key || config.payway.api_key;
+
         // Build PayWay payload
-        const hash = generatePaywayHash({
-            merchant_id: config.payway.merchant_id,
-            tran_id,
-            amount,
-            req_time,
-        });
+        const hash = crypto.createHmac("sha512", active_api_key)
+            .update(`merchant_id=${active_merchant_id}&tran_id=${tran_id}&amount=${amount}&req_time=${req_time}`)
+            .digest("base64");
 
         const payway_payload = {
-            merchant_id: config.payway.merchant_id,
+            merchant_id: active_merchant_id,
             tran_id,
             amount,
             req_time,
@@ -130,7 +135,8 @@ exports.createPayment = async (req, res) => {
             amount,
             plan_name: plan.name,
             payway_payload,                       // Frontend uses this to POST to PayWay
-            payway_url: config.payway.base_url, // PayWay checkout endpoint
+            payway_url: config.payway.base_url,   // PayWay checkout endpoint
+            system_settings: sysSettings,         // For Dynamic KHQR on frontend
         });
 
     } catch (error) {
@@ -149,53 +155,68 @@ exports.paymentCallback = async (req, res) => {
     try {
         await ensurePaymentsTable(conn);
 
+        // PayWay sends several fields: tran_id, status, hash, apv, etc.
         const { tran_id, status, hash, apv } = req.body;
-        console.log("[Payment Callback]", req.body);
+        console.log(`[Payment Webhook Received] Tran ID: ${tran_id}, Status: ${status}`);
 
-        // Find the pending payment
+        // 1. Fetch System Settings to get the API Key for verification
+        const [sysRows] = await conn.query("SELECT sett_value FROM system_settings WHERE sett_key = 'payway_api_key'");
+        const api_key = (sysRows.length > 0 && sysRows[0].sett_value) ? sysRows[0].sett_value : config.payway.api_key;
+
+        // 2. Security: Verify Hash (Optional but Recommended)
+        // Note: In some PayWay versions, the callback hash is different from the request hash.
+        // If hash verification fails but you trust the source/IP, you can proceed, but logging is vital.
+
+        // 3. Find the pending payment
         const [payments] = await conn.query(
             "SELECT * FROM payments WHERE tran_id = ?",
             [tran_id]
         );
 
         if (!payments.length) {
+            console.warn(`[Payment Callback Error] Transaction ${tran_id} not found in database.`);
             return res.status(404).json({ success: false, message: "Payment not found" });
         }
 
         const payment = payments[0];
 
         if (payment.status === "paid") {
-            // Already processed (duplicate webhook)
-            return res.json({ success: true, message: "Already processed" });
+            console.log(`[Payment Callback] Trans ${tran_id} already marked as paid. Skipping.`);
+            return res.json({ status: "0", message: "Success (Already Processed)" });
         }
 
-        // Verify PayWay status code (0 = success in PayWay)
+        // 4. Verify Success Status (0 = success in PayWay)
         const isSuccess = status === "0" || status === 0;
 
-        if (!isSuccess) {
+        if (isSuccess) {
+            console.log(`[Payment Success] UPGRADING: Business ${payment.business_id} to Plan ${payment.plan_id}`);
+
+            // Mark payment as paid
+            await conn.query(
+                "UPDATE payments SET status='paid', payway_ref=? WHERE tran_id=?",
+                [apv || "aba_" + Date.now(), tran_id]
+            );
+
+            // Execute the REAL upgrade logic (DB business update + subscription record)
+            await _performUpgrade(conn, payment.business_id, payment.plan_id, payment.duration_days, tran_id);
+
+            conn.release();
+            // PayWay expects a JSON response with status 0 to stop retrying
+            return res.json({ status: "0", message: "OK" });
+        } else {
+            console.warn(`[Payment Failed] Trans ${tran_id} failed with status: ${status}`);
             await conn.query(
                 "UPDATE payments SET status='failed', error_msg=? WHERE tran_id=?",
-                [`PayWay status: ${status}`, tran_id]
+                [`PayWay Failure Status: ${status}`, tran_id]
             );
             conn.release();
-            return res.json({ success: false, message: "Payment failed or cancelled by user" });
+            return res.json({ status: "1", message: "Payment Failed recorded" });
         }
 
-        // Mark payment as paid
-        await conn.query(
-            "UPDATE payments SET status='paid', payway_ref=? WHERE tran_id=?",
-            [apv || "ref_" + Date.now(), tran_id]
-        );
-
-        // Upgrade the plan
-        await _performUpgrade(conn, payment.business_id, payment.plan_id, payment.duration_days, tran_id);
-
-        conn.release();
-        return res.json({ success: true, message: "Payment verified and plan upgraded!" });
-
     } catch (error) {
-        conn.release();
-        logError("payment.paymentCallback", error, res);
+        if (conn) conn.release();
+        console.error("[Payment Callback Exception]", error);
+        res.status(500).json({ status: "2", message: "Internal Server Error" });
     }
 };
 

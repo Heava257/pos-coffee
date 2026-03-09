@@ -433,6 +433,7 @@ function PosPage() {
   const [pendingOrdersVisible, setPendingOrdersVisible] = useState(false);
   const [pendingOrders, setPendingOrders] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [branchInfo, setBranchInfo] = useState(null);
 
   const [currentOrderId, setCurrentOrderId] = useState(null);
 
@@ -485,6 +486,7 @@ function PosPage() {
   // ── initial data ──
   useEffect(() => {
     getParentCategories();
+    getBranchInfo();
     getList();
     getPendingOrders();
     const iv = setInterval(getPendingOrders, 30000); // Check every 30s
@@ -556,6 +558,18 @@ function PosPage() {
       }
     } catch {
       setParentCategories(defaultParentCategories);
+    }
+  };
+
+  const getBranchInfo = async () => {
+    try {
+      const res = await request("branch", "get");
+      if (res && res.list) {
+        const currentBranch = res.list.find(b => b.id === profile?.branch_id) || res.list[0];
+        setBranchInfo(currentBranch);
+      }
+    } catch (error) {
+      console.error("Error fetching branch info:", error);
     }
   };
 
@@ -1544,6 +1558,7 @@ function PosPage() {
         paymentLink={paymentData.paymentLink}
         orderNo={paymentData.orderNo}
         total={paymentData.total}
+        branchInfo={branchInfo}
       />
 
       <Modal
