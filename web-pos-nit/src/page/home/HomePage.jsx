@@ -52,7 +52,7 @@ function HomePage() {
   const fetchAllData = async () => {
     setIsLoading(true);
     try {
-      const res = await request('dashbaord', "get");
+      const res = await request('dashboard', "get");
       if (res && res.success) {
         let totalRev = 0;
         let totalOrders = 0;
