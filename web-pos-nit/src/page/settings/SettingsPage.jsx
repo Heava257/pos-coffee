@@ -54,8 +54,10 @@ const SettingsPage = () => {
             if (res && res.settings) {
                 setSettings(res.settings);
                 form.setFieldsValue(res.settings);
-                if (res.settings.logo) {
+                if (res.settings.logo && res.settings.logo !== "null" && res.settings.logo !== "undefined") {
                     setPreviewUrl(Config.getFullImagePath(res.settings.logo));
+                } else {
+                    setPreviewUrl(null);
                 }
             }
         } catch (error) {

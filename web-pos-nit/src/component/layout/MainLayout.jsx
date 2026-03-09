@@ -415,7 +415,7 @@ const MainLayout = () => {
     <>
       <div className="admin-header-g1">
         <img
-          src={profile?.business_logo ? Config.getFullImagePath(profile.business_logo) : logo}
+          src={(profile?.business_logo && profile.business_logo.trim() !== "" && profile.business_logo !== "null" && profile.business_logo !== "undefined") ? Config.getFullImagePath(profile.business_logo) : logo}
           alt="Logo"
           className="admin-logo"
           style={{
