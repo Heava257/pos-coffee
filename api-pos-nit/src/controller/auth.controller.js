@@ -126,7 +126,9 @@ exports.login = async (req, res) => {
       },
       business_name: user.business_name,
       role_name: user.role_name,
-      role_code: user.role_code
+      role_code: user.role_code,
+      business_logo: user.business_logo,
+      profile_image: user.image
     };
 
     // Fetch Permissions for Backend/Frontend checks
@@ -189,7 +191,7 @@ exports.updateProfile = async (req, res) => {
   try {
     const { name, password } = req.body;
     const user_id = req.user_id; // From token
-    const image = req.file?.filename;
+    const image = req.file?.path || req.file?.filename;
 
     let sql = "UPDATE users SET name = ?";
     let params = [name];
@@ -208,18 +210,32 @@ exports.updateProfile = async (req, res) => {
     sql += " WHERE id = ?";
     params.push(user_id);
 
+    // Update current profile in DB
     await db.query(sql, params);
 
-    // Fetch updated data
-    const [updatedUser] = await db.query(
-      "SELECT id, name, email, image as profile_image FROM users WHERE id = ?",
-      [user_id]
-    );
+    // Fetch refreshed user data with business and role context
+    // We map 'u.image' to 'profile_image' for frontend consistency
+    const [updatedUser] = await db.query(`
+      SELECT 
+        u.id, u.name, u.email, u.image as profile_image, u.branch_id, u.business_id, u.role_id,
+        b.name as business_name, b.logo as business_logo,
+        r.name as role_name, r.code as role_code, br.name as branch_name
+      FROM users u
+      JOIN businesses b ON u.business_id = b.id
+      JOIN roles r ON u.role_id = r.id
+      LEFT JOIN branches br ON u.branch_id = br.id
+      WHERE u.id = ?
+    `, [user_id]);
+
+    const newProfile = {
+      ...updatedUser[0],
+      is_super_admin: updatedUser[0].role_code === 'super_admin' ? 1 : 0
+    };
 
     res.json({
       success: true,
       message: "Profile updated successfully!",
-      profile: updatedUser[0]
+      profile: newProfile
     });
   } catch (error) {
     logError("auth.updateProfile", error, res);

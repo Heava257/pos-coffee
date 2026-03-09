@@ -30,7 +30,8 @@ import {
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
-import { getProfile, setProfile } from "../../store/profile.store";
+import { getProfile } from "../../store/profile.store";
+import { useProfileStore } from "../../store/profileStore";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -42,6 +43,7 @@ const SettingsPage = () => {
     const [settings, setSettings] = useState(null);
     const [imageFile, setImageFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
+    const { setProfile } = useProfileStore();
 
     useEffect(() => {
         fetchSettings();

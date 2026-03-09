@@ -129,13 +129,15 @@ const MENU_STRUCTURE = [
 ];
 
 
+import { useProfileStore } from "../../store/profileStore";
+
 const MainLayout = () => {
   const { lang, setLang } = useLanguage();
   const t = translations[lang];
   const [permision, setPermision] = useState([]);
   const [subAlert, setSubAlert] = useState(null);
   const { setConfig } = configStore();
-  const profile = getProfile();
+  const { profile } = useProfileStore(); // Use reactive profile from the store
   const [collapsed, setCollapsed] = useState(false);
   const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -629,7 +631,7 @@ const MainLayout = () => {
               <div className="profile-container" style={{ cursor: 'pointer' }}>
                 <img
                   className="img-user"
-                  src={profile?.profile_image ? Config.getFullImagePath(profile.profile_image) : ImgUser}
+                  src={(profile?.profile_image && typeof profile.profile_image === "string" && profile.profile_image.trim() !== "" && profile.profile_image !== "null" && profile.profile_image !== "undefined") ? Config.getFullImagePath(profile.profile_image) : ImgUser}
                   alt={profile?.name || "User"}
                   style={{
                     width: isMobile ? "32px" : "40px",

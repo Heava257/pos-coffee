@@ -26,7 +26,8 @@ import {
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
-import { getProfile, setProfile } from "../../store/profile.store";
+import { getProfile } from "../../store/profile.store";
+import { useProfileStore } from "../../store/profileStore";
 import { useLanguage, translations } from "../../store/language.store";
 
 const { Title, Text } = Typography;
@@ -41,6 +42,7 @@ const ProfilePage = () => {
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
+  const { setProfile } = useProfileStore();
   const currentUser = getProfile();
 
   useEffect(() => {
@@ -56,8 +58,10 @@ const ProfilePage = () => {
         form.setFieldsValue({
           name: res.profile.name,
         });
-        if (res.profile.image) {
+        if (res.profile.image && res.profile.image !== "null" && res.profile.image !== "undefined") {
           setPreviewUrl(Config.getFullImagePath(res.profile.image));
+        } else {
+          setPreviewUrl(null);
         }
       }
     } catch (error) {
@@ -114,7 +118,7 @@ const ProfilePage = () => {
   const handleImageChange = (info) => {
     if (info.file.status === 'removed') {
       setImageFile(null);
-      setPreviewUrl(profileData?.image ? Config.getFullImagePath(profileData.image) : null);
+      setPreviewUrl((profileData?.image && profileData.image !== "null" && profileData.image !== "undefined") ? Config.getFullImagePath(profileData.image) : null);
       return;
     }
 
