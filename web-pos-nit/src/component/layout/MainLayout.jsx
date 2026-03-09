@@ -16,6 +16,7 @@ import {
 } from "../../store/profile.store";
 import { useProfileStore } from "../../store/profileStore"; // Import the new store
 import { request } from "../../util/helper";
+import { useUIStore } from "../../store/uiStore";
 import { configStore } from "../../store/configStore";
 import { FaShop } from "react-icons/fa6";
 import {
@@ -137,6 +138,7 @@ const MainLayout = () => {
   const [subAlert, setSubAlert] = useState(null);
   const { setConfig } = configStore();
   const { profile, setProfile: setProfileStore } = useProfileStore(); // Use reactive profile from the store
+  const { isFullScreen, setFullScreen } = useUIStore();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -150,6 +152,11 @@ const MainLayout = () => {
     const list = getPermission();
     setPermision(Array.isArray(list) ? list : []);
     checkSubscriptionStatus();
+
+    // Auto-exit full screen if not on invoices page
+    if (isFullScreen && !location.pathname.includes('/invoices')) {
+      setFullScreen(false);
+    }
   }, [location.pathname]);
 
   const checkSubscriptionStatus = async () => {
@@ -407,6 +414,7 @@ const MainLayout = () => {
   };
 
   const getContentMargin = () => {
+    if (isFullScreen) return 0;
     if (isMobile) return 0;
     return getSiderWidth();
   };
@@ -466,7 +474,7 @@ const MainLayout = () => {
       }}
     >
       {/* Desktop Sidebar */}
-      {!isMobile && (
+      {!isMobile && !isFullScreen && (
         <Sider
           collapsible
           collapsed={collapsed}
@@ -515,164 +523,166 @@ const MainLayout = () => {
         background: "#f4f1eb"
       }}>
         {/* Header */}
-        <div
-          className="admin-header"
-          style={{
-            background: "#ffffff",
-            borderBottom: "1px solid #e8e3d8",
-            padding: getHeaderPadding(),
-            height: isMobile ? "60px" : "70px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            position: "sticky",
-            top: 0,
-            zIndex: 999,
-            boxShadow: "0 2px 10px rgba(30, 74, 45, 0.05)",
-          }}
-        >
-          {/* Mobile Menu Button */}
-          {isMobile && (
-            <Button
-              type="text"
-              icon={<MenuOutlined />}
-              onClick={toggleMobileDrawer}
-              style={{
-                fontSize: "18px",
-                width: 40,
-                height: 40,
-              }}
-            />
-          )}
-
-          {/* Header Right Section */}
+        {!isFullScreen && (
           <div
-            className="admin-header-g2"
+            className="admin-header"
             style={{
+              background: "#ffffff",
+              borderBottom: "1px solid #e8e3d8",
+              padding: getHeaderPadding(),
+              height: isMobile ? "60px" : "70px",
               display: "flex",
               alignItems: "center",
-              gap: isMobile ? "8px" : "16px",
-              marginLeft: isMobile ? "auto" : "0"
+              justifyContent: "space-between",
+              position: "sticky",
+              top: 0,
+              zIndex: 999,
+              boxShadow: "0 2px 10px rgba(30, 74, 45, 0.05)",
             }}
           >
-            {/* Hide email and notification icons on small mobile screens */}
-            {!isMobile && (
-              <>
-                <MdOutlineMarkEmailUnread
-                  className="icon-email"
-                  style={{ fontSize: "20px", color: "#6c757d" }}
-                />
-                <IoMdNotificationsOutline
-                  className="icon-notify"
-                  style={{ fontSize: "20px", color: "#6c757d" }}
-                />
-              </>
-            )}
-
-            {/* Upgrade Button */}
-            {!isMobile && profile?.business_id !== 1 && (
+            {/* Mobile Menu Button */}
+            {isMobile && (
               <Button
-                type="primary"
-                icon={<CreditCardOutlined />}
-                onClick={() => navigate('/my-plan')}
+                type="text"
+                icon={<MenuOutlined />}
+                onClick={toggleMobileDrawer}
                 style={{
-                  background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
-                  border: 'none',
-                  borderRadius: '20px',
-                  fontWeight: 600,
-                  boxShadow: '0 4px 10px rgba(253, 160, 133, 0.4)',
-                  color: '#fff',
-                  marginRight: 8,
-                  textTransform: 'uppercase',
-                  fontSize: 12,
-                  letterSpacing: 0.5
+                  fontSize: "18px",
+                  width: 40,
+                  height: 40,
                 }}
-              >
-                Upgrade to Pro
-              </Button>
+              />
             )}
 
-            {/* User info - hide text on mobile */}
-            {!isMobile && (
-              <div style={{ textAlign: "right", marginRight: "12px" }}>
-                <div style={{ fontWeight: "700", color: "#1e4a2d", fontSize: "14px" }}>
-                  {profile?.business_name || "Green Grounds Business"}
-                </div>
-                <div style={{ fontSize: "12px", color: "#6c757d", display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <FaShop size={10} color="#f7c06a" />
-                    <span style={{ fontWeight: 500 }}>{profile?.branch_name || "Main Branch"}</span>
-                  </div>
-                  <Divider type="vertical" style={{ margin: '0 4px' }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontWeight: 600, color: '#1e4a2d' }}>{profile?.name}</span>
-                    <Tag
-                      color={profile?.business_id === 1 ? "gold" : (profile?.role_code === 'owner' ? "blue" : "green")}
-                      style={{
-                        fontSize: '10px',
-                        lineHeight: '16px',
-                        borderRadius: '4px',
-                        border: 'none',
-                        margin: 0,
-                        fontWeight: 700,
-                        textTransform: 'uppercase'
-                      }}
-                    >
-                      {profile?.business_id === 1 ? (t.executives || "Super Admin") : (profile?.role_name || "Staff")}
-                    </Tag>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Premium Custom Language Switcher */}
+            {/* Header Right Section */}
             <div
-              className="lang-switcher-container"
-              onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
-            >
-              <div className={`lang-toggle-handle ${lang}`}>
-                <span className="lang-flag-emoji">
-                  {lang === 'en' ? '🇺🇸' : '🇰🇭'}
-                </span>
-              </div>
-              <div className="lang-labels">
-                <span className={`lang-label ${lang === 'en' ? 'active' : ''}`}>EN</span>
-                <span className={`lang-label ${lang === 'kh' ? 'active' : ''}`}>KH</span>
-              </div>
-            </div>
-
-            <Dropdown
-              menu={{
-                items: itemsDropdown,
-                onClick: (event) => {
-                  if (event.key === "logout") {
-                    onLoginOut();
-                  } else if (event.key === "profile") {
-                    navigate('/profile');
-                  } else if (event.key === "change_password") {
-                    navigate('/change-password');
-                  }
-                },
+              className="admin-header-g2"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: isMobile ? "8px" : "16px",
+                marginLeft: isMobile ? "auto" : "0"
               }}
-              trigger={['click']}
-              placement="bottomRight"
             >
-              <div className="profile-container" style={{ cursor: 'pointer' }}>
-                <img
-                  className="img-user"
-                  src={(profile?.profile_image && typeof profile.profile_image === "string" && profile.profile_image.trim() !== "" && profile.profile_image !== "null" && profile.profile_image !== "undefined") ? Config.getFullImagePath(profile.profile_image) : ImgUser}
-                  alt={profile?.name || "User"}
+              {/* Hide email and notification icons on small mobile screens */}
+              {!isMobile && (
+                <>
+                  <MdOutlineMarkEmailUnread
+                    className="icon-email"
+                    style={{ fontSize: "20px", color: "#6c757d" }}
+                  />
+                  <IoMdNotificationsOutline
+                    className="icon-notify"
+                    style={{ fontSize: "20px", color: "#6c757d" }}
+                  />
+                </>
+              )}
+
+              {/* Upgrade Button */}
+              {!isMobile && profile?.business_id !== 1 && (
+                <Button
+                  type="primary"
+                  icon={<CreditCardOutlined />}
+                  onClick={() => navigate('/my-plan')}
                   style={{
-                    width: isMobile ? "32px" : "40px",
-                    height: isMobile ? "32px" : "40px",
-                    borderRadius: "50%"
+                    background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+                    border: 'none',
+                    borderRadius: '20px',
+                    fontWeight: 600,
+                    boxShadow: '0 4px 10px rgba(253, 160, 133, 0.4)',
+                    color: '#fff',
+                    marginRight: 8,
+                    textTransform: 'uppercase',
+                    fontSize: 12,
+                    letterSpacing: 0.5
                   }}
-                />
-                {!isMobile && <span className="dropdown-arrow">▼</span>}
+                >
+                  Upgrade to Pro
+                </Button>
+              )}
+
+              {/* User info - hide text on mobile */}
+              {!isMobile && (
+                <div style={{ textAlign: "right", marginRight: "12px" }}>
+                  <div style={{ fontWeight: "700", color: "#1e4a2d", fontSize: "14px" }}>
+                    {profile?.business_name || "Green Grounds Business"}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#6c757d", display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <FaShop size={10} color="#f7c06a" />
+                      <span style={{ fontWeight: 500 }}>{profile?.branch_name || "Main Branch"}</span>
+                    </div>
+                    <Divider type="vertical" style={{ margin: '0 4px' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 600, color: '#1e4a2d' }}>{profile?.name}</span>
+                      <Tag
+                        color={profile?.business_id === 1 ? "gold" : (profile?.role_code === 'owner' ? "blue" : "green")}
+                        style={{
+                          fontSize: '10px',
+                          lineHeight: '16px',
+                          borderRadius: '4px',
+                          border: 'none',
+                          margin: 0,
+                          fontWeight: 700,
+                          textTransform: 'uppercase'
+                        }}
+                      >
+                        {profile?.business_id === 1 ? (t.executives || "Super Admin") : (profile?.role_name || "Staff")}
+                      </Tag>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Premium Custom Language Switcher */}
+              <div
+                className="lang-switcher-container"
+                onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
+              >
+                <div className={`lang-toggle-handle ${lang}`}>
+                  <span className="lang-flag-emoji">
+                    {lang === 'en' ? '🇺🇸' : '🇰🇭'}
+                  </span>
+                </div>
+                <div className="lang-labels">
+                  <span className={`lang-label ${lang === 'en' ? 'active' : ''}`}>EN</span>
+                  <span className={`lang-label ${lang === 'kh' ? 'active' : ''}`}>KH</span>
+                </div>
               </div>
-            </Dropdown>
+
+              <Dropdown
+                menu={{
+                  items: itemsDropdown,
+                  onClick: (event) => {
+                    if (event.key === "logout") {
+                      onLoginOut();
+                    } else if (event.key === "profile") {
+                      navigate('/profile');
+                    } else if (event.key === "change_password") {
+                      navigate('/change-password');
+                    }
+                  },
+                }}
+                trigger={['click']}
+                placement="bottomRight"
+              >
+                <div className="profile-container" style={{ cursor: 'pointer' }}>
+                  <img
+                    className="img-user"
+                    src={(profile?.profile_image && typeof profile.profile_image === "string" && profile.profile_image.trim() !== "" && profile.profile_image !== "null" && profile.profile_image !== "undefined") ? Config.getFullImagePath(profile.profile_image) : ImgUser}
+                    alt={profile?.name || "User"}
+                    style={{
+                      width: isMobile ? "32px" : "40px",
+                      height: isMobile ? "32px" : "40px",
+                      borderRadius: "50%"
+                    }}
+                  />
+                  {!isMobile && <span className="dropdown-arrow">▼</span>}
+                </div>
+              </Dropdown>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Content */}
         <Content

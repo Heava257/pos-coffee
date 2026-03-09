@@ -205,9 +205,9 @@ function UserPage() {
   // Search Logic
   const handleSearch = (value) => {
     const filtered = state.list.filter(user =>
-      user.name.toLowerCase().includes(value.toLowerCase()) ||
-      user.username.toLowerCase().includes(value.toLowerCase()) ||
-      user.tel?.includes(value)
+      (user.name || "").toLowerCase().includes((value || "").toLowerCase()) ||
+      (user.username || "").toLowerCase().includes((value || "").toLowerCase()) ||
+      (user.tel || "").includes(value || "")
     );
     setState(prev => ({ ...prev, filteredList: filtered }));
   };

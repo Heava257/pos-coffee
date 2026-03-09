@@ -123,6 +123,7 @@ export const updateAddons = (itemId, addonValue, checked, availableAddons) => {
 
 
 export const getIconForCategory = (name) => {
+  if (!name) return '🍽️';
   const lowerName = name.toLowerCase();
   if (lowerName.includes('coffee')) return '☕';
   if (lowerName.includes('juice')) return '🧃';
@@ -134,6 +135,7 @@ export const getIconForCategory = (name) => {
 };
 
 export const getColorForCategory = (name) => {
+  if (!name) return '#ff6b35';
   const lowerName = name.toLowerCase();
   if (lowerName.includes('coffee')) return '#8B4513';
   if (lowerName.includes('juice')) return '#4CAF50';

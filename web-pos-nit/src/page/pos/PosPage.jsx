@@ -39,8 +39,11 @@ import {
   CreditCardOutlined,
   ClockCircleOutlined,
   ShoppingOutlined,
+  ExpandOutlined,
+  CompressOutlined,
 } from "@ant-design/icons";
 import { FiSettings } from "react-icons/fi";
+import { useUIStore } from "../../store/uiStore";
 import ImgUser from "../../assets/profile.png";
 import useSound from "use-sound";
 import { useLanguage, translations } from "../../store/language.store";
@@ -416,6 +419,7 @@ function PosPage() {
   const { lang } = useLanguage();
   const t = translations[lang];
   const { profile } = useProfileStore(); // Reactive profile
+  const { isFullScreen, toggleFullScreen } = useUIStore();
   const [isDisabled, setIsDisabled] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(51);
   const [parentCategories, setParentCategories] = useState(defaultParentCategories);
@@ -875,7 +879,7 @@ function PosPage() {
 
   // ── filtered products ──
   const filteredProducts = state.list.filter((p) =>
-    p.name?.toLowerCase().includes(searchText.toLowerCase())
+    (p.name || "").toLowerCase().includes((searchText || "").toLowerCase())
   );
   const inStock = filteredProducts.filter((p) => p.qty > 0);
   const outOfStock = filteredProducts.filter((p) => p.qty <= 0);
@@ -1033,6 +1037,29 @@ function PosPage() {
             >
               <BellOutlined style={{ fontSize: 16 }} />
               <span>{isSoundEnabled ? t.sound_on : t.sound_off}</span>
+            </button>
+
+            <button
+              onClick={toggleFullScreen}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: isFullScreen ? COLORS.darkGreen : COLORS.white,
+                border: `1px solid ${isFullScreen ? COLORS.darkGreen : COLORS.softBorder}`,
+                borderRadius: 8,
+                padding: "6px 14px",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 700,
+                color: isFullScreen ? "#fff" : COLORS.textPrimary,
+                transition: "all 0.25s",
+                whiteSpace: "nowrap",
+                boxShadow: isFullScreen ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
+              }}
+            >
+              {isFullScreen ? <CompressOutlined style={{ fontSize: 16 }} /> : <ExpandOutlined style={{ fontSize: 16 }} />}
+              <span>{isFullScreen ? "Exit Full" : "Full Screen"}</span>
             </button>
 
             <button
