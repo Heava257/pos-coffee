@@ -68,7 +68,7 @@ exports.register = async (req, res) => {
             id, name, username, password, role_id, branch_id, is_super_admin, address, tel, is_active
         } = req.body;
 
-        const image = req.file?.filename || null;
+        const image = req.file?.path || req.file?.filename || null;
         const statusVal = (is_active === 1 || is_active === '1' || is_active === true) ? 'active' : 'inactive';
 
         if (id) {

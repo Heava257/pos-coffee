@@ -53,7 +53,7 @@ exports.create = async (req, res) => {
         await conn.beginTransaction();
         const { business_id, branch_id } = req;
         const { name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, discount } = req.body;
-        const image = req.file?.filename || null;
+        const image = req.file?.path || req.file?.filename || null;
 
         // Optimized Subscription Limit Check
         const { checkPlanLimit } = require("../util/helper");
@@ -94,14 +94,27 @@ exports.update = async (req, res) => {
         const { id, name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, discount } = req.body;
         const { business_id, branch_id } = req;
 
+        const image = req.file?.path || req.file?.filename;
         const p_status = (status === 'undefined' || status === undefined) ? 1 : Number(status);
         const p_qty = (qty === 'undefined' || qty === undefined) ? 0 : Number(qty);
 
         // Update Template
-        await db.query(
-            "UPDATE products SET name = ?, category_id = ?, barcode = ?, brand = ?, description = ?, status = ?, sizes = ?, addons = ?, discount = ? WHERE id = ? AND business_id = ?",
-            [name, category_id, barcode, brand || null, description || null, p_status, sizes || null, addons || null, discount || 0, id, business_id]
-        );
+        let sql = `
+            UPDATE products SET 
+                name = ?, category_id = ?, barcode = ?, brand = ?, 
+                description = ?, status = ?, sizes = ?, addons = ?, discount = ?
+        `;
+        let params = [name, category_id, barcode, brand || null, description || null, p_status, sizes || null, addons || null, discount || 0];
+
+        if (image) {
+            sql += ", image = ?";
+            params.push(image);
+        }
+
+        sql += " WHERE id = ? AND business_id = ?";
+        params.push(id, business_id);
+
+        await db.query(sql, params);
 
         // Update Branch Specifics
         await db.query(

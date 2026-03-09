@@ -27,7 +27,7 @@ exports.updateSettings = async (req, res) => {
             currency_symbol, telegram_link, facebook_link
         } = req.body;
 
-        const logo = req.file?.filename;
+        const logo = req.file?.path || req.file?.filename;
 
         let sql = `
       UPDATE businesses SET 
