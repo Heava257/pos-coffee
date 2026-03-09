@@ -175,7 +175,7 @@ exports.getOrderDetail = async (req, res) => {
         const [order] = await db.query("SELECT * FROM orders WHERE id = ? AND business_id = ?", [order_id, business_id]);
 
         res.json({
-            list,
+            details: list,
             order: order[0]
         });
     } catch (error) {

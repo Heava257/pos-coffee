@@ -44,8 +44,8 @@ import {
 import dayjs from "dayjs";
 import { formatDateClient, formatDateServer, isPermission, request } from "../../util/helper";
 import { configStore } from "../../store/configStore";
-import { getProfile } from "../../store/profile.store";
 import { Config } from "../../util/config";
+import { useProfileStore } from "../../store/profileStore";
 import { useLanguage, translations } from "../../store/language.store";
 
 const { RangePicker } = DatePicker;

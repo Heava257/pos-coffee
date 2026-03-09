@@ -23,7 +23,7 @@ import { request } from "../../util/helper";
 import { configStore } from "../../store/configStore";
 import { getIconForCategory, getColorForCategory } from "../../util/helper";
 import { Config } from "../../util/config";
-import { getProfile } from "../../store/profile.store";
+import { useProfileStore } from "../../store/profileStore";
 import { useReactToPrint } from "react-to-print";
 import PrintInvoice from "../../component/pos/PrintInvoice";
 import QRPaymentModal from "../../QRPaymentModal/QRPaymentModal";
@@ -415,6 +415,7 @@ function BillCartItem({ item, onIncrease, onDecrease, onRemove }) {
 function PosPage() {
   const { lang } = useLanguage();
   const t = translations[lang];
+  const { profile } = useProfileStore(); // Reactive profile
   const [isDisabled, setIsDisabled] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(51);
   const [parentCategories, setParentCategories] = useState(defaultParentCategories);
@@ -464,8 +465,7 @@ function PosPage() {
     order_date: null,
   });
 
-  const profile = getProfile();
-  const userId = profile?.user_id;
+  const userId = profile?.id || profile?.user_id;
 
   // ── time disable ──
   useEffect(() => {
@@ -575,7 +575,8 @@ function PosPage() {
 
   // ── fetch products ──
   const getList = async () => {
-    if (!userId) return;
+    const currentUserId = profile?.id || profile?.user_id;
+    if (!currentUserId) return;
     setState((p) => ({ ...p, loading: true }));
     try {
       const res = await request(`product`, "get", {
@@ -788,6 +789,9 @@ function PosPage() {
         setCurrentOrderId(order.id);
         setPendingOrdersVisible(false);
         message.info(`Loaded order for ${order.table_no ? "Table " + order.table_no : "Guest"}`);
+      } else {
+        setState((p) => ({ ...p, loading: false }));
+        message.warning("Could not load order details.");
       }
     } catch (error) {
       console.error("Error loading pending order:", error);

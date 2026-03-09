@@ -42,8 +42,7 @@ const ProfilePage = () => {
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
-  const { setProfile } = useProfileStore();
-  const currentUser = getProfile();
+  const { profile: currentUser, setProfile } = useProfileStore();
 
   useEffect(() => {
     fetchProfile();
