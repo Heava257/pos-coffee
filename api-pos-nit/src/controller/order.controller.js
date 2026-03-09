@@ -47,7 +47,8 @@ exports.create = async (req, res) => {
                 [order_id, item.product_id, item.qty, item.price, item.note || ""]
             );
 
-            // 2. Fetch Recipe if exists
+            // 2. [Optional] Fetch Recipe if exists (Commented out until recipes table is created)
+            /*
             const [recipe] = await conn.query(
                 "SELECT raw_material_id, quantity FROM recipes WHERE product_id = ?",
                 [item.product_id]
@@ -61,14 +62,8 @@ exports.create = async (req, res) => {
                         [ingredient.quantity * item.qty, ingredient.raw_material_id]
                     );
                 }
-            } else {
-                // If no recipe, assume product itself is tracked as stock item (simple inventory)
-                // Check if product is set to track stock
-                const [product] = await conn.query("SELECT is_track_stock FROM products WHERE id = ?", [item.product_id]);
-                if (product.length > 0 && product[0].is_track_stock) {
-                    // Logic for simple stock deduction could be here
-                }
             }
+            */
         }
 
         await conn.commit();

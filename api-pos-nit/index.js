@@ -132,13 +132,16 @@ app.listen(PORT, async () => {
     console.log("Migration: 'businesses' table settings columns added");
   } catch (err) { }
 
-  // Migration Fix: Add khqr_image to branches table
+  // Migration Fix: Add payment fields to branches table (Safe Check)
   try {
-    await db.query("ALTER TABLE branches ADD COLUMN IF NOT EXISTS khqr_image VARCHAR(255) DEFAULT NULL");
-    await db.query("ALTER TABLE branches ADD COLUMN IF NOT EXISTS payment_merchant_id VARCHAR(255) DEFAULT NULL");
-    await db.query("ALTER TABLE branches ADD COLUMN IF NOT EXISTS payment_api_key VARCHAR(255) DEFAULT NULL");
-    await db.query("ALTER TABLE branches ADD COLUMN IF NOT EXISTS payment_receiver_name VARCHAR(255) DEFAULT NULL");
-    console.log("Migration: 'branches' payment fields added");
+    const [cols] = await db.query("SHOW COLUMNS FROM branches LIKE 'khqr_image'");
+    if (cols.length === 0) {
+      await db.query("ALTER TABLE branches ADD COLUMN khqr_image VARCHAR(255) DEFAULT NULL");
+      await db.query("ALTER TABLE branches ADD COLUMN payment_merchant_id VARCHAR(255) DEFAULT NULL");
+      await db.query("ALTER TABLE branches ADD COLUMN payment_api_key VARCHAR(255) DEFAULT NULL");
+      await db.query("ALTER TABLE branches ADD COLUMN payment_receiver_name VARCHAR(255) DEFAULT NULL");
+      console.log("Migration: 'branches' payment fields added");
+    }
   } catch (err) {
     console.error("Migration Error (branches table):", err.message);
   }
