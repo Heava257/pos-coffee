@@ -761,6 +761,7 @@ function PosPage() {
     setTableNo("");
     setCurrentOrderId(null);
     form.resetFields();
+    getPendingOrders(); // Refresh pending list immediately after clearing
   };
 
   const handleSelectPendingOrder = async (order) => {
@@ -847,6 +848,7 @@ function PosPage() {
 
       if (res && !res.error) {
         message.success(currentOrderId ? t.order_completed : t.order_placed);
+        getPendingOrders(); // Added: Refresh count immediately after successful DB update
         if (res.payment_link) {
           setPaymentData({ paymentLink: res.payment_link, orderNo: res.order_no, total: param.total });
           setQrModalVisible(true);

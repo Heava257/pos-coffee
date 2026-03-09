@@ -200,9 +200,10 @@ exports.getPendingOrders = async (req, res) => {
 // 5. Update Status
 exports.updateStatus = async (req, res) => {
     try {
-        const { id, status } = req.body;
+        const { id, order_id, status } = req.body;
+        const targetId = id || order_id;
         const { business_id } = req;
-        await db.query("UPDATE orders SET status = ? WHERE id = ? AND business_id = ?", [status, id, business_id]);
+        await db.query("UPDATE orders SET status = ? WHERE id = ? AND business_id = ?", [status, targetId, business_id]);
         res.json({ success: true, message: "Status Updated" });
     } catch (error) {
         logError("order.updateStatus", error, res);
