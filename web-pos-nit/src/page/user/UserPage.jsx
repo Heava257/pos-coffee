@@ -40,9 +40,9 @@ function UserPage() {
   const { lang } = useLanguage();
   const t = translations[lang];
   const profile = getProfile();
-  const isSuperAdmin = profile?.is_super_admin === 1;
+  const isSuperAdmin = profile?.business_id === 1 && profile?.is_super_admin === 1;
   const isOwner = profile?.role_name?.toUpperCase() === "OWNER" || profile?.role_code === "owner";
-  const isAdmin = profile?.role_name?.toUpperCase().includes("ADMIN");
+  const isAdmin = profile?.role_name?.toUpperCase().includes("ADMIN") || profile?.role_code === "admin";
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
@@ -273,13 +273,21 @@ function UserPage() {
       key: "role",
       title: t.business_role,
       dataIndex: "role_name",
-      render: (role, row) => (
-        <Space>
-          <Tag color={row.is_super_admin ? "gold" : "green"} style={{ borderRadius: '6px', border: 'none' }}>
-            {row.is_super_admin ? t.executives : role || t.staff}
-          </Tag>
-        </Space>
-      )
+      render: (role, row) => {
+        const isSystemSuper = row.business_id === 1 && row.is_super_admin === 1;
+        const color = isSystemSuper ? "gold" : (row.role_code === "owner" ? "blue" : "green");
+        let label = role;
+        if (isSystemSuper) label = t.executives || "Super Admin";
+        else if (row.role_code === "owner") label = t.owner || "Owner";
+
+        return (
+          <Space>
+            <Tag color={color} style={{ borderRadius: '6px', border: 'none' }}>
+              {label || t.staff}
+            </Tag>
+          </Space>
+        );
+      }
     },
     {
       key: "contact",
@@ -358,9 +366,9 @@ function UserPage() {
             {!isSuperAdmin && (
               <Card style={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                 <Space direction="vertical" size={0}>
-                  <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>{t.executives}</Text>
-                  <Title level={2} style={{ margin: 0, color: '#c0a060' }}>{state.summary.super_admins}</Title>
-                  <Tag color="gold" style={{ borderRadius: '10px' }}>{t.executives}</Tag>
+                  <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>{t.user_role || "Roles"}</Text>
+                  <Title level={4} style={{ margin: 0, color: '#c0a060' }}>{state.summary.active_users} {t.active}</Title>
+                  <Tag color="gold" style={{ borderRadius: '10px' }}>{isOwner ? "Owner Level" : "Staff Level"}</Tag>
                 </Space>
               </Card>
             )}

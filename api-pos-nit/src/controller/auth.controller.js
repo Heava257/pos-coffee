@@ -38,14 +38,14 @@ exports.register = async (req, res) => {
       );
       const branch_id = branch.insertId;
 
-      // D. Setup Super Admin Role and Permissions for the new business
+      // D. Setup Owner Role and Permissions for the new business
       const [role_res] = await conn.query(
         "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
-        [business_id, "Super Admin", "super_admin"]
+        [business_id, "Owner", "owner"]
       );
       const role_id = role_res.insertId;
 
-      // Link all available permissions to this new Super Admin role
+      // Link all available permissions to this new Owner role
       await conn.query(`
         INSERT INTO role_permissions (role_id, permission_id)
         SELECT ?, id FROM permissions
@@ -55,7 +55,7 @@ exports.register = async (req, res) => {
       const hashedPassword = bcrypt.hashSync(password, 10);
       await conn.query(
         "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [business_id, branch_id, role_id, owner_name, email, hashedPassword, 'active', 1]
+        [business_id, branch_id, role_id, owner_name, email, hashedPassword, 'active', 0]
       );
 
       await conn.commit();

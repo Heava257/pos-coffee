@@ -316,9 +316,9 @@ const MainLayout = () => {
       if (newItem.hasOwnProperty('key') && !newItem.children) {
         if (newItem.key === "business") return profile?.business_id === 1 ? newItem : null;
 
-        // Let Dashboard and Settings be shown ONLY if they have explicit permission OR they are the system admin (Business ID 1)
+        // Let Dashboard and Settings be shown ONLY if they have explicit permission OR they are the system admin (Business ID 1) OR they are the Shop Owner (Business ID > 1)
         if (newItem.key === "dashboard" || newItem.key === "settings") {
-          if (profile?.business_id === 1) {
+          if (profile?.business_id === 1 || profile?.role_code === "owner" || profile?.role_name?.toUpperCase() === "OWNER") {
             return newItem;
           }
         }
@@ -603,7 +603,9 @@ const MainLayout = () => {
                   <FaShop size={10} color="#f7c06a" />
                   <span style={{ fontWeight: 500 }}>{profile?.branch_name || "Main Terminal"}</span>
                   <Divider type="vertical" />
-                  <span style={{ fontStyle: 'italic' }}>{profile?.name}</span>
+                  <span style={{ fontStyle: 'italic', fontWeight: 'bold', color: profile?.business_id === 1 ? '#d4af37' : '#1e4a2d' }}>
+                    {profile?.business_id === 1 ? (t.executives || "Super Admin") : (profile?.role_name || "Owner")}
+                  </span>
                 </div>
               </div>
             )}
