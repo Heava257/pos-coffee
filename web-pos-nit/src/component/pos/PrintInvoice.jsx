@@ -1,8 +1,6 @@
 import React from "react";
-import logo from "../../assets/CAMPTN.png";
-import "./fonts.css";
 import { getProfile } from "../../store/profile.store";
-import { formatDateClient } from "../../util/helper";
+import { Config } from "../../util/config";
 
 const PrintInvoice = React.forwardRef((props, ref) => {
   const profile = getProfile();
@@ -59,8 +57,9 @@ const PrintInvoice = React.forwardRef((props, ref) => {
     });
   };
 
-
-
+  const businessLogo = (profile?.business_logo && profile.business_logo !== "null" && profile.business_logo !== "undefined")
+    ? Config.getFullImagePath(profile.business_logo)
+    : null;
 
   return (
     <div ref={ref} style={{
@@ -76,24 +75,27 @@ const PrintInvoice = React.forwardRef((props, ref) => {
     }}>
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-        {/* <img
-          src={logo}
-          alt="Logo"
-          style={{
-            width: '60px',
-            height: '60px',
-            objectFit: 'contain',
-            marginBottom: '8px'
-          }}
-        /> */}
-        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '5px' }}>
-          COFFEE SHOP
+        {businessLogo && (
+          <img
+            src={businessLogo}
+            alt="Business Logo"
+            style={{
+              width: '80px',
+              height: '80px',
+              objectFit: 'contain',
+              marginBottom: '10px',
+              borderRadius: '8px'
+            }}
+          />
+        )}
+        <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px', textTransform: 'uppercase' }}>
+          {profile?.business_name || "COFFEE SHOP"}
         </div>
-        <div style={{ fontSize: '11px' }}>
+        <div style={{ fontSize: '11px', whiteSpace: 'pre-wrap' }}>
           {profile?.address || "123 Street, City"}
         </div>
-        <div style={{ fontSize: '11px' }}>
-          Tel: {profile?.tel || "+855 67 733 335"}
+        <div style={{ fontSize: '11px', marginTop: '3px' }}>
+          Tel: {profile?.tel || profile?.phone || "+855 67 733 335"}
         </div>
       </div>
 
@@ -279,7 +281,7 @@ const PrintInvoice = React.forwardRef((props, ref) => {
           Items: {objSummary.total_qty || cart_list.length}
         </div>
         <div>
-          Support: +855 67 733 335
+          Support: {profile?.tel || profile?.phone || "+855 67 733 335"}
         </div>
       </div>
 
