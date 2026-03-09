@@ -119,6 +119,19 @@ app.listen(PORT, async () => {
     console.error("Migration Error (branch_products):", err.message);
   }
 
+  // Migration Fix: Ensure businesses table has all setting columns
+  try {
+    await db.query("ALTER TABLE businesses ADD COLUMN address TEXT");
+    await db.query("ALTER TABLE businesses ADD COLUMN website VARCHAR(255)");
+    await db.query("ALTER TABLE businesses ADD COLUMN tax_percent DECIMAL(10, 2) DEFAULT 0");
+    await db.query("ALTER TABLE businesses ADD COLUMN service_charge DECIMAL(10, 2) DEFAULT 0");
+    await db.query("ALTER TABLE businesses ADD COLUMN kh_exchange_rate INT DEFAULT 4000");
+    await db.query("ALTER TABLE businesses ADD COLUMN currency_symbol VARCHAR(10) DEFAULT '$'");
+    await db.query("ALTER TABLE businesses ADD COLUMN telegram_link VARCHAR(255)");
+    await db.query("ALTER TABLE businesses ADD COLUMN facebook_link VARCHAR(255)");
+    console.log("Migration: 'businesses' table settings columns added");
+  } catch (err) { }
+
   // Migration Fix: Add khqr_image to branches table
   try {
     await db.query("ALTER TABLE branches ADD COLUMN IF NOT EXISTS khqr_image VARCHAR(255) DEFAULT NULL");
