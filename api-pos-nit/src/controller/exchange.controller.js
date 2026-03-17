@@ -2,13 +2,22 @@ const { db, logError } = require("../util/helper");
 
 exports.getExchangeRate = async (req, res) => {
     try {
-        // Return some dummy data for now
+        const { business_id } = req;
+        const [data] = await db.query(
+            "SELECT kh_exchange_rate FROM businesses WHERE id = ?",
+            [business_id]
+        );
+
+        let rate = 4000; // Default fallback
+        if (data && data.length > 0) {
+            rate = data[0].kh_exchange_rate || 4000;
+        }
+
         res.json({
             list: [
-                { id: 1, currency: "KHR", rate: 4100, updated_at: new Date() },
-                { id: 2, currency: "KHR", rate: 4050, updated_at: new Date(Date.now() - 86400000) }
+                { id: 1, currency: "KHR", rate: rate, updated_at: new Date() }
             ],
-            live_rate: 4100,
+            live_rate: rate,
             success: true
         });
     } catch (error) {

@@ -74,7 +74,7 @@ const ProductCard = ({ item, isStarred, onToggleStar, onClick }) => (
   >
     <div className="relative aspect-square rounded-xl bg-gray-50 overflow-hidden mb-4 shadow-sm">
       {item.image ? (
-        <img src={Config.getFullImagePath(item.image)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_400,c_fill,f_auto,q_auto")} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-3xl">☕</div>
       )}
@@ -650,7 +650,7 @@ const CoffeeMenuApp = () => {
         <div className="font-sans">
           <div className="relative h-64 bg-gray-50 overflow-hidden">
             {optionsModalItem?.image ? (
-              <img src={Config.getFullImagePath(optionsModalItem.image)} className="w-full h-full object-cover" />
+              <img src={Config.optimizeCloudinary(Config.getFullImagePath(optionsModalItem.image), "w_600,c_fill,f_auto,q_auto")} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-7xl bg-gray-100">☕</div>
             )}
@@ -771,7 +771,7 @@ const CoffeeMenuApp = () => {
                   <div key={item.cartId} className="group flex justify-between items-center bg-white p-4 rounded-3xl border border-gray-100 hover:border-gray-200 transition-all">
                     <div className="flex gap-4 items-center">
                       <div className="relative">
-                        <img src={Config.getFullImagePath(item.image)} className="w-14 h-14 rounded-2xl object-cover shadow-sm" />
+                        <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_150,c_fill,f_auto,q_auto")} className="w-14 h-14 rounded-2xl object-cover shadow-sm" />
                         <span className="absolute -top-1 -right-1 bg-[#1A3C28] text-white text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
                           {item.quantity}
                         </span>

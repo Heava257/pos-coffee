@@ -27,7 +27,7 @@ import { useProfileStore } from "../../store/profileStore";
 import { useReactToPrint } from "react-to-print";
 import PrintInvoice from "../../component/pos/PrintInvoice";
 import QRPaymentModal from "../../QRPaymentModal/QRPaymentModal";
-import { PriceDisplay } from "../../component/pos/ExchangeRateContext";
+import { PriceDisplay, useExchangeRate } from "../../component/pos/ExchangeRateContext";
 import {
   SearchOutlined,
   BellOutlined,
@@ -101,7 +101,7 @@ const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
     product.unit_price || product.price || product.actual_price || 0
   );
   const isOOS = product.qty <= 0;
-  const imgUrl = product.image ? Config.getFullImagePath(product.image) : null;
+  const imgUrl = product.image ? Config.optimizeCloudinary(Config.getFullImagePath(product.image), "w_300,h_300,c_fill,f_auto,q_auto") : null;
 
   return (
     <div
@@ -295,146 +295,104 @@ const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
 });
 
 // ─── Bill Cart Item (Memoized) ────────────────────────────────────────────────
-const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove }) => {
-  const price =
-    Number(item.unit_price || item.price || 0) * Number(item.cart_qty || 1);
+const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove, onEdit }) => {
   const imgUrl = item.image ? Config.getFullImagePath(item.image) : null;
+  const originalPrice = Number(item.unit_price || item.price || 0);
+  const discountPercent = parseFloat(item.discount || 0);
+  const finalPrice = originalPrice * (1 - (discountPercent / 100));
+
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "10px 0",
+        padding: "12px 0",
         borderBottom: `1px solid ${COLORS.softBorder}`,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
       }}
     >
-      {/* image */}
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 10,
-          overflow: "hidden",
-          background: "#f0ede6",
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {imgUrl ? (
-          <img
-            src={imgUrl}
-            alt={item.name}
-            loading="lazy"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        ) : (
-          <span style={{ fontSize: 22 }}>
-            {getIconForCategory(item.category_name)}
-          </span>
-        )}
-      </div>
-
-      {/* info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontWeight: 600,
-            fontSize: 13,
-            color: COLORS.textPrimary,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {item.display_name || item.name}
-        </div>
-        {item.note && (
-          <div style={{ fontSize: 11, color: COLORS.midGreen, fontWeight: 500 }}>
-            {item.note}
-          </div>
-        )}
-        {item.mood && (
-          <div style={{ fontSize: 11, color: COLORS.textSecondary }}>
-            {item.mood === "hot" ? "🔥 Hot" : "❄️ Cold"}
-            {item.size ? ` • ${item.size}` : ""}
-          </div>
-        )}
-        <div style={{ fontSize: 11, color: COLORS.textSecondary, display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ fontWeight: 700, color: COLORS.darkGreen }}>
-            ${(Number(item.unit_price || item.price || 0) * (1 - (parseFloat(item.discount || 0) / 100))).toFixed(2)}
-          </span>
-          {item.discount > 0 && (
-            <span style={{ textDecoration: "line-through", fontSize: "10px", opacity: 0.6 }}>
-              ${Number(item.unit_price || item.price || 0).toFixed(2)}
-            </span>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        {/* Image */}
+        <div style={{
+          width: 44, height: 44, borderRadius: 10, overflow: "hidden",
+          background: "#f0ede6", flexShrink: 0, display: "flex",
+          alignItems: "center", justifyContent: "center", border: `1px solid ${COLORS.softBorder}`
+        }}>
+          {imgUrl ? (
+            <img src={imgUrl} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <span style={{ fontSize: 20 }}>{getIconForCategory(item.category_name)}</span>
           )}
-          <span>x {item.cart_qty}</span>
+        </div>
+
+        {/* Info & Metadata */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: COLORS.textPrimary, marginBottom: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {item.name}
+            </span>
+            <span style={{ color: COLORS.darkGreen, fontWeight: 800 }}>
+              ${(finalPrice * item.cart_qty).toFixed(2)}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 4 }}>
+            {item.mood && (
+              <Tag size="small" color={item.mood === 'hot' ? 'orange' : 'blue'} style={{ fontSize: 9, margin: 0, borderRadius: 4, height: 18, lineHeight: '16px' }}>
+                {item.mood === 'hot' ? '🔥 Hot' : '❄️ Ice'} {item.size}
+              </Tag>
+            )}
+            {item.sugar && (
+              <Tag size="small" style={{ fontSize: 9, margin: 0, borderRadius: 4, height: 18, lineHeight: '16px' }}>
+                🍬 {item.sugar}
+              </Tag>
+            )}
+          </div>
+
+          {item.addons_selected && item.addons_selected.length > 0 && (
+            <div style={{ fontSize: 10, color: COLORS.textSecondary, fontStyle: 'italic', marginBottom: 2 }}>
+              +{item.addons_selected.join(", ")}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* qty controls */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <button
-          onClick={() => onDecrease(item)}
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: "50%",
-            border: `1px solid ${COLORS.softBorder}`,
-            background: "#fff",
-            cursor: "pointer",
-            fontSize: 14,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: COLORS.textSecondary,
-            padding: 0,
-          }}
-        >
-          −
-        </button>
-        <span style={{ fontSize: 13, fontWeight: 600, minWidth: 16, textAlign: "center" }}>
-          {item.cart_qty}
-        </span>
-        <button
-          onClick={() => onIncrease(item)}
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: "50%",
-            border: `none`,
-            background: COLORS.darkGreen,
-            cursor: "pointer",
-            fontSize: 14,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-            padding: 0,
-          }}
-        >
-          +
-        </button>
-      </div>
+      {/* Controls Row */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingLeft: 54 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={() => onEdit(item)}
+            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 4, color: COLORS.midGreen, display: 'flex' }}
+            title="Edit"
+          >
+            <span style={{ fontSize: 14 }}>✎</span>
+          </button>
+          <button
+            onClick={() => onRemove(item)}
+            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 4, color: COLORS.redBadge, display: 'flex' }}
+            title="Remove"
+          >
+            <DeleteOutlined style={{ fontSize: 14 }} />
+          </button>
+        </div>
 
-      {/* total price */}
-      <div
-        style={{
-          fontSize: 13,
-          fontWeight: 800,
-          color: COLORS.darkGreen,
-          minWidth: 50,
-          textAlign: "right",
-          padding: "2px 6px",
-          background: "#f8f7f2",
-          borderRadius: 8,
-          border: `1px solid ${COLORS.softBorder}`,
-        }}
-      >
-        ${(Number(item.unit_price || item.price || 0) * (1 - (parseFloat(item.discount || 0) / 100)) * Number(item.cart_qty || 1)).toFixed(2)}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: '#f8f7f2', padding: '2px 8px', borderRadius: 20, border: `1px solid ${COLORS.softBorder}` }}>
+          <button
+            onClick={() => onDecrease(item)}
+            style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, padding: 0, color: COLORS.textSecondary }}
+          >
+            −
+          </button>
+          <span style={{ fontSize: 13, fontWeight: 700, minWidth: 20, textAlign: "center" }}>
+            {item.cart_qty}
+          </span>
+          <button
+            onClick={() => onIncrease(item)}
+            style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, padding: 0, color: COLORS.darkGreen }}
+          >
+            +
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -457,6 +415,7 @@ function PosPage() {
   const { isFullScreen, toggleFullScreen } = useUIStore();
   const [isDisabled, setIsDisabled] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(51);
+  const [isEditingUniqueId, setIsEditingUniqueId] = useState(null);
   const [parentCategories, setParentCategories] = useState(defaultParentCategories);
   const [searchText, setSearchText] = useState("");
   const [orderType, setOrderType] = useState("dine_in");
@@ -476,6 +435,10 @@ function PosPage() {
   const [branchInfo, setBranchInfo] = useState(null);
 
   const [currentOrderId, setCurrentOrderId] = useState(null);
+  const { exchangeRate } = useExchangeRate();
+  const [cashReceivedUSD, setCashReceivedUSD] = useState(0);
+  const [cashReceivedKHR, setCashReceivedKHR] = useState(0);
+  const [cashPaymentModalVisible, setCashPaymentModalVisible] = useState(false);
 
   const { config } = configStore();
   const refInvoice = useRef(null);
@@ -641,13 +604,13 @@ function PosPage() {
 
     state.cart_list.forEach((item) => {
       const qty = Number(item.cart_qty) || 0;
-      const originalPrice = Number(item.unit_price || item.price || 0);
-      const discountPercent = parseFloat(item.discount) || 0;
-      const discountedPrice = originalPrice * (1 - (discountPercent / 100));
+      const originalUnitPrice = Number(item.unit_price || item.price || 0);
+      const discountPercent = parseFloat(item.discount || 0);
+      const discountedUnitPrice = originalUnitPrice * (1 - (discountPercent / 100));
 
       total_qty += qty;
-      sub_total += originalPrice * qty;
-      save_discount += (originalPrice - discountedPrice) * qty;
+      sub_total += originalUnitPrice * qty;
+      save_discount += (originalUnitPrice - discountedUnitPrice) * qty;
     });
 
     const total = sub_total - save_discount;
@@ -655,9 +618,9 @@ function PosPage() {
     setObjSummary((p) => ({
       ...p,
       total_qty,
-      sub_total: +sub_total.toFixed(2),
-      save_discount: +save_discount.toFixed(2),
-      total: +total.toFixed(2),
+      sub_total: parseFloat(sub_total.toFixed(2)),
+      save_discount: parseFloat(save_discount.toFixed(2)),
+      total: parseFloat(total.toFixed(2)),
       tax: 0,
     }));
   }, [state.cart_list]);
@@ -703,16 +666,44 @@ function PosPage() {
     });
   }, []);
 
+  const handleEditCartItem = useCallback((item) => {
+    // Find the original product from the list to get full metadata (sizes, addons)
+    const product = state.list.find(p => p.id === item.id);
+    if (!product) return;
+
+    setSelectedProductForOptions(product);
+    setTempOptions({
+      mood: item.mood || "hot",
+      size: item.size || "M",
+      sugar: item.sugar || "100%",
+      addons: item.addons_selected || []
+    });
+    setIsEditingUniqueId(item.unique_id);
+    setOptionsModalVisible(true);
+  }, [state.list]);
+
   const handleConfirmOptions = () => {
     const product = selectedProductForOptions;
     setState((prev) => {
-      const cart = [...prev.cart_list];
+      let cart = [...prev.cart_list];
+      let currentQty = 1;
+
+      // If editing, we find the old item to get its quantity and then remove it
+      // so we can re-add/re-merge with the new unique_id
+      if (isEditingUniqueId) {
+        const oldIndex = cart.findIndex(c => c.unique_id === isEditingUniqueId);
+        if (oldIndex > -1) {
+          currentQty = cart[oldIndex].cart_qty;
+          cart.splice(oldIndex, 1);
+        }
+      }
 
       let adjustedPrice = Number(product.price || product.unit_price || 0);
       if (product.sizes) {
         const sizes = safeParse(product.sizes) || [];
         const selectedSizeObj = sizes.find(s => s.label === tempOptions.size);
-        if (selectedSizeObj && selectedSizeObj.price) {
+        // Use size price if it exists and is greater than 0, otherwise fallback to base price
+        if (selectedSizeObj && Number(selectedSizeObj.price) > 0) {
           adjustedPrice = Number(selectedSizeObj.price);
         }
       }
@@ -728,7 +719,8 @@ function PosPage() {
       }
 
       const addonStr = tempOptions.addons.length > 0 ? ` + ${tempOptions.addons.join(", ")}` : "";
-      const optionNote = `${tempOptions.mood === "hot" ? "🔥 Hot" : "❄️ Ice"} (${tempOptions.size}, ${tempOptions.sugar} Sugar)${addonStr}`;
+      const sizeStr = tempOptions.size ? `${tempOptions.size}, ` : "";
+      const optionNote = `${tempOptions.mood === "hot" ? "🔥 Hot" : "❄️ Ice"} (${sizeStr}${tempOptions.sugar} Sugar)${addonStr}`;
 
       const uniqueName = `${product.name} [${optionNote}]`;
       const uniqueId = `${product.id}-${optionNote}`;
@@ -741,7 +733,7 @@ function PosPage() {
           display_name: uniqueName,
           unit_price: adjustedPrice,
           price: adjustedPrice,
-          cart_qty: 1,
+          cart_qty: currentQty,
           mood: tempOptions.mood,
           size: tempOptions.size,
           sugar: tempOptions.sugar,
@@ -749,12 +741,13 @@ function PosPage() {
           note: optionNote
         });
       } else {
-        cart[idx] = { ...cart[idx], cart_qty: cart[idx].cart_qty + 1 };
+        cart[idx] = { ...cart[idx], cart_qty: cart[idx].cart_qty + currentQty };
       }
       return { ...prev, cart_list: cart };
     });
     setOptionsModalVisible(false);
     setSelectedProductForOptions(null);
+    setIsEditingUniqueId(null);
   };
 
   const handleIncrease = useCallback((item) => {
@@ -801,6 +794,9 @@ function PosPage() {
     setCustomerName("");
     setTableNo("");
     setCurrentOrderId(null);
+    setCashReceivedUSD(0);
+    setCashReceivedKHR(0);
+    setCashPaymentModalVisible(false);
     form.resetFields();
     getPendingOrders();
   }, []);
@@ -874,7 +870,10 @@ function PosPage() {
       total_qty: +objSummary.total_qty,
       tax: 0,
       discount: 0,
-      payment_method: objSummary.payment_method
+      payment_method: objSummary.payment_method,
+      total_paid: objSummary.payment_method === "Cash"
+        ? (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate))
+        : +objSummary.total
     };
     try {
       let res;
@@ -1311,7 +1310,7 @@ function PosPage() {
         {/* ── RIGHT PANEL / RECEIPT ── */}
         <div
           style={{
-            width: 320,
+            width: 600,
             flexShrink: 0,
             background: COLORS.white,
             borderLeft: `1px solid ${COLORS.softBorder}`,
@@ -1461,6 +1460,7 @@ function PosPage() {
                   onIncrease={handleIncrease}
                   onDecrease={handleDecrease}
                   onRemove={handleRemoveItem}
+                  onEdit={handleEditCartItem}
                 />
               ))
             )}
@@ -1497,9 +1497,14 @@ function PosPage() {
               <span style={{ color: COLORS.textSecondary }}>
                 {t.subtotal} ({objSummary.total_qty} {t.items})
               </span>
-              <span style={{ color: COLORS.textPrimary, fontWeight: 500 }}>
-                ${objSummary.sub_total.toFixed(2)}
-              </span>
+              <div style={{ textAlign: "right" }}>
+                <span style={{ color: COLORS.textPrimary, fontWeight: 500, display: 'block' }}>
+                  ${objSummary.sub_total.toFixed(2)}
+                </span>
+                <span style={{ fontSize: 11, color: COLORS.textSecondary }}>
+                  ≈ {(objSummary.sub_total * exchangeRate).toLocaleString()} ៛
+                </span>
+              </div>
             </div>
 
             {/* Discount Summary */}
@@ -1545,9 +1550,14 @@ function PosPage() {
                 <span style={{ fontWeight: 700, fontSize: 13, color: COLORS.textPrimary, marginRight: 8 }}>
                   {t.total}
                 </span>
-                <span style={{ fontWeight: 900, fontSize: 22, color: COLORS.darkGreen }}>
-                  ${objSummary.total.toFixed(2)}
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                  <span style={{ fontWeight: 900, fontSize: 24, color: COLORS.darkGreen, lineHeight: 1 }}>
+                    ${objSummary.total.toFixed(2)}
+                  </span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: COLORS.textSecondary, marginTop: 4 }}>
+                    ≈ {(objSummary.total * exchangeRate).toLocaleString()} ៛
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1572,6 +1582,76 @@ function PosPage() {
                   { label: `❤️ ${t.all}`, value: "Other" },
                 ]}
               />
+
+              {objSummary.payment_method === "Cash" && (
+                <div style={{
+                  marginTop: 12,
+                  padding: 12,
+                  background: COLORS.white,
+                  borderRadius: 12,
+                  border: `1px solid ${COLORS.softBorder}`,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.textPrimary }}>Cash Received</span>
+                    <Button
+                      size="small"
+                      type="link"
+                      style={{ height: 20, padding: 0, fontSize: 11 }}
+                      onClick={() => setCashPaymentModalVisible(true)}
+                    >
+                      Calc Change
+                    </Button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 30, fontSize: 12, fontWeight: 700 }}>$</span>
+                      <InputNumber
+                        placeholder="USD"
+                        style={{ flex: 1 }}
+                        value={cashReceivedUSD}
+                        onChange={v => setCashReceivedUSD(v || 0)}
+                        min={0}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 30, fontSize: 12, fontWeight: 700 }}>៛</span>
+                      <InputNumber
+                        placeholder="KHR"
+                        style={{ flex: 1 }}
+                        value={cashReceivedKHR}
+                        onChange={v => setCashReceivedKHR(v || 0)}
+                        min={0}
+                        step={100}
+                      />
+                    </div>
+
+                    {(cashReceivedUSD > 0 || cashReceivedKHR > 0) && (
+                      <div style={{
+                        marginTop: 4,
+                        padding: '8px 0 0 0',
+                        borderTop: `1px dashed ${COLORS.softBorder}`
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                          <span>Total Received:</span>
+                          <span style={{ fontWeight: 700 }}>
+                            ${(Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)).toFixed(2)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: COLORS.darkGreen, marginTop: 4 }}>
+                          <span style={{ fontWeight: 700 }}>Change:</span>
+                          <span style={{ fontWeight: 900 }}>
+                            ${Math.max(0, (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)) - objSummary.total).toFixed(2)}
+                          </span>
+                        </div>
+                        <div style={{ textAlign: 'right', fontSize: 11, color: COLORS.textSecondary }}>
+                          ≈ {Math.max(0, Math.round(((Number(cashReceivedUSD) + (Number(cashReceivedKHR) / (exchangeRate || 4000))) - objSummary.total) * (exchangeRate || 4000) / 100) * 100).toLocaleString()} ៛
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Clear Cart link */}
@@ -1651,7 +1731,10 @@ function PosPage() {
           </div>
         }
         open={optionsModalVisible}
-        onCancel={() => setOptionsModalVisible(false)}
+        onCancel={() => {
+          setOptionsModalVisible(false);
+          setIsEditingUniqueId(null);
+        }}
         onOk={handleConfirmOptions}
         okText="Add to Order"
         cancelText="Cancel"
@@ -1799,6 +1882,95 @@ function PosPage() {
           <Button block onClick={getPendingOrders} icon={<ClockCircleOutlined />}>{t.refresh_list}</Button>
         </div>
       </Drawer>
+
+      {/* Cash Payment / Change Calculator Modal */}
+      <Modal
+        title={
+          <div style={{ textAlign: 'center', color: COLORS.darkGreen, fontSize: 20 }}>
+            💵 Cash Payment Calculator
+          </div>
+        }
+        open={cashPaymentModalVisible}
+        onCancel={() => setCashPaymentModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setCashPaymentModalVisible(false)} size="large" style={{ borderRadius: 10 }}>
+            Done
+          </Button>
+        ]}
+        width={400}
+        centered
+      >
+        <div style={{ padding: '10px 0' }}>
+          <div style={{
+            background: '#f8f7f2',
+            padding: 20,
+            borderRadius: 16,
+            marginBottom: 20,
+            border: `1px solid ${COLORS.softBorder}`,
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 4 }}>Total Amount Due</div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: COLORS.darkGreen }}>
+              ${objSummary.total.toFixed(2)}
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 600, color: COLORS.textSecondary, marginTop: 4 }}>
+              ≈ {(objSummary.total * exchangeRate).toLocaleString()} ៛
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 15 }}>Amount Received</div>
+              <div style={{ display: 'flex', gap: 15 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 6 }}>US Dollar ($)</div>
+                  <InputNumber
+                    size="large"
+                    style={{ width: '100%', borderRadius: 10 }}
+                    value={cashReceivedUSD}
+                    onChange={v => setCashReceivedUSD(v || 0)}
+                    min={0}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 6 }}>Khmer Riel (៛)</div>
+                  <InputNumber
+                    size="large"
+                    style={{ width: '100%', borderRadius: 10 }}
+                    value={cashReceivedKHR}
+                    onChange={v => setCashReceivedKHR(v || 0)}
+                    min={0}
+                    step={100}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              marginTop: 10,
+              padding: 20,
+              background: COLORS.darkGreen,
+              borderRadius: 16,
+              color: '#fff',
+              textAlign: 'center',
+              boxShadow: '0 8px 24px rgba(30,74,45,0.2)'
+            }}>
+              <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 6 }}>Change to Return</div>
+              <div style={{ fontSize: 36, fontWeight: 900 }}>
+                ${Math.max(0, (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)) - objSummary.total).toFixed(2)}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>
+                ≈ {Math.max(0, Math.round(((Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)) - objSummary.total) * exchangeRate / 100) * 100).toLocaleString()} ៛
+              </div>
+            </div>
+
+            <div style={{ fontSize: 12, color: COLORS.textSecondary, textAlign: 'center' }}>
+              Exchange Rate: 1$ = {exchangeRate.toLocaleString()} ៛
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

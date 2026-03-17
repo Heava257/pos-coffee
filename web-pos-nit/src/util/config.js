@@ -38,16 +38,24 @@ export const Config = {
   token: "",
   image_path: import.meta.env.VITE_IMAGE_PATH || defaultImagePath,
   platform_url: import.meta.env.VITE_PLATFORM_URL || "http://localhost:3000",
+  optimizeCloudinary: (url, transform = "f_auto,q_auto") => {
+    if (!url || typeof url !== 'string' || !url.includes("cloudinary.com")) return url;
+    if (url.includes("/upload/f_auto") || url.includes("/upload/w_")) return url;
+    if (url.includes("/upload/")) {
+      return url.replace("/upload/", `/upload/${transform}/`);
+    }
+    return url;
+  },
   getFullImagePath: (imagePart) => {
     if (!imagePart) return "";
-    if (imagePart.startsWith('http')) return imagePart;
+    if (imagePart.startsWith('http')) return Config.optimizeCloudinary(imagePart);
     const base = Config.image_path.endsWith('/') ? Config.image_path : `${Config.image_path}/`;
-    return `${base}${imagePart}`;
+    return Config.optimizeCloudinary(`${base}${imagePart}`);
   },
   getProductImagePath: (imagePart) => {
     if (!imagePart) return "";
     if (imagePart.startsWith('http') || Config.image_path.includes('cloudinary')) return Config.getFullImagePath(imagePart);
     const base = Config.image_path.endsWith('/') ? Config.image_path : `${Config.image_path}/`;
-    return `${base}image_pos/${imagePart}`;
+    return Config.optimizeCloudinary(`${base}image_pos/${imagePart}`);
   },
 };

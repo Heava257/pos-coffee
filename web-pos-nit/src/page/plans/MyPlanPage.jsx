@@ -169,6 +169,32 @@ function MyPlanPage() {
             message.error(res?.message || "Simulation failed.");
         }
     };
+const handleDownloadInvoice = async (tranId) => {
+    try {
+        const token = localStorage.getItem("token"); // ឬ key ដែលអ្នកប្រើក្នុង auth
+        const response = await fetch(
+            `${Config.base_url}payment/invoice/${tranId}`,
+            {
+                headers: { Authorization: `Bearer ${token}` },
+            }
+        );
+
+        if (!response.ok) {
+            message.error("Failed to download invoice.");
+            return;
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Invoice-${tranId}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    } catch (err) {
+        message.error("Invoice error.");
+    }
+};
 
     const handleSuccessDone = () => {
         setIsSuccessModalVisible(false);
@@ -253,21 +279,19 @@ function MyPlanPage() {
             render: (s) => <StatusTag status={s} />,
         },
         {
-            title: "Action",
-            key: "action",
-            render: (_, record) => (
-                <Button
-                    type="link"
-                    size="small"
-                    disabled={record.status !== "paid" && record.status !== "active"}
-                    icon={<FilePdfOutlined />}
-                    href={`${Config.base_url}payment/invoice/${record.tran_id}`}
-                    target="_blank"
-                >
-                    Invoice
-                </Button>
-            ),
-        },
+    title: "Action",
+    key: "action",
+    render: (_, record) => (
+       <Button
+    type="link"
+    icon={<FilePdfOutlined />}
+    disabled={record.status !== "paid" && record.status !== "active"}
+    onClick={() => handleDownloadInvoice(record.tran_id)}
+>
+    Invoice
+</Button>
+    ),
+},
     ];
 
     // ─────────────────────────────────────────────────────────────

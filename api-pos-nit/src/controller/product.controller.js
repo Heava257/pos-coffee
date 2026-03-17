@@ -1,4 +1,4 @@
-const { db, logError, removeFile } = require("../util/helper");
+const { db, logError, removeFile, checkPlanLimit } = require("../util/helper");
 
 const cleanVal = (val) => {
     if (val === "undefined" || val === "null" || val === undefined || val === null) return null;
@@ -15,7 +15,7 @@ exports.getList = async (req, res) => {
         let sql = `
         SELECT 
             p.id, p.name, p.image, p.category_id, p.status, p.barcode, p.brand,
-            p.sizes, p.addons, p.discount,
+            p.sizes, p.addons, p.moods, p.discount,
             bp.price, bp.cost_price, bp.stock_qty AS qty, bp.is_available, bp.min_stock_alert,
             c.name as category_name
         FROM products p
@@ -58,22 +58,22 @@ exports.create = async (req, res) => {
         conn = await db.getConnection();
         await conn.beginTransaction();
         const { business_id, branch_id } = req;
-        const { name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, discount, min_stock_alert } = req.body;
+        const { name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, moods, discount, min_stock_alert } = req.body;
         const image = req.file?.path || req.file?.filename || null;
 
         // Optimized Subscription Limit Check
-        const { checkPlanLimit } = require("../util/helper");
         const limitCheck = await checkPlanLimit(business_id, 'product');
         if (!limitCheck.allowed) {
-            return res.status(403).json({
-                message: limitCheck.message,
-                limit_reached: true
-            });
+          if (conn) await conn.rollback();
+          return res.status(403).json({
+            message: limitCheck.message,
+            limit_reached: true
+          });
         }
 
         // A. Insert into Global Products (Template)
         const [p_res] = await conn.query(
-            "INSERT INTO products (business_id, category_id, barcode, brand, name, description, image, status, sizes, addons, discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO products (business_id, category_id, barcode, brand, name, description, image, status, sizes, addons, moods, discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 Number(business_id),
                 Number(cleanVal(category_id)),
@@ -85,6 +85,7 @@ exports.create = async (req, res) => {
                 Number(cleanVal(status) || 1),
                 cleanVal(sizes),
                 cleanVal(addons),
+                cleanVal(moods),
                 Number(cleanVal(discount) || 0)
             ]
         );
@@ -119,7 +120,7 @@ exports.update = async (req, res) => {
     try {
         conn = await db.getConnection();
         await conn.beginTransaction();
-        const { id, name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, discount, min_stock_alert } = req.body;
+        const { id, name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, moods, discount, min_stock_alert } = req.body;
         const { business_id, branch_id } = req;
 
         const image = req.file?.path || req.file?.filename;
@@ -128,7 +129,7 @@ exports.update = async (req, res) => {
         let sql = `
             UPDATE products SET 
                 name = ?, category_id = ?, barcode = ?, brand = ?, 
-                description = ?, status = ?, sizes = ?, addons = ?, discount = ?
+                description = ?, status = ?, sizes = ?, addons = ?, moods = ?, discount = ?
         `;
         let params = [
             name,
@@ -139,6 +140,7 @@ exports.update = async (req, res) => {
             Number(cleanVal(status) || 1),
             cleanVal(sizes),
             cleanVal(addons),
+            cleanVal(moods),
             Number(cleanVal(discount) || 0)
         ];
 
@@ -218,11 +220,30 @@ exports.linkToBranch = async (req, res) => {
     }
 }
 
-// 7. Generate New Barcode
+// 7. Generate New Barcode (Guaranteed Unique)
 exports.generateBarcode = async (req, res) => {
     try {
-        // Generate a random 8-digit barcode
-        const barcode = Math.floor(10000000 + Math.random() * 90000000).toString();
+        const { business_id } = req;
+        let barcode = "";
+        let isUnique = false;
+        let attempts = 0;
+
+        while (!isUnique && attempts < 10) {
+            // Generate random 8-digit
+            barcode = Math.floor(10000000 + Math.random() * 90000000).toString();
+            
+            // Check if exists
+            const [rows] = await db.query(
+                "SELECT id FROM products WHERE barcode = ? AND business_id = ?",
+                [barcode, business_id]
+            );
+            
+            if (rows.length === 0) {
+                isUnique = true;
+            }
+            attempts++;
+        }
+
         res.json({ barcode });
     } catch (error) {
         logError("product.generateBarcode", error, res);

@@ -1,5 +1,5 @@
 // pages/OrderPage.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Button,
   DatePicker,
@@ -24,7 +24,10 @@ import {
   Empty,
   Image,
   notification,
+  InputNumber,
 } from "antd";
+import { useReactToPrint } from "react-to-print";
+import PrintShiftReport from "../../component/pos/PrintShiftReport";
 import {
   ShoppingCartOutlined,
   DollarOutlined,
@@ -47,6 +50,7 @@ import { configStore } from "../../store/configStore";
 import { Config } from "../../util/config";
 import { useProfileStore } from "../../store/profileStore";
 import { useLanguage, translations } from "../../store/language.store";
+import { useExchangeRate } from "../../component/pos/ExchangeRateContext";
 
 const { RangePicker } = DatePicker;
 const { TabPane } = Tabs;
@@ -69,6 +73,46 @@ function OrderPage() {
     total_qty: 0
   });
   const [loading, setLoading] = useState(false);
+  const [openingCash, setOpeningCash] = useState(0);
+  const [openingCashKHR, setOpeningCashKHR] = useState(0);
+  const [actualCash, setActualCash] = useState(0);
+  const [actualCashKHR, setActualCashKHR] = useState(0);
+  const refShiftReport = useRef(null);
+  const { profile } = useProfileStore();
+  const { exchangeRate } = useExchangeRate();
+
+  const handlePrintShift = useReactToPrint({
+    contentRef: refShiftReport,
+  });
+
+  const onSaveShift = async () => {
+    try {
+      const expected_cash_usd = Number(openingCash) + (Number(openingCashKHR) / exchangeRate) + Number(summary.total_cash || 0);
+      const actual_total_usd = Number(actualCash) + (Number(actualCashKHR) / exchangeRate);
+      const diff_usd = actual_total_usd - expected_cash_usd;
+
+      const data = {
+        opening_cash_usd: openingCash,
+        opening_cash_khr: openingCashKHR,
+        actual_cash_usd: actualCash,
+        actual_cash_khr: actualCashKHR,
+        expected_cash_usd: expected_cash_usd,
+        total_sales_usd: summary.total_amount,
+        total_aba_usd: summary.total_aba,
+        total_wing_usd: summary.total_wing,
+        diff_usd: diff_usd
+      };
+
+      const res = await request("shift", "post", data);
+      if (res && res.success) {
+        message.success(res.message);
+        handlePrintShift();
+      }
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to save shift");
+    }
+  };
 
   const [state, setState] = useState({
     visibleModal: false,
@@ -79,7 +123,7 @@ function OrderPage() {
   const [filter, setFilter] = useState({
     from_date: dayjs(), // Default to Today
     to_date: dayjs(),
-    user_id: "",
+    user_id: profile?.id || profile?.user_id || "", // Default to current user for closing
   });
 
   // 🧠 Fetch Orders - Fixed to match backend response
@@ -306,6 +350,20 @@ function OrderPage() {
           >
             {t.export}
           </Button>
+
+          <Button
+            type="primary"
+            icon={<CheckCircleOutlined />}
+            onClick={onSaveShift}
+            style={{
+              borderRadius: 8,
+              height: 40,
+              background: '#1e4a2d',
+              borderColor: '#1e4a2d'
+            }}
+          >
+            Save & Print Shift Report / រក្សាទុក និងបោះពុម្ព
+          </Button>
         </div>
 
         <Divider style={{ margin: '32px 0' }} />
@@ -359,6 +417,121 @@ function OrderPage() {
               </Button>
             </Col>
           </Row>
+
+                {/* 💰 Shift Reconciliation Section */}
+                <div style={{
+                  marginTop: 20,
+                  padding: '24px',
+                  background: '#fff',
+                  borderRadius: 16,
+                  border: '2px solid #eef2f7',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                }}>
+                  <Row gutter={[24, 24]}>
+                    <Col xs={24} lg={18}>
+                      <Row gutter={[16, 16]}>
+                        {/* 1. Opening Cash */}
+                        <Col xs={24} md={12}>
+                          <Card size="small" title={<span style={{fontSize: 12}}>1. Opening Cash / លុយដើមគ្រា</span>}>
+                            <Space direction="vertical" style={{ width: '100%' }}>
+                              <InputNumber
+                                style={{ width: '100%' }}
+                                prefix="$"
+                                value={openingCash}
+                                onChange={v => setOpeningCash(v || 0)}
+                                placeholder="USD"
+                              />
+                              <InputNumber
+                                style={{ width: '100%' }}
+                                prefix="៛"
+                                value={openingCashKHR}
+                                onChange={v => setOpeningCashKHR(v || 0)}
+                                placeholder="KHR"
+                                step={100}
+                              />
+                            </Space>
+                          </Card>
+                        </Col>
+
+                        {/* 2. Actual Cash In Hand */}
+                        <Col xs={24} md={12}>
+                          <Card size="small" title={<span style={{fontSize: 12}}>2. Actual Cash in Hand / លុយក្នុងថត</span>}>
+                            <Space direction="vertical" style={{ width: '100%' }}>
+                              <InputNumber
+                                style={{ width: '100%' }}
+                                prefix="$"
+                                value={actualCash}
+                                onChange={v => setActualCash(v || 0)}
+                                placeholder="USD"
+                              />
+                              <InputNumber
+                                style={{ width: '100%' }}
+                                prefix="៛"
+                                value={actualCashKHR}
+                                onChange={v => setActualCashKHR(v || 0)}
+                                placeholder="KHR"
+                                step={100}
+                              />
+                            </Space>
+                          </Card>
+                        </Col>
+                        
+                        {/* Summary Info */}
+                        <Col span={24}>
+                          <div style={{ display: 'flex', gap: 24, padding: '10px 0' }}>
+                             <div>
+                               <Text type="secondary" style={{fontSize: 11}}>Total Sales (Cash):</Text>
+                               <div style={{fontSize: 18, fontWeight: 'bold'}}>${Number(summary.total_cash || 0).toFixed(2)}</div>
+                             </div>
+                             <Divider type="vertical" style={{height: 40}} />
+                             <div>
+                               <Text type="secondary" style={{fontSize: 11}}>Exchange Rate:</Text>
+                               <div style={{fontSize: 18, fontWeight: 'bold'}}>1$ = {exchangeRate}៛</div>
+                             </div>
+                          </div>
+                        </Col>
+                      </Row>
+                    </Col>
+
+                    <Col xs={24} lg={6}>
+                      {(() => {
+                        const opening_usd = Number(openingCash) + (Number(openingCashKHR) / exchangeRate);
+                        const actual_usd = Number(actualCash) + (Number(actualCashKHR) / exchangeRate);
+                        const expected_usd = opening_usd + Number(summary.total_cash || 0);
+                        const diff = actual_usd - expected_usd;
+
+                        return (
+                          <div style={{
+                            height: '100%',
+                            padding: '20px',
+                            borderRadius: 12,
+                            background: Math.abs(diff) < 0.01 ? '#f0fdf4' : diff > 0 ? '#eff6ff' : '#fef2f2',
+                            border: '1px solid',
+                            borderColor: Math.abs(diff) < 0.01 ? '#bbf7d0' : diff > 0 ? '#bfdbfe' : '#fecaca',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            textAlign: 'center'
+                          }}>
+                            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 4, fontWeight: 600 }}>
+                              Difference / ភាពខុសគ្នា
+                            </div>
+                            <div style={{
+                              fontSize: 28,
+                              fontWeight: 900,
+                              color: Math.abs(diff) < 0.01 ? '#166534' : diff > 0 ? '#1e40af' : '#991b1b'
+                            }}>
+                              ${diff.toFixed(2)}
+                            </div>
+                            <Text style={{fontSize: 11, opacity: 0.7}}>
+                              (Expected: ${expected_usd.toFixed(2)})
+                            </Text>
+                          </div>
+                        );
+                      })()}
+                    </Col>
+                  </Row>
+                </div>
         </div>
 
         {/* Orders Table */}
@@ -770,6 +943,22 @@ function OrderPage() {
           />
         </div>
       </Modal>
+
+      {/* Hidden component for printing */}
+      <div style={{ display: "none" }}>
+        <PrintShiftReport
+          ref={refShiftReport}
+          summary={summary}
+          profile={profile}
+          filter={filter}
+          actual_cash={actualCash}
+          actual_cash_khr={actualCashKHR}
+          opening_cash={openingCash}
+          opening_cash_khr={openingCashKHR}
+          exchange_rate={exchangeRate}
+          staff_name={config?.user?.find(u => u.value === filter.user_id)?.label || profile?.name}
+        />
+      </div>
     </div>
   );
 }

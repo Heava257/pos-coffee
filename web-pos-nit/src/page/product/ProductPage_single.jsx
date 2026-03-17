@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Button,
+  Checkbox,
   Col,
   Form,
   Image,
@@ -14,8 +15,9 @@ import {
   Table,
   Tag,
   Upload,
+  Tooltip,
 } from "antd";
-import { request } from "../../util/helper";
+import { request, compressImage } from "../../util/helper";
 import { MdAdd, MdDelete, MdEdit, MdRestaurantMenu } from "react-icons/md";
 import MainPage from "../../component/layout/MainPage";
 import { configStore } from "../../store/configStore";
@@ -24,6 +26,213 @@ import { getProfile } from "../../store/profile.store";
 import "./Product.css"
 import RecipeModal from "./RecipeModal";
 import { useLanguage, translations } from "../../store/language.store";
+
+// ─── Color Palette (Matches POS) ─────────────────────────────────────────────
+const COLORS = {
+  bg: "#f4f1eb",
+  darkGreen: "#1e4a2d",
+  midGreen: "#2d6a42",
+  accentGreen: "#3a7d52",
+  white: "#ffffff",
+  textPrimary: "#1a2e1a",
+  textSecondary: "#6b7c6b",
+  softBorder: "#e8e3d8",
+  redBadge: "#e85d5d",
+};
+
+// ─── Sub-component for dynamic Coffee fields ────────────────────────────────
+const CoffeeOptions = ({ config, categoryId, stateId, t }) => {
+  const isCoffee = React.useMemo(() => {
+    const cid = categoryId || stateId;
+    if (!cid) return false;
+    
+    const strId = String(cid);
+    // Explicit list of Coffee IDs in your system
+    if (strId === "15" || strId === "51" || strId === "1") return true;
+
+    // Fallback: Check label or name matches
+    const cat = (config.category || []).find(c => String(c.value) === strId);
+    const label = (cat?.label || cat?.name || "").trim().toLowerCase();
+    return label.includes("coffee") || label.includes("កាហ្វេ") || label.includes("cafe");
+  }, [categoryId, stateId, config.category]);
+
+  if (!isCoffee) return null;
+
+  return (
+    <div style={{ 
+      background: "#f0f7f2", 
+      padding: "24px", 
+      borderRadius: "16px", 
+      marginBottom: "20px", 
+      border: "1px solid #d9e6dc",
+      boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)"
+    }}>
+      <div style={{ 
+        fontWeight: 800, 
+        marginBottom: 20, 
+        color: COLORS.darkGreen, 
+        fontSize: 17, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 10,
+        borderBottom: `2px solid #d9e6dc`,
+        paddingBottom: 10
+      }}>
+        <MdRestaurantMenu style={{ fontSize: 20 }} /> 
+        Customize Your Coffee / ការកំណត់ជម្រើសកាហ្វេ
+      </div>
+
+      <Form.Item name="moods" label={false} initialValue={['hot', 'iced']}>
+        <div>
+          <div style={{ fontWeight: 700, marginBottom: 12, color: COLORS.textPrimary, fontSize: 14 }}>
+            🔥❄️ {t.mood || "Moods"} / {translations.kh.mood || "ប្រភេទក្នុងហាង"}
+          </div>
+          <Checkbox.Group 
+            options={[
+              { label: 'Hot', value: 'hot' },
+              { label: 'Iced', value: 'iced' },
+              { label: 'Frappe', value: 'frappe' }
+            ]} 
+          />
+        </div>
+      </Form.Item>
+
+      <div style={{ margin: '20px 0', borderTop: '1px dashed #d9e6dc' }} />
+      <Form.List name="sizes" initialValue={[]}>
+        {(fields, { add, remove }) => (
+          <>
+            <div style={{ fontWeight: 800, marginBottom: 4, color: COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>☕</span> {t.sizes} / {translations.kh.sizes}
+            </div>
+            <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 12, fontStyle: 'italic' }}>
+              * ប្រសិនបើមានកំណត់តម្លៃតាមទំហំខាងក្រោម វានឹងប្រើជំនួសតម្លៃគោលក្នុង POS (Sizes override Base Price).
+            </div>
+            {fields.map(({ key, name, ...restField }) => (
+              <Space key={key} style={{ display: "flex", marginBottom: 12 }} align="start">
+                <Form.Item 
+                  {...restField} 
+                  name={[name, 'label']} 
+                  rules={[{ required: true, message: 'Required' }]}
+                  style={{ marginBottom: 0 }}
+                >
+                  <Select 
+                    style={{ width: 130 }} 
+                    placeholder="Size" 
+                    options={[
+                      { label: "Small (S)", value: "S" }, 
+                      { label: "Medium (M)", value: "M" }, 
+                      { label: "Large (L)", value: "L" }
+                    ]} 
+                  />
+                </Form.Item>
+                <Form.Item 
+                  {...restField} 
+                  name={[name, 'price']} 
+                  rules={[{ required: true, message: 'Required' }]}
+                  style={{ marginBottom: 0 }}
+                >
+                  <InputNumber 
+                    placeholder="Price" 
+                    style={{ width: 100 }} 
+                    min={0} 
+                    step={0.1}
+                    precision={2}
+                  />
+                </Form.Item>
+                <Button 
+                  danger 
+                  type="text" 
+                  onClick={() => remove(name)} 
+                  icon={<MdDelete style={{ fontSize: 18 }} />} 
+                />
+              </Space>
+            ))}
+            <Button 
+              type="dashed" 
+              onClick={() => add()} 
+              icon={<MdAdd />} 
+              block 
+              style={{ 
+                marginBottom: 20, 
+                borderRadius: 10, 
+                height: 40, 
+                borderColor: COLORS.midGreen, 
+                color: COLORS.midGreen 
+              }}
+            >
+              {t.add_size} / {translations.kh.add_size || "បន្ថែមទំហំ"}
+            </Button>
+          </>
+        )}
+      </Form.List>
+
+      <Form.List name="addons" initialValue={[]}>
+        {(fields, { add, remove }) => (
+          <>
+            <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>➕</span> {t.addons} / {translations.kh.addons}
+            </div>
+            {fields.map(({ key, name, ...restField }) => (
+              <Space key={key} style={{ display: "flex", marginBottom: 12 }} align="start">
+                <Form.Item 
+                  {...restField} 
+                  name={[name, 'label']} 
+                  rules={[{ required: true, message: 'Required' }]}
+                  style={{ marginBottom: 0 }}
+                >
+                  <Select 
+                    style={{ width: 130 }} 
+                    placeholder="Add-on" 
+                    options={[
+                      { label: "Extra Shot", value: "Extra Shot" }, 
+                      { label: "Milk Foam", value: "Milk Foam" },
+                      { label: "Honey", value: "Honey" },
+                      { label: "Pearl", value: "Pearl" }
+                    ]} 
+                  />
+                </Form.Item>
+                <Form.Item 
+                  {...restField} 
+                  name={[name, 'price']} 
+                  rules={[{ required: true, message: 'Required' }]}
+                  style={{ marginBottom: 0 }}
+                >
+                  <InputNumber 
+                    placeholder="Price" 
+                    style={{ width: 100 }} 
+                    min={0} 
+                    step={0.1}
+                    precision={2}
+                  />
+                </Form.Item>
+                <Button 
+                  danger 
+                  type="text" 
+                  onClick={() => remove(name)} 
+                  icon={<MdDelete style={{ fontSize: 18 }} />} 
+                />
+              </Space>
+            ))}
+            <Button 
+              type="dashed" 
+              onClick={() => add()} 
+              icon={<MdAdd />} 
+              block
+              style={{ 
+                borderRadius: 10, 
+                height: 40, 
+                borderColor: COLORS.midGreen, 
+                color: COLORS.midGreen 
+              }}
+            >
+              {t.add_addon} / {translations.kh.add_addon || "បន្ថែមគ្រឿងបន្ថែម"}
+            </Button>
+          </>
+        )}
+      </Form.List>
+    </div>
+  );
+};
 
 const getBase64 = (file) =>
   new Promise((resolve, reject) => {
@@ -53,6 +262,7 @@ function ProductPage() {
   const [imageOptional, setImageOptional] = useState([]);
   const [visibleRecipeModal, setVisibleRecipeModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     getList();
@@ -93,6 +303,8 @@ function ProductPage() {
     }));
     setImageDefault([]);
     form.resetFields();
+    // Reset coffee specific fields explicitly if needed
+    form.setFieldsValue({ moods: ['hot', 'iced'], sizes: [], addons: [] });
   };
   const onFinish = async (items) => {
     var params = new FormData();
@@ -109,24 +321,28 @@ function ProductPage() {
     params.append("id", form.getFieldValue("id"));
     params.append("sizes", JSON.stringify(items.sizes || []));
     params.append("addons", JSON.stringify(items.addons || []));
+    params.append("moods", JSON.stringify(items.moods || []));
 
 
-    if (items.image_default) {
+    if (items.image_default && items.image_default.file) {
       if (items.image_default.file.status === "removed") {
         params.append("image_remove", "1");
       } else {
-        params.append(
-          "upload_image",
-          items.image_default.file.originFileObj,
-          items.image_default.file.name
-        );
+        const file = items.image_default.file.originFileObj;
+        if (file) {
+          // 🚀 Compress image before upload to solve 10s delay
+          const compressedFile = await compressImage(file);
+          params.append("upload_image", compressedFile, file.name || "image.jpg");
+        }
       }
     }
     var method = "post";
     if (form.getFieldValue("id")) {
       method = "put";
     }
+    setIsSubmitting(true);
     const res = await request("product", method, params);
+    setIsSubmitting(false);
     if (res && !res.error) {
       message.success(t.product_saved);
       onCloseModal();
@@ -137,12 +353,9 @@ function ProductPage() {
   };
   const onBtnNew = async () => {
     try {
+      // 🚀 Optimized: Single request to get a checked/unique barcode
       const res = await request("new_barcode", "post");
       if (res && res.barcode) {
-        const checkRes = await request(`check-barcode/${res.barcode}`, "get");
-        if (checkRes && checkRes.exists) {
-          return onBtnNew();
-        }
         form.setFieldValue("barcode", res.barcode);
       }
     } catch (err) {
@@ -184,8 +397,16 @@ function ProductPage() {
 
 
   const onClickEdit = (item, index) => {
+    // Parse strings from DB back to objects/arrays for the form
+    const sizes = item.sizes ? (typeof item.sizes === 'string' ? JSON.parse(item.sizes) : item.sizes) : [];
+    const addons = item.addons ? (typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons) : [];
+    const moods = item.moods ? (typeof item.moods === 'string' ? JSON.parse(item.moods) : item.moods) : ['hot', 'iced'];
+
     form.setFieldsValue({
       ...item,
+      sizes,
+      addons,
+      moods,
     });
     setState((pre) => ({ ...pre, visibleModal: true, selectedParentId: item.category_id }));
     if (item.image != "" && item.image != null) {
@@ -264,69 +485,61 @@ function ProductPage() {
       </div>
       <Modal
         open={state.visibleModal}
-        title={form.getFieldValue("id") ? t.edit_product : t.add_new_product}
+        title={
+          <div style={{ fontSize: 18, color: COLORS.darkGreen, fontWeight: 700 }}>
+            {form.getFieldValue("id") ? t.edit_product : t.add_new_product}
+          </div>
+        }
         footer={null}
         onCancel={onCloseModal}
         width={800}
-        style={{ top: 20 }}
-        bodyStyle={{ maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}
+        centered
+        destroyOnClose
+        styles={{
+          mask: { backdropFilter: 'blur(4px)' },
+          content: { borderRadius: 20, padding: 24 }
+        }}
       >
-
         <Form layout="vertical" onFinish={onFinish} form={form}>
+          <Form.Item name="id" hidden><Input /></Form.Item>
           <Row gutter={16}>
             <Col span={12}>
               <div className="form-section">
                 <Form.Item
+                  name={"category_id"}
+                  label={t.category}
+                  rules={[{ required: true, message: t.category_required }]}
+                >
+                  <Select
+                    options={config.category}
+                    placeholder={t.category_name}
+                    onChange={(value) => {
+                      setState(prev => ({ ...prev, selectedParentId: value }));
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item
                   name={"name"}
                   label={t.product_name}
-                  rules={[{ required: true, message: t.product_name + " is required" }]}
+                  rules={[{ required: true, message: t.product_name }]}
                 >
                   <Input placeholder={t.product_name} />
                 </Form.Item>
 
-                {state.selectedParentId === 51 && (
-                  <>
-                    <Form.List name="sizes">
-                      {(fields, { add, remove }) => (
-                        <>
-                          <h3>{t.sizes}</h3>
-                          {fields.map(({ key, name, ...restField }) => (
-                            <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
-                              <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: 'Label required' }]}>
-                                <Select options={SAMPLE_SIZES} placeholder={t.sizes} style={{ width: 120 }} />
-                              </Form.Item>
-                              <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: 'Price required' }]}>
-                                <InputNumber placeholder={t.price} />
-                              </Form.Item>
-                              <Button danger onClick={() => remove(name)}>{t.delete}</Button>
-                            </Space>
-                          ))}
-                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>{t.add_size}</Button>
-                        </>
-                      )}
-                    </Form.List>
-
-                    <Form.List name="addons">
-                      {(fields, { add, remove }) => (
-                        <>
-                          <h3>{t.addons}</h3>
-                          {fields.map(({ key, name, ...restField }) => (
-                            <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
-                              <Form.Item {...restField} name={[name, 'label']} rules={[{ required: true, message: 'Label required' }]}>
-                                <Select options={SAMPLE_ADDONS} placeholder={t.addons} style={{ width: 180 }} />
-                              </Form.Item>
-                              <Form.Item {...restField} name={[name, 'price']} rules={[{ required: true, message: 'Price required' }]}>
-                                <InputNumber placeholder={t.price} />
-                              </Form.Item>
-                              <Button danger onClick={() => remove(name)}>{t.delete}</Button>
-                            </Space>
-                          ))}
-                          <Button type="link" onClick={() => add()} icon={<MdAdd />}>{t.add_addon}</Button>
-                        </>
-                      )}
-                    </Form.List>
-                  </>
-                )}
+                <Form.Item
+                  noStyle
+                  shouldUpdate={(prev, curr) => prev.category_id !== curr.category_id}
+                >
+                  {({ getFieldValue }) => (
+                    <CoffeeOptions 
+                      config={config} 
+                      categoryId={getFieldValue("category_id")} 
+                      stateId={state.selectedParentId}
+                      t={t} 
+                    />
+                  )}
+                </Form.Item>
 
                 <Form.Item name={"barcode"} label={t.barcode}>
                   <Input disabled placeholder={t.barcode} />
@@ -347,40 +560,24 @@ function ProductPage() {
             <Col span={12}>
               <div className="form-section">
                 <Form.Item
-                  name={"category_id"}
-                  label={t.category}
-                  rules={[{ required: true, message: t.category + " is required" }]}
-                >
-                  <Select
-                    options={config.category}
-                    placeholder={t.category}
-                    onChange={(value) => {
-                      form.setFieldValue("category_id", value);
-                      setState((prev) => ({ ...prev, selectedParentId: value }));
-                    }}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label={t.price}
+                  label={`${t.price || "Price"} (តម្លៃគោល)`}
                   name="price"
-                  rules={[{ required: true, message: t.price + ' is required' }]}
+                  rules={[{ required: true, message: t.price_required }]}
                 >
-                  <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+                  <Tooltip title="តម្លៃទូទៅ ឬតម្លៃទាបបំផុតប្រសិនបើមានច្រើនទំហំ (General / Fallback Price)">
+                    <InputNumber min={0} step={0.01} style={{ width: '100%' }} placeholder="2.50" />
+                  </Tooltip>
                 </Form.Item>
 
-                <Form.Item name={"status"} label={t.status}>
+                <Form.Item label={t.status} name="status">
                   <Select
-                    options={[
-                      { label: t.active, value: 1 },
-                      { label: t.inactive, value: 0 },
-                    ]}
+                    options={[{ label: t.active, value: 1 }, { label: t.inactive, value: 0 }]}
                     placeholder={t.status}
                   />
                 </Form.Item>
 
                 <Form.Item name={"description"} label={t.description}>
-                  <Input.TextArea rows={4} placeholder={t.description} />
+                  <Input.TextArea rows={2} placeholder={t.enter_description} />
                 </Form.Item>
 
                 <Form.Item name={"image_default"} label={t.image}>
@@ -392,30 +589,32 @@ function ProductPage() {
                     onPreview={handlePreview}
                     onChange={handleChangeImageDefault}
                   >
-                    <div>+{t.image}</div>
+                    <div>+{t.upload}</div>
                   </Upload>
                 </Form.Item>
               </div>
             </Col>
           </Row>
 
-          {previewImage && (
-            <Image
-              wrapperStyle={{ display: "none" }}
-              preview={{
-                visible: previewOpen,
-                onVisibleChange: (visible) => setPreviewOpen(visible),
-                afterOpenChange: (visible) => !visible && setPreviewImage(""),
-              }}
-              src={previewImage}
-            />
-          )}
-
-          <div style={{ textAlign: "right", marginTop: 24 }}>
-            <Space>
-              <Button onClick={onCloseModal}>{t.cancel}</Button>
-              <Button type="primary" htmlType="submit">
-                {form.getFieldValue("id") ? t.save : t.add_new}
+          <div style={{ textAlign: "right", marginTop: 30, borderTop: `1px solid ${COLORS.softBorder}`, paddingTop: 20 }}>
+            <Space size="middle">
+              <Button size="large" onClick={onCloseModal} style={{ borderRadius: 10, padding: '0 25px' }}>
+                {t.cancel}
+              </Button>
+              <Button 
+                type="primary" 
+                size="large" 
+                htmlType="submit" 
+                loading={isSubmitting}
+                style={{
+                  background: COLORS.darkGreen,
+                  borderRadius: 10,
+                  padding: '0 35px',
+                  fontWeight: 600,
+                  height: 45
+                }}
+              >
+                {form.getFieldValue("id") ? t.update_item || "Update" : t.save_item || "Save"}
               </Button>
             </Space>
           </div>
@@ -506,7 +705,7 @@ function ProductPage() {
               >
                 {value ? (
                   <Image
-                    src={Config.getFullImagePath(value)}
+                    src={Config.optimizeCloudinary(Config.getFullImagePath(value), "w_120,c_fill,f_auto,q_auto")}
                     style={{
                       width: "100%",
                       height: "100%",

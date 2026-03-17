@@ -85,7 +85,10 @@ const PrintInvoice = React.forwardRef((props, ref) => {
               height: '80px',
               objectFit: 'contain',
               marginBottom: '10px',
-              borderRadius: '8px'
+              borderRadius: '8px',
+              filter: 'grayscale(100%) contrast(1.2)', // Thermal printer style
+              display: 'block',
+              margin: '0 auto 10px auto'
             }}
           />
         )}
@@ -168,7 +171,7 @@ const PrintInvoice = React.forwardRef((props, ref) => {
                     {item.unit && ` (${item.unit})`}
                   </span>
                   {hasDiscount && (
-                    <span style={{ color: '#0066cc' }}>
+                    <span style={{ fontWeight: 'bold' }}>
                       -{item.discount}%
                     </span>
                   )}
@@ -208,7 +211,7 @@ const PrintInvoice = React.forwardRef((props, ref) => {
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            color: '#0066cc'
+            fontWeight: 'bold'
           }}>
             <span>Discount:</span>
             <span>-${formatNumber(objSummary.save_discount)}</span>

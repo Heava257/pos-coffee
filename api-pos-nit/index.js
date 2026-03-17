@@ -43,6 +43,7 @@ require("./src/route/stock.route")(app);
 require("./src/route/table.route")(app);
 require("./src/route/settings.route")(app);
 require("./src/route/favorite.route")(app);
+require("./src/route/shift.route")(app);
 
 
 app.use((err, req, res, next) => {

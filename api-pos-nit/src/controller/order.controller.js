@@ -128,6 +128,17 @@ exports.getList = async (req, res) => {
         const [list] = await db.query(sql, params);
 
         // Detailed Summary: Total, Qty, and Breakdown by Payment Method
+        const summaryParams = [
+            business_id, 
+            ...(branch_id ? [branch_id] : []), 
+            ...(user_id ? [user_id] : []),
+            ...(from_date && to_date ? [from_date, to_date] : []),
+            business_id, 
+            ...(branch_id ? [branch_id] : []), 
+            ...(user_id ? [user_id] : []),
+            ...(from_date && to_date ? [from_date, to_date] : [])
+        ];
+
         const [sum] = await db.query(
             `SELECT 
                 COUNT(o.id) as total_order, 
@@ -137,16 +148,19 @@ exports.getList = async (req, res) => {
                 SUM(CASE WHEN o.payment_method = 'Wing' THEN o.total_amount ELSE 0 END) as total_wing,
                 SUM(CASE WHEN o.payment_method NOT IN ('Cash', 'ABA', 'Wing') THEN o.total_amount ELSE 0 END) as total_other,
                 (SELECT SUM(qty) FROM order_details od JOIN orders o2 ON od.order_id = o2.id 
-                 WHERE o2.business_id = ? ${branch_id ? 'AND o2.branch_id = ?' : ''} AND o2.status != 'cancelled'
+                 WHERE o2.business_id = ? 
+                 ${branch_id ? 'AND o2.branch_id = ?' : ''} 
+                 ${user_id ? 'AND o2.user_id = ?' : ''}
+                 AND o2.status != 'cancelled'
                  ${from_date && to_date ? 'AND DATE(o2.created_at) BETWEEN ? AND ?' : ''}
                 ) as total_qty
              FROM orders o
-             WHERE o.business_id = ? ${branch_id ? 'AND o.branch_id = ?' : ''} AND o.status != 'cancelled'
+             WHERE o.business_id = ? 
+             ${branch_id ? 'AND o.branch_id = ?' : ''} 
+             ${user_id ? 'AND o.user_id = ?' : ''}
+             AND o.status != 'cancelled'
              ${from_date && to_date ? 'AND DATE(o.created_at) BETWEEN ? AND ?' : ''}`,
-            [
-                business_id, ...(branch_id ? [branch_id] : []), ...(from_date && to_date ? [from_date, to_date] : []),
-                business_id, ...(branch_id ? [branch_id] : []), ...(from_date && to_date ? [from_date, to_date] : [])
-            ]
+            summaryParams
         );
 
         res.json({

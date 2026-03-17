@@ -32,6 +32,7 @@ import { request } from "../../util/helper";
 import { Config } from "../../util/config";
 import { getProfile } from "../../store/profile.store";
 import { useProfileStore } from "../../store/profileStore";
+import { useExchangeRate } from "../../component/pos/ExchangeRateContext";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -44,6 +45,7 @@ const SettingsPage = () => {
     const [imageFile, setImageFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const { setProfile } = useProfileStore();
+    const { refreshRate } = useExchangeRate();
 
     useEffect(() => {
         fetchSettings();
@@ -100,6 +102,7 @@ const SettingsPage = () => {
                 }
 
                 fetchSettings(); // Refresh UI
+                refreshRate(); // Refresh the global exchange rate context
             }
         } catch (error) {
             console.error("Update settings error:", error);
