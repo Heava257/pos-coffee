@@ -50,7 +50,16 @@ app.use((err, req, res, next) => {
   if (err.type === 'entity.too.large') {
     return res.status(413).json({ message: 'Request entity too large' });
   }
-  next(err);
+
+  // Global Detailed Error Log
+  console.error("🔥 Global Error Handler:", require("util").inspect(err, { depth: null, colors: true }));
+
+  if (!res.headersSent) {
+    res.status(500).json({
+      error: "Internal Server Error (Global)",
+      message: err.message || "An unexpected error occurred."
+    });
+  }
 });
 
 

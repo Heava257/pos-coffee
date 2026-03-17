@@ -1,5 +1,10 @@
 const { db, logError, removeFile } = require("../util/helper");
 
+const cleanVal = (val) => {
+    if (val === "undefined" || val === "null" || val === undefined || val === null) return null;
+    return val;
+};
+
 // 1. Get Product List for POS (Active & Branch Filtered)
 exports.getList = async (req, res) => {
     try {
@@ -71,16 +76,16 @@ exports.create = async (req, res) => {
             "INSERT INTO products (business_id, category_id, barcode, brand, name, description, image, status, sizes, addons, discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 Number(business_id),
-                Number(category_id),
-                barcode || null,
-                brand || null,
+                Number(cleanVal(category_id)),
+                cleanVal(barcode),
+                cleanVal(brand),
                 name,
-                description || null,
+                cleanVal(description),
                 image || null,
-                Number(status || 1),
-                sizes || null,
-                addons || null,
-                Number(discount || 0)
+                Number(cleanVal(status) || 1),
+                cleanVal(sizes),
+                cleanVal(addons),
+                Number(cleanVal(discount) || 0)
             ]
         );
         const product_id = p_res.insertId;

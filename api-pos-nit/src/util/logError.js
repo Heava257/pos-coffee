@@ -1,15 +1,11 @@
 const fs = require("fs/promises");
 const path = require("path");
+const util = require("util");
 
-exports.logError = async (controller, message_error, res) => {
-  const errorObj = message_error instanceof Error ? {
-    message: message_error.message,
-    stack: message_error.stack,
-    sql: message_error.sql,
-    sqlMessage: message_error.sqlMessage
-  } : message_error;
+exports.logError = async (controller, error, res) => {
+  // 1. Detailed console logging (visible in Railway/Production logs)
+  console.error(`🚨 [${controller}] Error Detail:`, util.inspect(error, { depth: null, colors: true }));
 
-  console.error(`🚨 Controller Error [${controller}]:`, JSON.stringify(errorObj, null, 2));
   try {
     const logDir = "./logs";
     try {
@@ -19,17 +15,20 @@ exports.logError = async (controller, message_error, res) => {
     }
 
     const logPath = path.join(logDir, controller + ".txt");
-    const logMessage = message_error + "\n";
+    const logMessage = `[${new Date().toISOString()}] ${util.inspect(error, { depth: null })}\n`;
     await fs.appendFile(logPath, logMessage);
-  } catch (error) {
-    console.error("Error writing to log file:", error);
+  } catch (logErr) {
+    console.error("Critical: Failed to write to log file:", logErr);
   }
-  // Use json response for API consistency
-  if (!res.headersSent) {
+
+  // 2. Return friendly response to client
+  if (res && !res.headersSent) {
     res.status(500).json({
       error: "Internal Server Error",
-      message: message_error?.message || "Something went wrong! Please try again later.",
-      sqlMessage: message_error?.sqlMessage || null
+      message: error?.message || "Something went wrong! Please try again later.",
+      sqlMessage: error?.sqlMessage || null,
+      controller: controller
     });
   }
-};  
+};
+  
