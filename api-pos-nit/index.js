@@ -15,6 +15,8 @@ app.use('/public', express.static('public', {
   }
 }));
 
+app.get("/api/ping", (req, res) => res.json({ status: "ok", time: new Date() }));
+
 require("./src/route/auth.route")(app);
 require("./src/route/user.route")(app);
 require("./src/route/branch.route")(app);

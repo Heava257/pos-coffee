@@ -65,7 +65,7 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'coffee-pos',
-    allowed_formats: ['jpg', 'png', 'jpeg'],
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'avif'],
     public_id: (req, file) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const nameWithoutExt = file.originalname.split('.').slice(0, -1).join('.');

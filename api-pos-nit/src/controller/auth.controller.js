@@ -90,7 +90,7 @@ exports.login = async (req, res) => {
     const [users] = await db.query(sql, [email]);
 
     if (users.length === 0) {
-      return res.status(404).json({ message: "Account not found!" });
+      return res.status(401).json({ message: "Account not found or incorrect email!" });
     }
 
     const user = users[0];
