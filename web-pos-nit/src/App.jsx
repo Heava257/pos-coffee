@@ -25,7 +25,7 @@ import ReportPurchase_Summary from "./page/report/ReportPurchase_Summary";
 import Top_Sales from "./page/top_sale/Top_Sales";
 import ProfilePage from "./page/user/ProfilePage";
 import PosPage from "./page/pos/PosPage";
-import { ExchangeRateProvider } from "../src/component/pos/ExchangeRateContext";
+import { ExchangeRateProvider } from "./component/pos/ExchangeRateContext";
 import ExchangeRatePage from "./page/ExchangeRatePage/ExchangeRatePage";
 import BranchPage from "./page/branch/BranchPage";
 import ExpensePage from "./page/expense/ExpensePage";

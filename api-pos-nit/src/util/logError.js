@@ -2,7 +2,14 @@ const fs = require("fs/promises");
 const path = require("path");
 
 exports.logError = async (controller, message_error, res) => {
-  console.error("🚨 Controller Error [" + controller + "]:", message_error);
+  const errorObj = message_error instanceof Error ? {
+    message: message_error.message,
+    stack: message_error.stack,
+    sql: message_error.sql,
+    sqlMessage: message_error.sqlMessage
+  } : message_error;
+
+  console.error(`🚨 Controller Error [${controller}]:`, JSON.stringify(errorObj, null, 2));
   try {
     const logDir = "./logs";
     try {
@@ -21,7 +28,8 @@ exports.logError = async (controller, message_error, res) => {
   if (!res.headersSent) {
     res.status(500).json({
       error: "Internal Server Error",
-      message: "Something went wrong! Please try again later."
+      message: message_error?.message || "Something went wrong! Please try again later.",
+      sqlMessage: message_error?.sqlMessage || null
     });
   }
 };  

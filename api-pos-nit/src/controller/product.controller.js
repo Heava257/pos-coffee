@@ -11,7 +11,7 @@ exports.getList = async (req, res) => {
         SELECT 
             p.id, p.name, p.image, p.category_id, p.status, p.barcode, p.brand,
             p.sizes, p.addons, p.discount,
-            bp.price, bp.cost_price, bp.stock_qty AS qty, bp.is_available,
+            bp.price, bp.cost_price, bp.stock_qty AS qty, bp.is_available, bp.min_stock_alert,
             c.name as category_name
         FROM products p
         LEFT JOIN branch_products bp ON p.id = bp.product_id AND bp.branch_id = ?
@@ -48,11 +48,12 @@ exports.getList = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
-    const conn = await db.getConnection();
+    let conn;
     try {
+        conn = await db.getConnection();
         await conn.beginTransaction();
         const { business_id, branch_id } = req;
-        const { name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, discount } = req.body;
+        const { name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, discount, min_stock_alert } = req.body;
         const image = req.file?.path || req.file?.filename || null;
 
         // Optimized Subscription Limit Check
@@ -68,30 +69,52 @@ exports.create = async (req, res) => {
         // A. Insert into Global Products (Template)
         const [p_res] = await conn.query(
             "INSERT INTO products (business_id, category_id, barcode, brand, name, description, image, status, sizes, addons, discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [business_id, category_id, barcode, brand || null, name, description || null, image, status || 1, sizes || null, addons || null, discount || 0]
+            [
+                Number(business_id),
+                Number(category_id),
+                barcode || null,
+                brand || null,
+                name,
+                description || null,
+                image || null,
+                Number(status || 1),
+                sizes || null,
+                addons || null,
+                Number(discount || 0)
+            ]
         );
         const product_id = p_res.insertId;
 
         // B. Insert into Branch Inventory (The instance for current branch)
         await conn.query(
-            "INSERT INTO branch_products (branch_id, product_id, price, cost_price, stock_qty) VALUES (?, ?, ?, ?, ?)",
-            [branch_id, product_id, price, cost_price || 0, qty || 0]
+            "INSERT INTO branch_products (branch_id, product_id, price, cost_price, stock_qty, min_stock_alert) VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                Number(branch_id),
+                Number(product_id),
+                Number(price || 0),
+                Number(cost_price || 0),
+                Number(qty || 0),
+                Number(min_stock_alert || 5)
+            ]
         );
 
         await conn.commit();
         res.json({ success: true, message: "Product created and added to branch!" });
     } catch (error) {
-        await conn.rollback();
+        if (conn) await conn.rollback();
         logError("product.create", error, res);
     } finally {
-        conn.release();
+        if (conn) conn.release();
     }
 };
 
 // 3. Update Product details
 exports.update = async (req, res) => {
+    let conn;
     try {
-        const { id, name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, discount } = req.body;
+        conn = await db.getConnection();
+        await conn.beginTransaction();
+        const { id, name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, discount, min_stock_alert } = req.body;
         const { business_id, branch_id } = req;
 
         const image = req.file?.path || req.file?.filename;
@@ -104,7 +127,17 @@ exports.update = async (req, res) => {
                 name = ?, category_id = ?, barcode = ?, brand = ?, 
                 description = ?, status = ?, sizes = ?, addons = ?, discount = ?
         `;
-        let params = [name, category_id, barcode, brand || null, description || null, p_status, sizes || null, addons || null, discount || 0];
+        let params = [
+            name,
+            Number(category_id),
+            barcode || null,
+            brand || null,
+            description || null,
+            Number(p_status),
+            sizes || null,
+            addons || null,
+            Number(discount || 0)
+        ];
 
         if (image) {
             sql += ", image = ?";
@@ -112,19 +145,30 @@ exports.update = async (req, res) => {
         }
 
         sql += " WHERE id = ? AND business_id = ?";
-        params.push(id, business_id);
+        params.push(Number(id), Number(business_id));
 
-        await db.query(sql, params);
+        await conn.query(sql, params);
 
         // Update Branch Specifics
-        await db.query(
-            "UPDATE branch_products SET price = ?, cost_price = ?, stock_qty = ? WHERE product_id = ? AND branch_id = ?",
-            [price, cost_price, p_qty, id, branch_id]
+        await conn.query(
+            "UPDATE branch_products SET price = ?, cost_price = ?, stock_qty = ?, min_stock_alert = ? WHERE product_id = ? AND branch_id = ?",
+            [
+                Number(price || 0),
+                Number(cost_price || 0),
+                Number(p_qty),
+                Number(min_stock_alert || 5),
+                Number(id),
+                Number(branch_id)
+            ]
         );
 
+        await conn.commit();
         res.json({ success: true, message: "Product updated successfully!" });
     } catch (error) {
+        if (conn) await conn.rollback();
         logError("product.update", error, res);
+    } finally {
+        if (conn) conn.release();
     }
 };
 

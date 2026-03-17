@@ -163,7 +163,7 @@ const MainLayout = () => {
     // Only check if logged in and NOT the system admin (Business ID 1)
     if (!profile || profile.business_id === 1) return;
     const res = await request("my-plan", "get");
-    if (res && res.success && res.plan.subscription) {
+    if (res && res.success && res.plan?.subscription) {
       const sub = res.plan.subscription;
       if (sub.is_lifetime) return;
 

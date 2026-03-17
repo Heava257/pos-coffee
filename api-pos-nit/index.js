@@ -74,18 +74,46 @@ app.listen(PORT, async () => {
   try {
     await db.query("ALTER TABLE orders MODIFY user_id INT NULL");
     console.log("Migration: 'orders.user_id' is now NULLABLE");
-  } catch (err) { }
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) console.log("Migration (orders.user_id) skipped:", err.message);
+  }
 
   // Migration Fix: Ensure products table has 'brand' and 'discount' columns
   try {
     await db.query("ALTER TABLE products ADD COLUMN brand VARCHAR(255) AFTER barcode");
     console.log("Migration: Added 'brand' column to products");
-  } catch (err) { }
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) console.log("Migration (products.brand) skipped:", err.message);
+  }
 
   try {
     await db.query("ALTER TABLE products ADD COLUMN discount DOUBLE DEFAULT 0;");
     console.log("Migration: Added 'discount' column to products");
-  } catch (err) { }
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) console.log("Migration (products.discount) skipped:", err.message);
+  }
+
+  try {
+    await db.query("ALTER TABLE products ADD COLUMN sizes TEXT NULL AFTER image");
+    await db.query("ALTER TABLE products ADD COLUMN addons TEXT NULL AFTER sizes");
+    console.log("Migration: Added 'sizes' and 'addons' columns to products");
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) console.log("Migration (products.sizes/addons) skipped:", err.message);
+  }
+
+  try {
+    await db.query("ALTER TABLE products ADD COLUMN description TEXT NULL AFTER name");
+    console.log("Migration: Added 'description' column to products");
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) console.log("Migration (products.description) skipped:", err.message);
+  }
+
+  try {
+    await db.query("ALTER TABLE branch_products ADD COLUMN min_stock_alert INT DEFAULT 5");
+    console.log("Migration: Added 'min_stock_alert' column to branch_products");
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) console.log("Migration (branch_products.min_stock_alert) skipped:", err.message);
+  }
 
   // Migration Fix: Add missing categories once
   try {

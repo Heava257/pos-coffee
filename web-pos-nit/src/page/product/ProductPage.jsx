@@ -148,7 +148,13 @@ function ProductPage() {
       onCloseModal();
       getList();
     } else {
-      res.error?.barcode && message.error(res.error?.barcode);
+      if (res && res.error?.barcode) {
+        message.error(res.error.barcode);
+      } else if (res && res.message) {
+        message.error(res.message);
+      } else {
+        message.error("Connection failed. Check console for details.");
+      }
     }
   };
   const onBtnNew = async () => {

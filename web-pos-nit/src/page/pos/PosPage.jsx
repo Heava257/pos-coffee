@@ -442,6 +442,15 @@ const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove }) => 
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function PosPage() {
+  const safeParse = (str) => {
+    if (!str) return null;
+    try {
+      return JSON.parse(str);
+    } catch (e) {
+      console.error("JSON parse error:", e);
+      return null;
+    }
+  };
   const { lang } = useLanguage();
   const t = translations[lang];
   const { profile } = useProfileStore(); // Reactive profile
@@ -665,14 +674,16 @@ function PosPage() {
         }
 
         const isCoffee = product.category_name?.toLowerCase().includes("coffee");
-        const hasOptions = (product.sizes && JSON.parse(product.sizes).length > 0) || (product.addons && JSON.parse(product.addons).length > 0);
+        const sizes = safeParse(product.sizes);
+        const addons = safeParse(product.addons);
+        const hasOptions = (Array.isArray(sizes) && sizes.length > 0) || (Array.isArray(addons) && addons.length > 0);
 
         if (isCoffee || hasOptions) {
           setSelectedProductForOptions(product);
           // Default options
           setTempOptions({
             mood: "ice",
-            size: product.sizes ? JSON.parse(product.sizes)[0]?.label : "M",
+            size: Array.isArray(safeParse(product.sizes)) ? safeParse(product.sizes)[0]?.label : "M",
             sugar: "100%",
             addons: []
           });
@@ -699,7 +710,7 @@ function PosPage() {
 
       let adjustedPrice = Number(product.price || product.unit_price || 0);
       if (product.sizes) {
-        const sizes = JSON.parse(product.sizes);
+        const sizes = safeParse(product.sizes) || [];
         const selectedSizeObj = sizes.find(s => s.label === tempOptions.size);
         if (selectedSizeObj && selectedSizeObj.price) {
           adjustedPrice = Number(selectedSizeObj.price);
@@ -707,7 +718,7 @@ function PosPage() {
       }
 
       if (product.addons && tempOptions.addons.length > 0) {
-        const addonsList = JSON.parse(product.addons);
+        const addonsList = safeParse(product.addons) || [];
         tempOptions.addons.forEach(addonLabel => {
           const addonObj = addonsList.find(a => a.label === addonLabel);
           if (addonObj && addonObj.price) {
@@ -843,7 +854,8 @@ function PosPage() {
     }
     const items = state.cart_list.map((item) => {
       const qty = Number(item.cart_qty) || 1;
-      const unitPrice = Number(item.unit_price || item.price || 0);
+      const rawPrice = item.unit_price !== undefined && item.unit_price !== null ? item.unit_price : (item.price || 0);
+      const unitPrice = isNaN(Number(rawPrice)) ? 0 : Number(rawPrice);
       return {
         product_id: item.id,
         qty: qty,
@@ -913,11 +925,15 @@ function PosPage() {
     );
   }, [state.list, searchText]);
 
-  const allVisible = React.useMemo(() => {
-    const inStock = filteredProducts.filter((p) => p.qty > 0);
-    const outOfStock = filteredProducts.filter((p) => p.qty <= 0);
-    return [...inStock, ...outOfStock];
+  const { inStock, outOfStock } = React.useMemo(() => {
+    const is = filteredProducts.filter((p) => p.qty > 0);
+    const os = filteredProducts.filter((p) => p.qty <= 0);
+    return { inStock: is, outOfStock: os };
   }, [filteredProducts]);
+
+  const allVisible = React.useMemo(() => {
+    return [...inStock, ...outOfStock];
+  }, [inStock, outOfStock]);
 
   const getCartQty = useCallback((productId) => {
     const item = state.cart_list.find((c) => c.id === productId);
@@ -1662,7 +1678,7 @@ function PosPage() {
               value={tempOptions.size}
               onChange={e => setTempOptions(p => ({ ...p, size: e.target.value }))}
             >
-              {(selectedProductForOptions?.sizes ? JSON.parse(selectedProductForOptions.sizes) : [
+              {(selectedProductForOptions?.sizes ? (safeParse(selectedProductForOptions.sizes) || []) : [
                 { label: 'S', price: selectedProductForOptions?.price },
                 { label: 'M', price: selectedProductForOptions?.price },
                 { label: 'L', price: selectedProductForOptions?.price }
@@ -1689,7 +1705,7 @@ function PosPage() {
           </div>
 
           {/* Add-ons Selector */}
-          {(selectedProductForOptions?.addons && JSON.parse(selectedProductForOptions.addons).length > 0) && (
+          {(selectedProductForOptions?.addons && Array.isArray(safeParse(selectedProductForOptions.addons)) && safeParse(selectedProductForOptions.addons).length > 0) && (
             <div>
               <div style={{ fontWeight: 600, marginBottom: 8 }}>{t.addons}</div>
               <Checkbox.Group
@@ -1697,7 +1713,7 @@ function PosPage() {
                 onChange={v => setTempOptions(p => ({ ...p, addons: v }))}
               >
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {JSON.parse(selectedProductForOptions.addons).map(a => (
+                  {(safeParse(selectedProductForOptions.addons) || []).map(a => (
                     <Checkbox key={a.label} value={a.label}>
                       {a.label} (+${Number(a.price).toFixed(2)})
                     </Checkbox>

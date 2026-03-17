@@ -42,9 +42,11 @@ exports.create = async (req, res) => {
         // B. Insert Details & Deduct Stock (Recipe Aware)
         for (const item of cart_items) {
             // 1. Insert Detail Record
+            const itemPrice = Number(item.price) || 0;
+            const itemQty = Number(item.qty) || 1;
             await conn.query(
                 "INSERT INTO order_details (order_id, product_id, qty, price, note) VALUES (?, ?, ?, ?, ?)",
-                [order_id, item.product_id, item.qty, item.price, item.note || ""]
+                [order_id, item.product_id, itemQty, itemPrice, item.note || ""]
             );
 
             // 2. [Optional] Fetch Recipe if exists (Commented out until recipes table is created)

@@ -371,10 +371,18 @@ const CategoryView = ({ currentCategory, setCurrentCategory, menuItems, searchTe
 // --- MAIN APPLICATION ---
 
 const CoffeeMenuApp = () => {
-  const [selectedShop, setSelectedShop] = useState(() => JSON.parse(localStorage.getItem('coffee_pos_shop')));
+  const safeParse = (key, fallback = null) => {
+    try {
+      const val = localStorage.getItem(key);
+      return val ? JSON.parse(val) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+  const [selectedShop, setSelectedShop] = useState(() => safeParse('coffee_pos_shop'));
   const [selectedTable, setSelectedTable] = useState(() => localStorage.getItem('coffee_pos_table'));
-  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('coffee_pos_cart')) || []);
-  const [starredItems, setStarredItems] = useState(() => JSON.parse(localStorage.getItem('coffee_pos_starred')) || []);
+  const [cart, setCart] = useState(() => safeParse('coffee_pos_cart', []));
+  const [starredItems, setStarredItems] = useState(() => safeParse('coffee_pos_starred', []));
 
   const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState([]);
