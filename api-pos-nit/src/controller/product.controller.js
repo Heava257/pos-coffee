@@ -123,8 +123,6 @@ exports.update = async (req, res) => {
         const { business_id, branch_id } = req;
 
         const image = req.file?.path || req.file?.filename;
-        const p_status = (status === 'undefined' || status === undefined) ? 1 : Number(status);
-        const p_qty = (qty === 'undefined' || qty === undefined) ? 0 : Number(qty);
 
         // Update Template
         let sql = `
@@ -134,14 +132,14 @@ exports.update = async (req, res) => {
         `;
         let params = [
             name,
-            Number(category_id),
-            barcode || null,
-            brand || null,
-            description || null,
-            Number(p_status),
-            sizes || null,
-            addons || null,
-            Number(discount || 0)
+            Number(cleanVal(category_id)),
+            cleanVal(barcode),
+            cleanVal(brand),
+            cleanVal(description),
+            Number(cleanVal(status) || 1),
+            cleanVal(sizes),
+            cleanVal(addons),
+            Number(cleanVal(discount) || 0)
         ];
 
         if (image) {
@@ -158,10 +156,10 @@ exports.update = async (req, res) => {
         await conn.query(
             "UPDATE branch_products SET price = ?, cost_price = ?, stock_qty = ?, min_stock_alert = ? WHERE product_id = ? AND branch_id = ?",
             [
-                Number(price || 0),
-                Number(cost_price || 0),
-                Number(p_qty),
-                Number(min_stock_alert || 5),
+                Number(cleanVal(price) || 0),
+                Number(cleanVal(cost_price) || 0),
+                Number(cleanVal(qty) || 0),
+                Number(cleanVal(min_stock_alert) || 5),
                 Number(id),
                 Number(branch_id)
             ]
