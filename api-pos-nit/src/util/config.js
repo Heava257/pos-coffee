@@ -1,10 +1,12 @@
 module.exports = {
   db: {
-    HOST: process.env.DB_HOST || "localhost",
-    USER: process.env.DB_USER || "root",
-    PASSWORD: process.env.DB_PASSWORD || "",
-    DATABASE: process.env.DB_DATABASE || "coffee_saas",
-    PORT: process.env.DB_PORT || 3306,
+    // Switch between local and production easily
+    // In .env, set APP_ENV=local or APP_ENV=production
+    HOST: process.env.APP_ENV === 'production' ? process.env.DB_PROD_HOST : (process.env.DB_HOST || "localhost"),
+    USER: process.env.APP_ENV === 'production' ? process.env.DB_PROD_USER : (process.env.DB_USER || "root"),
+    PASSWORD: process.env.APP_ENV === 'production' ? process.env.DB_PROD_PASSWORD : (process.env.DB_PASSWORD || ""),
+    DATABASE: process.env.APP_ENV === 'production' ? process.env.DB_PROD_DATABASE : (process.env.DB_DATABASE || "coffee_saas"),
+    PORT: process.env.APP_ENV === 'production' ? process.env.DB_PROD_PORT : (process.env.DB_PORT || 3306),
   },
   platform_api_url: process.env.VITE_PLATFORM_API_URL || "https://platformsapi-production.up.railway.app/api",
   platform_hub_url: process.env.VITE_PLATFORM_HUB_URL || "https://platformhub-production.up.railway.app",

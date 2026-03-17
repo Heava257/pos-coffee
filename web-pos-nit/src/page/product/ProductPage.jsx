@@ -109,28 +109,33 @@ function ProductPage() {
     form.resetFields();
   };
   const onFinish = async (items) => {
-    var params = new FormData();
-    params.append("name", items.name || "");
-    params.append("category_id", items.category_id || "");
-    params.append("barcode", items.barcode || "");
-    params.append("brand", items.brand || "");
-    params.append("description", items.description || "");
-    params.append("qty", items.qty || 0);
-    params.append("min_stock_alert", items.min_stock_alert || 0);
-    params.append("price", items.price || 0);
-    params.append("cost_price", items.cost_price || 0);
-    params.append("discount", items.discount || 0);
-    params.append("status", items.status === 0 ? 0 : 1);
-    params.append("image", form.getFieldValue("image") || "");
-    params.append("id", form.getFieldValue("id") || "");
-    params.append("sizes", JSON.stringify(items.sizes || []));
-    params.append("addons", JSON.stringify(items.addons || []));
+    // 🔍 Debug log to see what we are sending
+    console.log("Submitting items:", items);
+    console.log("Form ID:", form.getFieldValue("id"));
 
+    var params = new FormData();
+    // Use items from onFinish if available, otherwise fallback to form
+    const getValue = (key) => items[key] !== undefined ? items[key] : form.getFieldValue(key);
+
+    params.append("id", form.getFieldValue("id") || "");
+    params.append("name", getValue("name") || "");
+    params.append("category_id", getValue("category_id") || "");
+    params.append("barcode", getValue("barcode") || "");
+    params.append("brand", getValue("brand") || "");
+    params.append("description", getValue("description") || "");
+    params.append("qty", getValue("qty") || 0);
+    params.append("min_stock_alert", getValue("min_stock_alert") || 0);
+    params.append("price", getValue("price") || 0);
+    params.append("cost_price", getValue("cost_price") || 0);
+    params.append("discount", getValue("discount") || 0);
+    params.append("status", getValue("status") === 0 ? 0 : 1);
+    params.append("sizes", JSON.stringify(getValue("sizes") || []));
+    params.append("addons", JSON.stringify(getValue("addons") || []));
 
     if (items.image_default) {
       if (items.image_default.file.status === "removed") {
         params.append("image_remove", "1");
-      } else {
+      } else if (items.image_default.file.originFileObj) {
         params.append(
           "upload_image",
           items.image_default.file.originFileObj,
@@ -138,10 +143,12 @@ function ProductPage() {
         );
       }
     }
+    
     var method = "post";
     if (form.getFieldValue("id")) {
       method = "put";
     }
+
     const res = await request("product", method, params);
     if (res && !res.error) {
       message.success(res.message);
@@ -382,6 +389,8 @@ function ProductPage() {
       >
 
         <Form layout="vertical" onFinish={onFinish} form={form}>
+          {/* Hidden ID field to ensure AntD tracks it */}
+          <Form.Item name="id" hidden><Input /></Form.Item>
           <Row gutter={16}>
             <Col span={12}>
               <div className="form-section">
