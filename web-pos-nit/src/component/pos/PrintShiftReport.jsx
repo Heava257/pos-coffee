@@ -13,7 +13,9 @@ const PrintShiftReport = React.forwardRef((props, ref) => {
         actual_cash_khr = 0,
         opening_cash = 0,
         opening_cash_khr = 0,
-        exchange_rate = 4000
+        exchange_rate = 4000,
+        total_expense_usd = 0,
+        remark = ""
     } = props;
 
     const formatUSD = (value) => {
@@ -33,7 +35,7 @@ const PrintShiftReport = React.forwardRef((props, ref) => {
 
     const opening_total_usd = Number(opening_cash) + (Number(opening_cash_khr) / exchange_rate);
     const actual_total_usd = Number(actual_cash) + (Number(actual_cash_khr) / exchange_rate);
-    const expected_total_usd = opening_total_usd + Number(summary.total_cash || 0);
+    const expected_total_usd = opening_total_usd + Number(summary.total_cash || 0) - (props.summary?.total_cash_expense || 0);
     const diff = actual_total_usd - expected_total_usd;
 
     return (
@@ -77,6 +79,10 @@ const PrintShiftReport = React.forwardRef((props, ref) => {
                     <span>Print Time:</span>
                     <span>{dayjs().format("HH:mm:ss")}</span>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Exchange Rate:</span>
+                    <span>1$ = {exchange_rate}៛</span>
+                </div>
             </div>
 
             <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
@@ -92,9 +98,17 @@ const PrintShiftReport = React.forwardRef((props, ref) => {
                     <span>Total Qty:</span>
                     <span>{summary.total_qty || 0}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '5px', fontSize: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
                     <span>GROSS SALES:</span>
                     <span>${formatUSD(summary.total_amount)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
+                    <span>TOTAL EXPENSE:</span>
+                    <span>-${formatUSD(summary.total_expense)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '5px', fontSize: '14px', borderTop: '1px solid #eee', paddingTop: '5px' }}>
+                    <span>NET PROFIT:</span>
+                    <span>${formatUSD(Number(summary.total_amount) - Number(summary.total_expense))}</span>
                 </div>
             </div>
 
@@ -129,8 +143,12 @@ const PrintShiftReport = React.forwardRef((props, ref) => {
                         <span>${formatUSD(opening_cash)} | {formatKHR(opening_cash_khr)}៛</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                        <span>Expected Sales:</span>
+                        <span>Expected Sales (Cash):</span>
                          <span>${formatUSD(summary.total_cash)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#ef4444' }}>
+                        <span>Expense (Cash):</span>
+                         <span>-${formatUSD(summary.total_cash_expense)}</span>
                     </div>
                 </div>
 
@@ -158,7 +176,26 @@ const PrintShiftReport = React.forwardRef((props, ref) => {
                     <span>DIFFERENCE:</span>
                     <span>${formatUSD(diff)}</span>
                 </div>
+
+                {remark && (
+                    <div style={{ marginTop: '10px', fontSize: '10px', fontStyle: 'italic', borderTop: '1px dashed #eee', paddingTop: '5px' }}>
+                        Note: {remark}
+                    </div>
+                )}
             </div>
+
+            {/* Top Products */}
+            {summary.top_products && summary.top_products.length > 0 && (
+                <div style={{ marginBottom: '15px' }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '11px', borderBottom: '1px solid #eee' }}>TOP SELLING ITEMS:</div>
+                    {summary.top_products.map((item, index) => (
+                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                            <span>{item.name}</span>
+                            <span>{item.total_qty} qty</span>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             <div style={{ marginTop: '30px', textAlign: 'center' }}>
                 <div style={{ borderTop: '1px solid #000', width: '60%', margin: '0 auto' }}></div>

@@ -163,9 +163,47 @@ exports.getList = async (req, res) => {
             summaryParams
         );
 
+        // Fetch Expenses for the same period and scope
+        const expenseParams = [
+            business_id,
+            ...(branch_id ? [branch_id] : []),
+            ...(from_date && to_date ? [from_date, to_date] : [])
+        ];
+        const [expenses] = await db.query(
+            `SELECT 
+                SUM(amount) as total_expense,
+                SUM(CASE WHEN payment_method = 'Cash' THEN amount ELSE 0 END) as total_cash_expense
+             FROM expense
+             WHERE business_id = ? 
+             ${branch_id ? 'AND branch_id = ?' : ''} 
+             ${from_date && to_date ? 'AND DATE(expense_date) BETWEEN ? AND ?' : ''}`,
+            expenseParams
+        );
+
+        // Fetch Top Selling Products
+        const [topProducts] = await db.query(
+            `SELECT p.name, SUM(od.qty) as total_qty
+             FROM order_details od
+             JOIN products p ON od.product_id = p.id
+             JOIN orders o ON od.order_id = o.id
+             WHERE o.business_id = ? 
+             ${branch_id ? 'AND o.branch_id = ?' : ''} 
+             ${from_date && to_date ? 'AND DATE(o.created_at) BETWEEN ? AND ?' : ''}
+             AND o.status != 'cancelled'
+             GROUP BY p.id
+             ORDER BY total_qty DESC
+             LIMIT 5`,
+            expenseParams // Same params as expenses (business_id, branch_id, date range)
+        );
+
         res.json({
             list,
-            summary: sum[0] || { total_order: 0, total_amount: 0, total_cash: 0, total_aba: 0, total_wing: 0, total_other: 0, total_qty: 0 }
+            summary: {
+                ...(sum[0] || {}),
+                total_expense: expenses[0]?.total_expense || 0,
+                total_cash_expense: expenses[0]?.total_cash_expense || 0,
+                top_products: topProducts
+            }
         });
     } catch (error) {
         logError("order.getList", error, res);

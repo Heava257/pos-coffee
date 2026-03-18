@@ -28,6 +28,7 @@ import {
 } from "recharts";
 import moment from "moment";
 import { useLanguage, translations } from "../../store/language.store";
+import { useProfileStore } from "../../store/profileStore";
 import { MdOutlineTableChart } from "react-icons/md";
 import { DollarSign, Activity, ShoppingBag, Loader, AlertTriangle, TrendingUp } from "lucide-react";
 
@@ -45,9 +46,10 @@ function HomePage() {
   const [performanceData, setPerformanceData] = useState([]);
   const [transactionData, setTransactionData] = useState([]);
 
+  const userId = useProfileStore(s => s.profile?.id || s.profile?.user_id);
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    if (userId) fetchAllData();
+  }, [userId]);
 
   const fetchAllData = async () => {
     setIsLoading(true);

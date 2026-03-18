@@ -18,6 +18,7 @@ import { request, getIconForCategory, getColorForCategory } from "../../util/hel
 import MainPage from "../../component/layout/MainPage";
 
 import { useLanguage, translations } from "../../store/language.store";
+import { useProfileStore } from "../../store/profileStore";
 
 const { Title } = Typography;
 
@@ -32,9 +33,10 @@ function CategoryPage() {
   });
   const [searchText, setSearchText] = useState("");
 
+  const userId = useProfileStore(s => s.profile?.id || s.profile?.user_id);
   useEffect(() => {
-    getList();
-  }, []);
+    if (userId) getList();
+  }, [userId]);
 
   const getList = async () => {
     setState((pre) => ({ ...pre, loading: true }));

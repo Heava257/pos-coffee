@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
+import logo from '../../assets/logo.png';
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -26,13 +27,20 @@ const MainWrapper = ({ children, bgClass = "bg-[#F8F9FA]" }) => (
       </div>
     </div>
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+      .font-serif { font-family: 'Playfair Display', serif; }
       .font-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      .premium-modal .ant-modal-content { border-radius: 24px !important; padding: 0 !important; overflow: hidden; }
-      .premium-modal .ant-modal-header { padding: 20px 24px; border-bottom: 1px solid #F1F2F6; margin: 0; }
-      .premium-modal .ant-modal-body { padding: 24px; }
+      .premium-modal .ant-modal-content { border-radius: 32px !important; padding: 0 !important; overflow: hidden; background: #FFFEFD; border: 1px solid rgba(192, 160, 96, 0.1); }
+      .premium-modal .ant-modal-header { padding: 24px 32px; border-bottom: 1px solid #F1F2F6; margin: 0; background: #FFFEFD; }
+      .glass-effect { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); }
+      .concave-nav {
+         background: #1A3C28;
+         clip-path: polygon(0 20%, 50% 0, 100% 20%, 100% 100%, 0 100%);
+      }
+      .gold-gradient { background: linear-gradient(135deg, #C0A060 0%, #D4AF37 50%, #B8860B 100%); }
+      .emerald-gradient { background: linear-gradient(135deg, #1A3C28 0%, #2D5A41 100%); }
     `}</style>
   </div>
 );
@@ -68,39 +76,52 @@ const SplashView = ({ businessName }) => (
 // --- VIEW COMPONENTS ---
 
 const ProductCard = ({ item, isStarred, onToggleStar, onClick }) => (
-  <div
-    className="group bg-white rounded-2xl border border-transparent hover:border-gray-100 hover:shadow-xl hover:shadow-gray-100/50 transition-all p-3 cursor-pointer relative"
+  <motion.div
+    whileHover={{ y: -8 }}
+    className="group bg-white rounded-[32px] border border-[#F1F2F6] hover:border-[#C0A060]/20 hover:shadow-2xl hover:shadow-[#1A3C28]/5 transition-all p-4 cursor-pointer relative"
     onClick={onClick}
   >
-    <div className="relative aspect-square rounded-xl bg-gray-50 overflow-hidden mb-4 shadow-sm">
+    <div className="relative aspect-[4/5] rounded-[24px] bg-[#FAF9F5] overflow-hidden mb-5">
       {item.image ? (
-        <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_400,c_fill,f_auto,q_auto")} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_500,c_fill,f_auto,q_auto")} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-3xl">☕</div>
+        <div className="w-full h-full flex items-center justify-center text-5xl bg-[#F4F4F4]">☕</div>
       )}
-      <button
-        onClick={(e) => { e.stopPropagation(); onToggleStar(item); }}
-        className={cn(
-          "absolute top-2 left-2 w-8 h-8 rounded-lg flex items-center justify-center backdrop-blur-md transition-all",
-          isStarred ? "bg-amber-400 text-white" : "bg-white/80 text-gray-400 hover:bg-white hover:text-amber-400"
-        )}
-      >
-        <Star size={16} fill={isStarred ? "currentColor" : "none"} strokeWidth={2.5} />
-      </button>
-      <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm border border-gray-100">
-        <Star size={12} className="fill-amber-500 text-amber-500" />
-        <span className="text-[10px] font-bold">4.9</span>
+      
+      {/* Premium Overlay Tag */}
+      <div className="absolute top-3 left-3 flex gap-1.5">
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleStar(item); }}
+          className={cn(
+            "w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-md transition-all",
+            isStarred ? "bg-[#C0A060] text-white" : "bg-white/80 text-[#1A3C28] hover:bg-white"
+          )}
+        >
+          <Star size={16} fill={isStarred ? "currentColor" : "none"} strokeWidth={2.5} />
+        </button>
+      </div>
+
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20">
+        <Star size={12} className="fill-[#C0A060] text-[#C0A060]" />
+        <span className="text-[11px] font-black text-white">4.9</span>
       </div>
     </div>
-    <h4 className="font-bold text-gray-800 text-sm mb-1 line-clamp-1">{item.name}</h4>
-    <p className="text-[10px] text-gray-400 mb-3 line-clamp-1">Freshly brewed coffee...</p>
-    <div className="flex justify-between items-center">
-      <span className="font-extrabold text-[#1A3C28]">${parseFloat(item.price).toFixed(2)}</span>
-      <button className="w-8 h-8 flex items-center justify-center bg-[#1A3C28] text-white rounded-lg shadow-lg shadow-[#1A3C28]/20 hover:scale-110 active:scale-95 transition-all">
-        <Plus size={16} strokeWidth={3} />
-      </button>
+
+    <div className="px-1">
+      <h4 className="font-bold text-[#1A2E1A] text-base mb-1 line-clamp-1">{item.name}</h4>
+      <p className="text-[11px] font-bold text-[#C0A060]/80 mb-4 uppercase tracking-wider">{item.category_name || "Specialty"}</p>
+      
+      <div className="flex justify-between items-center bg-[#FAF9F6] p-2 rounded-2xl border border-[#F1F2F6]">
+        <div className="flex flex-col ml-1">
+          <span className="text-[9px] font-black text-[#A0A0A0] uppercase tracking-tighter">Premium Price</span>
+          <span className="font-black text-[#1A3C28] text-lg">${parseFloat(item.price).toFixed(2)}</span>
+        </div>
+        <button className="w-11 h-11 flex items-center justify-center bg-[#1A3C28] text-white rounded-xl shadow-lg shadow-[#1A3C28]/20 hover:bg-[#C0A060] hover:scale-105 active:scale-95 transition-all">
+          <Plus size={20} strokeWidth={3} />
+        </button>
+      </div>
     </div>
-  </div>
+  </motion.div>
 );
 
 const HomeView = ({
@@ -108,66 +129,110 @@ const HomeView = ({
   menuItems, cart, setIsCartOpen, searchText, setSearchText,
   setOptionsModalItem, starredItems, onToggleStar
 }) => (
-  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col px-6 pb-24 pt-8">
-    <div className="flex justify-between items-center mb-8">
-      <div>
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Welcome to</p>
-        <h1 className="text-2xl font-extrabold text-[#1A3C28]">{selectedShop?.business_name || "Mingly Coffee"}</h1>
+  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col px-6 pb-24 pt-8 bg-[#FDFBF7]">
+    {/* Header Section */}
+    <div className="flex justify-between items-center mb-10">
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-[#1A3C28] flex items-center justify-center shadow-2xl shadow-[#1A3C28]/20 p-3">
+          <img src={logo} alt="brand" className="w_full h-full object-contain brightness-0 invert" />
+        </div>
+        <div>
+          <p className="text-[10px] font-black text-[#C0A060] uppercase tracking-[0.3em] mb-0.5">ESTABLISHED 2024</p>
+          <h1 className="text-2xl font-serif font-black text-[#1A3C28] leading-tight">{selectedShop?.business_name || "Mingly Coffee"}</h1>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <button className="relative w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full hover:bg-gray-100 transition-colors">
-          <Bell size={20} className="text-gray-600" />
-        </button>
+      <motion.button whileTap={{ scale: 0.9 }} className="relative w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-[#F1F2F6] text-[#1A3C28]">
+        <Bell size={22} strokeWidth={2.5} />
+        {cart.length > 0 && <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#C0A060] rounded-full border-2 border-white animate-pulse" />}
+      </motion.button>
+    </div>
+
+    {/* Search Section */}
+    <div className="relative mb-10 group">
+      <div className="absolute inset-x-0 h-full bg-[#1A3C28]/[0.02] rounded-3xl blur-xl group-hover:bg-[#1A3C28]/[0.05] transition-all"></div>
+      <div className="relative flex items-center bg-white border border-[#F1F2F6] rounded-3xl h-16 px-6 focus-within:border-[#C0A060] focus-within:shadow-xl focus-within:shadow-[#C0A060]/5 transition-all">
+        <Search className="text-[#C0A060]" size={20} strokeWidth={3} />
+        <input
+          type="text" placeholder="Discover your coffee..."
+          className="flex-1 h-full bg-transparent border-none px-4 text-base font-bold text-[#1A2E1A] placeholder:text-[#A0A0A0] focus:ring-0"
+          value={searchText} onChange={(e) => setSearchText(e.target.value)}
+        />
+        <div className="bg-[#FAF9F6] p-2 rounded-xl border border-[#F1F2F6]">
+           <Menu size={18} className="text-[#C0A060]" />
+        </div>
       </div>
     </div>
 
-    <div className="relative mb-8">
-      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-      <input
-        type="text" placeholder="Search for coffee, snacks..."
-        className="w-full h-14 bg-gray-50 border-none rounded-2xl pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-[#1A3C28]/10 transition-all"
-        value={searchText} onChange={(e) => setSearchText(e.target.value)}
-      />
-    </div>
-
-    <div className="relative bg-[#1A3C28] rounded-3xl p-8 text-white overflow-hidden mb-10 shadow-lg shadow-[#1A3C28]/10">
-      <div className="relative z-10 max-w-[65%]">
-        <h2 className="text-xl font-bold mb-2 leading-tight">Get 20% discount on your first order!</h2>
-        <p className="text-xs text-white/60 mb-6">Enjoy premium coffee brewed from the finest beans.</p>
-        <button className="bg-white text-[#1A3C28] px-6 py-2.5 rounded-xl text-sm font-bold shadow-xl shadow-black/10">Order Now</button>
+    {/* Banner Section - Premium Design */}
+    <div className="relative h-64 rounded-[40px] overflow-hidden mb-12 shadow-2xl shadow-[#1A3C28]/10">
+      <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop"
+        className="absolute inset-0 w-full h-full object-cover scale-110 brightness-75" alt="Banner" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#1A3C28]/95 via-[#1A3C28]/40 to-transparent"></div>
+      <div className="relative z-10 h-full flex flex-col justify-center px-10 max-w-[70%]">
+        <span className="inline-block px-3 py-1 bg-[#C0A060] text-black text-[9px] font-black uppercase tracking-widest rounded-full mb-4 w-fit">Summer Collection</span>
+        <h2 className="text-3xl md:text-4xl font-serif font-black text-white mb-2 leading-tight">Taste the Luxury of Fine Beans</h2>
+        <p className="text-white/60 text-xs font-medium mb-8 max-w-[280px]">Experience our signature limited edition brew, curated for premium members.</p>
+        <motion.button whileHover={{ x: 5 }} className="flex items-center gap-3 bg-white text-[#1A3C28] px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-wider shadow-xl shadow-black/20 w-fit">
+          Explore Now <ChevronLeft size={14} className="rotate-180" strokeWidth={3} />
+        </motion.button>
       </div>
-      <img src="https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=300&auto=format&fit=crop"
-        className="absolute -right-8 -bottom-8 w-44 h-44 object-cover rounded-full border-8 border-white/10 rotate-12" alt="Coffee" />
+      
+      {/* Premium Coffee Image Decoration */}
+      <motion.div 
+        animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
+        transition={{ repeat: Infinity, duration: 4 }}
+        className="absolute -right-12 -bottom-10 w-64 h-64 blur-[0.5px] opacity-90 hidden md:block"
+      >
+         <img src="https://cdni.iconscout.com/illustration/premium/thumb/takeaway-coffee-6849641-5619374.png" className="w-full h-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]" />
+      </motion.div>
     </div>
 
-    <div className="mb-10">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-bold text-gray-800">Categories</h3>
-        <button onClick={() => setCurrentCategory(null)} className="text-sm font-bold text-[#1A3C28]">View all</button>
+    {/* Categories Section */}
+    <div className="mb-12">
+      <div className="flex justify-between items-center mb-8 px-2">
+        <div>
+          <h3 className="text-xl font-serif font-black text-[#1A3C28]">Categories</h3>
+          <p className="text-[10px] font-bold text-[#A0A0A0] uppercase tracking-widest">Selected collections</p>
+        </div>
+        <button onClick={() => setCurrentCategory(null)} className="flex items-center gap-2 text-[11px] font-black text-[#C0A060] uppercase hover:gap-3 transition-all">View all <ChevronLeft size={14} className="rotate-180" strokeWidth={3} /></button>
       </div>
       <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6">
-        {[{ id: null, name: 'All' }, ...categories].map((cat) => (
-          <button
-            key={cat.id} onClick={() => setCurrentCategory(cat)}
-            className={cn("px-6 py-3 rounded-2xl font-bold text-sm transition-all whitespace-nowrap",
-              currentCategory?.id === cat.id ? "bg-[#1A3C28] text-white shadow-md shadow-[#1A3C28]/20" : "bg-gray-50 text-gray-500")}
-          >{cat.name}</button>
+        {[{ id: null, name: 'All Collection' }, ...categories].map((cat) => (
+          <motion.button
+            key={cat.id} 
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setCurrentCategory(cat)}
+            className={cn(
+              "px-8 py-4 rounded-[24px] font-bold text-[13px] transition-all whitespace-nowrap border",
+              currentCategory?.id === cat.id 
+                ? "bg-[#1A3C28] text-white border-[#1A3C28] shadow-2xl shadow-[#1A3C28]/20" 
+                : "bg-white text-[#A0A0A0] border-[#F1F2F6] hover:border-[#C0A060]/20"
+            )}
+          >
+            {cat.name}
+          </motion.button>
         ))}
       </div>
     </div>
 
-    <h3 className="text-lg font-bold text-gray-800 mb-6 font-sans">{searchText ? "Search Results" : "Most Popular"}</h3>
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {menuItems
-        .filter(i => !searchText || i.name.toLowerCase().includes(searchText.toLowerCase()))
-        .map((item) => (
-          <ProductCard
-            key={item.id} item={item}
-            isStarred={starredItems.some(s => s.id === item.id)}
-            onToggleStar={onToggleStar}
-            onClick={() => setOptionsModalItem(item)}
-          />
-        ))}
+    {/* Product Lists */}
+    <div className="px-2">
+      <div className="flex flex-col mb-10">
+        <h3 className="text-2xl font-serif font-black text-[#1A3C28] mb-1">{searchText ? "Found for You" : "House Favorites"}</h3>
+        <p className="text-[10px] font-black text-[#C0A060] uppercase tracking-[0.3em]">Pure perfection in every cup</p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        {menuItems
+          .filter(i => !searchText || i.name.toLowerCase().includes(searchText.toLowerCase()))
+          .map((item) => (
+            <ProductCard
+              key={item.id} item={item}
+              isStarred={starredItems.some(s => s.id === item.id)}
+              onToggleStar={onToggleStar}
+              onClick={() => setOptionsModalItem(item)}
+            />
+          ))}
+      </div>
     </div>
   </motion.div>
 );
@@ -371,6 +436,14 @@ const CategoryView = ({ currentCategory, setCurrentCategory, menuItems, searchTe
 // --- MAIN APPLICATION ---
 
 const CoffeeMenuApp = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const safeParse = (key, fallback = null) => {
     try {
       const val = localStorage.getItem(key);
@@ -617,25 +690,38 @@ const CoffeeMenuApp = () => {
           )}
         </AnimatePresence>
 
-        <div className="fixed bottom-0 md:bottom-8 left-0 md:left-1/2 md:-translate-x-1/2 w-full md:w-[480px] bg-white/90 backdrop-blur-xl border-t md:border border-gray-100 md:rounded-[32px] px-8 py-4 flex justify-between items-center z-50 md:shadow-2xl shadow-gray-200/50">
+        <motion.div 
+          initial={{ y: 100 }}
+          animate={{ y: isMobile ? 0 : 32 }}
+          className={cn(
+            "fixed bottom-0 md:bottom-8 left-0 md:left-1/2 md:-translate-x-1/2 w-full md:w-[540px] px-8 py-4 flex justify-between items-center z-50 transition-all",
+            isMobile ? "bg-[#1A3C28] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] rounded-t-[40px]" : "bg-[#1A3C28] shadow-2xl shadow-[#1A3C28]/30 rounded-[32px]"
+          )}
+        >
+          {/* Subtle decoration inside the footer bar */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-white/10 rounded-full mt-2 md:hidden"></div>
+
           {[
-            { id: 'home', icon: Home, label: 'Home' },
-            { id: 'order', icon: FileText, label: 'Order', badge: cart.length },
+            { id: 'home', icon: Home, label: 'Boutique' },
+            { id: 'order', icon: FileText, label: 'Basket', badge: cart.length },
             { id: 'starred', icon: Star, label: 'Starred' },
-            { id: 'profile', icon: User, label: 'Profile' }
+            { id: 'profile', icon: User, label: 'Atelier' }
           ].map(tab => (
             <button
               key={tab.id} onClick={() => { setActiveTab(tab.id); if (tab.id === 'order') setIsCartOpen(true); else setCurrentCategory(null); }}
-              className={cn("flex flex-col items-center gap-1.5 transition-all", (activeTab === tab.id || (tab.id === 'order' && isCartOpen)) ? "text-[#1A3C28]" : "text-gray-300")}
+              className={cn("flex flex-col items-center gap-2 transition-all relative", (activeTab === tab.id || (tab.id === 'order' && isCartOpen)) ? "text-[#C0A060]" : "text-white/40")}
             >
-              <div className="relative">
+              <div className="relative p-2">
                 <tab.icon size={22} strokeWidth={(activeTab === tab.id || (tab.id === 'order' && isCartOpen)) ? 3 : 2} />
-                {tab.badge > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full border-2 border-white text-[8px] flex items-center justify-center text-white font-black">{tab.badge}</span>}
+                {tab.badge > 0 && <span className="absolute -top-0 -right-0 w-5 h-5 bg-[#C0A060] rounded-full border-2 border-[#1A3C28] text-[9px] flex items-center justify-center text-black font-black shadow-lg">{tab.badge}</span>}
+                {(activeTab === tab.id || (tab.id === 'order' && isCartOpen)) && (
+                   <motion.div layoutId="nav-glow" className="absolute inset-0 bg-white/5 blur-xl rounded-full" />
+                )}
               </div>
-              <span className="text-[10px] font-bold uppercase">{tab.label}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{tab.label}</span>
             </button>
           ))}
-        </div>
+        </motion.div>
       </div>
 
       <Modal

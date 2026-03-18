@@ -2,7 +2,7 @@ const { db, logError } = require("../util/helper");
 
 exports.getAllPlans = async (req, res) => {
     try {
-        const [plans] = await db.query("SELECT * FROM subscription_plans ORDER BY price ASC");
+        const [plans] = await db.query("SELECT * FROM subscription_plans ORDER BY billing_cycle DESC, price ASC");
         res.json({
             plans,
             success: true
@@ -14,7 +14,7 @@ exports.getAllPlans = async (req, res) => {
 
 exports.updatePlan = async (req, res) => {
     try {
-        const { id, name, max_branches, max_staff, max_products, price, is_active } = req.body;
+        const { id, name, max_branches, max_staff, max_products, price, billing_cycle, is_active } = req.body;
         await db.query(`
             UPDATE subscription_plans SET 
                 name = ?, 
@@ -22,9 +22,10 @@ exports.updatePlan = async (req, res) => {
                 max_staff = ?, 
                 max_products = ?, 
                 price = ?, 
+                billing_cycle = ?,
                 is_active = ?
             WHERE id = ?
-        `, [name, max_branches, max_staff, max_products, price, is_active, id]);
+        `, [name, max_branches, max_staff, max_products, price, billing_cycle || 'monthly', is_active, id]);
 
         res.json({
             message: "Plan updated successfully",
@@ -73,7 +74,10 @@ exports.getBusinessPlan = async (req, res) => {
                     staff: staff[0].total,
                     products: products[0].total
                 },
-                subscription: subs[0] || {
+                subscription: subs.length > 0 ? {
+                    ...subs[0],
+                    is_lifetime: subs[0].end_date === null
+                } : {
                     start_date: plan.created_at,
                     end_date: null,
                     status: 'active',
@@ -152,11 +156,17 @@ exports.selfUpgrade = async (req, res) => {
         await conn.query("UPDATE subscriptions SET status = 'expired' WHERE business_id = ? AND status = 'active'", [business_id]);
 
         // 3. Create new subscription period
+        const [planRow] = await conn.query("SELECT billing_cycle FROM subscription_plans WHERE id = ?", [plan_id]);
+        const isLifetime = planRow.length && planRow[0].billing_cycle === 'lifetime';
+
         const startDate = new Date();
         const startString = startDate.toISOString().split('T')[0];
-        const endDate = new Date();
-        endDate.setDate(endDate.getDate() + (duration_days || 30));
-        const endString = endDate.toISOString().split('T')[0];
+        let endString = null;
+        if (!isLifetime) {
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + (duration_days || 30));
+            endString = endDate.toISOString().split('T')[0];
+        }
 
         const manualTranId = `MANUAL-${Date.now()}`;
         await conn.query(

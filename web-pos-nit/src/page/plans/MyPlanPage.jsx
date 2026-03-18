@@ -252,7 +252,7 @@ const handleDownloadInvoice = async (tranId) => {
             title: t.price,
             dataIndex: "plan_price",
             key: "plan_price",
-            render: (p) => <Text style={{ color: "#1e4a2d", fontWeight: 700 }}>${p}/mo</Text>,
+            render: (p, record) => <Text style={{ color: "#1e4a2d", fontWeight: 700 }}>${p}{record.billing_cycle === 'lifetime' ? ` (${t.one_time})` : '/mo'}</Text>,
         },
         {
             title: t.started,
@@ -351,7 +351,7 @@ const handleDownloadInvoice = async (tranId) => {
                                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                                         <CrownOutlined style={{ fontSize: "40px", color: "#c0a060" }} />
                                         <Tag color="gold" style={{ borderRadius: "12px", border: "none", padding: "2px 12px" }}>
-                                            {subscription.is_lifetime ? "LIFETIME" : subscription.status?.toUpperCase()}
+                                            {subscription.is_lifetime ? (t.lifetime?.toUpperCase() || "LIFETIME") : subscription.status?.toUpperCase()}
                                         </Tag>
                                     </div>
 
@@ -543,7 +543,7 @@ const handleDownloadInvoice = async (tranId) => {
                                                     {isLower && <Tag color="default" style={{ marginLeft: 8 }}>{t.not_available}</Tag>}
                                                 </Title>
                                                 <Text type="secondary">
-                                                    {plan.price === "0.00" ? "Free Forever" : `$${plan.price} / ${t.month}`}
+                                                    {plan.price === "0.00" ? "Free Forever" : `$${plan.price} ${plan.billing_cycle === 'lifetime' ? '(' + t.one_time + ')' : '/ ' + t.month}`}
                                                 </Text>
                                             </Space>
                                             <Radio value={plan.id} disabled={isLower} />
@@ -639,7 +639,8 @@ const handleDownloadInvoice = async (tranId) => {
                                         ${selectedPlan.price}
                                     </Text>
                                     <br />
-                                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px" }}>/ {t.month}</Text>
+                                    {selectedPlan.billing_cycle !== 'lifetime' && <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px" }}>/ {t.month}</Text>}
+                                    {selectedPlan.billing_cycle === 'lifetime' && <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px" }}> ({t.one_time})</Text>}
                                 </div>
                             </div>
 
@@ -672,11 +673,11 @@ const handleDownloadInvoice = async (tranId) => {
                             </List.Item>
                             <List.Item>
                                 <Space><CalendarOutlined style={{ color: "#c0a060" }} /><Text>{t.expires_on}</Text></Space>
-                                <Text strong>{dayjs().add(30, "day").format("DD MMM YYYY")}</Text>
+                                <Text strong>{selectedPlan.billing_cycle === 'lifetime' ? t.no_expiry : dayjs().add(30, "day").format("DD MMM YYYY")}</Text>
                             </List.Item>
                             <List.Item>
                                 <Space><CheckCircleOutlined style={{ color: "#52c41a" }} /><Text>{t.duration}</Text></Space>
-                                <Text strong>30 {t.month}</Text>
+                                <Text strong>{selectedPlan.billing_cycle === 'lifetime' ? t.permanent_access : `30 ${t.days}`}</Text>
                             </List.Item>
                         </List>
 
@@ -743,12 +744,12 @@ const handleDownloadInvoice = async (tranId) => {
                                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                                     <Text type="secondary">{t.active_until}</Text>
                                     <Text strong style={{ color: "#1e4a2d" }}>
-                                        {upgradeResult.end_date ? dayjs(upgradeResult.end_date).format("DD MMM YYYY") : dayjs().add(30, "day").format("DD MMM YYYY")}
+                                        {selectedPlan?.billing_cycle === 'lifetime' ? t.no_expiry : (upgradeResult.end_date ? dayjs(upgradeResult.end_date).format("DD MMM YYYY") : dayjs().add(30, "day").format("DD MMM YYYY"))}
                                     </Text>
                                 </div>
                                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                                     <Text type="secondary">{t.duration}</Text>
-                                    <Text strong>30 {t.month}</Text>
+                                    <Text strong>{selectedPlan?.billing_cycle === 'lifetime' ? t.lifetime : `30 ${t.days}`}</Text>
                                 </div>
                             </Space>
                         </div>

@@ -14,7 +14,8 @@ import {
     message,
     Space,
     Badge,
-    Divider
+    Divider,
+    Select
 } from "antd";
 import {
     CreditCardOutlined,
@@ -152,7 +153,7 @@ const PlanPage = () => {
             title: "Price",
             dataIndex: "price",
             key: "price",
-            render: (price) => <Text style={{ color: '#1e4a2d', fontWeight: 700 }}>${price}/mo</Text>
+            render: (price, record) => <Text style={{ color: '#1e4a2d', fontWeight: 700 }}>${price}{record.billing_cycle === 'lifetime' ? ' (One-time)' : '/mo'}</Text>
         },
         {
             title: "Limits",
@@ -415,8 +416,30 @@ const PlanPage = () => {
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item name="price" label="Monthly Price ($)" rules={[{ required: true }]}>
+                            <Form.Item name="price" label="Price ($)" rules={[{ required: true }]}>
                                 <InputNumber style={{ width: '100%' }} min={0} step={0.01} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item name="billing_cycle" label="Billing Cycle" rules={[{ required: true }]}>
+                                <Select>
+                                    <Select.Option value="monthly">Monthly</Select.Option>
+                                    <Select.Option value="lifetime">Lifetime (One-time)</Select.Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="is_active" label="Status" valuePropName="checked">
+                                <Badge
+                                    status={form.getFieldValue("is_active") ? "success" : "default"}
+                                    text={form.getFieldValue("is_active") ? "Active" : "Inactive"}
+                                />
+                                <Select style={{ width: '100%', marginTop: 8 }}>
+                                    <Select.Option value={1}>Active</Select.Option>
+                                    <Select.Option value={0}>Inactive</Select.Option>
+                                </Select>
                             </Form.Item>
                         </Col>
                     </Row>

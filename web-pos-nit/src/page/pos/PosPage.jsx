@@ -439,6 +439,8 @@ function PosPage() {
   const [cashReceivedUSD, setCashReceivedUSD] = useState(0);
   const [cashReceivedKHR, setCashReceivedKHR] = useState(0);
   const [cashPaymentModalVisible, setCashPaymentModalVisible] = useState(false);
+  const [currentShift, setCurrentShift] = useState(null);
+  const [openShiftModalVisible, setOpenShiftModalVisible] = useState(false);
 
   const { config } = configStore();
   const refInvoice = useRef(null);
@@ -487,17 +489,55 @@ function PosPage() {
 
   // ── initial data ──
   useEffect(() => {
-    getParentCategories();
-    getBranchInfo();
-    getList();
-    getPendingOrders();
-    const iv = setInterval(getPendingOrders, 30000); // Check every 30s
-    return () => clearInterval(iv);
-  }, []);
+    if (userId) {
+      checkShiftStatus();
+      getParentCategories();
+      getBranchInfo();
+      getPendingOrders();
+      const iv = setInterval(getPendingOrders, 30000); // Check every 30s
+      return () => clearInterval(iv);
+    }
+  }, [userId]);
+
+  const checkShiftStatus = async () => {
+    try {
+      const res = await request("shift/current", "get");
+      if (res && res.success && res.data) {
+        setCurrentShift(res.data);
+        setOpenShiftModalVisible(false);
+      } else {
+        setCurrentShift(null);
+        setOpenShiftModalVisible(true);
+      }
+    } catch (error) {
+      console.error("Error checking shift status:", error);
+    }
+  };
+
+  const onOpenShift = async (values) => {
+    try {
+      const data = {
+        opening_cash_usd: values.opening_cash_usd || 0,
+        opening_cash_khr: values.opening_cash_khr || 0,
+      };
+      const res = await request("shift/open", "post", data);
+      if (res && res.success) {
+        message.success(res.message);
+        checkShiftStatus();
+      } else {
+        message.warning(res.message);
+      }
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to open shift");
+    }
+  };
 
   useEffect(() => {
-    getList();
-  }, [selectedCategory]);
+    if (userId) {
+      getList();
+    }
+  }, [selectedCategory, userId]);
 
   useEffect(() => {
     handleCalSummary();
@@ -1970,6 +2010,72 @@ function PosPage() {
             </div>
           </div>
         </div>
+      </Modal>
+      {/* 🚀 Open Shift Modal */}
+      <Modal
+        title={
+          <div style={{textAlign: 'center', padding: '10px 0'}}>
+            <Typography.Title level={4} style={{margin: 0}}><ShoppingOutlined /> Open New Shift / បើកបញ្ជីថ្មី</Typography.Title>
+            <Typography.Text type="secondary">Enter your opening cash to start / បញ្ចូលសាច់ប្រាក់ដើមគ្រាដើម្បីចាប់ផ្តើម</Typography.Text>
+          </div>
+        }
+        open={openShiftModalVisible}
+        footer={null}
+        width={400}
+        closable={false}
+        maskClosable={false}
+      >
+        <Form layout="vertical" onFinish={onOpenShift}>
+          <div style={{background: '#f8fafc', padding: 20, borderRadius: 12, marginBottom: 20}}>
+            <Form.Item 
+              name="opening_cash_usd" 
+              label="Opening Cash (USD) / លុយដើម ($)" 
+              initialValue={0}
+            >
+              <InputNumber 
+                style={{ width: '100%' }} 
+                size="large"
+                prefix="$" 
+                min={0} 
+              />
+            </Form.Item>
+            <Form.Item 
+              name="opening_cash_khr" 
+              label="Opening Cash (KHR) / លុយដើម (៛)" 
+              initialValue={0}
+            >
+              <InputNumber 
+                style={{ width: '100%' }} 
+                size="large"
+                prefix="៛" 
+                min={0} 
+                step={100}
+              />
+            </Form.Item>
+          </div>
+
+          <div style={{textAlign: 'center', marginBottom: 10}}>
+            <Typography.Text type="secondary" style={{fontSize: 12}}>
+              Authorized By: <Typography.Text strong>{profile?.name}</Typography.Text>
+            </Typography.Text>
+          </div>
+
+          <Button 
+            type="primary" 
+            htmlType="submit" 
+            block 
+            size="large" 
+            style={{height: 50, borderRadius: 8, background: COLORS.darkGreen}}
+          >
+            Open Shift Now / បើកបញ្ជីឥឡូវនេះ
+          </Button>
+          
+          <div style={{marginTop: 15, textAlign: 'center'}}>
+             <Button type="link" onClick={() => window.location.href = '/'}>
+                Back to Dashboard / ត្រឡប់ទៅផ្ទាំងគ្រប់គ្រង
+             </Button>
+          </div>
+        </Form>
       </Modal>
     </div>
   );

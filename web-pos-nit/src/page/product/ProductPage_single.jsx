@@ -22,7 +22,7 @@ import { MdAdd, MdDelete, MdEdit, MdRestaurantMenu } from "react-icons/md";
 import MainPage from "../../component/layout/MainPage";
 import { configStore } from "../../store/configStore";
 import { Config } from "../../util/config";
-import { getProfile } from "../../store/profile.store";
+import { useProfileStore } from "../../store/profileStore";
 import "./Product.css"
 import RecipeModal from "./RecipeModal";
 import { useLanguage, translations } from "../../store/language.store";
@@ -79,19 +79,19 @@ const CoffeeOptions = ({ config, categoryId, stateId, t }) => {
         paddingBottom: 10
       }}>
         <MdRestaurantMenu style={{ fontSize: 20 }} /> 
-        Customize Your Coffee / ការកំណត់ជម្រើសកាហ្វេ
+        {t.customize_coffee}
       </div>
 
       <Form.Item name="moods" label={false} initialValue={['hot', 'iced']}>
         <div>
           <div style={{ fontWeight: 700, marginBottom: 12, color: COLORS.textPrimary, fontSize: 14 }}>
-            🔥❄️ {t.mood || "Moods"} / {translations.kh.mood || "ប្រភេទក្នុងហាង"}
+            🔥❄️ {t.mood}
           </div>
           <Checkbox.Group 
             options={[
-              { label: 'Hot', value: 'hot' },
-              { label: 'Iced', value: 'iced' },
-              { label: 'Frappe', value: 'frappe' }
+              { label: t.hot, value: 'hot' },
+              { label: t.iced, value: 'iced' },
+              { label: t.frappe, value: 'frappe' }
             ]} 
           />
         </div>
@@ -102,10 +102,10 @@ const CoffeeOptions = ({ config, categoryId, stateId, t }) => {
         {(fields, { add, remove }) => (
           <>
             <div style={{ fontWeight: 800, marginBottom: 4, color: COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>☕</span> {t.sizes} / {translations.kh.sizes}
+              <span>☕</span> {t.sizes}
             </div>
             <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 12, fontStyle: 'italic' }}>
-              * ប្រសិនបើមានកំណត់តម្លៃតាមទំហំខាងក្រោម វានឹងប្រើជំនួសតម្លៃគោលក្នុង POS (Sizes override Base Price).
+              {t.sizes_override_msg}
             </div>
             {fields.map(({ key, name, ...restField }) => (
               <Space key={key} style={{ display: "flex", marginBottom: 12 }} align="start">
@@ -160,7 +160,7 @@ const CoffeeOptions = ({ config, categoryId, stateId, t }) => {
                 color: COLORS.midGreen 
               }}
             >
-              {t.add_size} / {translations.kh.add_size || "បន្ថែមទំហំ"}
+              {t.add_size}
             </Button>
           </>
         )}
@@ -170,7 +170,7 @@ const CoffeeOptions = ({ config, categoryId, stateId, t }) => {
         {(fields, { add, remove }) => (
           <>
             <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>➕</span> {t.addons} / {translations.kh.addons}
+              <span>➕</span> {t.addons}
             </div>
             {fields.map(({ key, name, ...restField }) => (
               <Space key={key} style={{ display: "flex", marginBottom: 12 }} align="start">
@@ -225,7 +225,7 @@ const CoffeeOptions = ({ config, categoryId, stateId, t }) => {
                 color: COLORS.midGreen 
               }}
             >
-              {t.add_addon} / {translations.kh.add_addon || "បន្ថែមគ្រឿងបន្ថែម"}
+              {t.add_addon}
             </Button>
           </>
         )}
@@ -264,9 +264,10 @@ function ProductPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const userId = useProfileStore(s => s.profile?.id || s.profile?.user_id);
   useEffect(() => {
-    getList();
-  }, []);
+    if (userId) getList();
+  }, [userId]);
   const refPage = React.useRef(1);
 
   const getList = async () => {
@@ -560,13 +561,12 @@ function ProductPage() {
             <Col span={12}>
               <div className="form-section">
                 <Form.Item
-                  label={`${t.price || "Price"} (តម្លៃគោល)`}
+                  label={`${t.price || "Price"} (${t.base_price_label})`}
                   name="price"
                   rules={[{ required: true, message: t.price_required }]}
+                  tooltip={t.price_tooltip || "តម្លៃទូទៅ ឬតម្លៃទាបបំផុតប្រសិនបើមានច្រើនទំហំ (General / Fallback Price)"}
                 >
-                  <Tooltip title="តម្លៃទូទៅ ឬតម្លៃទាបបំផុតប្រសិនបើមានច្រើនទំហំ (General / Fallback Price)">
-                    <InputNumber min={0} step={0.01} style={{ width: '100%' }} placeholder="2.50" />
-                  </Tooltip>
+                  <InputNumber min={0} step={0.01} style={{ width: '100%' }} placeholder="2.50" />
                 </Form.Item>
 
                 <Form.Item label={t.status} name="status">
@@ -614,7 +614,7 @@ function ProductPage() {
                   height: 45
                 }}
               >
-                {form.getFieldValue("id") ? t.update_item || "Update" : t.save_item || "Save"}
+                {form.getFieldValue("id") ? t.update_item : t.save_item}
               </Button>
             </Space>
           </div>
@@ -626,7 +626,7 @@ function ProductPage() {
         columns={[
           {
             key: "name",
-            title: t.name,
+            title: t.product_name,
             dataIndex: "name",
           },
           {

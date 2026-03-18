@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { formatDateServer, request } from "../../util/helper";
-import { getProfile } from "../../store/profile.store";
+import { useProfileStore } from "../../store/profileStore";
 import {
   Avatar,
   Button,
@@ -39,7 +39,9 @@ const { TabPane } = Tabs;
 function UserPage() {
   const { lang } = useLanguage();
   const t = translations[lang];
-  const profile = getProfile();
+  const profile = useProfileStore(s => s.profile);
+  const userId = profile?.id || profile?.user_id;
+
   const isSuperAdmin = profile?.business_id === 1 && profile?.is_super_admin === 1;
   const isOwner = profile?.role_name?.toUpperCase() === "OWNER" || profile?.role_code === "owner";
   const isAdmin = profile?.role_name?.toUpperCase().includes("ADMIN") || profile?.role_code === "admin";
@@ -80,8 +82,8 @@ function UserPage() {
   });
 
   useEffect(() => {
-    getList();
-  }, []);
+    if (userId) getList();
+  }, [userId]);
 
   // Fetch user list with summary and sub info
   const getList = async () => {

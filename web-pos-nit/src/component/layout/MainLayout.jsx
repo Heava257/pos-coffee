@@ -37,7 +37,11 @@ import {
   TeamOutlined,
   GlobalOutlined,
   SettingOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
+import { twMerge } from 'tailwind-merge';
+import { clsx } from 'clsx';
+function cn(...inputs) { return twMerge(clsx(inputs)); }
 import { Config } from "../../util/config";
 import { FaHistory } from "react-icons/fa";
 import { Alert, Select } from "antd";
@@ -589,11 +593,18 @@ const MainLayout = () => {
                   {!isMobile && profile?.business_id !== 1 && (
                     <Button
                       type="primary"
-                      icon={<TrophyOutlined />}
+                      icon={profile?.plan_id >= 2 ? <CrownOutlined style={{ color: '#fff' }} /> : <TrophyOutlined />}
                       onClick={() => navigate('/my-plan')}
-                      className="premium-upgrade-btn"
+                      className={cn(
+                        "premium-upgrade-btn",
+                        profile?.plan_id >= 3 && "gold-gradient border-none text-black",
+                        profile?.plan_id === 2 && "emerald-gradient"
+                      )}
+                      style={profile?.plan_id >= 3 ? { color: '#000', fontWeight: 900 } : {}}
                     >
-                      UPGRADE TO PRO
+                      {profile?.plan_id === 1 && "UPGRADE TO PRO"}
+                      {profile?.plan_id === 2 && "PRO ACCOUNT"}
+                      {profile?.plan_id >= 3 && "PREMIUM ENTERPRISE"}
                     </Button>
                   )}
 

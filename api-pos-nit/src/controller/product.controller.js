@@ -14,7 +14,7 @@ exports.getList = async (req, res) => {
         let params = [business_id];
         let sql = `
         SELECT 
-            p.id, p.name, p.image, p.category_id, p.status, p.barcode, p.brand,
+            p.id, p.name, p.image, p.category_id, p.status, p.barcode, p.brand, p.description,
             p.sizes, p.addons, p.moods, p.discount,
             bp.price, bp.cost_price, bp.stock_qty AS qty, bp.is_available, bp.min_stock_alert,
             c.name as category_name
