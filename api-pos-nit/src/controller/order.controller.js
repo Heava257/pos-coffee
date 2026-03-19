@@ -6,7 +6,7 @@ exports.create = async (req, res) => {
     try {
         await conn.beginTransaction();
         const { business_id, branch_id } = req;
-        const user_id = req.user_id || null; // Support guest orders (QR Scan)
+        const user_id = req.user_id || null; 
         const {
             customer_name,
             table_no,
@@ -14,9 +14,13 @@ exports.create = async (req, res) => {
             total_amount,
             payment_method,
             order_type,
-            cart_items, // Array of products
-            status: requestStatus // 'unpaid' etc.
+            cart_items,
+            status: requestStatus
         } = req.body;
+
+        console.log("Creating new order:", {
+            business_id, branch_id, user_id, customer_name, table_no, total_amount, itemsCount: cart_items?.length
+        });
 
         // Default status: if guest ordered without paying yet -> 'ordered' or 'unpaid'
         // If POS staff created it (user_id exists) -> usually 'completed' (already paid)
@@ -215,18 +219,37 @@ exports.getOrderDetail = async (req, res) => {
     try {
         const { order_id } = req.params;
         const { business_id } = req;
+        
+        console.log("Fetching order details for ID:", order_id, "User Business ID:", business_id);
+
+        const [order_check] = await db.query("SELECT id, business_id FROM orders WHERE id = ?", [order_id]);
+        if (order_check.length > 0) {
+            console.log("Order found in DB:", order_check[0]);
+        } else {
+            console.log("Order NOT found in DB with ID:", order_id);
+        }
+
+        const [order] = await db.query("SELECT * FROM orders WHERE id = ? AND business_id = ?", [order_id, business_id]);
+
+        if (order.length === 0) {
+            console.log("Order access denied or not found:", { order_id, business_id });
+            return res.json({
+                details: [],
+                order: null,
+                message: "Order not found or access denied"
+            });
+        }
 
         const [list] = await db.query(
             `SELECT od.*, p.name as product_name, p.image, c.name as category_name
              FROM order_details od
              LEFT JOIN products p ON od.product_id = p.id
              LEFT JOIN categories c ON p.category_id = c.id
-             JOIN orders o ON od.order_id = o.id
-             WHERE od.order_id = ? AND o.business_id = ?`,
-            [order_id, business_id]
+             WHERE od.order_id = ?`,
+            [order_id]
         );
 
-        const [order] = await db.query("SELECT * FROM orders WHERE id = ? AND business_id = ?", [order_id, business_id]);
+        console.log("Order details successfully fetched. Count:", list.length);
 
         res.json({
             details: list,

@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage, translations } from '../../store/language.store';
 import logo from '../../assets/logo.png';
 
 function cn(...inputs) {
@@ -19,10 +20,13 @@ function cn(...inputs) {
 
 // --- SHARED COMPONENTS ---
 
-const MainWrapper = ({ children, bgClass = "bg-[#F8F9FA]" }) => (
-  <div className={cn("min-h-screen font-sans antialiased text-[#2D3436]", bgClass)}>
-    <div className="max-w-[1280px] mx-auto min-h-screen relative flex flex-col bg-white shadow-sm overflow-hidden md:rounded-3xl md:my-6 md:min-h-[calc(100vh-48px)]">
-      <div className="w-full h-full relative flex flex-col overflow-y-auto no-scrollbar">
+const MainWrapper = ({ children, bgClass = "bg-[#FDFBF7]", isMobile }) => (
+  <div className={cn("min-h-screen font-sans antialiased text-[#2D3436] transition-all duration-500", bgClass)}>
+    <div className={cn(
+      "relative flex flex-col bg-white overflow-hidden transition-all duration-700 w-full min-h-screen",
+      !isMobile && "border-none shadow-none"
+    )}>
+      <div className="w-full h-full relative flex flex-col overflow-y-auto no-scrollbar scroll-smooth">
         {children}
       </div>
     </div>
@@ -35,10 +39,6 @@ const MainWrapper = ({ children, bgClass = "bg-[#F8F9FA]" }) => (
       .premium-modal .ant-modal-content { border-radius: 32px !important; padding: 0 !important; overflow: hidden; background: #FFFEFD; border: 1px solid rgba(192, 160, 96, 0.1); }
       .premium-modal .ant-modal-header { padding: 24px 32px; border-bottom: 1px solid #F1F2F6; margin: 0; background: #FFFEFD; }
       .glass-effect { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); }
-      .concave-nav {
-         background: #1A3C28;
-         clip-path: polygon(0 20%, 50% 0, 100% 20%, 100% 100%, 0 100%);
-      }
       .gold-gradient { background: linear-gradient(135deg, #C0A060 0%, #D4AF37 50%, #B8860B 100%); }
       .emerald-gradient { background: linear-gradient(135deg, #1A3C28 0%, #2D5A41 100%); }
     `}</style>
@@ -75,167 +75,288 @@ const SplashView = ({ businessName }) => (
 
 // --- VIEW COMPONENTS ---
 
-const ProductCard = ({ item, isStarred, onToggleStar, onClick }) => (
+const ProductCard = ({ item, isStarred, onToggleStar, onClick, isMobile }) => (
   <motion.div
-    whileHover={{ y: -8 }}
-    className="group bg-white rounded-[32px] border border-[#F1F2F6] hover:border-[#C0A060]/20 hover:shadow-2xl hover:shadow-[#1A3C28]/5 transition-all p-4 cursor-pointer relative"
+    whileHover={{ y: -8, scale: 1.02 }}
+    whileTap={{ scale: 0.95 }}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    layout
+    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+    className={cn(
+      "group bg-white rounded-[24px] border border-[#F1F2F6] hover:border-[#C0A060]/20 hover:shadow-2xl transition-all cursor-pointer relative",
+      isMobile ? "p-2.5" : "p-4"
+    )}
     onClick={onClick}
   >
-    <div className="relative aspect-[4/5] rounded-[24px] bg-[#FAF9F5] overflow-hidden mb-5">
+    <div className={cn(
+      "relative aspect-[4/5] rounded-[18px] bg-[#FAF9F5] overflow-hidden",
+      isMobile ? "mb-2.5" : "mb-5"
+    )}>
       {item.image ? (
-        <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_500,c_fill,f_auto,q_auto")} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+        <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_500,c_fill,f_auto,q_auto")} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-5xl bg-[#F4F4F4]">☕</div>
+        <div className="w-full h-full flex items-center justify-center text-4xl bg-[#F4F4F4]">☕</div>
       )}
-      
-      {/* Premium Overlay Tag */}
-      <div className="absolute top-3 left-3 flex gap-1.5">
+      <div className="absolute top-2 left-2 flex gap-1">
         <button
           onClick={(e) => { e.stopPropagation(); onToggleStar(item); }}
           className={cn(
-            "w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-md transition-all",
-            isStarred ? "bg-[#C0A060] text-white" : "bg-white/80 text-[#1A3C28] hover:bg-white"
+            "w-7 h-7 rounded-lg flex items-center justify-center backdrop-blur-md transition-all",
+            isStarred ? "bg-[#C0A060] text-white" : "bg-white/80 text-[#1A3C28] hover:bg-white shadow-sm"
           )}
         >
-          <Star size={16} fill={isStarred ? "currentColor" : "none"} strokeWidth={2.5} />
+          <Star size={12} fill={isStarred ? "currentColor" : "none"} strokeWidth={3} />
         </button>
       </div>
-
-      <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20">
-        <Star size={12} className="fill-[#C0A060] text-[#C0A060]" />
-        <span className="text-[11px] font-black text-white">4.9</span>
+      <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg border border-white/20">
+        <Star size={10} className="fill-[#C0A060] text-[#C0A060]" />
+        <span className="text-[9px] font-black text-white">4.9</span>
       </div>
     </div>
-
     <div className="px-1">
-      <h4 className="font-bold text-[#1A2E1A] text-base mb-1 line-clamp-1">{item.name}</h4>
-      <p className="text-[11px] font-bold text-[#C0A060]/80 mb-4 uppercase tracking-wider">{item.category_name || "Specialty"}</p>
-      
-      <div className="flex justify-between items-center bg-[#FAF9F6] p-2 rounded-2xl border border-[#F1F2F6]">
+      <h4 className={cn(
+        "font-serif font-black text-[#1A3C28] line-clamp-1 group-hover:text-[#C0A060] transition-colors",
+        isMobile ? "text-sm mb-0.5" : "text-lg mb-1"
+      )}>{item.name}</h4>
+      <p className="text-[9px] font-black text-[#A0A0A0] mb-3 uppercase tracking-tight">{item.category_name || "Specialty"}</p>
+      <div className={cn(
+        "flex justify-between items-center bg-[#FAF9F6] rounded-xl border border-[#F1F2F6]",
+        isMobile ? "p-2" : "p-2.5"
+      )}>
         <div className="flex flex-col ml-1">
-          <span className="text-[9px] font-black text-[#A0A0A0] uppercase tracking-tighter">Premium Price</span>
-          <span className="font-black text-[#1A3C28] text-lg">${parseFloat(item.price).toFixed(2)}</span>
+          <span className="text-[8px] font-black text-[#A0A0A0] uppercase tracking-tighter">Artisan</span>
+          <span className={cn("font-black text-[#1A3C28]", isMobile ? "text-base" : "text-lg")}>
+            ${parseFloat(item.price).toFixed(2)}
+          </span>
         </div>
-        <button className="w-11 h-11 flex items-center justify-center bg-[#1A3C28] text-white rounded-xl shadow-lg shadow-[#1A3C28]/20 hover:bg-[#C0A060] hover:scale-105 active:scale-95 transition-all">
-          <Plus size={20} strokeWidth={3} />
+        <button className={cn(
+          "flex items-center justify-center bg-[#1A3C28] text-white rounded-lg shadow-lg shadow-[#1A3C28]/20 hover:gold-gradient transition-all",
+          isMobile ? "w-8 h-8" : "w-10 h-10"
+        )}>
+          <Plus size={isMobile ? 16 : 20} strokeWidth={3} />
         </button>
       </div>
     </div>
   </motion.div>
 );
-
 const HomeView = ({
   selectedShop, categories, currentCategory, setCurrentCategory,
   menuItems, cart, setIsCartOpen, searchText, setSearchText,
-  setOptionsModalItem, starredItems, onToggleStar
-}) => (
-  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col px-6 pb-24 pt-8 bg-[#FDFBF7]">
-    {/* Header Section */}
-    <div className="flex justify-between items-center mb-10">
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-[#1A3C28] flex items-center justify-center shadow-2xl shadow-[#1A3C28]/20 p-3">
-          <img src={logo} alt="brand" className="w_full h-full object-contain brightness-0 invert" />
-        </div>
-        <div>
-          <p className="text-[10px] font-black text-[#C0A060] uppercase tracking-[0.3em] mb-0.5">ESTABLISHED 2024</p>
-          <h1 className="text-2xl font-serif font-black text-[#1A3C28] leading-tight">{selectedShop?.business_name || "Mingly Coffee"}</h1>
-        </div>
-      </div>
-      <motion.button whileTap={{ scale: 0.9 }} className="relative w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-[#F1F2F6] text-[#1A3C28]">
-        <Bell size={22} strokeWidth={2.5} />
-        {cart.length > 0 && <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#C0A060] rounded-full border-2 border-white animate-pulse" />}
-      </motion.button>
-    </div>
+  setOptionsModalItem, starredItems, onToggleStar, isMobile
+}) => {
+  const { lang, setLang } = useLanguage();
+  const t = translations[lang] || translations.en;
 
-    {/* Search Section */}
-    <div className="relative mb-10 group">
-      <div className="absolute inset-x-0 h-full bg-[#1A3C28]/[0.02] rounded-3xl blur-xl group-hover:bg-[#1A3C28]/[0.05] transition-all"></div>
-      <div className="relative flex items-center bg-white border border-[#F1F2F6] rounded-3xl h-16 px-6 focus-within:border-[#C0A060] focus-within:shadow-xl focus-within:shadow-[#C0A060]/5 transition-all">
-        <Search className="text-[#C0A060]" size={20} strokeWidth={3} />
-        <input
-          type="text" placeholder="Discover your coffee..."
-          className="flex-1 h-full bg-transparent border-none px-4 text-base font-bold text-[#1A2E1A] placeholder:text-[#A0A0A0] focus:ring-0"
-          value={searchText} onChange={(e) => setSearchText(e.target.value)}
-        />
-        <div className="bg-[#FAF9F6] p-2 rounded-xl border border-[#F1F2F6]">
-           <Menu size={18} className="text-[#C0A060]" />
-        </div>
-      </div>
-    </div>
-
-    {/* Banner Section - Premium Design */}
-    <div className="relative h-64 rounded-[40px] overflow-hidden mb-12 shadow-2xl shadow-[#1A3C28]/10">
-      <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop"
-        className="absolute inset-0 w-full h-full object-cover scale-110 brightness-75" alt="Banner" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#1A3C28]/95 via-[#1A3C28]/40 to-transparent"></div>
-      <div className="relative z-10 h-full flex flex-col justify-center px-10 max-w-[70%]">
-        <span className="inline-block px-3 py-1 bg-[#C0A060] text-black text-[9px] font-black uppercase tracking-widest rounded-full mb-4 w-fit">Summer Collection</span>
-        <h2 className="text-3xl md:text-4xl font-serif font-black text-white mb-2 leading-tight">Taste the Luxury of Fine Beans</h2>
-        <p className="text-white/60 text-xs font-medium mb-8 max-w-[280px]">Experience our signature limited edition brew, curated for premium members.</p>
-        <motion.button whileHover={{ x: 5 }} className="flex items-center gap-3 bg-white text-[#1A3C28] px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-wider shadow-xl shadow-black/20 w-fit">
-          Explore Now <ChevronLeft size={14} className="rotate-180" strokeWidth={3} />
-        </motion.button>
-      </div>
-      
-      {/* Premium Coffee Image Decoration */}
-      <motion.div 
-        animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
-        transition={{ repeat: Infinity, duration: 4 }}
-        className="absolute -right-12 -bottom-10 w-64 h-64 blur-[0.5px] opacity-90 hidden md:block"
-      >
-         <img src="https://cdni.iconscout.com/illustration/premium/thumb/takeaway-coffee-6849641-5619374.png" className="w-full h-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]" />
-      </motion.div>
-    </div>
-
-    {/* Categories Section */}
-    <div className="mb-12">
-      <div className="flex justify-between items-center mb-8 px-2">
-        <div>
-          <h3 className="text-xl font-serif font-black text-[#1A3C28]">Categories</h3>
-          <p className="text-[10px] font-bold text-[#A0A0A0] uppercase tracking-widest">Selected collections</p>
-        </div>
-        <button onClick={() => setCurrentCategory(null)} className="flex items-center gap-2 text-[11px] font-black text-[#C0A060] uppercase hover:gap-3 transition-all">View all <ChevronLeft size={14} className="rotate-180" strokeWidth={3} /></button>
-      </div>
-      <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6">
-        {[{ id: null, name: 'All Collection' }, ...categories].map((cat) => (
-          <motion.button
-            key={cat.id} 
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setCurrentCategory(cat)}
-            className={cn(
-              "px-8 py-4 rounded-[24px] font-bold text-[13px] transition-all whitespace-nowrap border",
-              currentCategory?.id === cat.id 
-                ? "bg-[#1A3C28] text-white border-[#1A3C28] shadow-2xl shadow-[#1A3C28]/20" 
-                : "bg-white text-[#A0A0A0] border-[#F1F2F6] hover:border-[#C0A060]/20"
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col px-6 pb-24 pt-8">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-10">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-[#1A3C28] flex items-center justify-center shadow-2xl shadow-[#1A3C28]/20 overflow-hidden">
+            {selectedShop?.image ? (
+              <img src={Config.optimizeCloudinary(Config.getFullImagePath(selectedShop.image), "w_150,c_fill,f_auto,q_auto")} className="w-full h-full object-cover" />
+            ) : (
+              <img src={logo} alt="brand" className="w-8 h-8 object-contain brightness-0 invert" />
             )}
-          >
-            {cat.name}
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-[#C0A060] uppercase tracking-[0.3em] mb-0.5">ESTABLISHED 2024</p>
+            <h1 className="text-2xl font-serif font-black text-[#1A3C28] leading-tight">{selectedShop?.business_name || "Mingly Coffee"}</h1>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {isMobile && (
+            <button 
+              onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
+              className="w-11 h-11 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-[#F1F2F6] text-[#1A3C28] text-[10px] font-black"
+            >
+              {lang === 'en' ? 'KH' : 'EN'}
+            </button>
+          )}
+          <motion.button whileTap={{ scale: 0.9 }} className="relative w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-[#F1F2F6] text-[#1A3C28]">
+            <Bell size={22} strokeWidth={2.5} />
+            {cart.length > 0 && <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#C0A060] rounded-full border-2 border-white animate-pulse" />}
           </motion.button>
-        ))}
+        </div>
       </div>
-    </div>
 
-    {/* Product Lists */}
-    <div className="px-2">
-      <div className="flex flex-col mb-10">
-        <h3 className="text-2xl font-serif font-black text-[#1A3C28] mb-1">{searchText ? "Found for You" : "House Favorites"}</h3>
-        <p className="text-[10px] font-black text-[#C0A060] uppercase tracking-[0.3em]">Pure perfection in every cup</p>
+      {/* Search Section */}
+      <div className="relative mb-10 group">
+        <div className="absolute inset-x-0 h-full bg-[#1A3C28]/[0.02] rounded-3xl blur-xl group-hover:bg-[#1A3C28]/[0.05] transition-all"></div>
+        <div className="relative flex items-center bg-white border border-[#F1F2F6] rounded-3xl h-16 px-6 focus-within:border-[#C0A060] focus-within:shadow-xl focus-within:shadow-[#C0A060]/5 transition-all">
+          <Search className="text-[#C0A060]" size={20} strokeWidth={3} />
+          <input
+            type="text" placeholder={t.search_product || "Discover your coffee..."}
+            className="flex-1 h-full bg-transparent border-none px-4 text-base font-bold text-[#1A2E1A] placeholder:text-[#A0A0A0] focus:ring-0"
+            value={searchText} onChange={(e) => setSearchText(e.target.value)}
+          />
+          <div className="bg-[#FAF9F6] p-2 rounded-xl border border-[#F1F2F6]">
+             <Menu size={18} className="text-[#C0A060]" />
+          </div>
+        </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-        {menuItems
-          .filter(i => !searchText || i.name.toLowerCase().includes(searchText.toLowerCase()))
-          .map((item) => (
-            <ProductCard
-              key={item.id} item={item}
-              isStarred={starredItems.some(s => s.id === item.id)}
-              onToggleStar={onToggleStar}
-              onClick={() => setOptionsModalItem(item)}
-            />
+
+      {/* Banner Section - Premium Design */}
+      <div className="relative h-64 md:h-80 rounded-[40px] overflow-hidden mb-12 shadow-2xl shadow-[#1A3C28]/10">
+        <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop"
+          className="absolute inset-0 w-full h-full object-cover scale-110 brightness-75" alt="Banner" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1A3C28]/95 via-[#1A3C28]/40 to-transparent"></div>
+        <div className="relative z-10 h-full flex flex-col justify-center px-10 max-w-[90%] md:max-w-[60%]">
+          <span className="inline-block px-3 py-1 bg-[#C0A060] text-black text-[9px] font-black uppercase tracking-widest rounded-full mb-4 w-fit">Summer Collection</span>
+          <h2 className="text-3xl md:text-5xl font-serif font-black text-white mb-2 leading-tight">Taste the Luxury of <span className="text-[#C0A060]">Fine Beans</span></h2>
+          <p className="text-white/60 text-xs font-medium mb-8 max-w-[280px]">Experience our signature limited edition brew, curated for premium members.</p>
+          <motion.button whileHover={{ x: 5 }} className="flex items-center gap-3 bg-white text-[#1A3C28] px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-wider shadow-xl shadow-black/20 w-fit">
+            Explore Now <ChevronLeft size={14} className="rotate-180" strokeWidth={3} />
+          </motion.button>
+        </div>
+        
+        {/* Premium Coffee Image Decoration */}
+        {!isMobile && (
+          <motion.div 
+            animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
+            transition={{ repeat: Infinity, duration: 4 }}
+            className="absolute -right-8 -bottom-10 w-72 h-72 blur-[0.5px] opacity-90"
+          >
+             <img src="https://cdni.iconscout.com/illustration/premium/thumb/takeaway-coffee-6849641-5619374.png" className="w_full h_full object-contain drop-shadow-[0_20px_40_rgba(0,0,0,0.5)]" />
+          </motion.div>
+        )}
+      </div>
+
+      {/* Categories Section */}
+      <div className="mb-12">
+        <div className="flex justify-between items-center mb-8 px-2">
+          <div>
+            <h3 className="text-xl font-serif font-black text-[#1A3C28]">{t.categories || 'Categories'}</h3>
+            <p className="text-[10px] font-bold text-[#A0A0A0] uppercase tracking-widest">Selected collections</p>
+          </div>
+          <button onClick={() => setCurrentCategory(null)} className="flex items-center gap-2 text-[11px] font-black text-[#C0A060] uppercase hover:gap-3 transition-all">{t.view_all || 'View all'} <ChevronLeft size={14} className="rotate-180" strokeWidth={3} /></button>
+        </div>
+        <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6">
+          {[{ id: null, name: t.all_collection || t.all || 'All Collection' }, ...categories].map((cat) => (
+            <motion.button
+              key={cat.id} 
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setCurrentCategory(cat)}
+              className={cn(
+                "px-8 py-4 rounded-[24px] font-bold text-[13px] transition-all whitespace-nowrap border",
+                currentCategory?.id === cat.id 
+                  ? "bg-[#1A3C28] text-white border-[#1A3C28] shadow-2xl shadow-[#1A3C28]/20" 
+                  : "bg-white text-[#A0A0A0] border-[#F1F2F6] hover:border-[#C0A060]/20"
+              )}
+            >
+              {cat.name}
+            </motion.button>
           ))}
+        </div>
+      </div>
+
+      {/* Product Lists */}
+      <div className="px-2">
+        <div className="flex flex-col mb-10">
+          <h3 className="text-2xl font-serif font-black text-[#1A3C28] mb-1">{searchText ? (t.search_results || "Found for You") : (t.house_favorites || "House Favorites")}</h3>
+          <p className="text-[10px] font-black text-[#C0A060] uppercase tracking-[0.3em]">Pure perfection in every cup</p>
+        </div>
+        <div className={cn(
+          "grid gap-3 md:gap-8",
+          isMobile ? "grid-cols-2" : "grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+        )}>
+          {menuItems
+            .filter(i => !searchText || i.name.toLowerCase().includes(searchText.toLowerCase()))
+            .map((item) => (
+              <ProductCard
+                key={item.id} item={item}
+                isStarred={starredItems.some(s => s.id === item.id)}
+                onToggleStar={onToggleStar}
+                onClick={() => setOptionsModalItem(item)}
+                isMobile={isMobile}
+              />
+            ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+
+const NavBar = ({ activeTab, setActiveTab, cartCount, setIsCartOpen, isMobile }) => {
+  const { lang, setLang } = useLanguage();
+  const t = translations[lang] || translations.en;
+  
+  const tabs = [
+    { id: 'home', icon: Home, label: t.home_boutique || 'Boutique' },
+    { id: 'search', icon: Search, label: t.discover || 'Discover' },
+    { id: 'starred', icon: Star, label: t.starred || 'Starred' },
+    { id: 'profile', icon: User, label: t.profile_atelier || 'Atelier' },
+  ];
+
+  const toggleLang = () => {
+    setLang(lang === 'en' ? 'kh' : 'en');
+  };
+
+  if (isMobile) {
+    return (
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] glass-effect rounded-[32px] p-2 flex justify-between items-center z-[100] border border-white/50 shadow-2xl">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "relative flex-1 py-4 flex flex-col items-center gap-1 transition-all duration-500",
+                isActive ? "text-[#1A3C28]" : "text-gray-400 hover:text-gray-600"
+              )}
+            >
+              <tab.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+              {isActive && <motion.div layoutId="active-dot" className="w-1.5 h-1.5 bg-[#C0A060] rounded-full absolute -bottom-1" />}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="relative w-14 h-14 emerald-gradient text-white rounded-[24px] flex items-center justify-center shadow-lg shadow-[#1A3C28]/30 font-black"
+        >
+          <ShoppingCart size={22} />
+          {cartCount > 0 && <span className="absolute -top-1 -right-1 bg-[#C0A060] text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white">{cartCount}</span>}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sticky top-0 w-full bg-white/80 backdrop-blur-xl z-[100] border-b border-[#F1F2F6] px-10 py-5 flex justify-between items-center">
+      <div className="flex items-center gap-10">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 emerald-gradient rounded-2xl flex items-center justify-center text-white p-2 shadow-lg"><Star fill="white" size={24} /></div>
+          <span className="font-serif text-2xl font-black text-[#1A3C28]">Atelier Coffee</span>
+        </div>
+        <div className="flex gap-8">
+          {tabs.map((tab) => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all", activeTab === tab.id ? "bg-[#1A3C28] text-white shadow-lg" : "text-gray-400 hover:text-[#1A3C28] hover:bg-gray-50")}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        {/* Language Switcher */}
+        <button 
+          onClick={toggleLang}
+          className="flex items-center gap-2 bg-white border border-[#F1F2F6] px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#FDFBF7] transition-all"
+        >
+          <Globe size={16} />
+          <span>{lang === 'en' ? 'ភាសាខ្មែរ' : 'English'}</span>
+        </button>
+
+        <button onClick={() => setIsCartOpen(true)} className="flex items-center gap-3 bg-[#FAF9F6] text-[#1A3C28] px-6 py-3 rounded-2xl font-black text-[11px] uppercase border border-[#F1F2F6] hover:border-[#C0A060]/30 transition-all">
+          <ShoppingCart size={18} />
+          <span>{t.order || 'Cart'} • {cartCount} {t.items || 'Items'}</span>
+        </button>
       </div>
     </div>
-  </motion.div>
-);
+  );
+};
 
 const StarredView = ({ starredItems, onToggleStar, setOptionsModalItem }) => (
   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col px-6 pb-24 pt-8">
@@ -657,71 +778,106 @@ const CoffeeMenuApp = () => {
   if (splash) return <SplashView businessName={selectedShop?.business_name} />;
 
   return (
-    <MainWrapper>
-      <div className="flex-1 flex flex-col relative min-h-screen">
-        <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex items-center justify-center">
-              <div className="w-8 h-8 border-3 border-gray-100 border-t-[#1A3C28] rounded-full animate-spin"></div>
-            </motion.div>
-          ) : activeTab === 'profile' ? (
-            profileSubView === 'history' ? (
-              <HistoryView history={orderHistory} onBack={() => setProfileSubView(null)} />
-            ) : profileSubView === 'settings' ? (
-              <SettingsView onBack={() => setProfileSubView(null)} />
+    <MainWrapper isMobile={isMobile}>
+      <div className={cn("flex flex-col h-full", !isMobile && "flex-row")}>
+        <div className="flex-1 flex flex-col h-full overflow-y-auto no-scrollbar relative min-h-screen">
+          <NavBar activeTab={activeTab} setActiveTab={setActiveTab} cartCount={cart.length} setIsCartOpen={setIsCartOpen} isMobile={isMobile} />
+          
+          <AnimatePresence mode="wait">
+            {loading ? (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex items-center justify-center">
+                <div className="w-8 h-8 border-3 border-gray-100 border-t-[#1A3C28] rounded-full animate-spin"></div>
+              </motion.div>
+            ) : activeTab === 'profile' ? (
+              profileSubView === 'history' ? (
+                <HistoryView history={orderHistory} onBack={() => setProfileSubView(null)} />
+              ) : profileSubView === 'settings' ? (
+                <SettingsView onBack={() => setProfileSubView(null)} />
+              ) : (
+                <ProfileView selectedShop={selectedShop} selectedTable={selectedTable} setActiveTab={setActiveTab} setSubView={setProfileSubView} onFetchHistory={fetchOrderHistory} />
+              )
+            ) : activeTab === 'starred' ? (
+              <StarredView starredItems={starredItems} onToggleStar={onToggleStar} setOptionsModalItem={setOptionsModalItem} />
+            ) : currentCategory ? (
+              <CategoryView
+                currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
+                menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
+                searchText={searchText} setSearchText={setSearchText} setOptionsModalItem={setOptionsModalItem}
+              />
             ) : (
-              <ProfileView selectedShop={selectedShop} selectedTable={selectedTable} setActiveTab={setActiveTab} setSubView={setProfileSubView} onFetchHistory={fetchOrderHistory} />
-            )
-          ) : activeTab === 'starred' ? (
-            <StarredView starredItems={starredItems} onToggleStar={onToggleStar} setOptionsModalItem={setOptionsModalItem} />
-          ) : currentCategory ? (
-            <CategoryView
-              currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
-              menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
-              searchText={searchText} setSearchText={setSearchText} setOptionsModalItem={setOptionsModalItem}
-            />
-          ) : (
-            <HomeView
-              selectedShop={selectedShop} categories={categories} currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
-              menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
-              cart={cart} setIsCartOpen={setIsCartOpen} searchText={searchText} setSearchText={setSearchText}
-              getTotalPrice={() => cart.reduce((sum, item) => sum + (item.totalPrice || 0), 0)} setOptionsModalItem={setOptionsModalItem}
-            />
-          )}
-        </AnimatePresence>
+              <HomeView
+                selectedShop={selectedShop} categories={categories} currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
+                menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
+                cart={cart} setIsCartOpen={setIsCartOpen} searchText={searchText} setSearchText={setSearchText}
+                setOptionsModalItem={setOptionsModalItem} isMobile={isMobile}
+              />
+            )}
+          </AnimatePresence>
+        </div>
 
-        <motion.div 
-          initial={{ y: 100 }}
-          animate={{ y: isMobile ? 0 : 32 }}
-          className={cn(
-            "fixed bottom-0 md:bottom-8 left-0 md:left-1/2 md:-translate-x-1/2 w-full md:w-[540px] px-8 py-4 flex justify-between items-center z-50 transition-all",
-            isMobile ? "bg-[#1A3C28] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] rounded-t-[40px]" : "bg-[#1A3C28] shadow-2xl shadow-[#1A3C28]/30 rounded-[32px]"
-          )}
-        >
-          {/* Subtle decoration inside the footer bar */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-white/10 rounded-full mt-2 md:hidden"></div>
+        {/* Desktop Sidebar Cart */}
+        {!isMobile && activeTab === 'home' && (
+          <div className="w-[420px] border-l border-[#F1F2F6] bg-[#FDFBF7]/50 p-8 flex flex-col h-full sticky top-0 overflow-y-auto no-scrollbar">
+            <div className="flex items-center justify-between mb-8">
+               <h2 className="font-serif text-2xl font-black text-[#1A3C28]">Your Basket</h2>
+               <div className="bg-[#1A3C28] text-white text-[10px] font-black px-3 py-1.5 rounded-xl">{cart.length} ITEMS</div>
+            </div>
 
-          {[
-            { id: 'home', icon: Home, label: 'Boutique' },
-            { id: 'order', icon: FileText, label: 'Basket', badge: cart.length },
-            { id: 'starred', icon: Star, label: 'Starred' },
-            { id: 'profile', icon: User, label: 'Atelier' }
-          ].map(tab => (
-            <button
-              key={tab.id} onClick={() => { setActiveTab(tab.id); if (tab.id === 'order') setIsCartOpen(true); else setCurrentCategory(null); }}
-              className={cn("flex flex-col items-center gap-2 transition-all relative", (activeTab === tab.id || (tab.id === 'order' && isCartOpen)) ? "text-[#C0A060]" : "text-white/40")}
-            >
-              <div className="relative p-2">
-                <tab.icon size={22} strokeWidth={(activeTab === tab.id || (tab.id === 'order' && isCartOpen)) ? 3 : 2} />
-                {tab.badge > 0 && <span className="absolute -top-0 -right-0 w-5 h-5 bg-[#C0A060] rounded-full border-2 border-[#1A3C28] text-[9px] flex items-center justify-center text-black font-black shadow-lg">{tab.badge}</span>}
-                {(activeTab === tab.id || (tab.id === 'order' && isCartOpen)) && (
-                   <motion.div layoutId="nav-glow" className="absolute inset-0 bg-white/5 blur-xl rounded-full" />
-                )}
+            {cart.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-30">
+                 <ShoppingCart size={48} strokeWidth={1} />
+                 <p className="mt-4 font-black text-[10px] uppercase tracking-[0.2em]">Basket is currently empty</p>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">{tab.label}</span>
-            </button>
-          ))}
-        </motion.div>
+            ) : (
+              <div className="flex flex-col h-full">
+                <div className="space-y-4 mb-8">
+                   {cart.map((item) => (
+                     <div key={item.cartId} className="group bg-white p-5 rounded-[32px] border border-[#F1F2F6] flex gap-4 items-center hover:border-[#C0A060]/30 transition-all shadow-sm">
+                        <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_150,c_fill,f_auto,q_auto")} className="w-16 h-16 rounded-2xl object-cover shadow-sm" />
+                        <div className="flex-1">
+                           <h4 className="font-bold text-sm text-[#1A3C28] line-clamp-1">{item.name}</h4>
+                           <p className="text-[9px] font-black text-amber-600 uppercase mb-3 tracking-tighter">{item.customization || "Standard Creation"}</p>
+                           <div className="flex items-center justify-between">
+                              <span className="text-sm font-black text-[#1A3C28]">${item.totalPrice.toFixed(2)}</span>
+                              <div className="flex items-center gap-3 bg-[#FAF9F6] px-2.5 py-1.5 rounded-xl border border-[#F1F2F6]">
+                                 <button onClick={() => updateCartQty(item.cartId, -1)} className="text-gray-400 hover:text-red-500 transition-colors"><Minus size={12} strokeWidth={3} /></button>
+                                 <span className="text-xs font-black min-w-4 text-center">{item.quantity}</span>
+                                 <button onClick={() => updateCartQty(item.cartId, 1)} className="text-gray-400 hover:text-[#1A3C28] transition-colors"><Plus size={12} strokeWidth={3} /></button>
+                              </div>
+                           </div>
+                        </div>
+                        <button onClick={() => removeFromCart(item.cartId)} className="p-2 text-gray-200 hover:text-red-500 transition-colors"><X size={14} strokeWidth={3} /></button>
+                     </div>
+                   ))}
+                </div>
+
+                <div className="mt-auto pt-8 border-t border-dashed border-gray-200">
+                   <div className="flex justify-between items-center mb-2">
+                      <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Subtotal</span>
+                      <span className="text-sm font-black text-gray-800">${(cart.reduce((s, i) => s + (i.totalPrice || 0), 0)).toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between items-center mb-8">
+                      <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Service Fee</span>
+                      <span className="text-sm font-black text-green-600 uppercase">Complimentary</span>
+                   </div>
+                   <div className="flex justify-between items-end mb-8">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-black text-[#1A3C28] uppercase tracking-widest">Grand Total</span>
+                        <span className="text-4xl font-black text-[#1A3C28] tracking-tighter">${(cart.reduce((s, i) => s + (i.totalPrice || 0), 0)).toFixed(2)}</span>
+                      </div>
+                   </div>
+                   <button
+                      onClick={handlePlaceOrder}
+                      disabled={loading}
+                      className="w-full h-16 bg-[#1A3C28] text-white rounded-2xl font-black shadow-xl shadow-[#1A3C28]/20 hover:gold-gradient hover:shadow-[#C0A060]/30 transition-all duration-500 active:scale-[0.98] gold-glow"
+                   >
+                      {loading ? 'PROCESSING...' : 'PLACE ORDER NOW'}
+                   </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <Modal
