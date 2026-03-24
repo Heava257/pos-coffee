@@ -252,7 +252,10 @@ const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
 
       {/* add button */}
       <button
-        onClick={() => !isOOS && onAdd(product)}
+        onClick={(e) => {
+          e.stopPropagation();
+          !isOOS && onAdd(product);
+        }}
         disabled={isOOS}
         style={{
           position: "absolute",
