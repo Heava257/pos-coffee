@@ -58,12 +58,12 @@ const MENU_STRUCTURE = [
   },
   {
     key: "invoices",
-    labelKey: "invoices",
+    labelKey: "pos",
     icon: <MdRestaurantMenu />,
   },
   {
     key: "order",
-    labelKey: "order",
+    labelKey: "order_detail",
     icon: <FaHistory />,
   },
 
@@ -248,8 +248,8 @@ const MainLayout = () => {
   }, [location.pathname, lang]);
 
   const checkISnotPermissionViewPage = () => {
-    // Guard: if no permissions loaded yet, don't redirect
-    if (!permision || permision.length === 0) return;
+    // Guard: if no profile or permissions loaded yet, don't redirect
+    if (!profile || !permision || permision.length === 0) return;
 
     const currentPath = location.pathname;
 
@@ -259,28 +259,35 @@ const MainLayout = () => {
     // Special Case: always allow business page for system admin (Business ID 1)
     if (currentPath === '/business' && profile?.business_id === 1) return;
 
+    // Check if the route is allowed for the user
     const findIndex = permision.findIndex((item) => {
       if (!item.web_route_key) return false;
       const p1 = item.web_route_key.toLowerCase().replace(/^\/+|\/+$/g, '');
       const p2 = currentPath.toLowerCase().replace(/^\/+|\/+$/g, '');
 
-      // Special Case: "" (root) and "dashboard" equivalence
+      // Check for exact match or prefix match (for sub-routes like /product/edit/1)
       if ((p1 === "" || p1 === "dashboard") && (p2 === "" || p2 === "dashboard")) return true;
-
-      return p1 === p2;
+      
+      return p1 === p2 || p2.startsWith(p1 + "/");
     });
 
     if (findIndex === -1) {
       // If it's the root/dashboard, allow if they are OWNER/SuperAdmin by default
-      if ((currentPath === "/" || currentPath === "/dashboard") && (profile?.business_id === 1 || profile?.is_super_admin === 1 || profile?.role_name?.toUpperCase() === "OWNER")) {
+      if ((currentPath === "/" || currentPath === "/dashboard") && (profile?.business_id === 1 || profile?.is_super_admin === 1)) {
         return;
       }
 
-      // Current page not in permissions — redirect to first allowed page
+      // Final fallback for Super Admin (Business ID 1)
+      if (profile?.business_id === 1 && (currentPath === "/business" || currentPath === "/plans")) {
+        return;
+      }
+
+      console.warn(`Unauthorized access attempt to: ${currentPath}. Redirecting...`);
+      // Redirect to dashboard or first allowed page
       if (permision[0] && permision[0].web_route_key) {
         navigate(permision[0].web_route_key);
       } else {
-        navigate("/invoices"); // Fallback to POS
+        navigate("/dashboard");
       }
     }
   };
@@ -305,6 +312,12 @@ const MainLayout = () => {
       if (newItem.key === "business" && profile?.business_id !== 1) return null;
       if (newItem.key === "my-plan" && profile?.business_id === 1) return null;
 
+      // Hide Shop Operations for SaaS Owner (Business ID 1)
+      const shopOps = ["order", "inventory", "table", "product", "category", "shop_managment", "invoices", "pos", "expense", "report"];
+      if (profile?.business_id === 1 && (shopOps.includes(newItem.key) || shopOps.some(op => newItem.key?.includes(op)))) {
+        return null;
+      }
+
       // Helper to check permission safely
       const checkPath = (key) => {
         if (!key && key !== "") return false;
@@ -326,11 +339,8 @@ const MainLayout = () => {
       if (newItem.hasOwnProperty('key') && !newItem.children) {
         if (newItem.key === "business") return profile?.business_id === 1 ? newItem : null;
 
-        // Let Dashboard and Settings be shown ONLY if they have explicit permission OR they are the system admin (Business ID 1) OR they are the Shop Owner (Business ID > 1)
-        if (newItem.key === "dashboard" || newItem.key === "settings") {
-          if (profile?.business_id === 1 || profile?.role_code === "owner" || profile?.role_name?.toUpperCase() === "OWNER") {
-            return newItem;
-          }
+        if (newItem.key === "dashboard") {
+          if (profile?.business_id === 1) return newItem;
         }
 
         return checkPath(newItem.key) ? newItem : null;
@@ -569,42 +579,36 @@ const MainLayout = () => {
                 }}
               >
                 {/* 🚀 Quick Actions Group */}
-                {!isMobile && (
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '4px',
-                    padding: '4px',
-                    background: '#f8f9fa',
-                    borderRadius: '12px',
-                    border: '1px solid #f1f3f5'
-                  }}>
-                    <div className="icon-action-btn">
-                      <MdOutlineMarkEmailUnread className="icon-email" />
-                    </div>
-                    <div className="icon-action-btn">
-                      <IoMdNotificationsOutline className="icon-notify" />
-                    </div>
-                  </div>
-                )}
+
 
                 {/* 💎 Premium Feature / Branch Info */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   {!isMobile && profile?.business_id !== 1 && (
                     <Button
                       type="primary"
-                      icon={profile?.plan_id >= 2 ? <CrownOutlined style={{ color: '#fff' }} /> : <TrophyOutlined />}
+                      size="middle"
+                      icon={<CrownOutlined />}
                       onClick={() => navigate('/my-plan')}
                       className={cn(
                         "premium-upgrade-btn",
-                        profile?.plan_id >= 3 && "gold-gradient border-none text-black",
+                        profile?.plan_id >= 3 && "gold-gradient",
                         profile?.plan_id === 2 && "emerald-gradient"
                       )}
-                      style={profile?.plan_id >= 3 ? { color: '#000', fontWeight: 900 } : {}}
+                      style={{
+                        borderRadius: '12px',
+                        border: 'none',
+                        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.08)',
+                        fontWeight: 700,
+                        fontSize: '11px',
+                        height: '38px',
+                        padding: '0 16px',
+                        background: '#1e4a2d',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
                     >
-                      {profile?.plan_id === 1 && "UPGRADE TO PRO"}
-                      {profile?.plan_id === 2 && "PRO ACCOUNT"}
-                      {profile?.plan_id >= 3 && "PREMIUM ENTERPRISE"}
+                      {profile?.plan_id === 1 ? "UPGRADE" : (profile?.plan_id === 2 ? "PRO" : "PREMIUM")}
                     </Button>
                   )}
 
@@ -612,27 +616,30 @@ const MainLayout = () => {
                     <div style={{ 
                       display: 'flex', 
                       flexDirection: 'column', 
-                      alignItems: 'flex-end',
-                      borderRight: '1px solid #eee',
-                      paddingRight: '16px',
-                      marginRight: '-8px'
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                      borderLeft: '1px solid #f1f3f5',
+                      paddingLeft: '16px',
+                      marginLeft: '4px',
+                      minWidth: '120px'
                     }}>
                       <div style={{ 
-                        fontSize: '11px', 
-                        fontWeight: 700, 
-                        color: '#6c757d', 
-                        letterSpacing: '0.5px',
-                        textTransform: 'uppercase',
-                        marginBottom: '2px'
-                      }}>
-                        {profile?.branch_name || "Main Branch"}
-                      </div>
-                      <div style={{ 
-                        fontSize: '14px', 
+                        fontSize: '15px', 
                         fontWeight: 800, 
-                        color: '#1e4a2d' 
+                        color: '#1e4a2d',
+                        lineHeight: 1.2
                       }}>
                         {profile?.business_name || "Green Grounds"}
+                      </div>
+                      <div style={{ 
+                        fontSize: '10px', 
+                        fontWeight: 600, 
+                        color: '#95a5a6', 
+                        letterSpacing: '0.4px',
+                        textTransform: 'uppercase',
+                        marginTop: '2px'
+                      }}>
+                        {profile?.branch_name || "Main Branch"}
                       </div>
                     </div>
                   )}

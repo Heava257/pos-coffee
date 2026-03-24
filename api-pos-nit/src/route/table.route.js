@@ -7,8 +7,8 @@ const {
 } = require("../controller/table.controller");
 
 module.exports = (app) => {
-    app.get("/api/table", authMiddleware(), getList);
-    app.post("/api/table", authMiddleware(), create);
-    app.put("/api/table-status", authMiddleware(), updateStatus);
-    app.delete("/api/table", authMiddleware(), remove);
+    app.get("/api/table", authMiddleware("table"), getList);
+    app.post("/api/table", authMiddleware("table"), create);
+    app.put("/api/table-status", authMiddleware("table"), updateStatus);
+    app.delete("/api/table", authMiddleware("table"), remove);
 };

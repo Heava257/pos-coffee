@@ -39,6 +39,8 @@ const PermissionPage = () => {
     const [selectedPermIds, setSelectedPermIds] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [businesses, setBusinesses] = useState([]);
+    const [selectedBusinessId, setSelectedBusinessId] = useState(null);
 
     useEffect(() => {
         fetchInitialData();
@@ -47,15 +49,32 @@ const PermissionPage = () => {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const roleRes = await request("role", "get");
-            const permRes = await request("permission", "get");
+            const profile = getProfile();
+            const isAdmin = profile?.business_id === 1;
 
-            if (roleRes && roleRes.list) setRoles(roleRes.list);
+            if (isAdmin) {
+                const bizRes = await request("business", "get");
+                if (bizRes && bizRes.list) {
+                    setBusinesses(bizRes.list);
+                    if (!selectedBusinessId) setSelectedBusinessId(profile.business_id);
+                }
+            }
+
+            const permRes = await request("permission", "get");
             if (permRes && permRes.list) setAllPermissions(permRes.list);
 
-            if (roleRes?.list?.length > 0) {
-                setSelectedRoleId(roleRes.list[0].id);
-                fetchRolePermissions(roleRes.list[0].id);
+            const targetBiz = selectedBusinessId || profile?.business_id;
+            const roleRes = await request(`role?target_business_id=${targetBiz}`, "get");
+
+            if (roleRes && roleRes.list) {
+                setRoles(roleRes.list);
+                if (roleRes.list.length > 0) {
+                    setSelectedRoleId(roleRes.list[0].id);
+                    fetchRolePermissions(roleRes.list[0].id);
+                } else {
+                    setSelectedRoleId(null);
+                    setSelectedPermIds([]);
+                }
             }
         } catch (error) {
             message.error(t.failed);
@@ -74,6 +93,17 @@ const PermissionPage = () => {
             message.error(t.failed);
         }
     };
+
+    const handleBusinessChange = (bizId) => {
+        setSelectedBusinessId(bizId);
+        // We'll trigger a re-fetch of roles in a useEffect or by calling fetchInitialData
+    };
+
+    useEffect(() => {
+        if (selectedBusinessId) {
+            fetchInitialData();
+        }
+    }, [selectedBusinessId]);
 
     const handleRoleChange = (roleId) => {
         setSelectedRoleId(roleId);
@@ -94,6 +124,11 @@ const PermissionPage = () => {
         if (checked) {
             setSelectedPermIds(allPermissions.map(p => p.id));
         } else {
+            // 🛡️ IRONCLAD GUARD: Never allow mass unselection on critical roles
+            if (isOwnRole || isOwnerRole || selectedRole?.code?.toLowerCase() === 'super_admin') {
+                message.error("Security Violation: Mass unselection is prohibited for administrative and active roles.");
+                return;
+            }
             setSelectedPermIds([]);
         }
     };
@@ -113,19 +148,13 @@ const PermissionPage = () => {
                 // If the user just edited THEIR OWN role, we need to refresh their local session
                 // so the changes (like sidebar visibility) take effect immediately.
                 const profile = getProfile();
-                console.log("Saving permissions. Profile Role:", profile?.role_id, "Selected Role:", selectedRoleId);
-
                 if (profile && Number(profile.role_id) === Number(selectedRoleId)) {
-                    console.log("Updating current user session permissions...");
-                    // Filter the allPermissions list to get the objects for the selected IDs
+                    // Update current user session permissions
                     const newPermList = allPermissions
                         .filter(p => selectedPermIds.includes(p.id))
                         .map(p => ({ web_route_key: p.route_key, name: p.name }));
 
-                    console.log("New Permission List to save:", newPermList);
                     setPermission(newPermList);
-                    // This will trigger re-renders in MainLayout if the user navigates 
-                    // or if we force a state sync.
                     window.location.reload(); // Force refresh to apply new security context
                 }
             }
@@ -135,6 +164,12 @@ const PermissionPage = () => {
             setSaving(false);
         }
     };
+
+    const profile = getProfile();
+    const isSuperAdmin = profile?.is_super_admin === 1;
+    const selectedRole = roles.find(r => r.id === selectedRoleId);
+    const isOwnerRole = selectedRole?.code?.toLowerCase() === 'owner';
+    const isOwnRole = Number(profile?.role_id) === Number(selectedRoleId);
 
     const columns = [
         {
@@ -153,12 +188,27 @@ const PermissionPage = () => {
             title: t.action,
             key: "access",
             align: 'center',
-            render: (_, record) => (
-                <Checkbox
-                    checked={selectedPermIds.includes(record.id)}
-                    onChange={(e) => handleCheckboxChange(record.id, e.target.checked)}
-                />
-            )
+            render: (_, record) => {
+                const isChecked = selectedPermIds.includes(record.id);
+                // 🛡️ IRONCLAD GUARD:
+                // 1. If editing OWN role, cannot UNCHECK existing permissions (prevent lockout)
+                // 2. If editing OWNER role, cannot UNCHECK if not Super Admin
+                // 3. If it's a critical module like Dashboard or Permission, prevent unchecking for Admins
+                const isCritical = ['/dashboard', '/permission', '/role'].includes(record.route_key);
+                const isDisabled = (isOwnRole && isChecked) || 
+                                   (!isSuperAdmin && isOwnerRole && isChecked) || 
+                                   (isCritical && (isOwnRole || isOwnerRole));
+
+                return (
+                    <Tooltip title={isDisabled ? "Protected" : ""}>
+                        <Checkbox
+                            checked={isChecked}
+                            onChange={(e) => handleCheckboxChange(record.id, e.target.checked)}
+                            disabled={isDisabled}
+                        />
+                    </Tooltip>
+                );
+            }
         }
     ];
 
@@ -218,8 +268,35 @@ const PermissionPage = () => {
                         }
                         style={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}
                     >
-                        <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
-                            {t.user_role_desc || "Permissions will apply to all users assigned to this role."}
+                        {profile?.business_id === 1 && (
+                            <>
+                                <Text type="secondary" strong style={{ display: 'block', marginBottom: '8px', color: '#1e4a2d' }}>
+                                    {t.select_business || "Step 1: Select Business"}
+                                </Text>
+                                <Select
+                                    style={{ width: '100%', marginBottom: '20px' }}
+                                    size="large"
+                                    placeholder="Select Business"
+                                    value={selectedBusinessId}
+                                    onChange={handleBusinessChange}
+                                    showSearch
+                                    optionFilterProp="children"
+                                >
+                                    {businesses.map(biz => (
+                                        <Option key={biz.id} value={biz.id}>
+                                            <Space>
+                                                <Badge status={biz.status === 'active' ? 'success' : 'error'} />
+                                                {biz.name} (ID: {biz.id})
+                                            </Space>
+                                        </Option>
+                                    ))}
+                                </Select>
+                                <Divider style={{ margin: '12px 0' }} />
+                            </>
+                        )}
+
+                        <Text type="secondary" strong style={{ display: 'block', marginBottom: '8px', color: '#1e4a2d' }}>
+                            {t.select_user_role || "Step 2: Select User Role"}
                         </Text>
                         <Select
                             style={{ width: '100%', marginBottom: '16px' }}
@@ -231,7 +308,10 @@ const PermissionPage = () => {
                         >
                             {roles.map(role => (
                                 <Option key={role.id} value={role.id}>
-                                    {role.name} {role.code ? `(${role.code})` : ''}
+                                    <Space>
+                                        <Badge color="#c0a060" />
+                                        {role.name} {role.code ? `(${role.code})` : ''}
+                                    </Space>
                                 </Option>
                             ))}
                         </Select>

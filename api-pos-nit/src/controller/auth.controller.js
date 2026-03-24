@@ -169,18 +169,35 @@ exports.login = async (req, res) => {
   }
 };
 
-// 3. User Profile
+// 3. User Profile (Synchronized with latest DB state)
 exports.getProfile = async (req, res) => {
   try {
-    const sql = `
-            SELECT u.id, u.name, u.email, u.image, u.status, b.name as business_name, br.name as branch_name
-            FROM users u
-            INNER JOIN businesses b ON u.business_id = b.id
-            LEFT JOIN branches br ON u.branch_id = br.id
-            WHERE u.id = ?
-        `;
-    const [user] = await db.query(sql, [req.user_id]);
-    res.json({ profile: user[0] });
+    const [fullUser] = await db.query(`
+      SELECT u.*, r.name as role_name, r.code as role_code, b.name as business_name, br.name as branch_name
+      FROM users u
+      INNER JOIN roles r ON u.role_id = r.id
+      INNER JOIN businesses b ON u.business_id = b.id
+      LEFT JOIN branches br ON u.branch_id = br.id
+      WHERE u.id = ?
+    `, [req.user_id]);
+
+    if (fullUser.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const [rolePerms] = await db.query(`
+       SELECT p.route_key as web_route_key, p.name FROM permissions p
+       INNER JOIN role_permissions rp ON p.id = rp.permission_id
+       WHERE rp.role_id = ?
+    `, [fullUser[0].role_id]);
+
+    res.json({
+      profile: {
+        ...fullUser[0],
+        is_super_admin: fullUser[0].role_code === 'super_admin' ? 1 : 0
+      },
+      permission: rolePerms
+    });
   } catch (error) {
     logError("auth.getProfile", error, res);
   }

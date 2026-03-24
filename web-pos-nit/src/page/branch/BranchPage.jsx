@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
     Table, Button, Card, Row, Col, Input,
-    Modal, Form, message, Tag, Space,
+    Modal, Form, message, Tag, Space, Select,
     Typography, Divider, Badge, Switch, Tooltip, Image, Upload
 } from "antd";
 import {
@@ -70,6 +70,8 @@ const BranchPage = () => {
             formData.append("payment_merchant_id", values.payment_merchant_id || "");
             formData.append("payment_api_key", values.payment_api_key || "");
             formData.append("payment_receiver_name", values.payment_receiver_name || "");
+            formData.append("payment_provider", values.payment_provider || "KHQR");
+            formData.append("payment_api_url", values.payment_api_url || "");
 
             if (fileList.length > 0 && fileList[0].originFileObj) {
                 formData.append("khqr_image", fileList[0].originFileObj);
@@ -106,6 +108,8 @@ const BranchPage = () => {
             payment_merchant_id: item.payment_merchant_id,
             payment_api_key: item.payment_api_key,
             payment_receiver_name: item.payment_receiver_name,
+            payment_provider: item.payment_provider || "KHQR",
+            payment_api_url: item.payment_api_url,
         });
         if (item.khqr_image) {
             setFileList([
@@ -363,6 +367,23 @@ const BranchPage = () => {
                                     <QrcodeOutlined /> {t.khqr_setup_tip || "Setup your bank API for dynamic QR with automatic amount."}
                                 </Text>
                             </div>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="payment_provider" label="Bank Provider">
+                                <Select
+                                    placeholder="Select bank"
+                                    options={[
+                                        { label: "Bakong/KHQR", value: "KHQR" },
+                                        { label: "ABA PayWay", value: "ABA" },
+                                        { label: "Wing Bank", value: "WING" },
+                                    ]}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="payment_api_url" label="API Endpoint URL">
+                                <Input placeholder="https://api.bank.com/v1" />
+                            </Form.Item>
                         </Col>
                         <Col span={12}>
                             <Form.Item name="payment_merchant_id" label={t.merchant_id || "Merchant ID"}>

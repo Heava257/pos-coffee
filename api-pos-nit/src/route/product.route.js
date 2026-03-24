@@ -10,14 +10,14 @@ const {
 const { uploadFile } = require("../util/helper");
 
 module.exports = (app) => {
-    app.get("/api/product", authMiddleware(), getList);
-    app.post("/api/product", authMiddleware(), uploadFile.single("upload_image"), create);
-    app.put("/api/product", authMiddleware(), uploadFile.single("upload_image"), update);
-    app.delete("/api/product", authMiddleware(), remove);
+    app.get("/api/product", authMiddleware("product"), getList);
+    app.post("/api/product", authMiddleware("product"), uploadFile.single("upload_image"), create);
+    app.put("/api/product", authMiddleware("product"), uploadFile.single("upload_image"), update);
+    app.delete("/api/product", authMiddleware("product"), remove);
 
     // SaaS Branch Inventory Management
-    app.get("/api/product/business", authMiddleware(), getBusinessProducts);
-    app.post("/api/product/link", authMiddleware(), linkToBranch);
+    app.get("/api/product/business", authMiddleware("product"), getBusinessProducts);
+    app.post("/api/product/link", authMiddleware("product"), linkToBranch);
 
     // Barcode Generation
     const { generateBarcode, checkBarcode } = require("../controller/product.controller");

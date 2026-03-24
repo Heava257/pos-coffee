@@ -39,11 +39,14 @@ const QRPaymentModal = ({ visible, onClose, paymentLink, orderNo, total, branchI
   const [copying, setCopying] = useState(false);
 
   const staticQR = branchInfo?.khqr_image;
-  const merchantId = branchInfo?.payment_merchant_id;
-  const receiverName = branchInfo?.payment_receiver_name || branchInfo?.name || "Merchant";
+  const merchantId = branchInfo?.payment_merchant_id || "pong_chiva@bkrt";
+  const receiverName = branchInfo?.payment_receiver_name || branchInfo?.name || "POS COFFEE";
+  const paymentProvider = branchInfo?.payment_provider || "KHQR";
+  const apiUrl = branchInfo?.payment_api_url;
 
   let dynamicKHQR = null;
   if (merchantId && total > 0) {
+    // Standard KHQR generation - works with most Cambodian banks
     dynamicKHQR = generateKHQR(merchantId, receiverName, total);
   }
 

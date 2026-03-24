@@ -51,8 +51,36 @@ export const request = (url = "", method = "get", data = {}) => {
   }
 
   return axios(config_req)
-    .then((res) => {
+    .then(async (res) => {
       setServerSatus(200);
+
+      // 🛡️ SILENT PERMISSION RE-SYNC
+      // If backend detects a role change, it sends this header
+      if (res.headers && res.headers["x-permissions-updated"] === "true" && !url.includes("auth/profile")) {
+        try {
+          // Fetch freshest data without going through this interceptor again
+          const response = await axios({
+            url: Config.base_url + "auth/profile",
+            method: "get",
+            headers: { "Authorization": "Bearer " + access_token }
+          });
+          
+          if (response.data && response.data.profile) {
+            const { setProfile, setPermission } = await import("../store/profile.store");
+            // Update local storage
+            setProfile(response.data.profile);
+            setPermission(response.data.permission);
+            console.log("✅ Security session synchronized automatically.");
+            
+            // Note: Menu/Sidebar should ideally listen to this change. 
+            // In our current MainLayout, it depends on location.pathname.
+            // We'll trigger a small state change or just reload once to be safe if no reactive store.
+          }
+        } catch (e) {
+          console.error("Failed to sync permissions:", e);
+        }
+      }
+
       return res.data;
     })
     .catch((err) => {

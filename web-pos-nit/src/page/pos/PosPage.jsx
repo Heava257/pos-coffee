@@ -933,17 +933,29 @@ function PosPage() {
 
       if (res && !res.error) {
         message.success(currentOrderId ? t.order_completed : t.order_placed);
-        getPendingOrders(); // Added: Refresh count immediately after successful DB update
-        if (res.payment_link) {
-          setPaymentData({ paymentLink: res.payment_link, orderNo: res.order_no, total: param.total });
+        getPendingOrders();
+        
+        const isBankPayment = objSummary.payment_method !== "Cash";
+        
+        if (isBankPayment) {
+          setPaymentData({ 
+            paymentLink: res.payment_link || "", 
+            orderNo: res.order_no || res.order_id || "TEMP", 
+            total: +objSummary.total 
+          });
           setQrModalVisible(true);
         }
+
         setObjSummary((p) => ({
           ...p,
-          order_no: res.order_id,
+          order_no: res.order_no || res.order_id,
           order_date: new Date().toISOString(),
         }));
-        setTimeout(() => handlePrintInvoice(), 2000);
+        
+        // If cash, print immediately. If bank, don't auto-print so user can see QR.
+        if (!isBankPayment) {
+          setTimeout(() => handlePrintInvoice(), 2000);
+        }
       } else {
         message.error(`Order failed! ${res?.message || res?.error || ""}`);
       }
@@ -1760,6 +1772,7 @@ function PosPage() {
         onClose={() => {
           setQrModalVisible(false);
           setPaymentData({ paymentLink: "", orderNo: "", total: 0 });
+          handleClearCart();
         }}
         paymentLink={paymentData.paymentLink}
         orderNo={paymentData.orderNo}
