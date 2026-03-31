@@ -86,6 +86,9 @@ function OrderPage() {
   const [visibleOpenShiftModal, setVisibleOpenShiftModal] = useState(false);
   const [shiftHistory, setShiftHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [visibleCloseShiftModal, setVisibleCloseShiftModal] = useState(false);
+  const [closeShiftSummary, setCloseShiftSummary] = useState(null);
+  const [isClosingShift, setIsClosingShift] = useState(false);
   const refShiftReport = useRef(null);
   const { profile } = useProfileStore();
   const isOwner = profile?.role_name?.toUpperCase() === "OWNER" || profile?.role_code === "owner";
@@ -134,38 +137,70 @@ function OrderPage() {
     }
   };
 
-  const onSaveShift = async () => {
+  const handleOpenCloseShift = async () => {
+    if (!currentShift) {
+      setVisibleOpenShiftModal(true);
+      return;
+    }
+
+    setLoading(true);
     try {
-      const expected_cash_usd = Number(openingCash) + (Number(openingCashKHR) / exchangeRate) + Number(summary.total_cash || 0) - Number(summary.total_cash_expense || 0);
+      const res = await request("shift/summary", "get");
+      if (res && res.success) {
+        setCloseShiftSummary(res.summary);
+        setActualCash(0);
+        setActualCashKHR(0);
+        setRemark("");
+        setVisibleCloseShiftModal(true);
+      }
+    } catch (error) {
+      message.error("Failed to load shift summary");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onConfirmCloseShift = async () => {
+    if (!currentShift || !closeShiftSummary) return;
+
+    setIsClosingShift(true);
+    try {
+      const opening_usd = Number(openingCash);
+      const opening_khr_usd = Number(openingCashKHR) / exchangeRate;
+      
       const actual_total_usd = Number(actualCash) + (Number(actualCashKHR) / exchangeRate);
-      const diff_usd = actual_total_usd - expected_cash_usd;
+      const expected_total_usd = closeShiftSummary.expected_cash_usd;
+      const diff_usd = actual_total_usd - expected_total_usd;
 
       const data = {
-        id: currentShift?.id, // Use existing shift ID for closing
+        id: currentShift.id,
         opening_cash_usd: openingCash,
         opening_cash_khr: openingCashKHR,
         actual_cash_usd: actualCash,
         actual_cash_khr: actualCashKHR,
-        expected_cash_usd: expected_cash_usd,
-        total_sales_usd: summary.total_amount,
-        total_cash_usd: summary.total_cash,
-        total_aba_usd: summary.total_aba,
-        total_wing_usd: summary.total_wing,
-        total_expense_usd: summary.total_expense,
+        expected_cash_usd: expected_total_usd,
+        total_sales_usd: closeShiftSummary.total_sales_usd,
+        total_cash_usd: closeShiftSummary.total_cash_usd,
+        total_aba_usd: closeShiftSummary.total_aba_usd,
+        total_wing_usd: closeShiftSummary.total_wing_usd,
+        total_expense_usd: closeShiftSummary.total_expense_usd,
         diff_usd: diff_usd,
         remark: remark
       };
 
       const res = await request("shift", "post", data);
       if (res && res.success) {
-        message.success(res.message);
+        message.success("Shift Closed Successfully!");
+        setVisibleCloseShiftModal(false);
         handlePrintShift();
-        getCurrentShift(); // Check for next shift
-        getShiftHistory(); // Refresh history
+        getCurrentShift();
+        getShiftHistory();
+        getList();
       }
     } catch (error) {
-      console.error(error);
-      message.error("Failed to save shift");
+      message.error("Shift closing failed");
+    } finally {
+      setIsClosingShift(false);
     }
   };
 
@@ -357,7 +392,7 @@ function OrderPage() {
           <Card className="summary-card" bodyStyle={{ padding: 20 }}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}>{t.total_orders_label}</span>}
-              value={summary.total_order}
+              value={summary.total_order || 0}
               prefix={<ShoppingCartOutlined style={{ color: '#1e4a2d' }} />}
               valueStyle={{ color: '#1e4a2d', fontWeight: 'bold' }}
             />
@@ -368,7 +403,7 @@ function OrderPage() {
           <Card className="summary-card" bodyStyle={{ padding: 20 }}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}>{t.dash_cash}</span>}
-              value={summary.total_cash}
+              value={summary.total_cash || 0}
               prefix={<DollarOutlined style={{ color: '#059669' }} />}
               precision={2}
               valueStyle={{ color: '#059669', fontWeight: 'bold' }}
@@ -380,7 +415,7 @@ function OrderPage() {
           <Card className="summary-card" bodyStyle={{ padding: 20 }}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}>{t.dash_aba}</span>}
-              value={summary.total_aba}
+              value={summary.total_aba || 0}
               prefix={<CheckCircleOutlined style={{ color: '#2563eb' }} />}
               precision={2}
               valueStyle={{ color: '#2563eb', fontWeight: 'bold' }}
@@ -392,7 +427,7 @@ function OrderPage() {
           <Card className="summary-card" bodyStyle={{ padding: 20 }}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}>{t.dash_wing}</span>}
-              value={Number(summary.total_wing) + Number(summary.total_other || 0)}
+              value={Number(summary.total_wing || 0) + Number(summary.total_other || 0)}
               prefix={<div style={{ 
                 background: '#ca8a04', 
                 color: '#fff', 
@@ -415,7 +450,7 @@ function OrderPage() {
           <Card className="summary-card" style={{ background: '#ef4444' }} bodyStyle={{ padding: 20 }}>
             <Statistic
               title={<span style={{ color: '#fff' }}>{t.expenses}</span>}
-              value={summary.total_expense}
+              value={summary.total_expense || 0}
               prefix={<ArrowDownOutlined style={{ color: '#fff' }} />}
               precision={2}
               valueStyle={{ color: '#fff', fontWeight: 'bold' }}
@@ -427,7 +462,7 @@ function OrderPage() {
           <Card className="summary-card" style={{ background: '#1e4a2d' }} bodyStyle={{ padding: 20 }}>
             <Statistic
               title={<span style={{ color: '#ffffffcc' }}>{t.net_profit}</span>}
-              value={Number(summary.total_amount) - Number(summary.total_expense)}
+              value={Number(summary.total_amount || 0) - Number(summary.total_expense || 0)}
               prefix={<DollarOutlined style={{ color: '#fff' }} />}
               precision={2}
               valueStyle={{ color: '#fff', fontWeight: 'bold' }}
@@ -520,13 +555,8 @@ function OrderPage() {
               <Button
                 type="primary"
                 icon={<CheckCircleOutlined />}
-                onClick={() => {
-                  if (!currentShift) {
-                    setVisibleOpenShiftModal(true);
-                  } else {
-                    onSaveShift();
-                  }
-                }}
+                onClick={handleOpenCloseShift}
+                loading={loading}
                 style={{
                   borderRadius: 8,
                   height: 40,
@@ -534,7 +564,7 @@ function OrderPage() {
                   borderColor: '#1e4a2d'
                 }}
               >
-                {currentShift ? t.save_print_report : t.open_shift_btn}
+                {currentShift ? "Close Shift & Recon / បិទបញ្ជី និងទូទាត់" : t.open_shift_btn}
               </Button>
             </div>
 
@@ -589,141 +619,6 @@ function OrderPage() {
                   </Button>
                 </Col>
               </Row>
-
-                    {/* 💰 Shift Reconciliation Section */}
-                    <div style={{
-                      marginTop: 20,
-                      padding: '24px',
-                      background: '#fff',
-                      borderRadius: 16,
-                      border: '2px solid #eef2f7',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
-                    }}>
-                      <Row gutter={[24, 24]}>
-                        <Col xs={24} lg={18}>
-                          <Row gutter={[16, 16]}>
-                            {/* 1. Opening Cash */}
-                            <Col xs={24} md={12}>
-                              <Card size="small" title={<span style={{fontSize: 12}}>1. {t.opening_cash_label}</span>}>
-                                <Space direction="vertical" style={{ width: '100%' }}>
-                                  <InputNumber
-                                    style={{ width: '100%', background: '#f8fafc' }}
-                                    prefix="$"
-                                    value={openingCash}
-                                    readOnly
-                                    disabled
-                                    placeholder="USD"
-                                  />
-                                  <InputNumber
-                                    style={{ width: '100%', background: '#f8fafc' }}
-                                    prefix="៛"
-                                    value={openingCashKHR}
-                                    readOnly
-                                    disabled
-                                    placeholder="KHR"
-                                  />
-                                </Space>
-                              </Card>
-                            </Col>
-
-                            {/* 2. Actual Cash In Hand */}
-                            <Col xs={24} md={12}>
-                              <Card size="small" title={<span style={{fontSize: 12}}>2. {t.actual_cash_label}</span>}>
-                                <Space direction="vertical" style={{ width: '100%' }}>
-                                  <InputNumber
-                                    style={{ width: '100%' }}
-                                    prefix="$"
-                                    value={actualCash}
-                                    onChange={v => setActualCash(v || 0)}
-                                    placeholder="USD"
-                                  />
-                                  <InputNumber
-                                    style={{ width: '100%' }}
-                                    prefix="៛"
-                                    value={actualCashKHR}
-                                    onChange={v => setActualCashKHR(v || 0)}
-                                    placeholder="KHR"
-                                    step={100}
-                                  />
-                                </Space>
-                              </Card>
-                            </Col>
-                            
-                            {/* Summary Info */}
-                            <Col span={24}>
-                              <div style={{ display: 'flex', gap: 24, padding: '10px 0', flexWrap: 'wrap' }}>
-                                 <div>
-                                   <Text type="secondary" style={{fontSize: 11}}>{t.cash_sales_label}:</Text>
-                                   <div style={{fontSize: 16, fontWeight: 'bold', color: '#059669'}}>${Number(summary.total_cash || 0).toFixed(2)}</div>
-                                 </div>
-                                 <Divider type="vertical" style={{height: 40}} />
-                                 <div>
-                                   <Text type="secondary" style={{fontSize: 11}}>{t.cash_expenses_label}:</Text>
-                                   <div style={{fontSize: 16, fontWeight: 'bold', color: '#ef4444'}}>-${Number(summary.total_cash_expense || 0).toFixed(2)}</div>
-                                 </div>
-                                 <Divider type="vertical" style={{height: 40}} />
-                                 <div>
-                                   <Text type="secondary" style={{fontSize: 11}}>{t.exchange_rate_label}:</Text>
-                                   <div style={{fontSize: 16, fontWeight: 'bold'}}>1$ = {exchangeRate}៛</div>
-                                 </div>
-                              </div>
-                            </Col>
-
-                            <Col span={24}>
-                               <Input.TextArea 
-                                  placeholder={t.remark_placeholder}
-                                  value={remark}
-                                  onChange={e => setRemark(e.target.value)}
-                                  rows={2}
-                                  style={{borderRadius: 8}}
-                               />
-                            </Col>
-                          </Row>
-                        </Col>
-
-                        <Col xs={24} lg={6}>
-                          {(() => {
-                            const opening_usd = Number(openingCash) + (Number(openingCashKHR) / exchangeRate);
-                            const actual_usd = Number(actualCash) + (Number(actualCashKHR) / exchangeRate);
-                            const expected_usd = opening_usd + Number(summary.total_cash || 0) - Number(summary.total_cash_expense || 0);
-                            const diff = actual_usd - expected_usd;
-                            const isNeutral = actual_usd === 0;
-                            const isExact = Math.abs(diff) < 0.01;
-                            const isPositive = diff > 0;
-
-                            return (
-                              <div style={{
-                                height: '100%',
-                                padding: '20px',
-                                borderRadius: 12,
-                                background: isNeutral ? '#f8fafc' : isExact ? '#f0fdf4' : isPositive ? '#eff6ff' : '#fef2f2',
-                                border: '1px solid',
-                                borderColor: isNeutral ? '#e2e8f0' : isExact ? '#bbf7d0' : isPositive ? '#bfdbfe' : '#fecaca',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'center',
-                                textAlign: 'center',
-                                transition: 'all 0.3s ease'
-                              }}>
-                                <div style={{ fontSize: 13, color: isNeutral ? '#94a3b8' : '#64748b', marginBottom: 4, fontWeight: 600 }}>
-                                  {t.difference_label}
-                                </div>
-                                <div style={{
-                                  fontSize: 28,
-                                  fontWeight: 900,
-                                  color: isNeutral ? '#64748b' : isExact ? '#166534' : isPositive ? '#1e40af' : '#991b1b'
-                                }}>
-                                  ${diff.toFixed(2)}
-                                </div>
-                                <Text style={{fontSize: 11, opacity: 0.7}}>
-                                  ({t.expected_label}: ${expected_usd.toFixed(2)})
-                                </Text>
-                              </div>
-                            );
-                          })()}
-                        </Col>
-                      </Row>
-                    </div>
             </div>
             
             <Divider style={{ margin: '32px 0' }} />
@@ -1159,7 +1054,7 @@ function OrderPage() {
       <div style={{ display: "none" }}>
         <PrintShiftReport
           ref={refShiftReport}
-          summary={summary}
+          summary={closeShiftSummary || summary}
           profile={profile}
           filter={filter}
           actual_cash={actualCash}
@@ -1229,6 +1124,162 @@ function OrderPage() {
              </Space>
           </div>
         </Form>
+      </Modal>
+
+      {/* 🧾 X-Report / Close Shift Reconciliation Modal */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ background: '#f8fafc', padding: 8, borderRadius: 8 }}>
+              <FileTextOutlined style={{ fontSize: 24, color: '#1e4a2d' }} />
+            </div>
+            <div>
+              <Title level={4} style={{ margin: 0 }}>X-Report: Shift Reconciliation</Title>
+              <Text type="secondary" style={{ fontSize: 12 }}>Accountability check for shift completion</Text>
+            </div>
+          </div>
+        }
+        open={visibleCloseShiftModal}
+        onCancel={() => setVisibleCloseShiftModal(false)}
+        width={750}
+        centered
+        maskClosable={false}
+        footer={[
+          <Button key="cancel" onClick={() => setVisibleCloseShiftModal(false)} size="large">Cancel</Button>,
+          <Button 
+            key="submit" 
+            type="primary" 
+            size="large" 
+            loading={isClosingShift}
+            onClick={onConfirmCloseShift}
+            style={{ minWidth: 200, background: '#1e4a2d', borderColor: '#1e4a2d' }}
+          >
+            Confirm & Print X-Report
+          </Button>
+        ]}
+      >
+        <Divider style={{ margin: '16px 0' }} />
+        
+        {closeShiftSummary && (
+          <Row gutter={24}>
+            {/* Left Column: Automated Summary */}
+            <Col span={10}>
+              <div style={{ background: '#f8fafc', padding: 20, borderRadius: 16, height: '100%' }}>
+                <Title level={5} style={{ marginBottom: 20, fontSize: 13, textTransform: 'uppercase', color: '#64748b' }}>System Expected</Title>
+                
+                <Space direction="vertical" style={{ width: '100%' }} size="large">
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text type="secondary">Total Sales:</Text>
+                    <Text strong>${closeShiftSummary.total_sales_usd.toFixed(2)}</Text>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text type="secondary">Cash Sales:</Text>
+                    <Text strong style={{ color: '#059669' }}>+${closeShiftSummary.total_cash_usd.toFixed(2)}</Text>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text type="secondary">ABA/QR Sales:</Text>
+                    <Text strong style={{ color: '#2563eb' }}>${closeShiftSummary.total_aba_usd.toFixed(2)}</Text>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text type="secondary">Float/Opening:</Text>
+                    <Text strong>+${(Number(openingCash) + (Number(openingCashKHR) / exchangeRate)).toFixed(2)}</Text>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text type="secondary">Expenses:</Text>
+                    <Text strong style={{ color: '#ef4444' }}>-${closeShiftSummary.total_expense_usd.toFixed(2)}</Text>
+                  </div>
+                  
+                  <Divider style={{ margin: '12px 0' }} />
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text strong>EXPECTED CASH:</Text>
+                    <Title level={4} style={{ margin: 0, color: '#1e4a2d' }}>${closeShiftSummary.expected_cash_usd.toFixed(2)}</Title>
+                  </div>
+                </Space>
+              </div>
+            </Col>
+
+            {/* Right Column: Actual Count & Differences */}
+            <Col span={14}>
+              <div style={{ padding: '0 10px' }}>
+              <Title level={5} style={{ marginBottom: 20, fontSize: 13, textTransform: 'uppercase', color: '#64748b' }}>Actual Physical Count</Title>
+              
+              <Form layout="vertical">
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item label="Cash Count (USD)">
+                      <InputNumber 
+                        size="large"
+                        style={{ width: '100%' }} 
+                        prefix="$" 
+                        value={actualCash}
+                        onChange={setActualCash}
+                        placeholder="0.00"
+                        autoFocus
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item label="Cash Count (KHR)">
+                      <InputNumber 
+                        size="large"
+                        style={{ width: '100%' }} 
+                        prefix="៛" 
+                        value={actualCashKHR}
+                        onChange={setActualCashKHR}
+                        placeholder="0"
+                        step={100}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Form.Item label="Shift Notes / Remark">
+                  <Input.TextArea 
+                    placeholder="Provide context for any discrepancies..." 
+                    rows={2} 
+                    value={remark}
+                    onChange={e => setRemark(e.target.value)}
+                  />
+                </Form.Item>
+              </Form>
+
+              {/* Difference Visualization */}
+              {(() => {
+                const actualTotal = Number(actualCash) + (Number(actualCashKHR) / exchangeRate);
+                const diff = actualTotal - closeShiftSummary.expected_cash_usd;
+                const isExact = Math.abs(diff) < 0.01;
+                const isShort = diff < -0.01;
+
+                return (
+                  <div style={{ 
+                    padding: 24, 
+                    borderRadius: 16, 
+                    background: isExact ? '#f0fdf4' : (isShort ? '#fef2f2' : '#eff6ff'),
+                    border: '1px solid',
+                    borderColor: isExact ? '#bbf7d0' : (isShort ? '#fecaca' : '#bfdbfe'),
+                    textAlign: 'center',
+                    marginTop: 20
+                  }}>
+                    <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Reconciliation Difference</Text>
+                    <div style={{ 
+                      fontSize: 32, 
+                      fontWeight: 900, 
+                      color: isExact ? '#166534' : (isShort ? '#991b1b' : '#1e40af'),
+                      margin: '8px 0'
+                    }}>
+                      {diff >= 0 ? '+' : ''}{diff.toFixed(2)}$
+                    </div>
+                    {isShort && <Tag color="error">Shortage Detected - Review Required</Tag>}
+                    {isExact && <Tag color="success">Perfect Balance</Tag>}
+                    {!isExact && !isShort && <Tag color="processing">Overland / Excess Cash</Tag>}
+                  </div>
+                );
+              })()}
+              </div>
+            </Col>
+          </Row>
+        )}
       </Modal>
 
       {/* 🚀 Open Shift Modal */}

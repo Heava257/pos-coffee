@@ -26,8 +26,8 @@ exports.register = async (req, res) => {
 
       // A. Create Business
       const [business] = await conn.query(
-        "INSERT INTO businesses (name, owner_name, email, phone, plan_type) VALUES (?, ?, ?, ?, ?)",
-        [business_name, owner_name, email, phone, 'free']
+        "INSERT INTO businesses (name, owner_name, email, phone, plan_type, active_modules) VALUES (?, ?, ?, ?, ?, ?)",
+        [business_name, owner_name, email, phone, 'basic', 'POS']
       );
       const business_id = business.insertId;
 
@@ -38,25 +38,50 @@ exports.register = async (req, res) => {
       );
       const branch_id = branch.insertId;
 
-      // D. Setup Owner Role and Permissions for the new business
-      const [role_res] = await conn.query(
+      // D. Setup Default Roles for the new business
+      
+      // 1. Owner Role (Full Access)
+      const [ownerRes] = await conn.query(
         "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
         [business_id, "Owner", "owner"]
       );
-      const role_id = role_res.insertId;
+      const owner_role_id = ownerRes.insertId;
+      await conn.query("INSERT INTO role_permissions (role_id, permission_id) SELECT ?, id FROM permissions", [owner_role_id]);
 
-      // Link all available permissions to this new Owner role
+      // 2. Manager Role (Operations + Reports)
+      const [managerRes] = await conn.query(
+        "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
+        [business_id, "Manager", "manager"]
+      );
       await conn.query(`
         INSERT INTO role_permissions (role_id, permission_id)
-        SELECT ?, id FROM permissions
-      `, [role_id]);
+        SELECT ?, id FROM permissions 
+        WHERE route_key IN ('/invoices', '/order', '/category', '/product', '/stock', '/supplier', '/purchase', '/report_Sale_Summary', '/profile', '/table', '/expense')
+      `, [managerRes.insertId]);
 
-      // C. Create Owner Account
+      // 3. Sale Role (POS Operations)
+      const [saleRes] = await conn.query(
+        "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
+        [business_id, "Sale", "sale"]
+      );
+      await conn.query(`
+        INSERT INTO role_permissions (role_id, permission_id)
+        SELECT ?, id FROM permissions 
+        WHERE route_key IN ('/invoices', '/order', '/category', '/product', '/table', '/profile')
+      `, [saleRes.insertId]);
+
+      // C. Create Owner Account (Linked to Owner Role)
       const hashedPassword = bcrypt.hashSync(password, 10);
       await conn.query(
         "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [business_id, branch_id, role_id, owner_name, email, hashedPassword, 'active', 0]
+        [business_id, branch_id, owner_role_id, owner_name, email, hashedPassword, 'active', 0]
       );
+
+      // E. Enable all global categories by default for new businesses
+      await conn.query(`
+        INSERT INTO business_categories (business_id, category_id, is_active)
+        SELECT ?, id, 1 FROM categories WHERE business_id = 1
+      `, [business_id]);
 
       await conn.commit();
       res.json({ success: true, message: "Business Registered Successfully!" });
@@ -79,11 +104,12 @@ exports.login = async (req, res) => {
         SELECT u.*, 
                r.name as role_name, r.code as role_code,
                b.name as business_name, b.status as business_status, b.logo as business_logo,
+               b.active_modules, b.plan_type,
                p.name as plan_name, p.max_branches, p.max_staff, p.max_products
         FROM users u
         INNER JOIN roles r ON u.role_id = r.id
         INNER JOIN businesses b ON u.business_id = b.id
-        INNER JOIN subscription_plans p ON b.plan_id = p.id
+        LEFT JOIN subscription_plans p ON b.plan_id = p.id
         WHERE u.email = ?
     `;
 
@@ -128,13 +154,15 @@ exports.login = async (req, res) => {
       role_name: user.role_name,
       role_code: user.role_code,
       business_logo: user.business_logo,
-      profile_image: user.image
+      profile_image: user.image,
+      active_modules: user.active_modules, // Comma-separated string like 'POS,Inventory'
+      plan_type: user.plan_type
     };
 
     // Fetch Permissions for Backend/Frontend checks
     // We filter permissions based on the business's current plan level (min_plan_id)
     const [rolePerms] = await db.query(`
-      SELECT p.route_key as web_route_key, p.name
+      SELECT p.route_key, p.name
       FROM permissions p
       INNER JOIN role_permissions rp ON p.id = rp.permission_id
       WHERE rp.role_id = ?
@@ -142,7 +170,7 @@ exports.login = async (req, res) => {
     `, user.business_id === 1 ? [user.role_id] : [user.role_id, user.business_id]);
 
     const permissions = rolePerms;
-    payload.permissions = permissions.map(p => p.web_route_key.replace('/', '')); // Store as simple keys like 'my-plan', 'user']
+    payload.permissions = permissions.map(p => p.route_key.replace('/', '')); 
 
     // Generate Token with permissions included
     const accessToken = generateAccessToken(payload);
@@ -173,7 +201,9 @@ exports.login = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const [fullUser] = await db.query(`
-      SELECT u.*, r.name as role_name, r.code as role_code, b.name as business_name, br.name as branch_name
+      SELECT u.*, r.name as role_name, r.code as role_code, 
+             b.name as business_name, b.active_modules, b.plan_type,
+             br.name as branch_name
       FROM users u
       INNER JOIN roles r ON u.role_id = r.id
       INNER JOIN businesses b ON u.business_id = b.id
@@ -186,7 +216,7 @@ exports.getProfile = async (req, res) => {
     }
 
     const [rolePerms] = await db.query(`
-       SELECT p.route_key as web_route_key, p.name FROM permissions p
+       SELECT p.route_key, p.name FROM permissions p
        INNER JOIN role_permissions rp ON p.id = rp.permission_id
        WHERE rp.role_id = ?
     `, [fullUser[0].role_id]);
@@ -235,7 +265,7 @@ exports.updateProfile = async (req, res) => {
     const [updatedUser] = await db.query(`
       SELECT 
         u.id, u.name, u.email, u.image as profile_image, u.branch_id, u.business_id, u.role_id,
-        b.name as business_name, b.logo as business_logo,
+        b.name as business_name, b.logo as business_logo, b.active_modules, b.plan_type,
         r.name as role_name, r.code as role_code, br.name as branch_name
       FROM users u
       JOIN businesses b ON u.business_id = b.id

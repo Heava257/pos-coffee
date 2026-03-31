@@ -40,23 +40,22 @@ const COLORS = {
   redBadge: "#e85d5d",
 };
 
-// ─── Sub-component for dynamic Coffee fields ────────────────────────────────
-const CoffeeOptions = ({ config, categoryId, stateId, t }) => {
-  const isCoffee = React.useMemo(() => {
-    const cid = categoryId || stateId;
-    if (!cid) return false;
-    
-    const strId = String(cid);
-    // Explicit list of Coffee IDs in your system
-    if (strId === "15" || strId === "51" || strId === "1") return true;
+// ─── Dynamic Category Options (Data-Driven, Not Hardcoded) ─────────────────
+const CategoryOptions = ({ selectedCategory, t }) => {
+  // Parse the default config if it exists on the selected category
+  const parseJson = (val) => {
+    if (!val) return null;
+    try { return typeof val === 'string' ? JSON.parse(val) : val; }
+    catch { return null; }
+  };
 
-    // Fallback: Check label or name matches
-    const cat = (config.category || []).find(c => String(c.value) === strId);
-    const label = (cat?.label || cat?.name || "").trim().toLowerCase();
-    return label.includes("coffee") || label.includes("កាហ្វេ") || label.includes("cafe");
-  }, [categoryId, stateId, config.category]);
+  const defaultMoods = parseJson(selectedCategory?.default_moods);
+  const defaultSizes = parseJson(selectedCategory?.default_sizes);
+  const defaultAddons = parseJson(selectedCategory?.default_addons);
 
-  if (!isCoffee) return null;
+  // If category has no special configuration, hide this panel
+  const hasConfig = defaultMoods || defaultSizes || defaultAddons;
+  if (!selectedCategory || !hasConfig) return null;
 
   return (
     <div style={{ 
@@ -79,157 +78,153 @@ const CoffeeOptions = ({ config, categoryId, stateId, t }) => {
         paddingBottom: 10
       }}>
         <MdRestaurantMenu style={{ fontSize: 20 }} /> 
-        {t.customize_coffee}
+        {selectedCategory.label} {t.customize_coffee || "Customization"}
       </div>
 
-      <Form.Item name="moods" label={false} initialValue={['hot', 'iced']}>
-        <div>
-          <div style={{ fontWeight: 700, marginBottom: 12, color: COLORS.textPrimary, fontSize: 14 }}>
-            🔥❄️ {t.mood}
+      {/* Moods/Temperature Section */}
+      {defaultMoods && Array.isArray(defaultMoods) && (
+        <Form.Item name="moods" label={false}>
+          <div>
+            <div style={{ fontWeight: 700, marginBottom: 12, color: COLORS.textPrimary, fontSize: 14 }}>
+              🔥❄️ {t.mood || "Temperature"}
+            </div>
+            <Checkbox.Group 
+              options={defaultMoods.map(m => ({
+                label: m.charAt(0).toUpperCase() + m.slice(1),
+                value: m
+              }))} 
+            />
           </div>
-          <Checkbox.Group 
-            options={[
-              { label: t.hot, value: 'hot' },
-              { label: t.iced, value: 'iced' },
-              { label: t.frappe, value: 'frappe' }
-            ]} 
-          />
-        </div>
-      </Form.Item>
+        </Form.Item>
+      )}
 
-      <div style={{ margin: '20px 0', borderTop: '1px dashed #d9e6dc' }} />
-      <Form.List name="sizes" initialValue={[]}>
-        {(fields, { add, remove }) => (
-          <>
-            <div style={{ fontWeight: 800, marginBottom: 4, color: COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>☕</span> {t.sizes}
-            </div>
-            <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 12, fontStyle: 'italic' }}>
-              {t.sizes_override_msg}
-            </div>
-            {fields.map(({ key, name, ...restField }) => (
-              <Space key={key} style={{ display: "flex", marginBottom: 12 }} align="start">
-                <Form.Item 
-                  {...restField} 
-                  name={[name, 'label']} 
-                  rules={[{ required: true, message: 'Required' }]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <Select 
-                    style={{ width: 130 }} 
-                    placeholder="Size" 
-                    options={[
-                      { label: "Small (S)", value: "S" }, 
-                      { label: "Medium (M)", value: "M" }, 
-                      { label: "Large (L)", value: "L" }
-                    ]} 
-                  />
-                </Form.Item>
-                <Form.Item 
-                  {...restField} 
-                  name={[name, 'price']} 
-                  rules={[{ required: true, message: 'Required' }]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <InputNumber 
-                    placeholder="Price" 
-                    style={{ width: 100 }} 
-                    min={0} 
-                    step={0.1}
-                    precision={2}
-                  />
-                </Form.Item>
+      {/* Sizes Section */}
+      {defaultSizes && Array.isArray(defaultSizes) && (
+        <>
+          <div style={{ margin: '20px 0', borderTop: '1px dashed #d9e6dc' }} />
+          <Form.List name="sizes">
+            {(fields, { add, remove }) => (
+              <>
+                <div style={{ fontWeight: 800, marginBottom: 4, color: COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>☕</span> {t.sizes || "Sizes"}
+                </div>
+                <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 12, fontStyle: 'italic' }}>
+                  {t.sizes_override_msg || "Price per size overrides the base price in the POS"}
+                </div>
+                {fields.map(({ key, name, ...restField }) => (
+                  <Space key={key} style={{ display: "flex", marginBottom: 12 }} align="start">
+                    <Form.Item 
+                      {...restField} 
+                      name={[name, 'label']} 
+                      rules={[{ required: true, message: 'Required' }]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Select 
+                        style={{ width: 130 }} 
+                        placeholder="Size" 
+                        options={defaultSizes.map(s => ({
+                          label: s.label || s,
+                          value: s.value || s
+                        }))}
+                      />
+                    </Form.Item>
+                    <Form.Item 
+                      {...restField} 
+                      name={[name, 'price']} 
+                      rules={[{ required: true, message: 'Required' }]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <InputNumber 
+                        placeholder="Price" 
+                        style={{ width: 100 }} 
+                        min={0} 
+                        step={0.1}
+                        precision={2}
+                      />
+                    </Form.Item>
+                    <Button 
+                      danger 
+                      type="text" 
+                      onClick={() => remove(name)} 
+                      icon={<MdDelete style={{ fontSize: 18 }} />} 
+                    />
+                  </Space>
+                ))}
                 <Button 
-                  danger 
-                  type="text" 
-                  onClick={() => remove(name)} 
-                  icon={<MdDelete style={{ fontSize: 18 }} />} 
-                />
-              </Space>
-            ))}
-            <Button 
-              type="dashed" 
-              onClick={() => add()} 
-              icon={<MdAdd />} 
-              block 
-              style={{ 
-                marginBottom: 20, 
-                borderRadius: 10, 
-                height: 40, 
-                borderColor: COLORS.midGreen, 
-                color: COLORS.midGreen 
-              }}
-            >
-              {t.add_size}
-            </Button>
-          </>
-        )}
-      </Form.List>
+                  type="dashed" 
+                  onClick={() => add()} 
+                  icon={<MdAdd />} 
+                  block 
+                  style={{ marginBottom: 20, borderRadius: 10, height: 40, borderColor: COLORS.midGreen, color: COLORS.midGreen }}
+                >
+                  {t.add_size || "+ Add Size"}
+                </Button>
+              </>
+            )}
+          </Form.List>
+        </>
+      )}
 
-      <Form.List name="addons" initialValue={[]}>
-        {(fields, { add, remove }) => (
-          <>
-            <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>➕</span> {t.addons}
-            </div>
-            {fields.map(({ key, name, ...restField }) => (
-              <Space key={key} style={{ display: "flex", marginBottom: 12 }} align="start">
-                <Form.Item 
-                  {...restField} 
-                  name={[name, 'label']} 
-                  rules={[{ required: true, message: 'Required' }]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <Select 
-                    style={{ width: 130 }} 
-                    placeholder="Add-on" 
-                    options={[
-                      { label: "Extra Shot", value: "Extra Shot" }, 
-                      { label: "Milk Foam", value: "Milk Foam" },
-                      { label: "Honey", value: "Honey" },
-                      { label: "Pearl", value: "Pearl" }
-                    ]} 
+      {/* Add-ons Section */}
+      {defaultAddons && Array.isArray(defaultAddons) && (
+        <Form.List name="addons">
+          {(fields, { add, remove }) => (
+            <>
+              <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>➕</span> {t.addons || "Add-ons"}
+              </div>
+              {fields.map(({ key, name, ...restField }) => (
+                <Space key={key} style={{ display: "flex", marginBottom: 12 }} align="start">
+                  <Form.Item 
+                    {...restField} 
+                    name={[name, 'label']} 
+                    rules={[{ required: true, message: 'Required' }]}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Select 
+                      style={{ width: 160 }} 
+                      placeholder="Add-on" 
+                      options={defaultAddons.map(a => ({
+                        label: a.label || a,
+                        value: a.value || a
+                      }))}
+                    />
+                  </Form.Item>
+                  <Form.Item 
+                    {...restField} 
+                    name={[name, 'price']} 
+                    rules={[{ required: true, message: 'Required' }]}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <InputNumber 
+                      placeholder="Price" 
+                      style={{ width: 100 }} 
+                      min={0} 
+                      step={0.1}
+                      precision={2}
+                    />
+                  </Form.Item>
+                  <Button 
+                    danger 
+                    type="text" 
+                    onClick={() => remove(name)} 
+                    icon={<MdDelete style={{ fontSize: 18 }} />} 
                   />
-                </Form.Item>
-                <Form.Item 
-                  {...restField} 
-                  name={[name, 'price']} 
-                  rules={[{ required: true, message: 'Required' }]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <InputNumber 
-                    placeholder="Price" 
-                    style={{ width: 100 }} 
-                    min={0} 
-                    step={0.1}
-                    precision={2}
-                  />
-                </Form.Item>
-                <Button 
-                  danger 
-                  type="text" 
-                  onClick={() => remove(name)} 
-                  icon={<MdDelete style={{ fontSize: 18 }} />} 
-                />
-              </Space>
-            ))}
-            <Button 
-              type="dashed" 
-              onClick={() => add()} 
-              icon={<MdAdd />} 
-              block
-              style={{ 
-                borderRadius: 10, 
-                height: 40, 
-                borderColor: COLORS.midGreen, 
-                color: COLORS.midGreen 
-              }}
-            >
-              {t.add_addon}
-            </Button>
-          </>
-        )}
-      </Form.List>
+                </Space>
+              ))}
+              <Button 
+                type="dashed" 
+                onClick={() => add()} 
+                icon={<MdAdd />} 
+                block
+                style={{ borderRadius: 10, height: 40, borderColor: COLORS.midGreen, color: COLORS.midGreen }}
+              >
+                {t.add_addon || "+ Add Addon"}
+              </Button>
+            </>
+          )}
+        </Form.List>
+      )}
     </div>
   );
 };
@@ -263,6 +258,8 @@ function ProductPage() {
   const [visibleRecipeModal, setVisibleRecipeModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Track the full category object (with its default configs) for the selected category
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   const userId = useProfileStore(s => s.profile?.id || s.profile?.user_id);
   useEffect(() => {
@@ -401,7 +398,7 @@ function ProductPage() {
     // Parse strings from DB back to objects/arrays for the form
     const sizes = item.sizes ? (typeof item.sizes === 'string' ? JSON.parse(item.sizes) : item.sizes) : [];
     const addons = item.addons ? (typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons) : [];
-    const moods = item.moods ? (typeof item.moods === 'string' ? JSON.parse(item.moods) : item.moods) : ['hot', 'iced'];
+    const moods = item.moods ? (typeof item.moods === 'string' ? JSON.parse(item.moods) : item.moods) : [];
 
     form.setFieldsValue({
       ...item,
@@ -409,6 +406,11 @@ function ProductPage() {
       addons,
       moods,
     });
+
+    // Set the selected category object to drive the dynamic options panel
+    const cat = (config.category || []).find(c => String(c.value) === String(item.category_id));
+    setSelectedCategory(cat || null);
+
     setState((pre) => ({ ...pre, visibleModal: true, selectedParentId: item.category_id }));
     if (item.image != "" && item.image != null) {
       const imageProduct = [
@@ -417,7 +419,6 @@ function ProductPage() {
           name: item.image,
           status: "done",
           url: Config.getFullImagePath(item.image),
-
         },
       ];
       setImageDefault(imageProduct);
@@ -516,6 +517,17 @@ function ProductPage() {
                     placeholder={t.category_name}
                     onChange={(value) => {
                       setState(prev => ({ ...prev, selectedParentId: value }));
+                      // Find the full category object to drive the dynamic options panel
+                      const cat = (config.category || []).find(c => String(c.value) === String(value));
+                      setSelectedCategory(cat || null);
+                      // Reset customization fields when category changes
+                      form.setFieldsValue({ moods: [], sizes: [], addons: [] });
+                      // Auto-populate defaults from the category template
+                      if (cat) {
+                        const parseMoods = (val) => { try { return val ? (typeof val === 'string' ? JSON.parse(val) : val) : []; } catch { return []; } };
+                        const defaultMoods = parseMoods(cat.default_moods);
+                        if (defaultMoods.length > 0) form.setFieldValue('moods', defaultMoods);
+                      }
                     }}
                   />
                 </Form.Item>
@@ -528,19 +540,8 @@ function ProductPage() {
                   <Input placeholder={t.product_name} />
                 </Form.Item>
 
-                <Form.Item
-                  noStyle
-                  shouldUpdate={(prev, curr) => prev.category_id !== curr.category_id}
-                >
-                  {({ getFieldValue }) => (
-                    <CoffeeOptions 
-                      config={config} 
-                      categoryId={getFieldValue("category_id")} 
-                      stateId={state.selectedParentId}
-                      t={t} 
-                    />
-                  )}
-                </Form.Item>
+                {/* Dynamic Category Options Panel */}
+                <CategoryOptions selectedCategory={selectedCategory} t={t} />
 
                 <Form.Item name={"barcode"} label={t.barcode}>
                   <Input disabled placeholder={t.barcode} />

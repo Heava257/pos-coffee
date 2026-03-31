@@ -28,10 +28,11 @@ exports.getRolePermissions = async (req, res) => {
     try {
         const { role_id } = req.params;
         const [list] = await db.query(
-            "SELECT permission_id FROM role_permissions WHERE role_id = ?",
+            "SELECT permission_id, can_view, can_create, can_edit, can_delete FROM role_permissions WHERE role_id = ?",
             [role_id]
         );
-        res.json({ list: list.map(item => item.permission_id) });
+        res.json({ list });
+
     } catch (error) {
         logError("permission.getRolePermissions", error, res);
     }
@@ -42,24 +43,24 @@ exports.updateRolePermissions = async (req, res) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const { role_id, permission_ids } = req.body; // permission_ids = [1, 2, 3...]
+        const { role_id, permissions } = req.body; // permissions = [{permission_id: 1, can_view: 1...}]
         const { business_id, role_id: my_role_id } = req;
-        console.log(`Updating permissions for role ${role_id}:`, permission_ids);
+        console.log(`Updating granular permissions for role ${role_id}`);
 
-        let final_permission_ids = [];
-        if (permission_ids && Array.isArray(permission_ids)) {
-            final_permission_ids = permission_ids.map(Number);
+        let final_permissions = [];
+        if (permissions && Array.isArray(permissions)) {
+            final_permissions = permissions;
         }
 
         // Enforce strict hierarchy: non-system-admins can only grant permissions they themselves possess.
-        if (business_id !== 1 && final_permission_ids.length > 0) {
+        if (business_id !== 1 && final_permissions.length > 0) {
             const [myPerms] = await conn.query(
                 "SELECT permission_id FROM role_permissions WHERE role_id = ?",
                 [my_role_id]
             );
             const myPermIds = myPerms.map(p => p.permission_id);
             // Filter out any requested permissions that the current user does not have
-            final_permission_ids = final_permission_ids.filter(id => myPermIds.includes(id));
+            final_permissions = final_permissions.filter(p => myPermIds.includes(p.permission_id));
         }
 
         // Clear existing permissions. 
@@ -69,15 +70,23 @@ exports.updateRolePermissions = async (req, res) => {
         // By deleting all, if the user shouldn't have it, it's purged. If the role had it, it's purged.
         await conn.query("DELETE FROM role_permissions WHERE role_id = ?", [role_id]);
 
-        // Insert new ones
-        if (final_permission_ids.length > 0) {
-            const values = final_permission_ids.map(p_id => [role_id, p_id]);
-            // Bulk insert: mysql2 expects [ [ [v1,v2], [v1,v2] ] ]
+        // Insert new ones with granular flags
+        if (final_permissions.length > 0) {
+            const values = final_permissions.map(p => [
+                role_id, 
+                p.permission_id, 
+                p.can_view ?? 1, 
+                p.can_create ?? 0, 
+                p.can_edit ?? 0, 
+                p.can_delete ?? 0
+            ]);
+            
             await conn.query(
-                "INSERT INTO role_permissions (role_id, permission_id) VALUES ?",
+                "INSERT INTO role_permissions (role_id, permission_id, can_view, can_create, can_edit, can_delete) VALUES ?",
                 [values]
             );
         }
+
 
         await conn.commit();
         res.json({ success: true, message: "Permissions updated successfully!" });

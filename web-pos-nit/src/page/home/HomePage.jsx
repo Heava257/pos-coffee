@@ -31,6 +31,7 @@ import { useLanguage, translations } from "../../store/language.store";
 import { useProfileStore } from "../../store/profileStore";
 import { MdOutlineTableChart } from "react-icons/md";
 import { DollarSign, Activity, ShoppingBag, Loader, AlertTriangle, TrendingUp } from "lucide-react";
+import SuperAdminDashboard from "./SuperAdminDashboard";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -38,6 +39,10 @@ const { Option } = Select;
 function HomePage() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
+  const profile = useProfileStore(s => s.profile);
+  const userId = profile?.id || profile?.user_id;
+  const isPlatformAdmin = profile?.business_id === 1;
+
   const t = translations[lang];
   const [isLoading, setIsLoading] = useState(false);
   const [dbStats, setDbStats] = useState({ revenue: 0, orders: 0, customers: 0, performance: 'Good 2/24', netProfit: 0 });
@@ -46,10 +51,13 @@ function HomePage() {
   const [performanceData, setPerformanceData] = useState([]);
   const [transactionData, setTransactionData] = useState([]);
 
-  const userId = useProfileStore(s => s.profile?.id || s.profile?.user_id);
   useEffect(() => {
-    if (userId) fetchAllData();
-  }, [userId]);
+    if (userId && !isPlatformAdmin) fetchAllData();
+  }, [userId, isPlatformAdmin]);
+
+  if (isPlatformAdmin) {
+    return <SuperAdminDashboard />;
+  }
 
   const fetchAllData = async () => {
     setIsLoading(true);

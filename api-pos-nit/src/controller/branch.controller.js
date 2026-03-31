@@ -3,8 +3,13 @@ const { db, logError } = require("../util/helper");
 exports.getList = async (req, res) => {
     try {
         const { business_id } = req;
+        const { target_business_id } = req.query;
+        
+        // Super Admin can see any business's branches
+        const bizId = (business_id === 1 && target_business_id) ? target_business_id : business_id;
+        
         const sql = "SELECT * FROM branches WHERE business_id = ? ORDER BY id DESC";
-        const [list] = await db.query(sql, [business_id]);
+        const [list] = await db.query(sql, [bizId]);
         res.json({ list });
     } catch (error) {
         logError("branch.getList", error, res);

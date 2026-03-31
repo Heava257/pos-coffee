@@ -3,7 +3,7 @@ import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space,
     Typography, Divider, Badge, Tooltip, Statistic,
-    Select
+    Select, Checkbox
 } from "antd";
 import {
     PlusOutlined,
@@ -17,23 +17,55 @@ import {
     CheckCircleOutlined,
     StopOutlined,
     CrownOutlined,
-    CalendarOutlined
+    CalendarOutlined,
+    EyeOutlined,
+    TeamOutlined,
+    CoffeeOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 
 const { Title, Text } = Typography;
+const { TabPane } = Modal; // Not actually valid, using Tabs
+
+import { Tabs } from "antd";
+import CategoryManageTab from "../settings/CategoryManageTab";
 
 const BusinessPage = () => {
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [visible, setVisible] = useState(false);
+    const [catVisible, setCatVisible] = useState(false);
+    const [selectedBizId, setSelectedBizId] = useState(null);
     const [isRenewal, setIsRenewal] = useState(false);
     const [form] = Form.useForm();
     const [searchText, setSearchText] = useState("");
 
+    // Detail View State
+    const [detailVisible, setDetailVisible] = useState(false);
+    const [selectedBiz, setSelectedBiz] = useState(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailData, setDetailData] = useState({
+        branches: [],
+        users: [],
+        products: [],
+        insights: null
+    });
+
+    const [plans, setPlans] = useState([]);
+
     useEffect(() => {
         getList();
+        getPlans();
     }, []);
+
+    const getPlans = async () => {
+        try {
+            const res = await request("plans", "get");
+            if (res && res.plans) {
+                setPlans(res.plans);
+            }
+        } catch (error) {}
+    };
 
     const getList = async () => {
         setLoading(true);
@@ -46,6 +78,32 @@ const BusinessPage = () => {
             message.error("Failed to fetch businesses");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleViewDetail = async (record) => {
+        setSelectedBiz(record);
+        setDetailVisible(true);
+        setDetailLoading(true);
+        try {
+            // Fetch everything except money
+            const [bRes, uRes, pRes, iRes] = await Promise.all([
+                request(`branch?target_business_id=${record.id}`, "get"),
+                request(`user?target_business_id=${record.id}`, "get"),
+                request(`product/getBusinessProducts?target_business_id=${record.id}`, "get"),
+                request(`business/insights?id=${record.id}`, "get")
+            ]);
+            
+            setDetailData({
+                branches: bRes?.list || [],
+                users: uRes?.list || [],
+                products: pRes?.list || [],
+                insights: iRes || null
+            });
+        } catch (error) {
+            message.error("Failed to load enterprise details");
+        } finally {
+            setDetailLoading(false);
         }
     };
 
@@ -81,6 +139,8 @@ const BusinessPage = () => {
             const res = await request("business/plan", "put", {
                 business_id: values.business_id,
                 plan_id: values.plan_id,
+                plan_type: values.plan_type,
+                active_modules: values.active_modules,
                 duration_days: values.duration_days
             });
             if (res) {
@@ -137,13 +197,26 @@ const BusinessPage = () => {
             )
         },
         {
-            title: "Plan Type",
-            dataIndex: "plan_name",
-            key: "plan_name",
-            render: (plan) => (
-                <Tag color="gold" style={{ borderRadius: '8px', border: 'none', padding: '2px 10px', fontWeight: 600 }}>
-                    <SafetyCertificateOutlined /> {plan?.toUpperCase()}
-                </Tag>
+            title: "Plan Architecture",
+            dataIndex: "plan_type",
+            key: "plan_type",
+            render: (type) => {
+                const colors = { basic: 'blue', standard: 'gold', premium: 'purple' };
+                return (
+                    <Tag color={colors[type] || 'default'} style={{ borderRadius: '8px', border: 'none', padding: '2px 10px', fontWeight: 600 }}>
+                        <SafetyCertificateOutlined /> {type?.toUpperCase()}
+                    </Tag>
+                );
+            }
+        },
+        {
+            title: "Enabled Modules",
+            dataIndex: "active_modules",
+            key: "active_modules",
+            render: (modules) => (
+                <Space size={2} wrap>
+                    {modules?.split(',').map(m => <Tag key={m} style={{ fontSize: '10px' }}>{m}</Tag>)}
+                </Space>
             )
         },
         {
@@ -181,6 +254,14 @@ const BusinessPage = () => {
             align: 'right',
             render: (record) => (
                 <Space>
+                    <Tooltip title="View Enterprise Details">
+                        <Button
+                            icon={<EyeOutlined />}
+                            onClick={() => handleViewDetail(record)}
+                        >
+                            View
+                        </Button>
+                    </Tooltip>
                     <Tooltip title="Manage Subscription">
                         <Button
                             icon={<CrownOutlined />}
@@ -190,12 +271,27 @@ const BusinessPage = () => {
                                 form.setFieldsValue({
                                     business_id: record.id,
                                     plan_id: record.plan_id,
+                                    plan_type: record.plan_type,
+                                    active_modules: record.active_modules?.split(','),
                                     is_renewal: true
                                 });
                             }}
                             style={{ color: '#c0a060' }}
                         >
                             Renew
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Manage Category Access">
+                        <Button
+                            icon={<CoffeeOutlined />}
+                            onClick={() => {
+                                setSelectedBizId(record.id);
+                                setSelectedBiz(record);
+                                setCatVisible(true);
+                            }}
+                            style={{ color: '#1e4a2d' }}
+                        >
+                            Categories
                         </Button>
                     </Tooltip>
                     <Button
@@ -264,6 +360,10 @@ const BusinessPage = () => {
                                 onClick={() => {
                                     setIsRenewal(false);
                                     setVisible(true);
+                                    form.setFieldsValue({
+                                        plan_type: 'basic',
+                                        active_modules: ['POS']
+                                    });
                                 }}
                                 style={{ background: '#1e4a2d', borderColor: '#1e4a2d', borderRadius: '12px', height: '40px' }}
                             >
@@ -282,6 +382,123 @@ const BusinessPage = () => {
                     scroll={{ x: 1000 }}
                 />
             </Card>
+
+            {/* Enterprise Inspection Modal */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <EyeOutlined style={{ color: '#1e4a2d' }} />
+                            <Title level={4} style={{ margin: 0 }}>Enterprise Inspection: {selectedBiz?.name}</Title>
+                        </div>
+                        {detailData.insights?.lastActive && (
+                            <Tag color="cyan">Last Order Activity: {new Date(detailData.insights.lastActive).toLocaleString()}</Tag>
+                        )}
+                    </div>
+                }
+                open={detailVisible}
+                onCancel={() => setDetailVisible(false)}
+                footer={[<Button key="close" onClick={() => setDetailVisible(false)}>Done</Button>]}
+                width={1000}
+                centered
+            >
+                <Tabs defaultActiveKey="branches" loading={detailLoading}>
+                    <Tabs.TabPane 
+                        tab={<span><ShopOutlined /> Branches</span>} 
+                        key="branches"
+                    >
+                        <Table 
+                            size="small"
+                            dataSource={detailData.branches}
+                            pagination={{ pageSize: 5 }}
+                            columns={[
+                                { title: 'Branch Name', dataIndex: 'name', key: 'name' },
+                                { title: 'Location', dataIndex: 'location', key: 'location' },
+                                { title: 'Phone', dataIndex: 'phone', key: 'phone' },
+                                { title: 'Status', dataIndex: 'is_main', key: 'is_main', render: (val) => val == 1 ? <Tag color="gold">MAIN HQ</Tag> : <Tag>Regular</Tag> }
+                            ]}
+                        />
+                    </Tabs.TabPane>
+                    <Tabs.TabPane 
+                        tab={<span><TeamOutlined /> Team Roster</span>} 
+                        key="team"
+                    >
+                        <Table 
+                            size="small"
+                            dataSource={detailData.users}
+                            pagination={{ pageSize: 5 }}
+                            columns={[
+                                { title: 'Name', dataIndex: 'name', key: 'name' },
+                                { title: 'Role', dataIndex: 'role_name', key: 'role_name' },
+                                { title: 'Assigned Branch', dataIndex: 'branch_name', key: 'branch_name' },
+                                { title: 'Status', dataIndex: 'status', key: 'status', render: (s) => <Tag color={s === 'active' ? 'success' : 'error'}>{s?.toUpperCase()}</Tag> }
+                            ]}
+                        />
+                    </Tabs.TabPane>
+                    <Tabs.TabPane 
+                        tab={<span><CoffeeOutlined /> Product Menu</span>} 
+                        key="products"
+                    >
+                         <Table 
+                            size="small"
+                            dataSource={detailData.products}
+                            pagination={{ pageSize: 5 }}
+                            columns={[
+                                { title: 'Product Name', dataIndex: 'name', key: 'name' },
+                                { title: 'Category', dataIndex: 'category_name', key: 'category_name' },
+                                { title: 'Brand', dataIndex: 'brand', key: 'brand' },
+                                { title: 'Status', dataIndex: 'status', key: 'status', render: (s) => s == 1 ? <Tag color="success">Active</Tag> : <Tag color="error">Inactive</Tag> }
+                            ]}
+                        />
+                    </Tabs.TabPane>
+                    <Tabs.TabPane 
+                        tab={<span><SafetyCertificateOutlined /> Operational Health</span>} 
+                        key="insights"
+                    >
+                        <Row gutter={[16, 16]}>
+                            <Col span={12}>
+                                <Card size="small" title="Recent Order Volume (Last 6 Months)" style={{ borderRadius: '12px' }}>
+                                    {detailData.insights?.orderTrend?.map(item => (
+                                        <div key={item.label} style={{ fontSize: '13px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                                            <Text type="secondary">{item.label}</Text>
+                                            <Text strong>{item.value} Orders</Text>
+                                        </div>
+                                    ))}
+                                    {detailData.insights?.orderTrend?.length === 0 && <Text type="secondary">No order data yet.</Text>}
+                                </Card>
+                            </Col>
+                            <Col span={12}>
+                                <Card size="small" title="Top Popular Items" style={{ borderRadius: '12px' }}>
+                                    {detailData.insights?.topProducts?.map((item, idx) => (
+                                        <div key={idx} style={{ fontSize: '13px', marginBottom: '8px' }}>
+                                            <Badge count={idx+1} style={{ backgroundColor: '#1e4a2d', marginRight: '8px' }} />
+                                            <Text>{item.name}</Text>
+                                            <Text type="secondary" style={{ float: 'right' }}>{item.total_sold} units sold</Text>
+                                        </div>
+                                    ))}
+                                    {detailData.insights?.topProducts?.length === 0 && <Text type="secondary">No sales data yet.</Text>}
+                                </Card>
+                            </Col>
+                            <Col span={24}>
+                                <Card size="small" title="Menu Distribution" style={{ borderRadius: '12px' }}>
+                                    <Space size="middle" wrap>
+                                        {detailData.insights?.categories?.map(cat => (
+                                            <Tag key={cat.name} color="default" style={{ padding: '4px 12px', fontSize: '12px' }}>
+                                                {cat.name}: <strong>{cat.product_count} items</strong>
+                                            </Tag>
+                                        ))}
+                                    </Space>
+                                </Card>
+                            </Col>
+                        </Row>
+                    </Tabs.TabPane>
+                </Tabs>
+                <div style={{ marginTop: '16px', background: '#fff9ef', padding: '12px', borderRadius: '8px', border: '1px dashed #c0a060' }}>
+                    <Text italic style={{ fontSize: '12px', color: '#c0a060' }}>
+                        * Privacy Shield: Financial metrics, revenue snapshots, and sales reports are restricted from this administrative view to maintain enterprise privacy.
+                    </Text>
+                </div>
+            </Modal>
 
             <Modal
                 title={<Title level={3} style={{ margin: 0, color: '#1e4a2d' }}>
@@ -359,12 +576,42 @@ const BusinessPage = () => {
                         )}
 
                         <Col span={12}>
-                            <Form.Item name="plan_id" label="Selected Tier" initialValue={1}>
-                                <Select size="large">
-                                    <Select.Option value={1}>Free Entry Tier</Select.Option>
-                                    <Select.Option value={2}>Pro Enterprise Plan</Select.Option>
+                            <Form.Item name="plan_id" label="Subscription Tier" rules={[{ required: true }]}>
+                                <Select 
+                                    size="large" 
+                                    placeholder="Select Architecture"
+                                    onChange={(val) => {
+                                        const plan = plans.find(p => p.id === val);
+                                        if (plan) {
+                                            // Optional: auto-set plan_type based on name or price
+                                            const type = plan.price > 100 ? 'premium' : (plan.price > 0 ? 'standard' : 'basic');
+                                            form.setFieldsValue({ plan_type: type });
+                                        }
+                                    }}
+                                >
+                                    {plans.map(p => (
+                                        <Select.Option key={p.id} value={p.id}>
+                                            {p.name} - ${p.price} ({p.billing_cycle})
+                                        </Select.Option>
+                                    ))}
                                 </Select>
                             </Form.Item>
+                            <Form.Item name="plan_type" hidden initialValue="basic"><Input /></Form.Item>
+                        </Col>
+
+                        <Col span={24} style={{ marginTop: 12 }}>
+                            <Text strong style={{ color: '#c0a060', fontSize: '12px' }}>PROVISIONED MODULES (FEATURE TOGGLING)</Text>
+                            <div style={{ marginTop: 8 }}>
+                                <Form.Item name="active_modules" rules={[{ required: true, message: 'Select at least one module' }]}>
+                                    <Checkbox.Group>
+                                        <Row>
+                                            <Col span={8}><Checkbox value="POS">Core POS System</Checkbox></Col>
+                                            <Col span={8}><Checkbox value="Ordering">Web QR Ordering</Checkbox></Col>
+                                            <Col span={8}><Checkbox value="Inventory">Advanced Inventory</Checkbox></Col>
+                                        </Row>
+                                    </Checkbox.Group>
+                                </Form.Item>
+                            </div>
                         </Col>
                     </Row>
 
@@ -380,6 +627,28 @@ const BusinessPage = () => {
                         </Space>
                     </div>
                 </Form>
+            </Modal>
+            {/* Category Activation Management Modal */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <CoffeeOutlined style={{ fontSize: 24, color: '#1e4a2d' }} />
+                        <div>
+                            <Title level={4} style={{ margin: 0 }}>Category Access Control</Title>
+                            <Text type="secondary" style={{ fontSize: 13 }}>Enterprise: <Text strong color="#1e4a2d">{selectedBiz?.name}</Text></Text>
+                        </div>
+                    </div>
+                }
+                open={catVisible}
+                onCancel={() => setCatVisible(false)}
+                footer={[<Button key="close" onClick={() => setCatVisible(false)}>Done</Button>]}
+                width={1000}
+                centered
+                bodyStyle={{ padding: '24px 32px' }}
+            >
+                <div style={{ background: '#fcfaf7', borderRadius: 20, padding: 24, border: '1px solid #f0ede6' }}>
+                    <CategoryManageTab targetBusinessId={selectedBizId} />
+                </div>
             </Modal>
         </div>
     );

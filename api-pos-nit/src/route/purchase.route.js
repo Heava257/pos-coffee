@@ -4,7 +4,8 @@ const {
     getList,
     getDetails,
     receive,
-    remove
+    remove,
+    approve
 } = require("../controller/purchase.controller");
 
 module.exports = (app) => {
@@ -12,5 +13,6 @@ module.exports = (app) => {
     app.get("/api/purchase-details", authMiddleware(), getDetails);
     app.post("/api/purchase", authMiddleware(), create);
     app.post("/api/purchase-receive", authMiddleware(), receive);
+    app.post("/api/purchase-approve", authMiddleware(), approve);
     app.delete("/api/purchase", authMiddleware(), remove);
 };

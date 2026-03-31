@@ -12,7 +12,7 @@ exports.logError = async (controller, error, res) => {
       await fs.access(logDir);
     } catch {
       await fs.mkdir(logDir, { recursive: true });
-    }
+    } 
 
     const logPath = path.join(logDir, controller + ".txt");
     const logMessage = `[${new Date().toISOString()}] ${util.inspect(error, { depth: null })}\n`;

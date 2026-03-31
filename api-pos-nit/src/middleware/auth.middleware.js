@@ -37,12 +37,13 @@ const authMiddleware = (permission_name) => {
             req.role_id = Number(decoded.role_id);
             req.auth = decoded;
 
-            // 🚀 LIVE DATABASE PROTECTION: Fetch current role permissions from DB
+            // 🚀 LIVE DATABASE PROTECTION: Fetch current role permissions with granular actions
             const [rows] = await db.query(
-                "SELECT p.route_key FROM permissions p INNER JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = ?",
+                "SELECT p.route_key, rp.can_view, rp.can_create, rp.can_edit, rp.can_delete FROM permissions p INNER JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = ?",
                 [req.role_id]
             );
             const livePerms = rows.map(r => r.route_key.toLowerCase().replace(/^\/+|\/+$/g, ''));
+
 
             // Notify UI if local permissions are stale
             const jwtPerms = Array.isArray(decoded.permissions) ? decoded.permissions : [];
@@ -52,21 +53,40 @@ const authMiddleware = (permission_name) => {
             }
 
             // 🚀 SaaS Administrator (Business 1) Restriction
-            const shopLevelRoutes = ['product', 'category', 'table', 'invoices', 'order', 'inventory', 'stock', 'raw_material', 'purchase', 'expense', 'shift', 'payment', 'exchange'];
+            // We remove 'product' and 'table' from this list to allow the main system to manage its own base data if needed.
+            const shopLevelRoutes = ['invoices', 'order', 'inventory', 'stock', 'raw_material', 'purchase', 'expense', 'shift', 'payment', 'exchange'];
             if (req.business_id === 1 && permission_name && shopLevelRoutes.includes(permission_name.toLowerCase())) {
                 return res.status(403).json({ message: "Security Violation: SaaS Administrator cannot perform shop-level operations.", error: "SYSTEM_RESTRICTION" });
             }
 
-            // 🚀 STRICT RBAC GUARD: Check against live DB state
+            // 🚀 STRICT RBAC GUARD: Check against live DB state and HTTP Method
             if (permission_name) {
                 const target = permission_name.toLowerCase().replace(/^\/+|\/+$/g, '');
-                if (!livePerms.includes(target)) {
-                    return res.status(403).json({ 
-                        message: `Forbidden - Access revoked for ${permission_name}`, 
-                        error: "INSUFFICIENT_PERMISSIONS" 
+                const userPerm = rows.find(r => r.route_key.toLowerCase().replace(/^\/+|\/+$/g, '') === target);
+
+                if (!userPerm) {
+                    return res.status(403).json({
+                        message: `Forbidden - No access to ${permission_name}`,
+                        error: "INSUFFICIENT_PERMISSIONS"
                     });
                 }
+
+                // Check Action-level Permission based on HTTP Method
+                const method = req.method;
+                if (method === 'GET' && !userPerm.can_view) {
+                    return res.status(403).json({ message: "Forbidden - View access denied", error: "VIEW_DENIED" });
+                }
+                if (method === 'POST' && !userPerm.can_create) {
+                    return res.status(403).json({ message: "Forbidden - Create access denied", error: "CREATE_DENIED" });
+                }
+                if ((method === 'PUT' || method === 'PATCH') && !userPerm.can_edit) {
+                    return res.status(403).json({ message: "Forbidden - Update access denied", error: "EDIT_DENIED" });
+                }
+                if (method === 'DELETE' && !userPerm.can_delete) {
+                    return res.status(403).json({ message: "Forbidden - Delete access denied", error: "DELETE_DENIED" });
+                }
             }
+
 
             next();
         } catch (error) {

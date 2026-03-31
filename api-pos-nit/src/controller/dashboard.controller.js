@@ -10,14 +10,16 @@ exports.getList = async (req, res) => {
     const isOwner = user.length > 0 && user[0].is_super_admin === 1;
 
     // Scoping: 
-    // 1. If query_branch_id is provided, use it (specific branch).
-    // 2. If NO query_branch_id and NOT owner, use session branch_id.
-    // 3. If NO query_branch_id and IS owner, use NULL (to see all branches).
-    let target_branch_id = null;
+    // 1. If query_branch_id is provided, use it (explicit filter).
+    // 2. Default to session branch_id to ensure branch-level data isolation.
+    // 3. To see all branches, query_branch_id should be 'all' or specific.
+    let target_branch_id = branch_id; 
     if (query_branch_id) {
-      target_branch_id = query_branch_id;
-    } else if (!isOwner) {
-      target_branch_id = branch_id;
+      if (query_branch_id === 'all' && (isOwner || business_id === 1)) {
+        target_branch_id = null;
+      } else {
+        target_branch_id = query_branch_id;
+      }
     }
 
     if (!from_date || !to_date) {
@@ -176,3 +178,46 @@ exports.getList = async (req, res) => {
     logError("Dashboard.getList", error, res);
   }
 };
+
+exports.getAdminDashboard = async (req, res) => {
+  try {
+    const { business_id } = req;
+    if (business_id !== 1) return res.status(403).json({ message: "Forbidden" });
+
+    const [[bizStats]] = await db.query(`
+      SELECT 
+        (SELECT COUNT(id) FROM businesses) as total_businesses,
+        (SELECT COUNT(id) FROM businesses WHERE status = 'active') as active_businesses,
+        (SELECT COUNT(id) FROM users) as total_users,
+        (SELECT COUNT(id) FROM branches) as total_branches
+    `);
+
+    const [newestBusinesses] = await db.query(`
+      SELECT b.id, b.name, b.owner_name, b.status, b.created_at, p.name as plan_name
+      FROM businesses b
+      JOIN subscription_plans p ON b.plan_id = p.id
+      ORDER BY b.id DESC
+      LIMIT 5
+    `);
+
+    const [planDist] = await db.query(`
+      SELECT p.name as category, COUNT(b.id) as value
+      FROM businesses b
+      JOIN subscription_plans p ON b.plan_id = p.id
+      GROUP BY p.name
+    `);
+
+    const [recentUsers] = await db.query(`
+      SELECT u.id, u.name, b.name as business_name, u.created_at, r.name as role_name
+      FROM users u
+      JOIN businesses b ON u.business_id = b.id
+      JOIN roles r ON u.role_id = r.id
+      ORDER BY u.id DESC
+      LIMIT 10
+    `);
+
+    res.json({ bizStats, newestBusinesses, planDist, recentUsers, success: true });
+  } catch (error) {
+    logError("Dashboard.getAdminDashboard", error, res);
+  }
+};

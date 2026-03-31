@@ -5,16 +5,30 @@ exports.getList = async (req, res) => {
     const { business_id } = req;
     const { target_business_id } = req.query; // Super Admin can filter by business
 
-    let sql = "SELECT * FROM roles WHERE business_id = ?";
+    let sql = `
+      SELECT r.*, b.name as business_name 
+      FROM roles r 
+      LEFT JOIN businesses b ON r.business_id = b.id 
+      WHERE r.business_id = ?
+    `;
     let params = [business_id];
 
     // Platform Owner (Biz 1) can see any business's roles
     if (business_id === 1 && target_business_id) {
-      sql = "SELECT * FROM roles WHERE business_id = ?";
+      sql = `
+        SELECT r.*, b.name as business_name 
+        FROM roles r 
+        LEFT JOIN businesses b ON r.business_id = b.id 
+        WHERE r.business_id = ?
+      `;
       params = [target_business_id];
     } else if (business_id === 1 && !target_business_id) {
-       // Optional: List ALL roles or just Biz 1? Let's stay with Biz 1 by default or add a flag
-       sql = "SELECT * FROM roles";
+       // Optional: List ALL roles with their business names
+       sql = `
+        SELECT r.*, b.name as business_name 
+        FROM roles r 
+        LEFT JOIN businesses b ON r.business_id = b.id
+       `;
        params = [];
     }
 

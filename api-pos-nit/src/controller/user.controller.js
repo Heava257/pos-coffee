@@ -4,6 +4,10 @@ const bcrypt = require("bcrypt");
 exports.getList = async (req, res) => {
     try {
         const { business_id } = req;
+        const { target_business_id } = req.query;
+        
+        // Super Admin can see any business's users
+        const bizId = (business_id === 1 && target_business_id) ? target_business_id : business_id;
 
         // 1. Fetch User List with Role and Branch names
         const sqlUsers = `
@@ -16,7 +20,7 @@ exports.getList = async (req, res) => {
             WHERE u.business_id = ?
             ORDER BY u.id ASC
         `;
-        const [list] = await db.query(sqlUsers, [business_id]);
+        const [list] = await db.query(sqlUsers, [bizId]);
 
         // 2. Fetch Detailed Subscription Info
         const sqlSub = `
@@ -30,7 +34,7 @@ exports.getList = async (req, res) => {
             WHERE b.id = ?
             LIMIT 1
         `;
-        const [subInfo] = await db.query(sqlSub, [business_id]);
+        const [subInfo] = await db.query(sqlSub, [bizId]);
 
         // 3. Calculate Statistics
         const totalStaff = list.length;
@@ -39,8 +43,8 @@ exports.getList = async (req, res) => {
         const regularStaff = totalStaff - superAdmins;
 
         // 4. Fetch Meta Data for UI
-        const [roles] = await db.query("SELECT id as value, name as label FROM roles WHERE business_id = ?", [business_id]);
-        const [branches] = await db.query("SELECT id as value, name as label FROM branches WHERE business_id = ?", [business_id]);
+        const [roles] = await db.query("SELECT id as value, name as label FROM roles WHERE business_id = ?", [bizId]);
+        const [branches] = await db.query("SELECT id as value, name as label FROM branches WHERE business_id = ?", [bizId]);
         const totalBranches = branches.length;
 
         res.json({

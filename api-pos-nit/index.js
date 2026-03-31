@@ -44,6 +44,7 @@ require("./src/route/table.route")(app);
 require("./src/route/settings.route")(app);
 require("./src/route/favorite.route")(app);
 require("./src/route/shift.route")(app);
+require("./src/route/business_category.route")(app);
 
 
 app.use((err, req, res, next) => {
@@ -88,6 +89,34 @@ app.listen(PORT, async () => {
     console.log("Migration: 'orders.user_id' is now NULLABLE");
   } catch (err) {
     if (!err.message.includes("Duplicate")) console.log("Migration (orders.user_id) skipped:", err.message);
+  }
+
+  // ✅ Migration: Create business_categories junction table
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS business_categories (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        business_id INT NOT NULL,
+        category_id INT NOT NULL,
+        is_active TINYINT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_biz_cat (business_id, category_id)
+      )
+    `);
+    console.log("Migration: 'business_categories' table is ready");
+  } catch (err) {
+    console.error("Migration Error (business_categories):", err.message);
+  }
+
+  // ✅ Migration: Add default config columns to categories table
+  const catCols = ['default_moods', 'default_sizes', 'default_addons'];
+  for (const col of catCols) {
+    try {
+      await db.query(`ALTER TABLE categories ADD COLUMN ${col} TEXT NULL`);
+      console.log(`Migration: Added 'categories.${col}'`);
+    } catch (err) {
+      if (!err.message.includes("Duplicate")) console.log(`Migration (categories.${col}) skipped:`, err.message);
+    }
   }
 
   // Migration Fix: Ensure products table has 'brand' and 'discount' columns
@@ -169,7 +198,9 @@ app.listen(PORT, async () => {
     await db.query("ALTER TABLE businesses ADD COLUMN currency_symbol VARCHAR(10) DEFAULT '$'");
     await db.query("ALTER TABLE businesses ADD COLUMN telegram_link VARCHAR(255)");
     await db.query("ALTER TABLE businesses ADD COLUMN facebook_link VARCHAR(255)");
-    console.log("Migration: 'businesses' table settings columns added");
+    await db.query("ALTER TABLE businesses ADD COLUMN plan_type VARCHAR(50) DEFAULT 'basic'");
+    await db.query("ALTER TABLE businesses ADD COLUMN active_modules TEXT");
+    console.log("Migration: 'businesses' table settings and modular columns added");
   } catch (err) { }
 
   // Migration Fix: Add payment fields to branches table (Safe Check)

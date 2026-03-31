@@ -594,6 +594,25 @@ const CoffeeMenuApp = () => {
   const [selectedTemp, setSelectedTemp] = useState('Iced');
   const [selectedSugar, setSelectedSugar] = useState('100%');
 
+  // NEW: Detect Table/Branch from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const biz = params.get('biz');
+    const br = params.get('br');
+    const tbl = params.get('tbl');
+
+    if (biz && br) {
+      // Auto-set shop and table
+      // In a real SaaS, we would fetch branch details here to get the name/logo
+      // For now, if we have the IDs, we can fetch products directly
+      setSelectedShop(prev => ({ ...prev, id: parseInt(br), business_id: parseInt(biz) }));
+      if (tbl) setSelectedTable(tbl);
+      
+      // Clear URL params to keep it clean (optional)
+      // window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => { if (!optionsModalItem) { setOptionQty(1); setSelectedTemp('Iced'); setSelectedSugar('100%'); } }, [optionsModalItem]);
 
   const isDrink = useMemo(() => {
@@ -606,10 +625,10 @@ const CoffeeMenuApp = () => {
 
 
   useEffect(() => {
-    localStorage.setItem('coffee_pos_table', selectedTable);
-    localStorage.setItem('coffee_pos_shop', JSON.stringify(selectedShop));
-    localStorage.setItem('coffee_pos_cart', JSON.stringify(cart));
-    localStorage.setItem('coffee_pos_starred', JSON.stringify(starredItems));
+    localStorage.setItem('coffee_pos_table', selectedTable || "");
+    localStorage.setItem('coffee_pos_shop', JSON.stringify(selectedShop || {}));
+    localStorage.setItem('coffee_pos_cart', JSON.stringify(cart || []));
+    localStorage.setItem('coffee_pos_starred', JSON.stringify(starredItems || []));
   }, [selectedTable, selectedShop, cart, starredItems]);
 
   useEffect(() => {
@@ -623,7 +642,11 @@ const CoffeeMenuApp = () => {
     setTimeout(() => setSplash(false), 1500);
   }, []);
 
-  useEffect(() => { fetchShopProducts(); }, [selectedShop, currentCategory?.id]);
+  useEffect(() => { 
+    if (selectedShop?.id) {
+        fetchShopProducts(); 
+    }
+  }, [selectedShop?.id, currentCategory?.id]);
 
   const fetchShopProducts = async () => {
     try {
@@ -632,7 +655,7 @@ const CoffeeMenuApp = () => {
         const catRes = await request("category", "get");
         if (catRes?.list) setCategories(catRes.list);
       }
-      const productRes = await request("product", "get", { branch_id: selectedShop?.id, category_id: currentCategory?.id });
+      const productRes = await request("product", "get", { branch_id: selectedShop?.id });
       if (productRes?.list) {
         setMenuItems(productRes.list);
         let sizesMap = {};
@@ -726,11 +749,11 @@ const CoffeeMenuApp = () => {
     const orderData = {
       business_id: selectedShop?.business_id,
       branch_id: selectedShop?.id,
-      customer_name: "Guest",
-      table_no: selectedTable || "",
+      customer_name: getProfile()?.firstname || "Web Guest",
+      table_no: selectedTable || "Web",
       sub_total: sub_total,
       total_amount: sub_total,
-      payment_method: "Cash",
+      payment_method: "Unpaid (Web QR)",
       order_type: "dine_in",
       cart_items: cart.map(item => ({
         product_id: item.id,
@@ -743,9 +766,10 @@ const CoffeeMenuApp = () => {
 
     setLoading(true);
     try {
-      const res = await request("order", "post", orderData);
+      // Use the new PUBLIC order-web endpoint
+      const res = await request("order-web", "post", orderData);
       if (res && res.success) {
-        message.success("Order Placed Successfully!");
+        message.success("Order Placed Successfully! Barista is preparing your coffee. ☕");
         setCart([]);
         localStorage.setItem('coffee_pos_cart', JSON.stringify([]));
         setIsCartOpen(false);

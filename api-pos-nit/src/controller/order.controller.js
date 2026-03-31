@@ -286,3 +286,97 @@ exports.updateStatus = async (req, res) => {
         logError("order.updateStatus", error, res);
     }
 };
+
+// 6. KDS (Kitchen Display System) - Get Active Orders
+exports.getKDSOrders = async (req, res) => {
+    try {
+        const { business_id, branch_id } = req;
+        const [list] = await db.query(
+            `SELECT 
+                o.*, 
+                u.name as staff_name,
+                (SELECT GROUP_CONCAT(CONCAT(od.qty, ' x ', p.name) SEPARATOR '\n') 
+                 FROM order_details od JOIN products p ON od.product_id = p.id 
+                 WHERE od.order_id = o.id) as items_summary
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.id
+            WHERE o.business_id = ? AND o.branch_id = ? 
+            AND o.status != 'cancelled'
+            AND (o.kitchen_status IS NULL OR o.kitchen_status != 'served')
+            ORDER BY o.id ASC`,
+            [business_id, branch_id]
+        );
+
+        // Fetch details for each order for more granular display
+        // (Alternatively, use the items_summary or a separate query per order on frontend)
+        res.json({ list });
+    } catch (error) {
+        logError("order.getKDSOrders", error, res);
+    }
+};
+
+// 7. Update Kitchen Status
+exports.updateKitchenStatus = async (req, res) => {
+    try {
+        const { id, kitchen_status } = req.body;
+        const { business_id } = req;
+        
+        await db.query(
+            "UPDATE orders SET kitchen_status = ? WHERE id = ? AND business_id = ?",
+            [kitchen_status, id, business_id]
+        );
+        
+        res.json({ success: true, message: "Kitchen status updated to " + kitchen_status });
+    } catch (error) {
+        logError("order.updateKitchenStatus", error, res);
+    }
+};
+
+// 8. Public Web Order (For QR Ordering)
+exports.createWebOrder = async (req, res) => {
+    let connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        const {
+            business_id,
+            branch_id,
+            customer_name,
+            table_no,
+            sub_total,
+            total_amount,
+            payment_method,
+            order_type,
+            cart_items,
+            status // should be 'unpaid'
+        } = req.body;
+
+        if (!business_id || !branch_id) {
+            return res.status(400).json({ message: "Missing Business or Branch context" });
+        }
+
+        const [orderResult] = await connection.query(
+            `INSERT INTO orders 
+            (business_id, branch_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, status, kitchen_status, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+            [business_id, branch_id, customer_name || 'Web Guest', table_no, sub_total, total_amount, payment_method || 'Unpaid', order_type || 'dine_in', status || 'unpaid']
+        );
+
+        const orderId = orderResult.insertId;
+
+        for (const item of cart_items) {
+            await connection.query(
+                "INSERT INTO order_details (order_id, product_id, qty, price, note) VALUES (?, ?, ?, ?, ?)",
+                [orderId, item.product_id, item.qty, item.price, item.note]
+            );
+        }
+
+        await connection.commit();
+        res.json({ success: true, message: "Order Placed Successfully", order_id: orderId });
+    } catch (error) {
+        await connection.rollback();
+        console.error("Web Order Error:", error);
+        res.status(500).json({ message: "Order Processing Failed" });
+    } finally {
+        connection.release();
+    }
+};

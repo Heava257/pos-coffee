@@ -10,8 +10,9 @@ import MainLayout from "./component/layout/MainLayout";
 import MainLayoutAuth from "./component/layout/MainLayoutAuth";
 import EmployeePage from "./page/employee/EmployeePage";
 import CoffeeMenuApp from "./page/CoffeeMenuApp/CoffeeMenuApp";
-import CategoryPage from "./page/category/CategoryPage";
 import UserPage from "./page/user/UserPage";
+ import CategoryPage from "./page/category/CategoryPage";
+ import GlobalCategoryPage from "./page/category/GlobalCategoryPage";
 import RolePage from "./page/role/RolePage";
 import PermissionPage from "./page/role/PermissionPage";
 import PlanPage from "./page/plans/PlanPage";
@@ -39,18 +40,24 @@ import MyPlanPage from "./page/plans/MyPlanPage";
 import PaymentResultPage from "./page/plans/PaymentResultPage";
 import TablePage from "./page/table/TablePage";
 import SettingsPage from "./page/settings/SettingsPage";
+import KdsPage from "./page/pos/KdsPage";
+import RecipePage from "./page/recipe/RecipePage";
 import { getProfile } from "./store/profile.store";
 
 const RootRedirect = () => {
   const profile = getProfile();
-  // Safe check for admin session using multiple common ID properties
-  const isAdmin = profile && (profile.id || profile.user_id) && profile.role_code !== "guest";
+  if (!profile) return <Navigate to="/customer" replace />;
+
+  const isAdmin = profile.is_super_admin === 1 || 
+                ['Owner', 'Executive', 'Admin'].includes(profile.role_name);
 
   if (isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
-  return <Navigate to="/customer" replace />;
+  // Staff/Sale redirects to POS
+  return <Navigate to="/invoices" replace />;
 };
+
 
 function App() {
   const MainLayoutWrapper = () => (
@@ -69,7 +76,7 @@ function App() {
             <Route path="/dashboard" element={<HomePage />} />
             <Route path="/invoices" element={<PosPage />} />
             <Route path="/table" element={<TablePage />} />
-            <Route path="/category" element={<CategoryPage />} />
+            <Route path="/category" element={getProfile()?.business_id === 1 ? <GlobalCategoryPage /> : <CategoryPage />} />
             <Route path="/shop_managment" element={<BranchPage />} />
             <Route path="/expense" element={<ExpensePage />} />
             {/* <Route path="/total_due" element={<SmartProductEntry />} /> */}
@@ -95,6 +102,8 @@ function App() {
             <Route path="/raw_material" element={<RawMaterialPage />} />
             <Route path="/purchase" element={<PurchasePage />} />
             <Route path="/stock" element={<StockPage />} />
+            <Route path="/recipe" element={<RecipePage />} />
+            <Route path="/kds" element={<KdsPage />} />
             <Route path="*" element={<Navigate to="/customer" replace />} />
           </Route>
 

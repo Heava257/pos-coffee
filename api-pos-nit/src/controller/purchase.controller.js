@@ -44,10 +44,11 @@ exports.create = async (req, res) => {
             note,
             purchase_date,
             status, // Pending, Received, etc.
-            items // [{ product_id, qty, cost, item_type }]
+            items, // [{ product_id, qty, cost, item_type }]
+            ref: custom_ref
         } = req.body;
 
-        const ref = `PO-${Date.now()}`;
+        const ref = custom_ref || `PO-${Date.now()}`;
 
         // 1. Create Purchase record
         const [p_res] = await conn.query(
@@ -231,3 +232,20 @@ exports.remove = async (req, res) => {
         logError("purchase.remove", error, res);
     }
 }
+
+exports.approve = async (req, res) => {
+    try {
+        const { business_id } = req;
+        const { id } = req.body;
+        
+        // Only allow approving if current status is 'Request'
+        const [rows] = await db.query("SELECT status FROM purchase WHERE id = ? AND business_id = ?", [id, business_id]);
+        if (rows.length === 0) return res.status(404).json({ message: "Purchase not found" });
+        if (rows[0].status !== 'Request') return res.status(400).json({ message: "Only purchase requests can be approved" });
+
+        await db.query("UPDATE purchase SET status = 'Approved' WHERE id = ? AND business_id = ?", [id, business_id]);
+        res.json({ success: true, message: "Purchase approved successfully!" });
+    } catch (error) {
+        logError("purchase.approve", error, res);
+    }
+};

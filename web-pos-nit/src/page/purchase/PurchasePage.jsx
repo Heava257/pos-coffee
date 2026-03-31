@@ -19,11 +19,16 @@ import { MdAdd, MdDelete, MdRemoveRedEye, MdInventory } from "react-icons/md";
 import MainPage from "../../component/layout/MainPage";
 import dayjs from "dayjs";
 import { useLanguage, translations } from "../../store/language.store";
+import { useProfileStore } from "../../store/profileStore";
 
 function PurchasePage() {
     const { lang } = useLanguage();
     const t = translations[lang];
     const [form] = Form.useForm();
+    const { profile } = useProfileStore();
+    const isOwner = profile?.role_name?.toUpperCase() === "OWNER" || profile?.role_code === "owner";
+    const isAdmin = profile?.role_name?.toUpperCase().includes("ADMIN") || profile?.role_code === "admin";
+    const canApprove = isOwner || isAdmin;
     const [state, setState] = useState({
         list: [],
         loading: false,
@@ -299,6 +304,8 @@ function PurchasePage() {
                 if (val === "Received") color = "green";
                 if (val === "Partial") color = "cyan";
                 if (val === "Cancelled") color = "red";
+                if (val === "Request") color = "purple";
+                if (val === "Approved") color = "blue";
                 return <Tag color={color} style={{ borderRadius: 6, padding: '2px 8px', textTransform: 'uppercase', fontSize: 10 }}>{val}</Tag>
             }
         },
@@ -313,7 +320,22 @@ function PurchasePage() {
             align: 'center',
             render: (item) => (
                 <Space>
-                    {(item.status === 'Pending' || item.status === 'Partial') && (
+                    {item.status === 'Request' && canApprove && (
+                        <Button 
+                           type="primary" 
+                           size="small" 
+                           onClick={async () => {
+                               const res = await request("purchase-approve", "post", { id: item.id });
+                               if (res && !res.error) {
+                                   message.success("Purchase request approved!");
+                                   getList();
+                               }
+                           }}
+                        >
+                           Approve
+                        </Button>
+                    )}
+                    {(item.status === 'Pending' || item.status === 'Partial' || item.status === 'Approved') && (
                         <Button
                             type="primary"
                             size="small"
@@ -324,7 +346,7 @@ function PurchasePage() {
                             {t.receiving_now || "Receive"}
                         </Button>
                     )}
-                    {(item.status === 'Pending' || item.status === 'Cancelled') && (
+                    {(item.status === 'Pending' || item.status === 'Cancelled' || item.status === 'Request') && (
                         <Button
                             type="text"
                             danger
@@ -409,26 +431,32 @@ function PurchasePage() {
             >
                 <Form layout="vertical" form={form} onFinish={onFinish}>
                     <Row gutter={16}>
-                        <Col span={6}>
+                        <Col span={5}>
                             <Form.Item name="supplier_id" label={t.supplier} rules={[{ required: true }]}>
                                 <Select options={state.suppliers} placeholder={t.supplier} showSearch filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())} />
                             </Form.Item>
                         </Col>
-                        <Col span={6}>
+                        <Col span={5}>
+                            <Form.Item name="ref" label={t.ref_no + " (Invoice #)"}>
+                                <Input placeholder="e.g. INV-001" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={5}>
                             <Form.Item name="purchase_date" label={t.receive_date} rules={[{ required: true }]}>
                                 <DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
                             </Form.Item>
                         </Col>
-                        <Col span={6}>
-                            <Form.Item name="status" label={t.status} rules={[{ required: true }]} initialValue="Received">
+                        <Col span={5}>
+                            <Form.Item name="status" label={t.status} rules={[{ required: true }]} initialValue={canApprove ? "Received" : "Request"}>
                                 <Select options={[
-                                    { label: "⏳ " + t.pending, value: "Pending" },
-                                    { label: "✅ " + t.paid, value: "Received" },
+                                    { label: "📥 " + (t.request || "Request (PO)"), value: "Request" },
+                                    { label: "⌛ " + t.pending, value: "Pending" },
+                                    { label: "✅ " + (t.received || "Received"), value: "Received" },
                                     { label: "❌ " + t.cancelled, value: "Cancelled" }
                                 ]} />
                             </Form.Item>
                         </Col>
-                        <Col span={6}>
+                        <Col span={4}>
                             <Form.Item name="note" label={t.note}>
                                 <Input placeholder={t.note} />
                             </Form.Item>
@@ -463,6 +491,7 @@ function PurchasePage() {
                                                                 const fValues = form.getFieldsValue();
                                                                 const items = [...fValues.items];
                                                                 items[name].cost = item.price;
+                                                                items[name].qty = items[name].qty || 1; // Default 1
                                                                 items[name].item_type = item.item_type;
                                                                 items[name].real_id = item.item_id;
                                                                 form.setFieldsValue({ items });

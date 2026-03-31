@@ -7,7 +7,7 @@ import ImgUser from "../../assets/profile.png";
 import { Tooltip } from "antd";
 import { MdOutlineMarkEmailUnread, MdRestaurantMenu } from "react-icons/md";
 import { IoMdNotificationsOutline } from "react-icons/io";
-import { LockOutlined, MenuOutlined, UnlockOutlined } from "@ant-design/icons";
+import { CoffeeOutlined, LockOutlined, MenuOutlined, UnlockOutlined } from "@ant-design/icons";
 import {
   getPermission,
   getProfile, // Keep getProfile from profile.store.js for initial load if needed
@@ -38,6 +38,8 @@ import {
   GlobalOutlined,
   SettingOutlined,
   CrownOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from "@ant-design/icons";
 import { twMerge } from 'tailwind-merge';
 import { clsx } from 'clsx';
@@ -52,85 +54,115 @@ const { Header, Content, Footer, Sider } = Layout;
 // Menu keys used for mapping translations
 const MENU_STRUCTURE = [
   {
-    key: "dashboard",
-    labelKey: "dashboard",
-    icon: <PieChartOutlined />,
-  },
-  {
-    key: "invoices",
-    labelKey: "pos",
-    icon: <MdRestaurantMenu />,
-  },
-  {
-    key: "order",
-    labelKey: "order_detail",
-    icon: <FaHistory />,
-  },
-
-  {
-    key: "inventory",
-    labelKey: "inventory",
-    icon: <ShoppingCartOutlined />,
+    type: 'group',
+    labelKey: 'menu_group_main',
     children: [
-      { key: "purchase", labelKey: "purchase", icon: <ShoppingCartOutlined /> },
-      { key: "supplier", labelKey: "supplier", icon: <TeamOutlined /> },
-      { key: "raw_material", labelKey: "raw_material", icon: <FileProtectOutlined /> },
-      { key: "stock", labelKey: "stock", icon: <FileProtectOutlined /> },
+      {
+        key: "dashboard",
+        labelKey: "dashboard",
+        icon: <PieChartOutlined />,
+      },
+      {
+        key: "invoices",
+        labelKey: "pos",
+        icon: <MdRestaurantMenu />,
+      },
+      {
+        key: "kds",
+        labelKey: "kds",
+        icon: <CoffeeOutlined />,
+      },
+      {
+        key: "order",
+        labelKey: "order_detail",
+        icon: <FaHistory />,
+      },
     ]
   },
 
   {
-    key: "shop_managment",
-    labelKey: "shop_managment",
-    icon: <FaShop />,
-  },
-  {
-    key: "table",
-    labelKey: "table",
-    icon: <DesktopOutlined />,
-  },
-  {
-    key: "product",
-    labelKey: "product",
-    icon: <ShopOutlined />,
-  },
-  {
-    key: "category",
-    labelKey: "category",
-    icon: <SolutionOutlined />,
+    type: 'group',
+    labelKey: 'menu_group_inventory',
+    children: [
+      {
+        key: "inventory",
+        labelKey: "inventory",
+        icon: <ShoppingCartOutlined />,
+        children: [
+          { key: "purchase", labelKey: "purchase", icon: <ShoppingCartOutlined /> },
+          { key: "supplier", labelKey: "supplier", icon: <TeamOutlined /> },
+          { key: "raw_material", labelKey: "raw_material", icon: <FileProtectOutlined /> },
+          { key: "recipe", labelKey: "recipe", icon: <SolutionOutlined /> },
+          { key: "stock", labelKey: "stock", icon: <FileProtectOutlined /> },
+        ]
+      },
+    ]
   },
 
   {
-    key: "staff",
-    labelKey: "staff_roles",
-    icon: <UsergroupAddOutlined />,
+    type: 'group',
+    labelKey: 'menu_group_setup',
     children: [
-      { key: "user", labelKey: "user", icon: <UserOutlined /> },
-      { key: "role", labelKey: "roles", icon: <SafetyCertificateOutlined /> },
-      { key: "permission", labelKey: "permission", icon: <UnlockOutlined /> },
-      { key: "plans", labelKey: "plans", icon: <CreditCardOutlined /> },
-    ],
+      {
+        key: "shop_managment",
+        labelKey: "shop_managment",
+        icon: <FaShop />,
+      },
+      {
+        key: "table",
+        labelKey: "table",
+        icon: <DesktopOutlined />,
+      },
+      {
+        key: "product",
+        labelKey: "product",
+        icon: <ShopOutlined />,
+      },
+      {
+        key: "category",
+        labelKey: "category",
+        icon: <SolutionOutlined />,
+      },
+    ]
   },
+
   {
-    key: "reports",
-    labelKey: "reports",
-    icon: <FileOutlined />,
+    type: 'group',
+    labelKey: 'menu_group_admin',
     children: [
-      { key: "report_Sale_Summary", labelKey: "sales_report", icon: <PieChartOutlined /> },
-      { key: "expense", labelKey: "expenses", icon: <DollarOutlined /> },
-      { key: "Top_Sale", labelKey: "best_sellers", icon: <TrophyOutlined /> },
-    ],
-  },
-  {
-    key: "settings",
-    labelKey: "settings",
-    icon: <SettingOutlined />,
-  },
-  {
-    key: "business",
-    labelKey: "business",
-    icon: <GlobalOutlined />,
-    style: { background: '#fff9ef', margin: '4px 8px', borderRadius: '8px', color: '#c0a060', fontWeight: 'bold' }
+      {
+        key: "staff",
+        labelKey: "staff_roles",
+        icon: <UsergroupAddOutlined />,
+        children: [
+          { key: "user", labelKey: "user", icon: <UserOutlined /> },
+          { key: "role", labelKey: "roles", icon: <SafetyCertificateOutlined /> },
+          { key: "permission", labelKey: "permission", icon: <UnlockOutlined /> },
+          { key: "plans", labelKey: "plans", icon: <CreditCardOutlined /> },
+        ],
+      },
+      {
+        key: "reports",
+        labelKey: "reports",
+        icon: <FileOutlined />,
+        children: [
+          { key: "report_Sale_Summary", labelKey: "sales_report", icon: <PieChartOutlined /> },
+          { key: "expense", labelKey: "expenses", icon: <DollarOutlined /> },
+          { key: "Top_Sale", labelKey: "best_sellers", icon: <TrophyOutlined /> },
+        ],
+      },
+      {
+        key: "settings",
+        labelKey: "settings",
+        icon: <SettingOutlined />,
+      },
+      {
+        key: "business",
+        labelKey: "business",
+        icon: <GlobalOutlined />,
+        style: { background: '#fff9ef', margin: '4px 0', borderRadius: '8px', color: '#c0a060', fontWeight: 'bold' }
+      },
+    ]
   },
 ];
 
@@ -261,33 +293,36 @@ const MainLayout = () => {
 
     // Check if the route is allowed for the user
     const findIndex = permision.findIndex((item) => {
-      if (!item.web_route_key) return false;
-      const p1 = item.web_route_key.toLowerCase().replace(/^\/+|\/+$/g, '');
+      if (!item.route_key) return false;
+      const p1 = item.route_key.toLowerCase().replace(/^\/+|\/+$/g, '');
       const p2 = currentPath.toLowerCase().replace(/^\/+|\/+$/g, '');
 
       // Check for exact match or prefix match (for sub-routes like /product/edit/1)
-      if ((p1 === "" || p1 === "dashboard") && (p2 === "" || p2 === "dashboard")) return true;
-      
-      return p1 === p2 || p2.startsWith(p1 + "/");
+      return p1 === p2 || (p1 !== "" && p2.startsWith(p1 + "/"));
     });
 
     if (findIndex === -1) {
-      // If it's the root/dashboard, allow if they are OWNER/SuperAdmin by default
-      if ((currentPath === "/" || currentPath === "/dashboard") && (profile?.business_id === 1 || profile?.is_super_admin === 1)) {
-        return;
-      }
+      // Special Exception for Root/Dashboard: Only for Platform Admins (ID 1) or specific Super Admins
+      const isPlatformAdmin = profile?.business_id === 1;
+      const isDashboardRoute = currentPath === "/" || currentPath === "/dashboard";
 
-      // Final fallback for Super Admin (Business ID 1)
-      if (profile?.business_id === 1 && (currentPath === "/business" || currentPath === "/plans")) {
+      if (isDashboardRoute && isPlatformAdmin) {
         return;
       }
 
       console.warn(`Unauthorized access attempt to: ${currentPath}. Redirecting...`);
-      // Redirect to dashboard or first allowed page
-      if (permision[0] && permision[0].web_route_key) {
+
+      // Smart Redirection:
+      // 1. If staff (has POS permission), send to /invoices
+      // 2. Otherwise send to first permitted route
+      // 3. Last fallback to login
+      const posPerm = permision.find(p => p.web_route_key?.includes('invoices'));
+      if (posPerm) {
+        navigate("/invoices");
+      } else if (permision[0] && permision[0].web_route_key) {
         navigate(permision[0].web_route_key);
       } else {
-        navigate("/dashboard");
+        navigate("/login");
       }
     }
   };
@@ -296,71 +331,94 @@ const MainLayout = () => {
   const items = React.useMemo(() => {
     if (!permision || !Array.isArray(permision)) return [];
 
-    const items_menu = MENU_STRUCTURE.map(item => ({
-      ...item,
-      label: t[item.labelKey],
-      children: item.children ? item.children.map(child => ({
-        ...child,
-        label: t[child.labelKey]
-      })) : undefined
-    }));
+    // Helper to check permission safely
+    const checkPath = (key) => {
+      if (!key && key !== "") return false;
+      const targetPath = (key === "" || key === "dashboard") ? "/" : "/" + key;
+      return permision.some(p => {
+        if (!p.route_key) return false;
+        const p1 = p.route_key.toLowerCase().replace(/^\/+|\/+$/g, '');
+        const p2 = targetPath.toLowerCase().replace(/^\/+|\/+$/g, '');
+        if ((p1 === "" || p1 === "dashboard") && (p2 === "" || p2 === "dashboard")) return true;
+        return p1 === p2;
+      });
+    };
 
-    return items_menu.map(item => {
-      const newItem = { ...item };
+    // Recursive filtering function
+    const filterMenuItems = (menuList) => {
+      // Get active modules from profile (default to POS for old accounts)
+      const activeModules = profile?.active_modules ? profile.active_modules.split(',') : ['POS'];
 
-      // 1. Contextual Visibility Rules
-      if (newItem.key === "business" && profile?.business_id !== 1) return null;
-      if (newItem.key === "my-plan" && profile?.business_id === 1) return null;
+      return menuList.map(item => {
+        const newItem = { ...item };
 
-      // Hide Shop Operations for SaaS Owner (Business ID 1)
-      const shopOps = ["order", "inventory", "table", "product", "category", "shop_managment", "invoices", "pos", "expense", "report"];
-      if (profile?.business_id === 1 && (shopOps.includes(newItem.key) || shopOps.some(op => newItem.key?.includes(op)))) {
-        return null;
-      }
+        // Translate label
+        if (newItem.labelKey) {
+          newItem.label = t[newItem.labelKey];
+        }
 
-      // Helper to check permission safely
-      const checkPath = (key) => {
-        if (!key && key !== "") return false;
-        const targetPath = (key === "" || key === "dashboard") ? "/" : "/" + key;
-        return permision.some(p => {
-          if (!p.web_route_key) return false;
-          // Normalize both paths: lowercase and remove trailing/leading slashes for comparison
-          const p1 = p.web_route_key.toLowerCase().replace(/^\/+|\/+$/g, '');
-          const p2 = targetPath.toLowerCase().replace(/^\/+|\/+$/g, '');
+        // 1. Contextual Visibility Rules
+        if (newItem.key === "business" && profile?.business_id !== 1) return null;
+        if (newItem.key === "my-plan" && profile?.business_id === 1) return null;
 
-          // Special Case: "" (root) and "dashboard" are often used interchangeably
-          if ((p1 === "" || p1 === "dashboard") && (p2 === "" || p2 === "dashboard")) return true;
+        // Hide Shop Operations for SaaS Owner (Business ID 1)
+        const shopOps = ["order", "inventory", "table", "product", "shop_managment", "invoices", "pos", "expense", "report"];
+        if (profile?.business_id === 1 && (shopOps.includes(newItem.key) || shopOps.some(op => newItem.key?.includes(op)))) {
+          return null;
+        }
 
-          return p1 === p2;
-        });
-      };
+        // 2. Modular Filtering Logic
+        // Map menu keys/groups to active_modules
+        // Some menus are shared between Core POS and Web Ordering
+        const isPOS = activeModules.includes('POS');
+        const isOrdering = activeModules.includes('Ordering');
+        const isInventory = activeModules.includes('Inventory');
 
-      // Case 1: Simple menu item (no children)
-      if (newItem.hasOwnProperty('key') && !newItem.children) {
+        const moduleMap = {
+          'inventory': isInventory,
+          'purchase': isInventory,
+          'supplier': isInventory,
+          'stock': isInventory,
+          'raw_material': isInventory,
+          'recipe': isInventory,
+
+          'invoices': isPOS, // POS Terminal only for POS module
+
+          // Shared modules for both POS and Ordering
+          'kds': isPOS || isOrdering,
+          'order': isPOS || isOrdering,
+          'shop_managment': isPOS || isOrdering,
+          'category': isPOS || isOrdering,
+          'product': isPOS || isOrdering,
+          'table': isPOS || isOrdering
+        };
+
+        const isAllowedByModule = moduleMap[newItem.key];
+        if (isAllowedByModule === false) {
+          return null;
+        }
+
+        // Case: Group or Submenu
+        if (newItem.children) {
+          const filteredChildren = filterMenuItems(newItem.children);
+          if (filteredChildren && filteredChildren.length > 0) {
+            return { ...newItem, children: filteredChildren };
+          }
+          return null;
+        }
+
+        // Case: Simple menu item
         if (newItem.key === "business") return profile?.business_id === 1 ? newItem : null;
-
         if (newItem.key === "dashboard") {
           if (profile?.business_id === 1) return newItem;
         }
 
         return checkPath(newItem.key) ? newItem : null;
-      }
+      }).filter(Boolean);
+    };
 
-      // Case 2: Parent menu with children
-      if (newItem.children) {
-        const filteredChildren = newItem.children.filter(child => {
-          if (child.key === "plans") return profile?.business_id === 1;
-          return checkPath(child.key);
-        });
-
-        if (filteredChildren.length > 0) {
-          return { ...newItem, children: filteredChildren };
-        }
-      }
-
-      return null;
-    }).filter(Boolean);
-  }, [permision, profile, lang]);
+    return filterMenuItems(MENU_STRUCTURE);
+  }, [permision, profile, lang, collapsed, t]);
 
   const getMenuByUser = () => {
     // This function is now redundant due to useMemo
@@ -384,7 +442,13 @@ const MainLayout = () => {
   };
 
   const onOpenChange = (keys) => {
-    setOpenKeys(keys);
+    const rootSubmenuKeys = ["inventory", "staff", "reports"];
+    const latestOpenKey = keys.find((key) => openKeys.indexOf(key) === -1);
+    if (!rootSubmenuKeys.includes(latestOpenKey)) {
+      setOpenKeys(keys);
+    } else {
+      setOpenKeys(latestOpenKey ? [latestOpenKey] : []);
+    }
   };
 
   const onLoginOut = () => {
@@ -454,9 +518,12 @@ const MainLayout = () => {
           alt="Logo"
           className="admin-logo"
           style={{
-            height: isMobile ? "80px" : collapsed ? "60px" : "130px",
+            height: isMobile ? "80px" : collapsed ? "45px" : "130px",
+            width: "auto",
+            maxWidth: collapsed ? "60px" : "200px",
             objectFit: "contain",
-            transition: "height 0.3s"
+            transition: "all 0.3s ease",
+            margin: collapsed ? "0 auto" : "0"
           }}
         />
       </div>
@@ -555,173 +622,182 @@ const MainLayout = () => {
             }}
           >
             {/* Mobile Menu Button */}
-            {isMobile && (
+            <Tooltip title={isMobile ? (mobileDrawerVisible ? "Close Menu" : "Open Menu") : (collapsed ? "Expand Menu" : "Collapse Menu")} placement="bottom">
               <Button
                 type="text"
-                icon={<MenuOutlined />}
-                onClick={toggleMobileDrawer}
+                icon={collapsed && !isMobile ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                onClick={isMobile ? toggleMobileDrawer : () => setCollapsed(!collapsed)}
+                className="sidebar-toggle-btn"
                 style={{
                   fontSize: "18px",
                   width: 40,
                   height: 40,
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#f8f9fa',
+                  border: '1px solid #e9ecef',
+                  color: '#1e4a2d',
+                  marginRight: '12px'
                 }}
               />
-            )}
+            </Tooltip>
 
-              {/* Header Right Content */}
-              <div
-                className="admin-header-g2"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: isMobile ? "12px" : "24px",
-                  marginLeft: "auto",
-                }}
-              >
-                {/* 🚀 Quick Actions Group */}
+            {/* Header Right Content */}
+            <div
+              className="admin-header-g2"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: isMobile ? "12px" : "24px",
+                marginLeft: "auto",
+              }}
+            >
+              {/* 🚀 Quick Actions Group */}
 
 
-                {/* 💎 Premium Feature / Branch Info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  {!isMobile && profile?.business_id !== 1 && (
-                    <Button
-                      type="primary"
-                      size="middle"
-                      icon={<CrownOutlined />}
-                      onClick={() => navigate('/my-plan')}
-                      className={cn(
-                        "premium-upgrade-btn",
-                        profile?.plan_id >= 3 && "gold-gradient",
-                        profile?.plan_id === 2 && "emerald-gradient"
-                      )}
-                      style={{
-                        borderRadius: '12px',
-                        border: 'none',
-                        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.08)',
-                        fontWeight: 700,
-                        fontSize: '11px',
-                        height: '38px',
-                        padding: '0 16px',
-                        background: '#1e4a2d',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      {profile?.plan_id === 1 ? "UPGRADE" : (profile?.plan_id === 2 ? "PRO" : "PREMIUM")}
-                    </Button>
-                  )}
-
-                  {!isMobile && (
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'flex-start',
-                      justifyContent: 'center',
-                      borderLeft: '1px solid #f1f3f5',
-                      paddingLeft: '16px',
-                      marginLeft: '4px',
-                      minWidth: '120px'
-                    }}>
-                      <div style={{ 
-                        fontSize: '15px', 
-                        fontWeight: 800, 
-                        color: '#1e4a2d',
-                        lineHeight: 1.2
-                      }}>
-                        {profile?.business_name || "Green Grounds"}
-                      </div>
-                      <div style={{ 
-                        fontSize: '10px', 
-                        fontWeight: 600, 
-                        color: '#95a5a6', 
-                        letterSpacing: '0.4px',
-                        textTransform: 'uppercase',
-                        marginTop: '2px'
-                      }}>
-                        {profile?.branch_name || "Main Branch"}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 👤 User Profile Section */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  {/* User Badge - Hidden on small mobile */}
-                  {!isMobile && (
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 800, color: '#2d3436', fontSize: '13px', lineHeight: 1.2 }}>
-                        {profile?.name}
-                      </div>
-                      <Tag
-                        color={profile?.business_id === 1 ? "gold" : (profile?.role_code === 'owner' ? "blue" : "#34495e")}
-                        style={{
-                          fontSize: '9px',
-                          borderRadius: '10px',
-                          padding: '0 8px',
-                          marginTop: '4px',
-                          border: 'none',
-                          fontWeight: 800,
-                          textTransform: 'uppercase'
-                        }}
-                      >
-                        {profile?.business_id === 1 ? (t.executives || "Admin") : (profile?.role_name || "Staff")}
-                      </Tag>
-                    </div>
-                  )}
-
-                  {/* Language Switcher */}
-                  <div
-                    className="lang-switcher-container"
-                    onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
-                    style={{ transform: isMobile ? 'scale(0.85)' : 'none' }}
+              {/* 💎 Premium Feature / Branch Info */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                {!isMobile && profile?.business_id !== 1 && (
+                  <Button
+                    type="primary"
+                    size="middle"
+                    icon={<CrownOutlined />}
+                    onClick={() => navigate('/my-plan')}
+                    className={cn(
+                      "premium-upgrade-btn",
+                      profile?.plan_id >= 3 && "gold-gradient",
+                      profile?.plan_id === 2 && "emerald-gradient"
+                    )}
+                    style={{
+                      borderRadius: '12px',
+                      border: 'none',
+                      boxShadow: '0 4px 10px rgba(0, 0, 0, 0.08)',
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      height: '38px',
+                      padding: '0 16px',
+                      background: '#1e4a2d',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
                   >
-                    <div className={`lang-toggle-handle ${lang}`}>
-                      <span className="lang-flag-emoji">
-                        {lang === 'en' ? '🇺🇸' : '🇰🇭'}
-                      </span>
+                    {profile?.plan_id === 1 ? "UPGRADE" : (profile?.plan_id === 2 ? "PRO" : "PREMIUM")}
+                  </Button>
+                )}
+
+                {!isMobile && (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    justifyContent: 'center',
+                    borderLeft: '1px solid #f1f3f5',
+                    paddingLeft: '16px',
+                    marginLeft: '4px',
+                    minWidth: '120px'
+                  }}>
+                    <div style={{
+                      fontSize: '15px',
+                      fontWeight: 800,
+                      color: '#1e4a2d',
+                      lineHeight: 1.2
+                    }}>
+                      {profile?.business_name || "Green Grounds"}
                     </div>
-                    <div className="lang-labels">
-                      <span className={`lang-label ${lang === 'en' ? 'active' : ''}`}>EN</span>
-                      <span className={`lang-label ${lang === 'kh' ? 'active' : ''}`}>KH</span>
+                    <div style={{
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      color: '#95a5a6',
+                      letterSpacing: '0.4px',
+                      textTransform: 'uppercase',
+                      marginTop: '2px'
+                    }}>
+                      {profile?.branch_name || "Main Branch"}
                     </div>
                   </div>
-
-                  {/* Profile Dropdown */}
-                  <Dropdown
-                    menu={{
-                      items: itemsDropdown,
-                      onClick: (event) => {
-                        if (event.key === "logout") onLoginOut();
-                        else if (event.key === "profile") navigate('/profile');
-                      },
-                    }}
-                    trigger={['click']}
-                    placement="bottomRight"
-                  >
-                    <div className="profile-wrapper" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                      <div style={{ position: 'relative' }}>
-                        <img
-                          className="img-user-premium"
-                          src={(profile?.profile_image && typeof profile.profile_image === "string" && profile.profile_image.trim() !== "" && profile.profile_image !== "null" && profile.profile_image !== "undefined") ? Config.getFullImagePath(profile.profile_image) : ImgUser}
-                          alt={profile?.name}
-                        />
-                        <div style={{
-                          position: 'absolute',
-                          bottom: 0,
-                          right: 0,
-                          width: 10,
-                          height: 10,
-                          background: '#2ecc71',
-                          border: '2px solid #fff',
-                          borderRadius: '50%'
-                        }} />
-                      </div>
-                      {!isMobile && <span style={{ color: '#b2bec3', fontSize: 10, marginLeft: 8 }}>▼</span>}
-                    </div>
-                  </Dropdown>
-                </div>
+                )}
               </div>
+
+              {/* 👤 User Profile Section */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                {/* User Badge - Hidden on small mobile */}
+                {!isMobile && (
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 800, color: '#2d3436', fontSize: '13px', lineHeight: 1.2 }}>
+                      {profile?.name}
+                    </div>
+                    <Tag
+                      color={profile?.business_id === 1 ? "gold" : (profile?.role_code === 'owner' ? "blue" : "#34495e")}
+                      style={{
+                        fontSize: '9px',
+                        borderRadius: '10px',
+                        padding: '0 8px',
+                        marginTop: '4px',
+                        border: 'none',
+                        fontWeight: 800,
+                        textTransform: 'uppercase'
+                      }}
+                    >
+                      {profile?.business_id === 1 ? (t.executives || "Admin") : (profile?.role_name || "Staff")}
+                    </Tag>
+                  </div>
+                )}
+
+                {/* Language Switcher */}
+                <div
+                  className="lang-switcher-container"
+                  onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
+                  style={{ transform: isMobile ? 'scale(0.85)' : 'none' }}
+                >
+                  <div className={`lang-toggle-handle ${lang}`}>
+                    <span className="lang-flag-emoji">
+                      {lang === 'en' ? '🇺🇸' : '🇰🇭'}
+                    </span>
+                  </div>
+                  <div className="lang-labels">
+                    <span className={`lang-label ${lang === 'en' ? 'active' : ''}`}>EN</span>
+                    <span className={`lang-label ${lang === 'kh' ? 'active' : ''}`}>KH</span>
+                  </div>
+                </div>
+
+                {/* Profile Dropdown */}
+                <Dropdown
+                  menu={{
+                    items: itemsDropdown,
+                    onClick: (event) => {
+                      if (event.key === "logout") onLoginOut();
+                      else if (event.key === "profile") navigate('/profile');
+                    },
+                  }}
+                  trigger={['click']}
+                  placement="bottomRight"
+                >
+                  <div className="profile-wrapper" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                    <div style={{ position: 'relative' }}>
+                      <img
+                        className="img-user-premium"
+                        src={(profile?.profile_image && typeof profile.profile_image === "string" && profile.profile_image.trim() !== "" && profile.profile_image !== "null" && profile.profile_image !== "undefined") ? Config.getFullImagePath(profile.profile_image) : ImgUser}
+                        alt={profile?.name}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        right: 0,
+                        width: 10,
+                        height: 10,
+                        background: '#2ecc71',
+                        border: '2px solid #fff',
+                        borderRadius: '50%'
+                      }} />
+                    </div>
+                    {!isMobile && <span style={{ color: '#b2bec3', fontSize: 10, marginLeft: 8 }}>▼</span>}
+                  </div>
+                </Dropdown>
+              </div>
+            </div>
           </div>
         )}
 

@@ -36,7 +36,7 @@ const PermissionPage = () => {
     const [roles, setRoles] = useState([]);
     const [allPermissions, setAllPermissions] = useState([]);
     const [selectedRoleId, setSelectedRoleId] = useState(null);
-    const [selectedPermIds, setSelectedPermIds] = useState([]);
+    const [selectedPermissions, setSelectedPermissions] = useState({}); // { [permId]: { can_view: 1, can_create: 0... } }
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [businesses, setBusinesses] = useState([]);
@@ -87,7 +87,17 @@ const PermissionPage = () => {
         try {
             const res = await request(`permission/${roleId}`, "get");
             if (res && res.list) {
-                setSelectedPermIds(res.list);
+                // Convert list to a lookup object
+                const permMap = {};
+                res.list.forEach(item => {
+                    permMap[item.permission_id] = {
+                        can_view: item.can_view,
+                        can_create: item.can_create,
+                        can_edit: item.can_edit,
+                        can_delete: item.can_delete
+                    };
+                });
+                setSelectedPermissions(permMap);
             }
         } catch (error) {
             message.error(t.failed);
@@ -110,26 +120,35 @@ const PermissionPage = () => {
         fetchRolePermissions(roleId);
     };
 
-    const handleCheckboxChange = (permId, checked) => {
-        setSelectedPermIds(prev => {
-            if (checked) {
-                return [...new Set([...prev, permId])];
-            } else {
-                return prev.filter(id => id !== permId);
+    const handleCheckboxChange = (permId, action, checked) => {
+        setSelectedPermissions(prev => {
+            const current = prev[permId] || { can_view: 0, can_create: 0, can_edit: 0, can_delete: 0 };
+            const next = { ...current, [action]: checked ? 1 : 0 };
+            
+            // If all actions are 0, we can remove the key
+            if (next.can_view === 0 && next.can_create === 0 && next.can_edit === 0 && next.can_delete === 0) {
+                const newMap = { ...prev };
+                delete newMap[permId];
+                return newMap;
             }
+            
+            return { ...prev, [permId]: next };
         });
     };
 
     const handleSelectAll = (checked) => {
         if (checked) {
-            setSelectedPermIds(allPermissions.map(p => p.id));
+            const allMap = {};
+            allPermissions.forEach(p => {
+                allMap[p.id] = { can_view: 1, can_create: 1, can_edit: 1, can_delete: 1 };
+            });
+            setSelectedPermissions(allMap);
         } else {
-            // 🛡️ IRONCLAD GUARD: Never allow mass unselection on critical roles
             if (isOwnRole || isOwnerRole || selectedRole?.code?.toLowerCase() === 'super_admin') {
-                message.error("Security Violation: Mass unselection is prohibited for administrative and active roles.");
+                message.error("Security Violation: Mass unselection is prohibited for administrative roles.");
                 return;
             }
-            setSelectedPermIds([]);
+            setSelectedPermissions({});
         }
     };
 
@@ -137,25 +156,28 @@ const PermissionPage = () => {
         if (!selectedRoleId) return;
         setSaving(true);
         try {
+            // Transform object map to array
+            const payload = Object.keys(selectedPermissions).map(permId => ({
+                permission_id: Number(permId),
+                ...selectedPermissions[permId]
+            }));
+
             const res = await request("permission/assign", "post", {
                 role_id: selectedRoleId,
-                permission_ids: selectedPermIds
+                permissions: payload
             });
             if (res && !res.error) {
                 message.success(t.success);
 
-                // Reactive Session Update:
-                // If the user just edited THEIR OWN role, we need to refresh their local session
-                // so the changes (like sidebar visibility) take effect immediately.
                 const profile = getProfile();
                 if (profile && Number(profile.role_id) === Number(selectedRoleId)) {
                     // Update current user session permissions
                     const newPermList = allPermissions
-                        .filter(p => selectedPermIds.includes(p.id))
-                        .map(p => ({ web_route_key: p.route_key, name: p.name }));
+                        .filter(p => selectedPermissions[p.id]?.can_view === 1)
+                        .map(p => ({ route_key: p.route_key, name: p.name }));
 
                     setPermission(newPermList);
-                    window.location.reload(); // Force refresh to apply new security context
+                    window.location.reload(); 
                 }
             }
         } catch (error) {
@@ -185,28 +207,74 @@ const PermissionPage = () => {
             render: (text) => <Badge status="processing" text={text} style={{ opacity: 0.7 }} />
         },
         {
-            title: t.action,
-            key: "access",
+            title: t.view || "View",
+            key: "view",
             align: 'center',
             render: (_, record) => {
-                const isChecked = selectedPermIds.includes(record.id);
-                // 🛡️ IRONCLAD GUARD:
-                // 1. If editing OWN role, cannot UNCHECK existing permissions (prevent lockout)
-                // 2. If editing OWNER role, cannot UNCHECK if not Super Admin
-                // 3. If it's a critical module like Dashboard or Permission, prevent unchecking for Admins
+                const isChecked = !!selectedPermissions[record.id]?.can_view;
                 const isCritical = ['/dashboard', '/permission', '/role'].includes(record.route_key);
-                const isDisabled = (isOwnRole && isChecked) || 
-                                   (!isSuperAdmin && isOwnerRole && isChecked) || 
-                                   (isCritical && (isOwnRole || isOwnerRole));
+                const isDisabled = (isCritical && (isOwnRole || isOwnerRole));
 
                 return (
-                    <Tooltip title={isDisabled ? "Protected" : ""}>
-                        <Checkbox
-                            checked={isChecked}
-                            onChange={(e) => handleCheckboxChange(record.id, e.target.checked)}
-                            disabled={isDisabled}
-                        />
-                    </Tooltip>
+                    <Checkbox
+                        checked={isChecked}
+                        onChange={(e) => handleCheckboxChange(record.id, 'can_view', e.target.checked)}
+                        disabled={isDisabled}
+                    />
+                );
+            }
+        },
+        {
+            title: t.create || "Create",
+            key: "create",
+            align: 'center',
+            render: (_, record) => {
+                const isChecked = !!selectedPermissions[record.id]?.can_create;
+                const isCritical = ['/permission', '/role'].includes(record.route_key);
+                const isDisabled = (isCritical && (isOwnRole || isOwnerRole));
+
+                return (
+                    <Checkbox
+                        checked={isChecked}
+                        onChange={(e) => handleCheckboxChange(record.id, 'can_create', e.target.checked)}
+                        disabled={isDisabled}
+                    />
+                );
+            }
+        },
+        {
+            title: t.edit || "Edit",
+            key: "edit",
+            align: 'center',
+            render: (_, record) => {
+                const isChecked = !!selectedPermissions[record.id]?.can_edit;
+                const isCritical = ['/permission', '/role'].includes(record.route_key);
+                const isDisabled = (isCritical && (isOwnRole || isOwnerRole));
+
+                return (
+                    <Checkbox
+                        checked={isChecked}
+                        onChange={(e) => handleCheckboxChange(record.id, 'can_edit', e.target.checked)}
+                        disabled={isDisabled}
+                    />
+                );
+            }
+        },
+        {
+            title: t.delete || "Delete",
+            key: "delete",
+            align: 'center',
+            render: (_, record) => {
+                const isChecked = !!selectedPermissions[record.id]?.can_delete;
+                const isCritical = ['/permission', '/role', '/business'].includes(record.route_key);
+                const isDisabled = (isCritical && (isOwnRole || isOwnerRole));
+
+                return (
+                    <Checkbox
+                        checked={isChecked}
+                        onChange={(e) => handleCheckboxChange(record.id, 'can_delete', e.target.checked)}
+                        disabled={isDisabled}
+                    />
                 );
             }
         }
@@ -339,8 +407,8 @@ const PermissionPage = () => {
                                 </Col>
                                 <Col>
                                     <Checkbox
-                                        indeterminate={selectedPermIds.length > 0 && selectedPermIds.length < allPermissions.length}
-                                        checked={selectedPermIds.length === allPermissions.length && allPermissions.length > 0}
+                                        indeterminate={Object.keys(selectedPermissions).length > 0 && Object.keys(selectedPermissions).length < allPermissions.length}
+                                        checked={Object.keys(selectedPermissions).length === allPermissions.length && allPermissions.length > 0}
                                         onChange={(e) => handleSelectAll(e.target.checked)}
                                     >
                                         {t.select_all || "Select All"}

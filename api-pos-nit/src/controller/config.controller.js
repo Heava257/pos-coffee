@@ -4,10 +4,31 @@ exports.getList = async (req, res) => {
   try {
     const { business_id } = req;
 
-    const [categories] = await db.query(
-      "SELECT id AS value, name AS label FROM categories WHERE business_id = ?",
+    // Load only categories that this business has ACTIVATED (opted into).
+    // If no selections yet (new business), return ALL platform categories as default.
+    const [activatedCount] = await db.query(
+      "SELECT COUNT(*) AS cnt FROM business_categories WHERE business_id = ?",
       [business_id]
     );
+
+    let categories;
+    if (activatedCount[0].cnt > 0) {
+      // Business has made their selection — return only active ones
+      const [rows] = await db.query(`
+        SELECT c.id AS value, c.name AS label, c.default_moods, c.default_sizes, c.default_addons
+        FROM categories c
+        INNER JOIN business_categories bc ON c.id = bc.category_id
+        WHERE bc.business_id = ? AND bc.is_active = 1
+        ORDER BY c.id ASC
+      `, [business_id]);
+      categories = rows;
+    } else {
+      // New business — show all platform categories as default
+      const [rows] = await db.query(
+        "SELECT id AS value, name AS label, default_moods, default_sizes, default_addons FROM categories WHERE business_id = 1 ORDER BY id ASC"
+      );
+      categories = rows;
+    }
 
     const [roles] = await db.query(
       "SELECT id AS value, name AS label FROM roles WHERE business_id = ?",

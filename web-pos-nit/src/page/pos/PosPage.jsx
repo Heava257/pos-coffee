@@ -47,6 +47,15 @@ import { useUIStore } from "../../store/uiStore";
 import ImgUser from "../../assets/profile.png";
 import useSound from "use-sound";
 import { useLanguage, translations } from "../../store/language.store";
+import { useHeldOrdersStore } from "../../store/heldOrdersStore";
+import {
+  PauseCircleOutlined,
+  HistoryOutlined,
+  SaveOutlined,
+  FolderOpenOutlined,
+  PlusCircleOutlined,
+} from "@ant-design/icons";
+
 
 // Public notification sound URL (stable mirror)
 const BELL_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3";
@@ -445,6 +454,10 @@ function PosPage() {
   const [currentShift, setCurrentShift] = useState(null);
   const [openShiftModalVisible, setOpenShiftModalVisible] = useState(false);
 
+  const { heldOrders, holdOrder, resumeOrder, removeHeldOrder } = useHeldOrdersStore();
+  const [heldOrdersVisible, setHeldOrdersVisible] = useState(false);
+  const [currentDraftId, setCurrentDraftId] = useState(null);
+
   const { config } = configStore();
   const refInvoice = useRef(null);
   const [form] = Form.useForm();
@@ -473,6 +486,10 @@ function PosPage() {
   });
 
   const userId = profile?.id || profile?.user_id;
+  const isAdmin = profile?.is_super_admin === 1 || 
+                ['Owner', 'Executive', 'Admin'].includes(profile?.role_name) ||
+                profile?.role_id === 1; // Fallback for common admin IDs
+
 
   // ── time disable ──
   useEffect(() => {
@@ -510,7 +527,8 @@ function PosPage() {
         setOpenShiftModalVisible(false);
       } else {
         setCurrentShift(null);
-        setOpenShiftModalVisible(true);
+        // User requested: don't auto-open modal. They will click to open.
+        setOpenShiftModalVisible(false); 
       }
     } catch (error) {
       console.error("Error checking shift status:", error);
@@ -826,6 +844,61 @@ function PosPage() {
     }));
   }, []);
 
+  const handleHoldOrder = () => {
+    if (state.cart_list.length === 0) {
+      message.warning("Cart is empty");
+      return;
+    }
+    holdOrder({
+      id: currentDraftId,
+      cart_list: state.cart_list,
+      customerName,
+      tableNo,
+      orderType,
+      objSummary,
+      currentOrderId, // Preserve if it was from pending
+    });
+    handleClearCart();
+    message.success(currentDraftId ? "Draft updated!" : "Order held as draft!");
+  };
+
+  const handleResumeHeldOrder = (order) => {
+    const resumed = resumeOrder(order.id);
+    if (resumed) {
+      setState((prev) => ({ ...prev, cart_list: resumed.cart_list }));
+      setCustomerName(resumed.customerName || "");
+      setTableNo(resumed.tableNo || "");
+      setOrderType(resumed.orderType || "dine_in");
+      setCurrentDraftId(resumed.id); // Track we are editing this draft
+      setCurrentOrderId(resumed.currentOrderId || null); // Restore if it was from pending
+      setHeldOrdersVisible(false);
+      message.info(`Resumed draft for ${resumed.tableNo || resumed.customerName || "Guest"}`);
+    }
+  };
+
+  const handleMergeHeldOrder = (order) => {
+    const resumed = resumeOrder(order.id);
+    if (resumed) {
+      setState((prev) => {
+        const newCart = [...prev.cart_list];
+        resumed.cart_list.forEach(item => {
+          const uId = item.unique_id || item.id;
+          const idx = newCart.findIndex(c => (c.unique_id || c.id) === uId);
+          if (idx > -1) {
+            newCart[idx].cart_qty += item.cart_qty;
+          } else {
+            newCart.push({ ...item });
+          }
+        });
+        return { ...prev, cart_list: newCart };
+      });
+      setHeldOrdersVisible(false);
+      message.success(`Merged items from draft into cart`);
+    }
+  };
+
+
+
   const handleClearCart = useCallback(() => {
     setState((p) => ({ ...p, cart_list: [] }));
     setObjSummary((p) => ({
@@ -837,7 +910,9 @@ function PosPage() {
     setCustomerName("");
     setTableNo("");
     setCurrentOrderId(null);
+    setCurrentDraftId(null);
     setCashReceivedUSD(0);
+
     setCashReceivedKHR(0);
     setCashPaymentModalVisible(false);
     form.resetFields();
@@ -883,6 +958,11 @@ function PosPage() {
 
   // ── place order ──
   const handleClickOut = async () => {
+    if (!currentShift) {
+      message.warning("Please open a shift before placing an order!");
+      setOpenShiftModalVisible(true);
+      return;
+    }
     if (!state.cart_list.length) {
       message.error("Cart is empty!");
       return;
@@ -1024,7 +1104,8 @@ function PosPage() {
           flex: 1,
           gap: 0,
           overflow: "hidden",
-          height: "calc(100vh - 180px)", // Adjusted for MainLayout padding/header
+          height: "calc(100vh - 140px)", // Adjusted for MainLayout padding/header
+
         }}
       >
         {/* ── LEFT PANEL ── */}
@@ -1038,26 +1119,66 @@ function PosPage() {
             gap: 16,
           }}
         >
-          {/* Search bar */}
           <div
             style={{
-              background: COLORS.white,
-              borderRadius: 14,
-              padding: "10px 16px",
               display: "flex",
               alignItems: "center",
-              gap: 10,
+              flexWrap: "wrap",
+              gap: 12,
+              marginBottom: 20,
+              background: COLORS.white,
+              padding: "10px 16px",
+              borderRadius: 14,
               border: `1px solid ${COLORS.softBorder}`,
               boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
             }}
           >
-            <SearchOutlined style={{ fontSize: 16, color: COLORS.textSecondary }} />
+
+            {/* Shift Control Button - User requested: Click to Open */}
+            {!currentShift ? (
+              <button
+                onClick={() => setOpenShiftModalVisible(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: COLORS.white,
+                  border: `2px solid ${COLORS.redBadge}`,
+                  borderRadius: 10,
+                  padding: "6px 16px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: COLORS.redBadge,
+                  transition: "all 0.25s",
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 4px 10px rgba(232,93,93,0.15)"
+                }}
+              >
+                <PlusCircleOutlined style={{ fontSize: 18 }} />
+                <span>Open New Shift / បើកបញ្ជីថ្មី</span>
+              </button>
+            ) : (
+               <div style={{ 
+                  display: "flex", alignItems: "center", gap: 6, 
+                  background: "#e6f4ea", borderRadius: 8, padding: "6px 12px", 
+                  color: COLORS.darkGreen, fontSize: 13, fontWeight: 700 
+               }}>
+                  <div style={{ width: 8, height: 8, background: COLORS.midGreen, borderRadius: "50%" }} />
+                  Shift Started: {new Date(currentShift.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+               </div>
+            )}
+
+            <Divider type="vertical" />
+
+            <SearchOutlined style={{ color: COLORS.textSecondary, fontSize: 18 }} />
             <input
-              placeholder={t.search_product}
+              placeholder="Discover your coffee..."
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               style={{
                 flex: 1,
+                minWidth: 150,
                 border: "none",
                 outline: "none",
                 background: "transparent",
@@ -1066,6 +1187,7 @@ function PosPage() {
                 fontFamily: "inherit",
               }}
             />
+
             <div
               style={{
                 fontSize: 11,
@@ -1087,6 +1209,31 @@ function PosPage() {
             </div>
 
             <Divider type="vertical" />
+
+            {/* Held Orders Button */}
+            <Badge count={heldOrders.length} size="small" offset={[-2, 2]} color={COLORS.softGold}>
+              <button
+                onClick={() => setHeldOrdersVisible(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: COLORS.white,
+                  border: `1px solid ${COLORS.softBorder}`,
+                  borderRadius: 8,
+                  padding: "6px 14px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: COLORS.textPrimary,
+                  transition: "all 0.25s",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <FolderOpenOutlined style={{ fontSize: 16, color: COLORS.softGold }} />
+                <span>Held Drafts</span>
+              </button>
+            </Badge>
 
             {/* Table Orders Button */}
             <Badge count={pendingCount} size="small" offset={[-2, 2]} overflowCount={99}>
@@ -1167,6 +1314,14 @@ function PosPage() {
             </button>
 
             <button
+              onClick={() => {
+                if (isAdmin) {
+                  window.location.href = "/report_Sale_Summary";
+                } else {
+                  window.location.href = "/order";
+                }
+              }}
+
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -1191,8 +1346,17 @@ function PosPage() {
                 (e.currentTarget.style.color = COLORS.textPrimary))
               }
             >
-              <FileTextOutlined /> {t.report}
+              {isAdmin ? (
+                <>
+                  <FileTextOutlined /> {t.report}
+                </>
+              ) : (
+                <>
+                  <HistoryOutlined /> {t.order_history}
+                </>
+              )}
             </button>
+
           </div>
 
           {/* Category cards */}
@@ -1365,8 +1529,9 @@ function PosPage() {
         {/* ── RIGHT PANEL / RECEIPT ── */}
         <div
           style={{
-            width: 600,
+            width: 420,
             flexShrink: 0,
+
             background: COLORS.white,
             borderLeft: `1px solid ${COLORS.softBorder}`,
             display: "flex",
@@ -1709,26 +1874,48 @@ function PosPage() {
               )}
             </div>
 
-            {/* Clear Cart link */}
+            {/* Hold and Clear buttons */}
             {state.cart_list.length > 0 && (
-              <button
-                onClick={handleClearCart}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: COLORS.textSecondary,
-                  fontSize: 12,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  marginBottom: 10,
-                  fontFamily: "inherit",
-                  padding: 0,
-                }}
-              >
-                <DeleteOutlined /> {t.purge}
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <button
+                  onClick={handleHoldOrder}
+                  style={{
+                    background: "#fdf8ef",
+                    border: `1px solid ${COLORS.softGold}`,
+                    color: "#9a6a1a",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "6px 12px",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <PauseCircleOutlined /> {currentDraftId ? "Update Draft" : "Hold Draft"}
+
+                </button>
+
+                <button
+                  onClick={handleClearCart}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: COLORS.textSecondary,
+                    fontSize: 12,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontFamily: "inherit",
+                    padding: 0,
+                  }}
+                >
+                  <DeleteOutlined /> {t.purge}
+                </button>
+              </div>
             )}
 
             {/* Place Order button */}
@@ -1766,7 +1953,115 @@ function PosPage() {
         </div>
       </div>
 
-      {/* QR Modal */}
+      {/* Held Orders Drawer (Local Drafts) */}
+      <Drawer
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: COLORS.darkGreen }}>
+            <PauseCircleOutlined />
+            <span>Held Drafts / ការកុម្ម៉ង់ផ្អាកទុក</span>
+          </div>
+        }
+        placement="right"
+        onClose={() => setHeldOrdersVisible(false)}
+        open={heldOrdersVisible}
+        width={380}
+        styles={{
+          header: { borderBottom: `1px solid ${COLORS.softBorder}`, padding: '16px 24px' },
+          body: { padding: 0 }
+        }}
+      >
+        <List
+          dataSource={heldOrders}
+          locale={{ emptyText: <Empty description="No held drafts" /> }}
+          renderItem={(order) => (
+            <List.Item
+              style={{
+                padding: '16px 24px',
+                borderBottom: `1px solid ${COLORS.softBorder}`,
+                display: 'block'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text strong style={{ fontSize: 16 }}>
+                  {order.tableNo ? `${t.table_label} ${order.tableNo}` : t.walk_in}
+                </Text>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  {new Date(order.heldAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>
+                  {order.customerName || t.guest} • {order.cart_list.length} Items
+                </div>
+                <div style={{ fontSize: 12, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {order.cart_list.slice(0, 3).map((it, i) => (
+                    <Tag key={i} style={{ borderRadius: 4, fontSize: 10, margin: 0 }}>
+                      {it.name} x{it.cart_qty}
+                    </Tag>
+                  ))}
+                  {order.cart_list.length > 3 && <Tag style={{ borderRadius: 4, fontSize: 10, margin: 0 }}>...</Tag>}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div style={{ flex: 1, display: 'flex', gap: 6 }}>
+                  <Button 
+                    type="primary" 
+                    icon={<FolderOpenOutlined />}
+                    style={{ background: COLORS.darkGreen }}
+                    onClick={() => handleResumeHeldOrder(order)}
+                    title="Replace current cart"
+                  >
+                    Resume
+                  </Button>
+                  <Button 
+                    icon={<PlusCircleOutlined />}
+                    onClick={() => handleMergeHeldOrder(order)}
+                    title="Add to current cart"
+                  >
+                    Merge
+                  </Button>
+                </div>
+
+                <div style={{ textAlign: 'right', minWidth: 80 }}>
+                   <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.darkGreen }}>
+                     ${(order.objSummary?.total || 0).toFixed(2)}
+                   </div>
+                   <div style={{ fontSize: 10, color: COLORS.textSecondary }}>
+                      ≈ {((order.objSummary?.total || 0) * exchangeRate).toLocaleString()} ៛
+                   </div>
+                </div>
+                <Button 
+                  danger 
+                  icon={<DeleteOutlined />}
+                  onClick={() => removeHeldOrder(order.id)}
+                />
+              </div>
+
+            </List.Item>
+          )}
+        />
+        {heldOrders.length > 0 && (
+           <div style={{ padding: 20 }}>
+              <Button 
+                block 
+                danger 
+                type="dashed"
+                onClick={() => {
+                  Modal.confirm({
+                    title: 'Clear all held orders?',
+                    content: 'This action cannot be undone.',
+                    onOk: () => useHeldOrdersStore.getState().clearAllHeldOrders()
+                  })
+                }}
+              >
+                Clear All Drafts
+              </Button>
+           </div>
+        )}
+      </Drawer>
+
       <QRPaymentModal
         visible={qrModalVisible}
         onClose={() => {

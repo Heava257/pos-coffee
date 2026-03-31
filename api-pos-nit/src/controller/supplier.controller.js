@@ -9,8 +9,8 @@ exports.getList = async (req, res) => {
     let sql = "SELECT * FROM suppliers WHERE business_id = ?";
 
     if (txtSearch) {
-      sql += " AND (name LIKE ? OR phone LIKE ?)";
-      params.push(`%${txtSearch}%`, `%${txtSearch}%`);
+      sql += " AND (name LIKE ? OR tel LIKE ? OR code LIKE ?)";
+      params.push(`%${txtSearch}%`, `%${txtSearch}%`, `%${txtSearch}%`);
     }
 
     const [list] = await db.query(sql, params);
@@ -23,10 +23,10 @@ exports.getList = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { business_id } = req;
-    const { name, phone, address } = req.body;
+    const { name, code, tel, email, address, website, note } = req.body;
 
-    const sql = "INSERT INTO suppliers (business_id, name, phone, address) VALUES (?, ?, ?, ?)";
-    const [data] = await db.query(sql, [business_id, name, phone, address]);
+    const sql = "INSERT INTO suppliers (business_id, name, code, tel, email, address, website, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    const [data] = await db.query(sql, [business_id, name, code, tel, email, address, website, note]);
 
     res.json({
       success: true,
@@ -40,10 +40,10 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { business_id } = req;
-    const { id, name, phone, address } = req.body;
+    const { id, name, code, tel, email, address, website, note } = req.body;
 
-    const sql = "UPDATE suppliers SET name = ?, phone = ?, address = ? WHERE id = ? AND business_id = ?";
-    await db.query(sql, [name, phone, address, id, business_id]);
+    const sql = "UPDATE suppliers SET name = ?, code = ?, tel = ?, email = ?, address = ?, website = ?, note = ? WHERE id = ? AND business_id = ?";
+    await db.query(sql, [name, code, tel, email, address, website, note, id, business_id]);
 
     res.json({ message: "Supplier updated successfully!" });
   } catch (error) {

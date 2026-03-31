@@ -196,7 +196,18 @@ exports.remove = async (req, res) => {
 exports.getBusinessProducts = async (req, res) => {
     try {
         const { business_id } = req;
-        const [list] = await db.query("SELECT * FROM products WHERE business_id = ?", [business_id]);
+        const { target_business_id } = req.query;
+
+        // Super Admin can see any business's product catalog
+        const bizId = (business_id === 1 && target_business_id) ? target_business_id : business_id;
+
+        const sql = `
+            SELECT p.*, c.name as category_name 
+            FROM products p 
+            LEFT JOIN categories c ON p.category_id = c.id 
+            WHERE p.business_id = ?
+        `;
+        const [list] = await db.query(sql, [bizId]);
         res.json({ list });
     } catch (error) {
         logError("product.getBusinessProducts", error, res);

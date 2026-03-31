@@ -170,3 +170,82 @@ exports.getList = async (req, res) => {
         logError("shift.getList", error, res);
     }
 };
+
+// 5. Get Shift Summary (The logic for Closing Shift / X-Report)
+exports.getShiftSummary = async (req, res) => {
+    try {
+        const { business_id, branch_id, user_id } = req;
+        const { id } = req.query; // Optional specific shift ID
+
+        let currentShift = null;
+        if (id) {
+            const [rows] = await db.query("SELECT * FROM shifts WHERE id = ?", [id]);
+            if (rows.length > 0) currentShift = rows[0];
+        } else {
+            const [rows] = await db.query(
+                "SELECT * FROM shifts WHERE business_id = ? AND branch_id = ? AND user_id = ? AND status = 'Open' ORDER BY id DESC LIMIT 1",
+                [business_id, branch_id, user_id]
+            );
+            if (rows.length > 0) currentShift = rows[0];
+        }
+
+        if (!currentShift) {
+            return res.status(404).json({ message: "No active shift found" });
+        }
+
+        const startTime = currentShift.created_at;
+
+        // A. Sum Sales by Payment Method
+        const [sales] = await db.query(`
+            SELECT 
+                payment_method, 
+                SUM(total_amount) as total 
+            FROM orders 
+            WHERE business_id = ? AND branch_id = ? AND user_id = ? 
+            AND created_at >= ? AND status != 'cancelled'
+            GROUP BY payment_method
+        `, [business_id, branch_id, user_id, startTime]);
+
+        // B. Sum Expenses
+        const [expenses] = await db.query(`
+            SELECT SUM(amount) as total 
+            FROM expense 
+            WHERE business_id = ? AND branch_id = ? 
+            AND created_at >= ?
+        `, [business_id, branch_id, startTime]);
+
+        // C. Breakdown totals
+        let totalSales = 0;
+        let cashSales = 0;
+        let abaSales = 0;
+        let wingSales = 0;
+
+        sales.forEach(s => {
+            totalSales += parseFloat(s.total || 0);
+            if (s.payment_method === 'cash') cashSales = parseFloat(s.total || 0);
+            if (s.payment_method === 'qr' || s.payment_method === 'aba' || s.payment_method === 'transfer') abaSales += parseFloat(s.total || 0);
+            if (s.payment_method === 'wing') wingSales = parseFloat(s.total || 0);
+        });
+
+        const expenseTotal = parseFloat(expenses[0]?.total || 0);
+
+        // Expected Cash = Opening + Cash Sales - Expenses
+        const expectedCash = (parseFloat(currentShift.opening_cash_usd || 0)) + cashSales - expenseTotal;
+
+        res.json({
+            success: true,
+            shift: currentShift,
+            summary: {
+                total_sales_usd: totalSales,
+                total_cash_usd: cashSales,
+                total_aba_usd: abaSales,
+                total_wing_usd: wingSales,
+                total_expense_usd: expenseTotal,
+                expected_cash_usd: expectedCash
+            }
+        });
+
+    } catch (error) {
+        logError("shift.getShiftSummary", error, res);
+    }
+};

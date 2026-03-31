@@ -36,8 +36,12 @@ exports.create = async (req, res) => {
             email,
             password,
             phone,
-            plan_id
+            plan_id,
+            plan_type,
+            active_modules // Array of strings like ['POS', 'Ordering']
         } = req.body;
+
+        const modulesStr = Array.isArray(active_modules) ? active_modules.join(",") : (active_modules || "POS");
 
         const conn = await db.getConnection();
         try {
@@ -45,8 +49,8 @@ exports.create = async (req, res) => {
 
             // 1. Create Business
             const [business] = await conn.query(
-                "INSERT INTO businesses (name, owner_name, email, phone, plan_id, plan_type) VALUES (?, ?, ?, ?, ?, ?)",
-                [business_name, owner_name, email, phone, plan_id || 1, 'pro']
+                "INSERT INTO businesses (name, owner_name, email, phone, plan_id, plan_type, active_modules) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [business_name, owner_name, email, phone, plan_id || 1, plan_type || 'basic', modulesStr]
             );
             const business_id = business.insertId;
 
@@ -57,7 +61,9 @@ exports.create = async (req, res) => {
             );
             const branch_id = branch.insertId;
 
-            // 3. Create Super Admin Role for this business
+            // 3. Setup Default Roles for this business
+            
+            // 3.1 Owner Role (Full Access)
             const [role_res] = await conn.query(
                 "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
                 [business_id, "Owner", "owner"]
@@ -69,6 +75,29 @@ exports.create = async (req, res) => {
                 INSERT INTO role_permissions (role_id, permission_id)
                 SELECT ?, id FROM permissions WHERE min_plan_id <= ?
             `, [role_id, plan_id || 1]);
+
+            // 3.2 Manager Role (Operations + Reports)
+            const [managerRes] = await conn.query(
+                "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
+                [business_id, "Manager", "manager"]
+            );
+            await conn.query(`
+                INSERT INTO role_permissions (role_id, permission_id)
+                SELECT ?, id FROM permissions 
+                WHERE min_plan_id <= ? AND route_key IN ('/invoices', '/order', '/category', '/product', '/stock', '/supplier', '/purchase', '/report_Sale_Summary', '/profile', '/table', '/expense')
+            `, [managerRes.insertId, plan_id || 1]);
+
+            // 3.3 Sale Role (POS Operations)
+            const [saleRes] = await conn.query(
+                "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
+                [business_id, "Sale", "sale"]
+            );
+            await conn.query(`
+                INSERT INTO role_permissions (role_id, permission_id)
+                SELECT ?, id FROM permissions 
+                WHERE min_plan_id <= ? AND route_key IN ('/invoices', '/order', '/category', '/product', '/table', '/profile')
+            `, [saleRes.insertId, plan_id || 1]);
+
 
             // 4. Create Owner Account
             const hashedPassword = bcrypt.hashSync(password, 10);
@@ -85,8 +114,14 @@ exports.create = async (req, res) => {
 
             await conn.query(
                 "INSERT INTO subscriptions (business_id, plan_id, plan_type, start_date, end_date, status) VALUES (?, ?, ?, ?, ?, ?)",
-                [business_id, plan_id || 1, plan_id == 1 ? 'free' : 'pro', startDate, formattedEndDate, 'active']
+                [business_id, plan_id || 1, plan_type || 'basic', startDate, formattedEndDate, 'active']
             );
+
+            // 6. Enable all global categories by default
+            await conn.query(`
+                INSERT INTO business_categories (business_id, category_id, is_active)
+                SELECT ?, id, 1 FROM categories WHERE business_id = 1
+            `, [business_id]);
 
             await conn.commit();
             res.json({ success: true, message: "Business and Owner created with 30-day active period!" });
@@ -116,15 +151,18 @@ exports.updateStatus = async (req, res) => {
 exports.updatePlan = async (req, res) => {
     try {
         if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
-
-        const { business_id, plan_id, duration_days } = req.body;
+        const { business_id, plan_id, plan_type, active_modules, duration_days } = req.body;
+        const modulesStr = Array.isArray(active_modules) ? active_modules.join(",") : (active_modules || "POS");
 
         const conn = await db.getConnection();
         try {
             await conn.beginTransaction();
 
             // 1. Update business table
-            await conn.query("UPDATE businesses SET plan_id = ? WHERE id = ?", [plan_id, business_id]);
+            await conn.query(
+                "UPDATE businesses SET plan_id = ?, plan_type = ?, active_modules = ? WHERE id = ?", 
+                [plan_id, plan_type || 'standard', modulesStr, business_id]
+            );
 
             // 2. Set existing active subscriptions to expired
             await conn.query("UPDATE subscriptions SET status = 'expired' WHERE business_id = ? AND status = 'active'", [business_id]);
@@ -137,7 +175,7 @@ exports.updatePlan = async (req, res) => {
 
             await conn.query(
                 "INSERT INTO subscriptions (business_id, plan_id, plan_type, start_date, end_date, status) VALUES (?, ?, ?, ?, ?, ?)",
-                [business_id, plan_id, plan_id == 1 ? 'free' : 'pro', startDate, formattedEndDate, 'active']
+                [business_id, plan_id, plan_type || 'standard', startDate, formattedEndDate, 'active']
             );
 
             // 4. Auto-update Owner role permissions to match the new plan tier
@@ -162,3 +200,53 @@ exports.updatePlan = async (req, res) => {
         logError("business.updatePlan", error, res);
     }
 };
+
+exports.getInsights = async (req, res) => {
+    try {
+        if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
+        const { id } = req.query;
+
+        // 1. Order Volume Trend (Count only, no money)
+        const [orderTrend] = await db.query(`
+            SELECT DATE_FORMAT(created_at, '%Y-%m') as label, COUNT(*) as value 
+            FROM orders 
+            WHERE business_id = ? AND status != 'cancelled'
+            GROUP BY label 
+            ORDER BY label DESC 
+            LIMIT 6
+        `, [id]);
+
+        // 2. Product Popularity
+        const [topProducts] = await db.query(`
+            SELECT p.name, SUM(od.qty) as total_sold
+            FROM order_details od
+            JOIN products p ON od.product_id = p.id
+            JOIN orders o ON od.order_id = o.id
+            WHERE o.business_id = ? AND o.status != 'cancelled'
+            GROUP BY p.id
+            ORDER BY total_sold DESC
+            LIMIT 5
+        `, [id]);
+
+        // 3. Category Distribution
+        const [categories] = await db.query(`
+            SELECT c.name, (SELECT COUNT(*) FROM products WHERE category_id = c.id AND business_id = ?) as product_count
+            FROM categories c
+            WHERE business_id = ?
+        `, [id, id]);
+
+        // 4. Last Activity
+        const [lastActivity] = await db.query(`
+            SELECT created_at FROM orders WHERE business_id = ? ORDER BY id DESC LIMIT 1
+        `, [id]);
+
+        res.json({ 
+            orderTrend: orderTrend.reverse(), 
+            topProducts, 
+            categories, 
+            lastActive: lastActivity[0]?.created_at || null 
+        });
+    } catch (error) {
+        logError("business.getInsights", error, res);
+    }
+}
