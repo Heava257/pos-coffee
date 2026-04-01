@@ -28,8 +28,8 @@ exports.create = async (req, res) => {
         if (payment_method === 'Cash' && !user_id) order_status = 'unpaid';
 
         // A. Insert into Orders Table (Dynamic to handle null user_id)
-        const fields = ["business_id", "branch_id", "customer_name", "table_no", "sub_total", "total_amount", "payment_method", "order_type", "status"];
-        const values = [business_id, branch_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, order_status];
+        const fields = ["business_id", "branch_id", "customer_name", "table_no", "sub_total", "total_amount", "payment_method", "order_type", "status", "kitchen_status"];
+        const values = [business_id, branch_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, order_status, 'pending'];
 
         if (user_id) {
             fields.push("user_id");
@@ -291,8 +291,10 @@ exports.updateStatus = async (req, res) => {
 exports.getKDSOrders = async (req, res) => {
     try {
         const { business_id, branch_id } = req;
-        const [list] = await db.query(
-            `SELECT 
+        const { is_history } = req.query;
+ 
+        let sql = `
+            SELECT 
                 o.*, 
                 u.name as staff_name,
                 (SELECT GROUP_CONCAT(CONCAT(od.qty, ' x ', p.name) SEPARATOR '\n') 
@@ -302,13 +304,18 @@ exports.getKDSOrders = async (req, res) => {
             LEFT JOIN users u ON o.user_id = u.id
             WHERE o.business_id = ? AND o.branch_id = ? 
             AND o.status != 'cancelled'
-            AND (o.kitchen_status IS NULL OR o.kitchen_status != 'served')
-            ORDER BY o.id ASC`,
-            [business_id, branch_id]
-        );
+            AND DATE(o.created_at) = CURDATE()
+        `;
 
-        // Fetch details for each order for more granular display
-        // (Alternatively, use the items_summary or a separate query per order on frontend)
+        if (is_history) {
+            sql += " AND o.kitchen_status = 'served' ";
+        } else {
+            sql += " AND (o.kitchen_status IS NULL OR o.kitchen_status != 'served') ";
+        }
+
+        sql += " ORDER BY o.id ASC";
+
+        const [list] = await db.query(sql, [business_id, branch_id]);
         res.json({ list });
     } catch (error) {
         logError("order.getKDSOrders", error, res);

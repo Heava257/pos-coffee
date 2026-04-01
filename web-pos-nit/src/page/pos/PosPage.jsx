@@ -1049,12 +1049,12 @@ function PosPage() {
 
   // ── print ──
   const handlePrintInvoice = useReactToPrint({
-    contentRef: () => refInvoice.current,
+    content: () => refInvoice.current,
     onAfterPrint: () => handleClearCart(),
   });
 
   const handlePrintKitchen = useReactToPrint({
-    contentRef: () => refKitchen.current,
+    content: () => refKitchen.current,
   });
 
   // ── filtered products (Memoized for performance) ──
@@ -1098,8 +1098,8 @@ function PosPage() {
         flexDirection: "column",
       }}
     >
-      {/* Hidden print invoice */}
-      <div style={{ display: "none" }}>
+      {/* Hidden print containers - off-screen instead of display:none to fix 'nothing to print' error */}
+      <div style={{ position: "absolute", top: -9999, left: -9999, opacity: 0, pointerEvents: "none" }}>
         <PrintInvoice ref={refInvoice} cart_list={state.cart_list} objSummary={objSummary} />
         <PrintKitchenTicket ref={refKitchen} cart_list={state.cart_list} objSummary={{...objSummary, customerName, tableNo, order_type: orderType, remark: ""}} />
       </div>
@@ -2234,6 +2234,11 @@ function PosPage() {
                   <Tag color={order.status === 'unpaid' ? 'volcano' : 'blue'}>
                     {order.status.toUpperCase()}
                   </Tag>
+                  {order.kitchen_status && (
+                    <Tag color={order.kitchen_status === 'preparing' ? 'processing' : order.kitchen_status === 'ready' ? 'success' : 'default'} style={{ marginLeft: 4 }}>
+                      {order.kitchen_status.toUpperCase()}
+                    </Tag>
+                  )}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>

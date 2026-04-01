@@ -19,7 +19,8 @@ import {
     CoffeeOutlined, 
     SoundOutlined,
     SyncOutlined,
-    NotificationOutlined
+    NotificationOutlined,
+    HistoryOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import dayjs from "dayjs";
@@ -32,16 +33,17 @@ const { Title, Text } = Typography;
 const KdsPage = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isHistory, setIsHistory] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const audioRef = useRef(null);
 
     const fetchOrders = async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-            const res = await request("order-kds", "get");
+            const res = await request(`order-kds?is_history=${isHistory ? 1 : 0}`, "get");
             if (res && res.list) {
-                // If new orders arrived, play sound
-                if (orders.length > 0 && res.list.length > orders.length) {
+                // If new orders arrived and not in history mode, play sound
+                if (!isHistory && orders.length > 0 && res.list.length > orders.length) {
                     playNotification();
                 }
                 setOrders(res.list);
@@ -64,17 +66,17 @@ const KdsPage = () => {
 
     useEffect(() => {
         fetchOrders();
-    }, []);
+    }, [isHistory]);
 
     useEffect(() => {
         let interval;
-        if (autoRefresh) {
+        if (autoRefresh && !isHistory) {
             interval = setInterval(() => {
                 fetchOrders(true);
             }, 10000); // 10 seconds
         }
         return () => clearInterval(interval);
-    }, [autoRefresh, orders]);
+    }, [autoRefresh, orders, isHistory]);
 
     const updateStatus = async (id, status) => {
         try {
@@ -108,29 +110,38 @@ const KdsPage = () => {
         <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <Title level={2} style={{ margin: 0 }}>
-                    <CoffeeOutlined /> KDS - Kitchen Display System
+                    <CoffeeOutlined /> {isHistory ? "KDS History (Today)" : "KDS - Kitchen Display System"}
                 </Title>
                 <Space>
+                    <Button 
+                        type={isHistory ? "primary" : "default"}
+                        icon={<HistoryOutlined />}
+                        onClick={() => setIsHistory(!isHistory)}
+                    >
+                        {isHistory ? "Show Active" : "History"}
+                    </Button>
                     <Button 
                         icon={<SyncOutlined spin={loading} />} 
                         onClick={() => fetchOrders()}
                     >
                         Refresh
                     </Button>
-                    <Button 
-                        type={autoRefresh ? "primary" : "default"}
-                        icon={<NotificationOutlined />}
-                        onClick={() => setAutoRefresh(!autoRefresh)}
-                    >
-                        Auto-Refresh: {autoRefresh ? "ON" : "OFF"}
-                    </Button>
+                    {!isHistory && (
+                        <Button 
+                            type={autoRefresh ? "primary" : "default"}
+                            icon={<NotificationOutlined />}
+                            onClick={() => setAutoRefresh(!autoRefresh)}
+                        >
+                            Auto-Refresh: {autoRefresh ? "ON" : "OFF"}
+                        </Button>
+                    )}
                 </Space>
             </div>
 
             {loading && orders.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 100 }}><Spin size="large" /></div>
             ) : orders.length === 0 ? (
-                <Empty description="No active preparation tickets" style={{ marginTop: 100 }} />
+                <Empty description={isHistory ? "No served orders today" : "No active preparation tickets"} style={{ marginTop: 100 }} />
             ) : (
                 <Row gutter={[16, 16]}>
                     {orders.map((order) => (
