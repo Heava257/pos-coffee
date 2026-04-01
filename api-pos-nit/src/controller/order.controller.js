@@ -307,7 +307,7 @@ exports.getKDSOrders = async (req, res) => {
             AND DATE(o.created_at) = CURDATE()
         `;
 
-        if (is_history) {
+        if (is_history === '1' || is_history === 1 || is_history === 'true') {
             sql += " AND o.kitchen_status = 'served' ";
         } else {
             sql += " AND (o.kitchen_status IS NULL OR o.kitchen_status != 'served') ";
