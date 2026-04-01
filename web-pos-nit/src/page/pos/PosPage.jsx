@@ -1006,6 +1006,7 @@ function PosPage() {
       tax: 0,
       discount: 0,
       payment_method: objSummary.payment_method,
+      shift_id: currentShift?.id, // Link order to current active shift
       total_paid: objSummary.payment_method === "Cash"
         ? (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate))
         : +objSummary.total

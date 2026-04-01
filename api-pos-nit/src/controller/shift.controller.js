@@ -196,15 +196,26 @@ exports.getShiftSummary = async (req, res) => {
         const startTime = currentShift.created_at;
 
         // A. Sum Sales by Payment Method
-        const [sales] = await db.query(`
+        let salesSql = `
             SELECT 
                 payment_method, 
                 SUM(total_amount) as total 
             FROM orders 
-            WHERE business_id = ? AND branch_id = ? AND user_id = ? 
-            AND created_at >= ? AND status != 'cancelled'
-            GROUP BY payment_method
-        `, [business_id, branch_id, user_id, startTime]);
+            WHERE business_id = ? AND branch_id = ? 
+            AND status != 'cancelled'
+        `;
+        let salesParams = [business_id, branch_id];
+
+        if (id || currentShift.id) {
+            salesSql += " AND shift_id = ? ";
+            salesParams.push(id || currentShift.id);
+        } else {
+            salesSql += " AND user_id = ? AND created_at >= ? ";
+            salesParams.push(user_id, startTime);
+        }
+
+        salesSql += " GROUP BY payment_method ";
+        const [sales] = await db.query(salesSql, salesParams);
 
         // B. Sum Expenses
         const [expenses] = await db.query(`

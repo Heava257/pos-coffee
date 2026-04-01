@@ -15,11 +15,12 @@ exports.create = async (req, res) => {
             payment_method,
             order_type,
             cart_items,
+            shift_id,
             status: requestStatus
         } = req.body;
 
         console.log("Creating new order:", {
-            business_id, branch_id, user_id, customer_name, table_no, total_amount, itemsCount: cart_items?.length
+            business_id, branch_id, user_id, customer_name, table_no, total_amount, itemsCount: cart_items?.length, shift_id
         });
 
         // Default status: if guest ordered without paying yet -> 'ordered' or 'unpaid'
@@ -27,13 +28,17 @@ exports.create = async (req, res) => {
         let order_status = requestStatus || (user_id ? 'completed' : 'ordered');
         if (payment_method === 'Cash' && !user_id) order_status = 'unpaid';
 
-        // A. Insert into Orders Table (Dynamic to handle null user_id)
+        // A. Insert into Orders Table (Dynamic to handle null user_id/shift_id)
         const fields = ["business_id", "branch_id", "customer_name", "table_no", "sub_total", "total_amount", "payment_method", "order_type", "status", "kitchen_status"];
         const values = [business_id, branch_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, order_status, 'pending'];
 
         if (user_id) {
             fields.push("user_id");
             values.push(user_id);
+        }
+        if (shift_id) {
+            fields.push("shift_id");
+            values.push(shift_id);
         }
 
         const placeholders = values.map(() => "?").join(", ");
@@ -87,7 +92,7 @@ exports.create = async (req, res) => {
 exports.getList = async (req, res) => {
     try {
         const { business_id, branch_id, user_id: session_user_id } = req;
-        let { from_date, to_date, user_id, txtSearch } = req.query;
+        let { from_date, to_date, user_id, txtSearch, shift_id } = req.query;
 
         // Scoping: 
         // 1. Admin/Owner can see all orders in business or filter by branch
@@ -109,6 +114,11 @@ exports.getList = async (req, res) => {
         if (branch_id) {
             sql += " AND o.branch_id = ? ";
             params.push(branch_id);
+        }
+
+        if (shift_id) {
+            sql += " AND o.shift_id = ? ";
+            params.push(shift_id);
         }
 
         if (user_id) {
