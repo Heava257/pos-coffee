@@ -1,9 +1,17 @@
 const { db, logError } = require("../util/helper");
+const { getCache, setCache, clearCache } = require("../util/redisClient");
 
 // 1. Get List of Categories (Filtered by Business Activation)
 exports.getList = async (req, res) => {
   try {
     const { business_id } = req;
+    const cacheKey = `categories_biz_${business_id}`;
+
+    // 1. Check Redis Cache
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) {
+      return res.json({ list: cachedData, source: "redis" });
+    }
     
     let sql;
     let params = [];
@@ -14,16 +22,21 @@ exports.getList = async (req, res) => {
     } else {
       // Regular Business only sees categories that have been ACTIVATED for them
       sql = `
-        SELECT c.* 
+        SELECT DISTINCT c.* 
         FROM categories c
-        INNER JOIN business_categories bc ON c.id = bc.category_id
-        WHERE bc.business_id = ? AND bc.is_active = 1
+        LEFT JOIN business_categories bc ON c.id = bc.category_id AND bc.business_id = ?
+        LEFT JOIN products p ON c.id = p.category_id AND p.business_id = ?
+        WHERE (bc.is_active = 1) OR (p.id IS NOT NULL)
         ORDER BY c.id ASC
       `;
-      params = [business_id];
+      params = [business_id, business_id];
     }
 
     const [list] = await db.query(sql, params);
+    
+    // 2. Set Redis Cache
+    await setCache(cacheKey, list, 3600); // cache for 1 hour
+
     res.json({ list });
   } catch (error) {
     logError("category.getList", error, res);
@@ -49,6 +62,9 @@ exports.create = async (req, res) => {
       default_sizes ? (typeof default_sizes === 'object' ? JSON.stringify(default_sizes) : default_sizes) : null, 
       default_addons ? (typeof default_addons === 'object' ? JSON.stringify(default_addons) : default_addons) : null,
     ]);
+
+    // Clear Category Cache globally when changed
+    await clearCache("categories_biz_*");
 
     res.json({
       success: true,
@@ -85,6 +101,8 @@ exports.update = async (req, res) => {
       id
     ]);
 
+    await clearCache("categories_biz_*");
+
     res.json({
       success: true,
       message: "Global category updated successfully!"
@@ -112,6 +130,8 @@ exports.remove = async (req, res) => {
 
     const sql = "DELETE FROM categories WHERE id = ? AND business_id = 1";
     await db.query(sql, [id]);
+
+    await clearCache("categories_biz_*");
 
     res.json({ message: "Global category removed successfully!" });
   } catch (error) {

@@ -1,4 +1,5 @@
 const { db, logError } = require("../util/helper");
+const { clearCache } = require("../util/redisClient");
 
 // 1. Get all platform categories with status for a specific business
 exports.getList = async (req, res) => {
@@ -46,6 +47,8 @@ exports.toggle = async (req, res) => {
       ON DUPLICATE KEY UPDATE is_active = ?
     `, [target_business_id, category_id, is_active ? 1 : 0, is_active ? 1 : 0]);
 
+    await clearCache(`categories_biz_${target_business_id}`);
+
     res.json({ success: true, message: "Category toggled!" });
   } catch (error) {
     logError("businessCategory.toggle", error, res);
@@ -77,6 +80,9 @@ exports.bulkSave = async (req, res) => {
     }
 
     await conn.commit();
+
+    await clearCache(`categories_biz_${target_business_id}`);
+
     res.json({ success: true, message: "Category configurations updated!" });
   } catch (error) {
     await conn.rollback();

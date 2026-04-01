@@ -1,4 +1,5 @@
 const { db, logError, removeFile, checkPlanLimit } = require("../util/helper");
+const { getCache, setCache, clearCache } = require("../util/redisClient");
 
 const cleanVal = (val) => {
     if (val === "undefined" || val === "null" || val === undefined || val === null) return null;
@@ -10,6 +11,15 @@ exports.getList = async (req, res) => {
     try {
         const { txt_search, category_id, is_list_all } = req.query;
         const { business_id, branch_id } = req;
+
+        const cacheKey = txt_search ? null : `products_biz_${business_id}_branch_${branch_id}_cat_${category_id || 'all'}_all_${is_list_all || 0}`;
+
+        if (cacheKey) {
+            const cachedData = await getCache(cacheKey);
+            if (cachedData) {
+                return res.json({ list: cachedData, source: "redis" });
+            }
+        }
 
         let params = [business_id];
         let sql = `
@@ -45,6 +55,9 @@ exports.getList = async (req, res) => {
 
         const [list] = await db.query(sql, params);
 
+        if (cacheKey) {
+            await setCache(cacheKey, list, 3600); // 1 hour cache
+        }
 
         res.json({ list });
     } catch (error) {
@@ -105,6 +118,8 @@ exports.create = async (req, res) => {
         );
 
         await conn.commit();
+        await clearCache(`products_biz_${business_id}_branch_*`);
+        await clearCache(`categories_biz_${business_id}`);
         res.json({ success: true, message: "Product created and added to branch!" });
     } catch (error) {
         if (conn) await conn.rollback();
@@ -168,6 +183,8 @@ exports.update = async (req, res) => {
         );
 
         await conn.commit();
+        await clearCache(`products_biz_${business_id}_branch_*`);
+        await clearCache(`categories_biz_${business_id}`);
         res.json({ success: true, message: "Product updated successfully!" });
     } catch (error) {
         if (conn) await conn.rollback();
@@ -185,6 +202,9 @@ exports.remove = async (req, res) => {
 
         // This will cascade delete from branch_products if foreign key is set correctly
         await db.query("DELETE FROM products WHERE id = ? AND business_id = ?", [id, business_id]);
+
+        await clearCache(`products_biz_${business_id}_branch_*`);
+        await clearCache(`categories_biz_${business_id}`);
 
         res.json({ message: "Product removed successfully!" });
     } catch (error) {
@@ -224,6 +244,10 @@ exports.linkToBranch = async (req, res) => {
             "INSERT INTO branch_products (branch_id, product_id, price, cost_price) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE price=?, cost_price=?",
             [branch_id, product_id, price, cost_price, price, cost_price]
         );
+
+        // We could extract business_id from req for clearing cache, assuming req.business_id exists.
+        await clearCache(`products_biz_${req.business_id}_branch_${branch_id}_*`);
+        if (req.business_id) await clearCache(`categories_biz_${req.business_id}`);
 
         res.json({ message: "Product linked to branch!" });
     } catch (error) {

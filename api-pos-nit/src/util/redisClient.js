@@ -9,6 +9,7 @@ let redis = null;
 if (redisConnectionURL) {
   // Use connection URL provided by Railway
   redis = new Redis(redisConnectionURL, {
+    family: 0, // Auto-detect IPv4/IPv6 (Railway uses IPv6 internally)
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     retryStrategy(times) {
@@ -32,6 +33,7 @@ if (redisConnectionURL) {
     port: parseInt(process.env.REDISPORT || "6379"),
     password: process.env.REDISPASSWORD || process.env.REDIS_PASSWORD,
     username: process.env.REDISUSER || 'default',
+    family: 0,
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     retryStrategy(times) {
