@@ -32,66 +32,115 @@ const PrintKitchenTicket = React.forwardRef((props, ref) => {
       padding: '10px',
       fontFamily: 'monospace',
       fontSize: '14px',
-      lineHeight: '1.4',
+      lineHeight: '1.2',
       color: '#000',
       backgroundColor: '#fff'
     }}>
       {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '10px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
-        <div style={{ fontSize: '24px', fontWeight: 'bold', textTransform: 'uppercase' }}>
-          ** KITCHEN TICKET **
+      <div style={{ textAlign: 'center', marginBottom: '8px', borderBottom: '3px solid #000', paddingBottom: '6px' }}>
+        <div style={{ fontSize: '26px', fontWeight: '900', textTransform: 'uppercase' }}>
+          ** KITCHEN **
         </div>
       </div>
 
       {/* Ticket Info */}
-      <div style={{ marginBottom: '15px', fontSize: '14px', fontWeight: 'bold' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-          <span>Order #: {objSummary.order_no || 'N/A'}</span>
-          <span>{formatDate(objSummary.order_date || new Date())}</span>
+      <div style={{ marginBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid #000', paddingBottom: '4px' }}>
+          <span style={{ fontSize: '16px', fontWeight: 'bold' }}>
+            {objSummary.order_no ? `Order: #${objSummary.order_no}` : '*** NEW TICKET ***'}
+          </span>
+          <span style={{ fontSize: '12px' }}>{formatDate(objSummary.order_date || new Date())}</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '18px' }}>
-          <span>Type: <span style={{ textTransform: 'uppercase', border: '1px solid #000', padding: '2px 4px' }}>{objSummary.order_type === 'dine_in' ? 'DINE IN' : 'TAKE AWAY'}</span></span>
-          {objSummary.table_no && <span>Table: {objSummary.table_no}</span>}
+
+        {/* Large Table/Type Section */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          backgroundColor: '#000',
+          color: '#fff',
+          padding: '8px',
+          borderRadius: '4px',
+          marginBottom: '10px'
+        }}>
+          <div style={{ fontSize: '22px', fontWeight: '900', textTransform: 'uppercase' }}>
+            {objSummary.order_type === 'dine_in' ? 'DINE IN' : 'TAKE AWAY'}
+          </div>
+          {objSummary.table_no && (
+            <div style={{ fontSize: '28px', fontWeight: '900' }}>
+              TBL: {objSummary.table_no}
+            </div>
+          )}
         </div>
+
+        {objSummary.customer_name && (
+          <div style={{ fontSize: '14px', marginBottom: '4px' }}>
+            Guest: <strong>{objSummary.customer_name}</strong>
+          </div>
+        )}
+
         {objSummary.remark && (
-          <div style={{ marginTop: '8px', padding: '4px', border: '1px dashed #000' }}>
-            Note: {objSummary.remark}
+          <div style={{ marginTop: '6px', padding: '6px', border: '2px solid #000', fontSize: '16px', fontWeight: 'bold' }}>
+            !!! NOTE: {objSummary.remark}
           </div>
         )}
       </div>
 
       {/* Divider */}
-      <div style={{ borderTop: '2px dashed #000', margin: '10px 0' }}></div>
+      <div style={{ borderTop: '2px dashed #000', margin: '8px 0' }}></div>
 
-      {/* Items */}
+      {/* Items List */}
       <div style={{ marginBottom: '15px' }}>
         {cart_list.map((item, index) => {
           return (
-            <div key={index} style={{ marginBottom: '12px', borderBottom: '1px dotted #ccc', paddingBottom: '6px' }}>
+            <div key={index} style={{ 
+              marginBottom: '10px', 
+              borderBottom: '1px solid #eee', 
+              paddingBottom: '8px' 
+            }}>
               <div style={{ 
                 display: 'flex', 
-                justifyContent: 'flex-start', 
-                fontSize: '18px', 
+                alignItems: 'flex-start',
+                fontSize: '20px', 
                 fontWeight: 'bold',
-                marginBottom: '4px'
+                lineHeight: '1.1'
               }}>
-                <span style={{ marginRight: '10px' }}>{item.cart_qty}x</span>
-                <span>{item.name}</span>
+                <span style={{ 
+                  marginRight: '12px', 
+                  fontSize: '24px', 
+                  backgroundColor: '#eee', 
+                  padding: '0 6px',
+                  borderRadius: '4px'
+                }}>{item.cart_qty}</span>
+                <span style={{ flex: 1 }}>{item.name}</span>
               </div>
 
-              {/* Customizations / Modifiers */}
-              <div style={{ fontSize: '14px', paddingLeft: '25px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {/* Modifiers (Very Important for Kitchen) */}
+              <div style={{ 
+                fontSize: '15px', 
+                paddingLeft: '38px', 
+                marginTop: '4px',
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '2px',
+                fontWeight: 'bold'
+              }}>
                 {item.mood && (
-                  <div>• {item.mood === 'hot' ? 'HOT' : 'ICE'}</div>
+                  <div style={{ textTransform: 'uppercase' }}>→ {item.mood}</div>
                 )}
                 {item.size && (
-                  <div>• Size: {item.size}</div>
+                  <div>→ Size: {item.size}</div>
                 )}
                 {item.sugar && (
-                  <div>• Sugar: {item.sugar}</div>
+                  <div>→ Sugar: {item.sugar}</div>
+                )}
+                {item.note && (
+                  <div style={{ color: '#000', borderLeft: '3px solid #000', paddingLeft: '5px', marginTop: '2px' }}>
+                    * {item.note}
+                  </div>
                 )}
                 {item.addons_selected && item.addons_selected.length > 0 && (
-                  <div>• Addon: {item.addons_selected.join(', ')}</div>
+                  <div>+ {item.addons_selected.join(', ')}</div>
                 )}
               </div>
             </div>
@@ -99,9 +148,13 @@ const PrintKitchenTicket = React.forwardRef((props, ref) => {
         })}
       </div>
 
-      {/* End */}
-      <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px' }}>
-        --- END OF TICKET ---
+      <div style={{ borderTop: '2px solid #000', paddingTop: '8px', textAlign: 'center' }}>
+        <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+          Total Items: {cart_list.reduce((sum, i) => sum + (Number(i.cart_qty) || 0), 0)}
+        </div>
+        <div style={{ fontSize: '10px', marginTop: '10px' }}>
+          Printed at: {new Date().toLocaleTimeString()}
+        </div>
       </div>
     </div>
   );
