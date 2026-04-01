@@ -26,6 +26,7 @@ import { Config } from "../../util/config";
 import { useProfileStore } from "../../store/profileStore";
 import { useReactToPrint } from "react-to-print";
 import PrintInvoice from "../../component/pos/PrintInvoice";
+import PrintKitchenTicket from "../../component/pos/PrintKitchenTicket";
 import QRPaymentModal from "../../QRPaymentModal/QRPaymentModal";
 import { PriceDisplay, useExchangeRate } from "../../component/pos/ExchangeRateContext";
 import {
@@ -41,6 +42,7 @@ import {
   ShoppingOutlined,
   ExpandOutlined,
   CompressOutlined,
+  PrinterOutlined,
 } from "@ant-design/icons";
 import { FiSettings } from "react-icons/fi";
 import { useUIStore } from "../../store/uiStore";
@@ -460,6 +462,7 @@ function PosPage() {
 
   const { config } = configStore();
   const refInvoice = useRef(null);
+  const refKitchen = useRef(null);
   const [form] = Form.useForm();
 
   const [state, setState] = useState({
@@ -1046,8 +1049,12 @@ function PosPage() {
 
   // ── print ──
   const handlePrintInvoice = useReactToPrint({
-    contentRef: refInvoice,
+    contentRef: () => refInvoice.current,
     onAfterPrint: () => handleClearCart(),
+  });
+
+  const handlePrintKitchen = useReactToPrint({
+    contentRef: () => refKitchen.current,
   });
 
   // ── filtered products (Memoized for performance) ──
@@ -1094,6 +1101,7 @@ function PosPage() {
       {/* Hidden print invoice */}
       <div style={{ display: "none" }}>
         <PrintInvoice ref={refInvoice} cart_list={state.cart_list} objSummary={objSummary} />
+        <PrintKitchenTicket ref={refKitchen} cart_list={state.cart_list} objSummary={{...objSummary, customerName, tableNo, order_type: orderType, remark: ""}} />
       </div>
 
       {/* ══ HEADER ══════════════════════════════════════════════════════════ */}
@@ -1545,13 +1553,41 @@ function PosPage() {
             style={{
               padding: "18px 18px 14px",
               borderBottom: `1px solid ${COLORS.softBorder}`,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
             }}
           >
-            <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 2 }}>
-              {t.purchase_receipt}
+            <div>
+              <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 2 }}>
+                {t.purchase_receipt}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
+                #{String(objSummary.order_no || Math.floor(Math.random() * 90000) + 10000).padStart(5, "0")}
+              </div>
             </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
-              #{String(objSummary.order_no || Math.floor(Math.random() * 90000) + 10000).padStart(5, "0")}
+            
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button 
+                size="small" 
+                icon={<PrinterOutlined />} 
+                onClick={handlePrintKitchen}
+                disabled={state.cart_list.length === 0}
+                title="Print Kitchen Ticket"
+                style={{ borderRadius: 6 }}
+              >
+                Cook
+              </Button>
+              <Button 
+                size="small" 
+                type="primary"
+                icon={<FileTextOutlined />} 
+                onClick={handlePrintInvoice}
+                disabled={state.cart_list.length === 0}
+                style={{ borderRadius: 6, background: COLORS.darkGreen }}
+              >
+                Receipt
+              </Button>
             </div>
           </div>
 
