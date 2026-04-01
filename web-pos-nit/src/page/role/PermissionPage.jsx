@@ -124,14 +124,26 @@ const PermissionPage = () => {
         setSelectedPermissions(prev => {
             const current = prev[permId] || { can_view: 0, can_create: 0, can_edit: 0, can_delete: 0 };
             const next = { ...current, [action]: checked ? 1 : 0 };
-            
+
+            // Dependency Logic:
+            // 1. If 'View' is unchecked, automatically uncheck 'Create', 'Edit', and 'Delete'
+            if (action === 'can_view' && !checked) {
+                next.can_create = 0;
+                next.can_edit = 0;
+                next.can_delete = 0;
+            }
+            // 2. If 'Create', 'Edit', or 'Delete' is checked, automatically check 'View'
+            else if (['can_create', 'can_edit', 'can_delete'].includes(action) && checked) {
+                next.can_view = 1;
+            }
+
             // If all actions are 0, we can remove the key
             if (next.can_view === 0 && next.can_create === 0 && next.can_edit === 0 && next.can_delete === 0) {
                 const newMap = { ...prev };
                 delete newMap[permId];
                 return newMap;
             }
-            
+
             return { ...prev, [permId]: next };
         });
     };
@@ -177,7 +189,7 @@ const PermissionPage = () => {
                         .map(p => ({ route_key: p.route_key, name: p.name }));
 
                     setPermission(newPermList);
-                    window.location.reload(); 
+                    window.location.reload();
                 }
             }
         } catch (error) {

@@ -45,7 +45,8 @@ require("./src/route/settings.route")(app);
 require("./src/route/favorite.route")(app);
 require("./src/route/shift.route")(app);
 require("./src/route/business_category.route")(app);
-
+require("./src/route/modular_package.route")(app);
+require("./src/route/system_module.route")(app);
 
 app.use((err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {

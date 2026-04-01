@@ -38,6 +38,7 @@ exports.create = async (req, res) => {
             phone,
             plan_id,
             plan_type,
+            package_id,
             active_modules // Array of strings like ['POS', 'Ordering']
         } = req.body;
 
@@ -49,8 +50,8 @@ exports.create = async (req, res) => {
 
             // 1. Create Business
             const [business] = await conn.query(
-                "INSERT INTO businesses (name, owner_name, email, phone, plan_id, plan_type, active_modules) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                [business_name, owner_name, email, phone, plan_id || 1, plan_type || 'basic', modulesStr]
+                "INSERT INTO businesses (name, owner_name, email, phone, plan_id, plan_type, package_id, active_modules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [business_name, owner_name, email, phone, plan_id || 1, plan_type || 'basic', package_id || null, modulesStr]
             );
             const business_id = business.insertId;
 
@@ -151,7 +152,7 @@ exports.updateStatus = async (req, res) => {
 exports.updatePlan = async (req, res) => {
     try {
         if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
-        const { business_id, plan_id, plan_type, active_modules, duration_days } = req.body;
+        const { business_id, plan_id, plan_type, package_id, active_modules, duration_days } = req.body;
         const modulesStr = Array.isArray(active_modules) ? active_modules.join(",") : (active_modules || "POS");
 
         const conn = await db.getConnection();
@@ -160,8 +161,8 @@ exports.updatePlan = async (req, res) => {
 
             // 1. Update business table
             await conn.query(
-                "UPDATE businesses SET plan_id = ?, plan_type = ?, active_modules = ? WHERE id = ?", 
-                [plan_id, plan_type || 'standard', modulesStr, business_id]
+                "UPDATE businesses SET plan_id = ?, plan_type = ?, package_id = ?, active_modules = ? WHERE id = ?", 
+                [plan_id, plan_type || 'standard', package_id || null, modulesStr, business_id]
             );
 
             // 2. Set existing active subscriptions to expired

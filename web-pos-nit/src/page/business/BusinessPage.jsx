@@ -20,7 +20,8 @@ import {
     CalendarOutlined,
     EyeOutlined,
     TeamOutlined,
-    CoffeeOutlined
+    CoffeeOutlined,
+    AppstoreAddOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 
@@ -32,6 +33,8 @@ import CategoryManageTab from "../settings/CategoryManageTab";
 
 const BusinessPage = () => {
     const [list, setList] = useState([]);
+    const [packageList, setPackageList] = useState([]);
+    const [systemModules, setSystemModules] = useState([]);
     const [loading, setLoading] = useState(false);
     const [visible, setVisible] = useState(false);
     const [catVisible, setCatVisible] = useState(false);
@@ -56,7 +59,28 @@ const BusinessPage = () => {
     useEffect(() => {
         getList();
         getPlans();
+        getPackages();
+        getSystemModules();
     }, []);
+
+    const getSystemModules = async () => {
+        try {
+            const res = await request("system_module", "get");
+            if (res && res.list) {
+                // only active modules should be selectable in onboarding
+                setSystemModules(res.list.filter(m => m.status === 'active'));
+            }
+        } catch (error) {}
+    };
+
+    const getPackages = async () => {
+        try {
+            const res = await request("modular_package", "get");
+            if (res && res.list) {
+                setPackageList(res.list);
+            }
+        } catch (error) {}
+    };
 
     const getPlans = async () => {
         try {
@@ -601,17 +625,40 @@ const BusinessPage = () => {
 
                         <Col span={24} style={{ marginTop: 12 }}>
                             <Text strong style={{ color: '#c0a060', fontSize: '12px' }}>PROVISIONED MODULES (FEATURE TOGGLING)</Text>
-                            <div style={{ marginTop: 8 }}>
-                                <Form.Item name="active_modules" rules={[{ required: true, message: 'Select at least one module' }]}>
-                                    <Checkbox.Group>
-                                        <Row>
-                                            <Col span={8}><Checkbox value="POS">Core POS System</Checkbox></Col>
-                                            <Col span={8}><Checkbox value="Ordering">Web QR Ordering</Checkbox></Col>
-                                            <Col span={8}><Checkbox value="Inventory">Advanced Inventory</Checkbox></Col>
-                                        </Row>
-                                    </Checkbox.Group>
-                                </Form.Item>
-                            </div>
+                                    <Divider orientation="left">Industry & Capabilities Blueprint</Divider>
+                                    
+                                    <Form.Item name="package_id" label="Industry Package / Blueprint (Auto-config Features)">
+                                        <Select 
+                                            placeholder="Select Industry (e.g. Mart, Restaurant, Cafe)" 
+                                            size="large"
+                                            style={{ borderRadius: 12 }}
+                                            onChange={(val) => {
+                                                // When package selected, we can eventually auto-check modules
+                                                // For now, it will be stored and used for permission mapping
+                                            }}
+                                        >
+                                            {packageList.map(pkg => (
+                                                <Select.Option key={pkg.id} value={pkg.id}>
+                                                    <Space>
+                                                        <AppstoreAddOutlined />
+                                                        {pkg.name}
+                                                    </Space>
+                                                </Select.Option>
+                                            ))}
+                                        </Select>
+                                    </Form.Item>
+
+                                    <Form.Item label="ADDITIONAL MODULES (FEATURE TOGGLING)" name="active_modules" rules={[{ required: true, message: 'Select at least one module' }]}>
+                                        <Checkbox.Group>
+                                            <Row gutter={[8, 8]}>
+                                                {systemModules.map(mod => (
+                                                    <Col span={8} key={mod.code}>
+                                                        <Checkbox value={mod.code}>{mod.name}</Checkbox>
+                                                    </Col>
+                                                ))}
+                                            </Row>
+                                        </Checkbox.Group>
+                                    </Form.Item>
                         </Col>
                     </Row>
 

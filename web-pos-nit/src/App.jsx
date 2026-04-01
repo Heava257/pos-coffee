@@ -42,6 +42,8 @@ import TablePage from "./page/table/TablePage";
 import SettingsPage from "./page/settings/SettingsPage";
 import KdsPage from "./page/pos/KdsPage";
 import RecipePage from "./page/recipe/RecipePage";
+import ModuleConfigPage from "./page/modular_package/ModuleConfigPage";
+import SystemModulePage from "./page/modular_package/SystemModulePage";
 import { getProfile } from "./store/profile.store";
 
 const RootRedirect = () => {
@@ -87,6 +89,8 @@ function App() {
             <Route path="/permission" element={<PermissionPage />} />
             <Route path="/plans" element={<PlanPage />} />
             <Route path="/business" element={<BusinessPage />} />
+            <Route path="/service-blueprints" element={<ModuleConfigPage />} />
+            <Route path="/system-modules" element={<SystemModulePage />} />
             <Route path="/my-plan" element={<MyPlanPage />} />
             <Route path="/payment/result" element={<PaymentResultPage />} />
             <Route path="/order" element={<OrderPage />} />

@@ -1,53 +1,22 @@
 const rateLimit = require("express-rate-limit");
-
-const memory = new Map();
+const RedisStore = require("rate-limit-redis").default || require("rate-limit-redis");
+const { redis } = require("./redisClient");
 
 const loginRateLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // default: 5 minutes
-  max: 5,
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 5, // Limit each IP to 5 requests per `windowMs`
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  store: new RedisStore({
+    // @ts-ignore
+    sendCommand: (...args) => redis.call(...args),
+  }),
   keyGenerator: (req) => req.ip,
-  handler: (req, res, next) => {
-    const ip = req.ip;
-    const now = Date.now();
-
-    const attempt = memory.get(ip) || {
-      count: 1,
-      firstAttempt: now,
-      blockUntil: null,
-    };
-
-    if (attempt.blockUntil && now < attempt.blockUntil) {
-      return res.status(429).json({
-        message: `អ្នកត្រូវរងចាំ ${Math.ceil((attempt.blockUntil - now) / 60000)} នាទីមុនពេលសាកល្បងម្តងទៀត។`,
-      });
-    }
-
-    if (attempt.count >= 5) {
-      // Determine delay duration
-      let delay;
-      if (!attempt.delayStage || attempt.delayStage === 1) {
-        delay = 15 * 60 * 1000; // 15 mins
-        attempt.delayStage = 2;
-      } else if (attempt.delayStage === 2) {
-        delay = 30 * 60 * 1000; // 30 mins
-        attempt.delayStage = 3;
-      } else {
-        delay = 30 * 60 * 1000; // always 30 mins after
-      }
-
-      attempt.blockUntil = now + delay;
-      attempt.count = 0;
-
-      memory.set(ip, attempt);
-      return res.status(429).json({
-        message: `អ្នកបានស្នើច្រើនពេក! សូមរងចាំ ${delay / 60000} នាទី។`,
-      });
-    }
-
-    attempt.count += 1;
-    memory.set(ip, attempt);
-    next();
-  },
+  handler: (req, res, next, options) => {
+    return res.status(options.statusCode).json({
+       message: "គណនីរបស់អ្នកត្រូវបានផ្អាកជាបណ្ដោះអាសន្ន ដោយសារព្យាយាម Login ខុសច្រើនដង។ សូមរងចាំ ៥ នាទី!"
+    });
+  }
 });
 
 module.exports = loginRateLimiter;

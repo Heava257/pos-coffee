@@ -7,7 +7,7 @@ import ImgUser from "../../assets/profile.png";
 import { Tooltip } from "antd";
 import { MdOutlineMarkEmailUnread, MdRestaurantMenu } from "react-icons/md";
 import { IoMdNotificationsOutline } from "react-icons/io";
-import { CoffeeOutlined, LockOutlined, MenuOutlined, UnlockOutlined } from "@ant-design/icons";
+import { CoffeeOutlined, LockOutlined, MenuOutlined, PartitionOutlined, UnlockOutlined } from "@ant-design/icons";
 import {
   getPermission,
   getProfile, // Keep getProfile from profile.store.js for initial load if needed
@@ -40,6 +40,7 @@ import {
   CrownOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  AppstoreOutlined,
 } from "@ant-design/icons";
 import { twMerge } from 'tailwind-merge';
 import { clsx } from 'clsx';
@@ -161,6 +162,18 @@ const MENU_STRUCTURE = [
         labelKey: "business",
         icon: <GlobalOutlined />,
         style: { background: '#fff9ef', margin: '4px 0', borderRadius: '8px', color: '#c0a060', fontWeight: 'bold' }
+      },
+      {
+        key: "service-blueprints",
+        labelKey: "service_blueprints",
+        icon: <PartitionOutlined />,
+        style: { background: '#f5f7fa', margin: '4px 0', borderRadius: '8px', color: '#1e4a2d', fontWeight: 'bold' }
+      },
+      {
+        key: "system-modules",
+        labelKey: "system_modules",
+        icon: <AppstoreOutlined />,
+        style: { background: '#f5f7fa', margin: '4px 0', borderRadius: '8px', color: '#1e4a2d', fontWeight: 'bold' }
       },
     ]
   },
