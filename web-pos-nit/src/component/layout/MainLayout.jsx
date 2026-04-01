@@ -365,14 +365,27 @@ const MainLayout = () => {
       return menuList.map(item => {
         const newItem = { ...item };
 
+        const isOwner = profile?.role_name?.toUpperCase() === "OWNER" || profile?.role_code === "owner";
+        const isAdmin = profile?.role_name?.toUpperCase().includes("ADMIN") || profile?.role_code === "admin";
+        const canSeeAllReports = isOwner || isAdmin;
+
         // Translate label
         if (newItem.labelKey) {
           newItem.label = t[newItem.labelKey];
         }
 
+        // Customize labels based on role
+        if (newItem.key === "order" && !canSeeAllReports) {
+          newItem.label = t.my_shift_report || "My Shift report";
+        }
+
         // 1. Contextual Visibility Rules
         if (newItem.key === "business" && profile?.business_id !== 1) return null;
         if (newItem.key === "my-plan" && profile?.business_id === 1) return null;
+
+        // Hide full reports / analytics for staff (keep only my shift)
+        if (newItem.key === "reports" && !canSeeAllReports) return null;
+        if (newItem.key === "dashboard" && !canSeeAllReports) return null;
 
         // Hide Shop Operations for SaaS Owner (Business ID 1)
         const shopOps = ["order", "inventory", "table", "product", "shop_managment", "invoices", "pos", "expense", "report"];

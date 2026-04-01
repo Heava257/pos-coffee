@@ -386,103 +386,105 @@ function OrderPage() {
         </Text>
       </div>
 
-      {/* Summary Cards */}
-      <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
-        <Col xs={24} sm={12} lg={4}>
-          <Card className="summary-card" bodyStyle={{ padding: 20 }}>
-            <Statistic
-              title={<span style={{ color: '#6b7280' }}>{t.total_orders_label}</span>}
-              value={summary.total_order || 0}
-              prefix={<ShoppingCartOutlined style={{ color: '#1e4a2d' }} />}
-              valueStyle={{ color: '#1e4a2d', fontWeight: 'bold' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={5}>
-          <Card className="summary-card" bodyStyle={{ padding: 20 }}>
-            <Statistic
-              title={<span style={{ color: '#6b7280' }}>{t.dash_cash}</span>}
-              value={summary.total_cash || 0}
-              prefix={<DollarOutlined style={{ color: '#059669' }} />}
-              precision={2}
-              valueStyle={{ color: '#059669', fontWeight: 'bold' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={5}>
-          <Card className="summary-card" bodyStyle={{ padding: 20 }}>
-            <Statistic
-              title={<span style={{ color: '#6b7280' }}>{t.dash_aba}</span>}
-              value={summary.total_aba || 0}
-              prefix={<CheckCircleOutlined style={{ color: '#2563eb' }} />}
-              precision={2}
-              valueStyle={{ color: '#2563eb', fontWeight: 'bold' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={5}>
-          <Card className="summary-card" bodyStyle={{ padding: 20 }}>
-            <Statistic
-              title={<span style={{ color: '#6b7280' }}>{t.dash_wing}</span>}
-              value={Number(summary.total_wing || 0) + Number(summary.total_other || 0)}
-              prefix={<div style={{ 
-                background: '#ca8a04', 
-                color: '#fff', 
-                width: 28, 
-                height: 28, 
-                borderRadius: 8, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                fontSize: 14,
-                fontWeight: 900
-              }}>W</div>}
-              precision={2}
-              valueStyle={{ color: '#ca8a04', fontWeight: 'bold' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={4}>
-          <Card className="summary-card" style={{ background: '#ef4444' }} bodyStyle={{ padding: 20 }}>
-            <Statistic
-              title={<span style={{ color: '#fff' }}>{t.expenses}</span>}
-              value={summary.total_expense || 0}
-              prefix={<ArrowDownOutlined style={{ color: '#fff' }} />}
-              precision={2}
-              valueStyle={{ color: '#fff', fontWeight: 'bold' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={4}>
-          <Card className="summary-card" style={{ background: '#1e4a2d' }} bodyStyle={{ padding: 20 }}>
-            <Statistic
-              title={<span style={{ color: '#ffffffcc' }}>{t.net_profit}</span>}
-              value={Number(summary.total_amount || 0) - Number(summary.total_expense || 0)}
-              prefix={<DollarOutlined style={{ color: '#fff' }} />}
-              precision={2}
-              valueStyle={{ color: '#fff', fontWeight: 'bold' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-            <Card bodyStyle={{ padding: '8px 16px' }}>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{t.top_selling_label}</div>
-                {summary.top_products?.map((item, index) => (
-                    <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                        <span>{item.name}</span>
-                        <Text strong>{item.total_qty} {t.items}</Text>
-                    </div>
-                ))}
-                {(!summary.top_products || summary.top_products.length === 0) && <Text type="secondary" style={{fontSize: 10}}>No data</Text>}
+      {/* Summary Cards - Only visible to Owners/Admins */}
+      {canSeeAllReports && (
+        <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
+          <Col xs={24} sm={12} lg={4}>
+            <Card className="summary-card" bodyStyle={{ padding: 20 }}>
+              <Statistic
+                title={<span style={{ color: '#6b7280' }}>{t.total_orders_label}</span>}
+                value={summary.total_order || 0}
+                prefix={<ShoppingCartOutlined style={{ color: '#1e4a2d' }} />}
+                valueStyle={{ color: '#1e4a2d', fontWeight: 'bold' }}
+              />
             </Card>
-        </Col>
-      </Row>
+          </Col>
+
+          <Col xs={24} sm={12} lg={5}>
+            <Card className="summary-card" bodyStyle={{ padding: 20 }}>
+              <Statistic
+                title={<span style={{ color: '#6b7280' }}>{t.dash_cash}</span>}
+                value={summary.total_cash || 0}
+                prefix={<DollarOutlined style={{ color: '#059669' }} />}
+                precision={2}
+                valueStyle={{ color: '#059669', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={5}>
+            <Card className="summary-card" bodyStyle={{ padding: 20 }}>
+              <Statistic
+                title={<span style={{ color: '#6b7280' }}>{t.dash_aba}</span>}
+                value={summary.total_aba || 0}
+                prefix={<CheckCircleOutlined style={{ color: '#2563eb' }} />}
+                precision={2}
+                valueStyle={{ color: '#2563eb', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={5}>
+            <Card className="summary-card" bodyStyle={{ padding: 20 }}>
+              <Statistic
+                title={<span style={{ color: '#6b7280' }}>{t.dash_wing}</span>}
+                value={Number(summary.total_wing || 0) + Number(summary.total_other || 0)}
+                prefix={<div style={{ 
+                  background: '#ca8a04', 
+                  color: '#fff', 
+                  width: 28, 
+                  height: 28, 
+                  borderRadius: 8, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  fontSize: 14,
+                  fontWeight: 900
+                }}>W</div>}
+                precision={2}
+                valueStyle={{ color: '#ca8a04', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={4}>
+            <Card className="summary-card" style={{ background: '#ef4444' }} bodyStyle={{ padding: 20 }}>
+              <Statistic
+                title={<span style={{ color: '#fff' }}>{t.expenses}</span>}
+                value={summary.total_expense || 0}
+                prefix={<ArrowDownOutlined style={{ color: '#fff' }} />}
+                precision={2}
+                valueStyle={{ color: '#fff', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={4}>
+            <Card className="summary-card" style={{ background: '#1e4a2d' }} bodyStyle={{ padding: 20 }}>
+              <Statistic
+                title={<span style={{ color: '#ffffffcc' }}>{t.net_profit}</span>}
+                value={Number(summary.total_amount || 0) - Number(summary.total_expense || 0)}
+                prefix={<DollarOutlined style={{ color: '#fff' }} />}
+                precision={2}
+                valueStyle={{ color: '#fff', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+              <Card bodyStyle={{ padding: '8px 16px' }}>
+                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{t.top_selling_label}</div>
+                  {summary.top_products?.map((item, index) => (
+                      <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                          <span>{item.name}</span>
+                          <Text strong>{item.total_qty} {t.items}</Text>
+                      </div>
+                  ))}
+                  {(!summary.top_products || summary.top_products.length === 0) && <Text type="secondary" style={{fontSize: 10}}>No data</Text>}
+              </Card>
+          </Col>
+        </Row>
+      )}
 
       {/* Main Content Card */}
       <Card
@@ -591,18 +593,20 @@ function OrderPage() {
                   />
                 </Col>
 
-                <Col xs={24} sm={12} md={8}>
-                  <Select
-                    size="large"
-                    allowClear
-                    style={{ width: '100%', borderRadius: 8 }}
-                    placeholder={t.user}
-                    value={filter.user_id}
-                    options={config?.user || []}
-                    onChange={(val) => setFilter(prev => ({ ...prev, user_id: val }))}
-                    prefix={<UserOutlined />}
-                  />
-                </Col>
+                {canSeeAllReports && (
+                  <Col xs={24} sm={12} md={8}>
+                    <Select
+                      size="large"
+                      allowClear
+                      style={{ width: '100%', borderRadius: 8 }}
+                      placeholder={t.user}
+                      value={filter.user_id}
+                      options={config?.user || []}
+                      onChange={(val) => setFilter(prev => ({ ...prev, user_id: val }))}
+                      prefix={<UserOutlined />}
+                    />
+                  </Col>
+                )}
 
                 <Col xs={24} sm={12} md={8}>
                   <Button
@@ -726,14 +730,16 @@ function OrderPage() {
                        onChange={d => setFilter(p => ({...p, from_date: d[0], to_date: d[1]}))}
                      />
                   </Col>
-                  <Col span={8}>
-                     <Select 
-                        allowClear placeholder="Filter by user" style={{width: '100%'}}
-                        options={config?.user || []}
-                        onChange={v => setFilter(p => ({...p, user_id: v}))}
-                        value={filter.user_id}
-                     />
-                  </Col>
+                  {canSeeAllReports && (
+                    <Col span={8}>
+                       <Select 
+                          allowClear placeholder="Filter by user" style={{width: '100%'}}
+                          options={config?.user || []}
+                          onChange={v => setFilter(p => ({...p, user_id: v}))}
+                          value={filter.user_id}
+                       />
+                    </Col>
+                  )}
                   <Col span={4}>
                      <Button type="primary" block onClick={getShiftHistory}>Refresh</Button>
                   </Col>
