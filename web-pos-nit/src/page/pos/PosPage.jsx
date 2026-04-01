@@ -1049,12 +1049,12 @@ function PosPage() {
 
   // ── print ──
   const handlePrintInvoice = useReactToPrint({
-    content: () => refInvoice.current,
+    contentRef: refInvoice,
     onAfterPrint: () => handleClearCart(),
   });
 
   const handlePrintKitchen = useReactToPrint({
-    content: () => refKitchen.current,
+    contentRef: refKitchen,
   });
 
   // ── filtered products (Memoized for performance) ──
@@ -1098,8 +1098,8 @@ function PosPage() {
         flexDirection: "column",
       }}
     >
-      {/* Hidden print containers - off-screen instead of display:none to fix 'nothing to print' error */}
-      <div style={{ position: "absolute", top: -9999, left: -9999, opacity: 0, pointerEvents: "none" }}>
+      {/* Hidden print containers - unreachable by user but reachable by browser for printing */}
+      <div style={{ position: "absolute", top: -9999, left: -9999, height: 0, overflow: "hidden" }}>
         <PrintInvoice ref={refInvoice} cart_list={state.cart_list} objSummary={objSummary} />
         <PrintKitchenTicket ref={refKitchen} cart_list={state.cart_list} objSummary={{...objSummary, customerName, tableNo, order_type: orderType, remark: ""}} />
       </div>
