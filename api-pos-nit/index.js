@@ -16,6 +16,17 @@ app.use('/public', express.static('public', {
 }));
 
 app.get("/api/ping", (req, res) => res.json({ status: "ok", time: new Date() }));
+app.get("/api/redis-test", async (req, res) => {
+  try {
+    const { redis } = require("./src/util/redisClient");
+    if (!redis) return res.json({ status: "error", message: "Redis Config Missing or Not Initialized" });
+    await redis.set("test_key", "Hello from Redis!", "EX", 60);
+    const value = await redis.get("test_key");
+    res.json({ status: "ok", connected: true, value, message: "Redis is working perfectly!" });
+  } catch (err) {
+    res.json({ status: "error", connected: false, message: err.message });
+  }
+});
 
 require("./src/route/auth.route")(app);
 require("./src/route/user.route")(app);
