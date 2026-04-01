@@ -974,6 +974,15 @@ function PosPage() {
       message.error("Please select a payment method!");
       return;
     }
+
+    // New Validation: For Cash, ensure enough money is received
+    if (objSummary.payment_method === "Cash") {
+      const totalPaidUSD = Number(cashReceivedUSD || 0) + (Number(cashReceivedKHR || 0) / exchangeRate);
+      if (totalPaidUSD < (Number(objSummary.total || 0) - 0.001)) { // Allow tiny margin for floating point
+        message.warning(t.insufficient_cash || "Insufficient cash received!");
+        return;
+      }
+    }
     const items = state.cart_list.map((item) => {
       const qty = Number(item.cart_qty) || 1;
       const rawPrice = item.unit_price !== undefined && item.unit_price !== null ? item.unit_price : (item.price || 0);
