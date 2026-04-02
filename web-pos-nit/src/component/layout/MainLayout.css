@@ -19,13 +19,13 @@
 .demo-logo-vertical {
   height: 80px;
   margin: 20px;
-  background: linear-gradient(135deg, #1e4a2d, #2d6a42);
+  background: linear-gradient(135deg, var(--primary-color, #1e4a2d), var(--accent-color, #2d6a42));
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  box-shadow: 0 4px 12px rgba(30, 74, 45, 0.2);
+  box-shadow: var(--primary-shadow, 0 4px 12px rgba(30, 74, 45, 0.2));
 }
 
 /* Profile Container */
@@ -201,9 +201,9 @@
 */
 
 .ant-menu-item-selected {
-  background: linear-gradient(135deg, #1e4a2d, #2d6a42) !important;
+  background: linear-gradient(135deg, var(--primary-color, #1e4a2d), var(--accent-color, #2d6a42)) !important;
   color: white !important;
-  box-shadow: 0 4px 12px rgba(30, 74, 45, 0.3) !important;
+  box-shadow: var(--primary-shadow, 0 4px 12px rgba(30, 74, 45, 0.3)) !important;
 }
 
 .ant-menu-item-selected .ant-menu-item-icon {
@@ -223,7 +223,7 @@
 
 /* Menu Group Styling */
 .ant-menu-item-group-title {
-  color: #1e4a2d !important;
+  color: var(--primary-color, #1e4a2d) !important;
   font-size: 10px !important;
   font-weight: 800 !important;
   text-transform: uppercase !important;
@@ -291,7 +291,7 @@
 }
 
 .ant-menu-sub .ant-menu-item-selected {
-  background: linear-gradient(135deg, #1e4a2d, #2d6a42) !important;
+  background: linear-gradient(135deg, var(--primary-color, #1e4a2d), var(--accent-color, #2d6a42)) !important;
   color: white !important;
 }
 
@@ -589,7 +589,7 @@
 
 /* 🚀 Premium Header Enhancements */
 .premium-upgrade-btn {
-  background: #1e4a2d !important;
+  background: var(--primary-color, #1e4a2d) !important;
   border: none !important;
   border-radius: 50px !important;
   font-weight: 800 !important;
@@ -597,7 +597,7 @@
   height: 36px !important;
   padding: 0 20px !important;
   color: #fff !important;
-  box-shadow: 0 4px 15px rgba(30, 74, 45, 0.2) !important;
+  box-shadow: var(--primary-shadow, 0 4px 15px rgba(30, 74, 45, 0.2)) !important;
   transition: all 0.3s ease !important;
   letter-spacing: 0.8px !important;
 }

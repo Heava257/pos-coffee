@@ -21,7 +21,8 @@ import {
     EyeOutlined,
     TeamOutlined,
     CoffeeOutlined,
-    AppstoreAddOutlined
+    AppstoreAddOutlined,
+    EditOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 
@@ -40,6 +41,7 @@ const BusinessPage = () => {
     const [catVisible, setCatVisible] = useState(false);
     const [selectedBizId, setSelectedBizId] = useState(null);
     const [isRenewal, setIsRenewal] = useState(false);
+    const [isEdit, setIsEdit] = useState(false);
     const [form] = Form.useForm();
     const [searchText, setSearchText] = useState("");
 
@@ -132,16 +134,30 @@ const BusinessPage = () => {
     };
 
     const onFinish = async (values) => {
+        console.log("FORM_VALUES_SUBMITTED:", values);
         try {
-            const res = await request("business", "post", values);
+            let res;
+            if (isEdit) {
+                res = await request("business", "put", {
+                    id: values.id,
+                    name: values.business_name,
+                    phone: values.phone,
+                    owner_name: values.owner_name,
+                    package_id: values.package_id,
+                    active_modules: values.active_modules
+                });
+            } else {
+                res = await request("business", "post", values);
+            }
+            
             if (res) {
-                message.success("New Business and Owner registered successfully!");
+                message.success(isEdit ? "Business updated successfully!" : "New Business and Owner registered successfully!");
                 setVisible(false);
                 form.resetFields();
                 getList();
             }
         } catch (error) {
-            message.error(error.message || "Registration failed");
+            message.error(error.message || (isEdit ? "Update failed" : "Registration failed"));
         }
     };
 
@@ -292,7 +308,9 @@ const BusinessPage = () => {
                             onClick={() => {
                                 setVisible(true);
                                 setIsRenewal(true);
+                                setIsEdit(false);
                                 form.setFieldsValue({
+                                    id: record.id,
                                     business_id: record.id,
                                     plan_id: record.plan_id,
                                     plan_type: record.plan_type,
@@ -303,6 +321,28 @@ const BusinessPage = () => {
                             style={{ color: '#c0a060' }}
                         >
                             Renew
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Edit Basic Details">
+                        <Button
+                            icon={<EditOutlined />}
+                            onClick={() => {
+                                setVisible(true);
+                                setIsEdit(true);
+                                setIsRenewal(false);
+                                form.setFieldsValue({
+                                    id: record.id,
+                                    business_name: record.name,
+                                    owner_name: record.owner_name,
+                                    email: record.email,
+                                    phone: record.phone,
+                                    package_id: record.package_id,
+                                    active_modules: record.active_modules?.split(',')
+                                });
+                            }}
+                            style={{ color: '#1890ff' }}
+                        >
+                            Edit
                         </Button>
                     </Tooltip>
                     <Tooltip title="Manage Category Access">
@@ -383,6 +423,7 @@ const BusinessPage = () => {
                                 icon={<PlusOutlined />}
                                 onClick={() => {
                                     setIsRenewal(false);
+                                    setIsEdit(false);
                                     setVisible(true);
                                     form.setFieldsValue({
                                         plan_type: 'basic',
@@ -526,7 +567,7 @@ const BusinessPage = () => {
 
             <Modal
                 title={<Title level={3} style={{ margin: 0, color: '#1e4a2d' }}>
-                    {isRenewal ? "Subscription Lifecycle Control" : "Business Onboarding"}
+                    {isRenewal ? "Subscription Lifecycle Control" : (isEdit ? "Update Enterprise Details" : "Business Onboarding")}
                 </Title>}
                 open={visible}
                 onCancel={() => {
@@ -540,10 +581,11 @@ const BusinessPage = () => {
                 <Divider style={{ margin: '12px 0 24px 0' }} />
                 <Form form={form} layout="vertical" onFinish={isRenewal ? handleUpdatePlan : onFinish}>
                     <Form.Item name="business_id" hidden><Input /></Form.Item>
+                    <Form.Item name="id" hidden><Input /></Form.Item>
                     <Form.Item name="is_renewal" hidden><Input /></Form.Item>
 
                     <Row gutter={24}>
-                        {!isRenewal && (
+                        {( !isRenewal ) && (
                             <>
                                 <Col span={24}>
                                     <Text strong style={{ color: '#c0a060', fontSize: '12px' }}>ENTERPRISE DETAILS</Text>
@@ -561,105 +603,126 @@ const BusinessPage = () => {
                             </>
                         )}
 
-                        <Col span={24} style={{ marginTop: 12 }}>
-                            <Text strong style={{ color: '#c0a060', fontSize: '12px' }}>
-                                {isRenewal ? "PLAN CONFIGURATION" : "OWNER CREDENTIALS"}
-                            </Text>
-                        </Col>
+                        {!isRenewal && (
+                            <Col span={24} style={{ marginTop: 12 }}>
+                                <Text strong style={{ color: '#c0a060', fontSize: '12px' }}>
+                                    {isEdit ? "OWNER IDENTITY" : "OWNER CREDENTIALS"}
+                                </Text>
+                            </Col>
+                        )}
+                        {isRenewal && (
+                             <Col span={24} style={{ marginTop: 12 }}>
+                                <Text strong style={{ color: '#c0a060', fontSize: '12px' }}>
+                                    PLAN CONFIGURATION
+                                </Text>
+                            </Col>
+                        )}
 
-                        {!isRenewal ? (
+                        {!isRenewal && (
                             <>
                                 <Col span={12}>
                                     <Form.Item name="owner_name" label="Owner Full Name" rules={[{ required: true }]}>
                                         <Input prefix={<UserOutlined />} placeholder="Owner Name" size="large" />
                                     </Form.Item>
                                 </Col>
+                                {!isEdit && (
+                                    <>
+                                        <Col span={12}>
+                                            <Form.Item name="email" label="Owner Email (Login)" rules={[{ required: true, type: 'email' }]}>
+                                                <Input prefix={<MailOutlined />} placeholder="owner@gmail.com" size="large" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={12}>
+                                            <Form.Item name="password" label="Temporary Password" rules={[{ required: true, min: 6 }]}>
+                                                <Input.Password placeholder="******" size="large" />
+                                            </Form.Item>
+                                        </Col>
+                                    </>
+                                )}
+                            </>
+                        )}
+                        {isRenewal && (
+                            <>
                                 <Col span={12}>
-                                    <Form.Item name="email" label="Owner Email (Login)" rules={[{ required: true, type: 'email' }]}>
-                                        <Input prefix={<MailOutlined />} placeholder="owner@gmail.com" size="large" />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item name="password" label="Temporary Password" rules={[{ required: true, min: 6 }]}>
-                                        <Input.Password placeholder="******" size="large" />
+                                    <Form.Item name="duration_days" label="Subscription Duration" initialValue={30} rules={[{ required: true }]}>
+                                        <Select size="large">
+                                            <Select.Option value={30}>1 Month (30 Days)</Select.Option>
+                                            <Select.Option value={90}>3 Months</Select.Option>
+                                            <Select.Option value={180}>6 Months</Select.Option>
+                                            <Select.Option value={365}>1 Year (Normal)</Select.Option>
+                                            <Select.Option value={730}>2 Years (Bonus)</Select.Option>
+                                        </Select>
                                     </Form.Item>
                                 </Col>
                             </>
-                        ) : (
+                        )}
+
+                        {(isRenewal || (!isEdit && !isRenewal)) && (
                             <Col span={12}>
-                                <Form.Item name="duration_days" label="Subscription Duration" initialValue={30} rules={[{ required: true }]}>
-                                    <Select size="large">
-                                        <Select.Option value={30}>1 Month (30 Days)</Select.Option>
-                                        <Select.Option value={90}>3 Months</Select.Option>
-                                        <Select.Option value={180}>6 Months</Select.Option>
-                                        <Select.Option value={365}>1 Year (Normal)</Select.Option>
-                                        <Select.Option value={730}>2 Years (Bonus)</Select.Option>
+                                <Form.Item name="plan_id" label="Subscription Tier" rules={[{ required: true }]}>
+                                    <Select 
+                                        size="large" 
+                                        placeholder="Select Architecture"
+                                        onChange={(val) => {
+                                            const plan = plans.find(p => p.id === val);
+                                            if (plan) {
+                                                const type = plan.price > 100 ? 'premium' : (plan.price > 0 ? 'standard' : 'basic');
+                                                form.setFieldsValue({ plan_type: type });
+                                            }
+                                        }}
+                                    >
+                                        {plans.map(p => (
+                                            <Select.Option key={p.id} value={p.id}>
+                                                {p.name} - ${p.price} ({p.billing_cycle})
+                                            </Select.Option>
+                                        ))}
                                     </Select>
                                 </Form.Item>
+                                <Form.Item name="plan_type" hidden initialValue="basic"><Input /></Form.Item>
                             </Col>
                         )}
 
-                        <Col span={12}>
-                            <Form.Item name="plan_id" label="Subscription Tier" rules={[{ required: true }]}>
-                                <Select 
-                                    size="large" 
-                                    placeholder="Select Architecture"
-                                    onChange={(val) => {
-                                        const plan = plans.find(p => p.id === val);
-                                        if (plan) {
-                                            // Optional: auto-set plan_type based on name or price
-                                            const type = plan.price > 100 ? 'premium' : (plan.price > 0 ? 'standard' : 'basic');
-                                            form.setFieldsValue({ plan_type: type });
-                                        }
-                                    }}
-                                >
-                                    {plans.map(p => (
-                                        <Select.Option key={p.id} value={p.id}>
-                                            {p.name} - ${p.price} ({p.billing_cycle})
-                                        </Select.Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                            <Form.Item name="plan_type" hidden initialValue="basic"><Input /></Form.Item>
-                        </Col>
-
-                        <Col span={24} style={{ marginTop: 12 }}>
-                            <Text strong style={{ color: '#c0a060', fontSize: '12px' }}>PROVISIONED MODULES (FEATURE TOGGLING)</Text>
-                                    <Divider orientation="left">Industry & Capabilities Blueprint</Divider>
-                                    
-                                    <Form.Item name="package_id" label="Industry Package / Blueprint (Auto-config Features)">
-                                        <Select 
-                                            placeholder="Select Industry (e.g. Mart, Restaurant, Cafe)" 
-                                            size="large"
-                                            style={{ borderRadius: 12 }}
-                                            onChange={(val) => {
-                                                // When package selected, we can eventually auto-check modules
-                                                // For now, it will be stored and used for permission mapping
-                                            }}
+                        {!isRenewal && (
+                            <Col span={24} style={{ marginTop: 12 }}>
+                                <Text strong style={{ color: '#c0a060', fontSize: '12px' }}>
+                                    {isEdit ? "INDUSTRY BLUEPRINT & CAPABILITIES (SYSTEM FLEXIBILITY)" : "PROVISIONED MODULES (FEATURE TOGGLING)"}
+                                </Text>
+                                        <Divider orientation="left">Industry Role & Features</Divider>
+                                        
+                                <Form.Item 
+                                            name="package_id" 
+                                            label="Industry Type (e.g. Mart, Restaurant, Cafe - Changes system behavior)"
+                                            rules={[{ required: true, message: 'Please select industry type' }]}
                                         >
-                                            {packageList.map(pkg => (
-                                                <Select.Option key={pkg.id} value={pkg.id}>
-                                                    <Space>
-                                                        <AppstoreAddOutlined />
-                                                        {pkg.name}
-                                                    </Space>
-                                                </Select.Option>
-                                            ))}
-                                        </Select>
-                                    </Form.Item>
-
-                                    <Form.Item label="ADDITIONAL MODULES (FEATURE TOGGLING)" name="active_modules" rules={[{ required: true, message: 'Select at least one module' }]}>
-                                        <Checkbox.Group>
-                                            <Row gutter={[8, 8]}>
-                                                {systemModules.map(mod => (
-                                                    <Col span={8} key={mod.code}>
-                                                        <Checkbox value={mod.code}>{mod.name}</Checkbox>
-                                                    </Col>
+                                            <Select 
+                                                placeholder="Change Industry Blueprint" 
+                                                size="large"
+                                                style={{ borderRadius: 12 }}
+                                            >
+                                                {packageList.map(pkg => (
+                                                    <Select.Option key={pkg.id} value={pkg.id}>
+                                                        <Space>
+                                                            <AppstoreAddOutlined />
+                                                            {pkg.name}
+                                                        </Space>
+                                                    </Select.Option>
                                                 ))}
-                                            </Row>
-                                        </Checkbox.Group>
-                                    </Form.Item>
-                        </Col>
+                                            </Select>
+                                        </Form.Item>
+    
+                                        <Form.Item label="ACTIVE MODULES (ADD/REMOVE FEATURES)" name="active_modules" rules={[{ required: true, message: 'Select at least one module' }]}>
+                                            <Checkbox.Group>
+                                                <Row gutter={[8, 8]}>
+                                                    {systemModules.map(mod => (
+                                                        <Col span={8} key={mod.code}>
+                                                            <Checkbox value={mod.code}>{mod.name}</Checkbox>
+                                                        </Col>
+                                                    ))}
+                                                </Row>
+                                            </Checkbox.Group>
+                                        </Form.Item>
+                            </Col>
+                        )}
                     </Row>
 
                     <div style={{ textAlign: 'right', marginTop: 32 }}>
@@ -669,7 +732,7 @@ const BusinessPage = () => {
                                 form.resetFields();
                             }}>Cancel</Button>
                             <Button size="large" type="primary" htmlType="submit" style={{ background: '#1e4a2d', borderColor: '#1e4a2d', minWidth: 200 }}>
-                                {isRenewal ? "Update & Issue Subscription" : "Provision Enterprise"}
+                                {isRenewal ? "Update & Issue Subscription" : (isEdit ? "Update Details" : "Provision Enterprise")}
                             </Button>
                         </Space>
                     </div>

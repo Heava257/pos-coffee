@@ -71,11 +71,18 @@ exports.create = async (req, res) => {
             );
             const role_id = role_res.insertId;
 
-            // Link permissions allowed by the selected plan to the Owner role
-            await conn.query(`
-                INSERT INTO role_permissions (role_id, permission_id)
-                SELECT ?, id FROM permissions WHERE min_plan_id <= ?
-            `, [role_id, plan_id || 1]);
+            // Link permissions: Use Modular Package if selected, otherwise use plan-based defaults
+            if (package_id) {
+                await conn.query(`
+                    INSERT INTO role_permissions (role_id, permission_id)
+                    SELECT ?, permission_id FROM package_permissions WHERE package_id = ?
+                `, [role_id, package_id]);
+            } else {
+                await conn.query(`
+                    INSERT INTO role_permissions (role_id, permission_id)
+                    SELECT ?, id FROM permissions WHERE min_plan_id <= ?
+                `, [role_id, plan_id || 1]);
+            }
 
             // 3.2 Manager Role (Operations + Reports)
             const [managerRes] = await conn.query(
@@ -118,11 +125,22 @@ exports.create = async (req, res) => {
                 [business_id, plan_id || 1, plan_type || 'basic', startDate, formattedEndDate, 'active']
             );
 
-            // 6. Enable all global categories by default
-            await conn.query(`
-                INSERT INTO business_categories (business_id, category_id, is_active)
-                SELECT ?, id, 1 FROM categories WHERE business_id = 1
-            `, [business_id]);
+            // 6. Enable global categories based on industry package (blueprint)
+            if (package_id) {
+                await conn.query(`
+                    INSERT INTO business_categories (business_id, category_id, is_active)
+                    SELECT ?, c.id, 1 
+                    FROM categories c
+                    JOIN modular_packages mp ON c.industry_code = mp.industry_code
+                    WHERE mp.id = ? AND c.business_id = 1
+                `, [business_id, package_id]);
+            } else {
+                // Fallback: Enable all global categories if no specific package is selected
+                await conn.query(`
+                    INSERT INTO business_categories (business_id, category_id, is_active)
+                    SELECT ?, id, 1 FROM categories WHERE business_id = 1
+                `, [business_id]);
+            }
 
             await conn.commit();
             res.json({ success: true, message: "Business and Owner created with 30-day active period!" });
@@ -146,6 +164,65 @@ exports.updateStatus = async (req, res) => {
         res.json({ message: `Business ${status} successfully` });
     } catch (error) {
         logError("business.updateStatus", error, res);
+    }
+};
+
+exports.update = async (req, res) => {
+    try {
+        if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
+        const { id, name, phone, owner_name, package_id, active_modules } = req.body;
+        
+        // Detailed logging to identify why package_id is null
+        console.log("DEBUG_UPDATE_BIZ:", { id, name, package_id, active_modules_raw: active_modules });
+
+        if (!id) return res.status(400).json({ message: "Business ID is required" });
+
+        const modulesStr = Array.isArray(active_modules) ? active_modules.join(",") : (active_modules || "POS");
+        
+        // Ensure package_id is a valid number or null
+        const pkgId = (package_id && package_id !== "" && package_id !== "null") ? Number(package_id) : null;
+
+        const conn = await db.getConnection();
+        try {
+            await conn.beginTransaction();
+            
+            // 1. Update business details
+            const [updateResult] = await conn.query(
+                "UPDATE businesses SET name = ?, phone = ?, owner_name = ?, package_id = ?, active_modules = ? WHERE id = ?",
+                [name, phone, owner_name, pkgId, modulesStr, id]
+            );
+            
+            console.log("UPDATE_SQL_RESULT:", updateResult.info);
+            
+            // 2. Update owner user name (Super Admin of this business)
+            await conn.query(
+                "UPDATE users SET name = ? WHERE business_id = ? AND is_super_admin = 1",
+                [owner_name, id]
+            );
+
+            // 3. Sync permissions for the owner role if the package changed
+            if (package_id) {
+                const [ownerRoles] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'owner'", [id]);
+                if (ownerRoles.length > 0) {
+                    const ownerRoleId = ownerRoles[0].id;
+                    // Add only new permissions from the blueprint without deleting existing ones
+                    await conn.query(`
+                        INSERT IGNORE INTO role_permissions (role_id, permission_id)
+                        SELECT ?, permission_id FROM package_permissions WHERE package_id = ?
+                    `, [ownerRoleId, package_id]);
+                }
+            }
+            
+            await conn.commit();
+            res.json({ success: true, message: "Business updated successfully" });
+        } catch (err) {
+            await conn.rollback();
+            throw err;
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        logError("business.update", error, res);
     }
 };
 
@@ -179,14 +256,22 @@ exports.updatePlan = async (req, res) => {
                 [business_id, plan_id, plan_type || 'standard', startDate, formattedEndDate, 'active']
             );
 
-            // 4. Auto-update Owner role permissions to match the new plan tier
+            // 4. Auto-update Owner role permissions
             const [ownerRoles] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'owner'", [business_id]);
             if (ownerRoles.length > 0) {
                 const ownerRoleId = ownerRoles[0].id;
-                await conn.query(`
-                    INSERT IGNORE INTO role_permissions (role_id, permission_id)
-                    SELECT ?, id FROM permissions WHERE min_plan_id <= ?
-                `, [ownerRoleId, plan_id]);
+                // Add only new permissions without deleting existing overrides
+                if (package_id) {
+                    await conn.query(`
+                        INSERT IGNORE INTO role_permissions (role_id, permission_id)
+                        SELECT ?, permission_id FROM package_permissions WHERE package_id = ?
+                    `, [ownerRoleId, package_id]);
+                } else {
+                    await conn.query(`
+                        INSERT IGNORE INTO role_permissions (role_id, permission_id)
+                        SELECT ?, id FROM permissions WHERE min_plan_id <= ?
+                    `, [ownerRoleId, plan_id]);
+                }
             }
 
             await conn.commit();

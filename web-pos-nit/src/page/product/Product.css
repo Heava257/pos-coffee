@@ -5,8 +5,31 @@
   margin-bottom: 16px;
 }
 
+.form-section-premium {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+}
+
+.form-section-premium:hover {
+  border-color: #e6f0e9;
+  box-shadow: 0 8px 24px rgba(30, 74, 45, 0.05);
+}
+
 .ant-form-item-label > label {
-  font-weight: 600;
+  font-weight: 700 !important;
+  color: #2d6a42 !important;
+  font-size: 13px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ant-input-lg, .ant-select-lg, .ant-input-number-lg {
+  border-radius: 12px !important;
 }
 
 .add-button {

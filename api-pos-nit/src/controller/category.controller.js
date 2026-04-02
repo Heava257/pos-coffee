@@ -20,14 +20,17 @@ exports.getList = async (req, res) => {
       // Platform Admin sees EVERYTHING for management
       sql = `SELECT * FROM categories WHERE business_id = 1 ORDER BY id ASC`;
     } else {
-      // Regular Business only sees categories that have been ACTIVATED for them
+      // Show BOTH:
+      // 1. Global categories that are ACTIVATED via Access Control
+      // 2. Local categories created by this specific business
       sql = `
-        SELECT DISTINCT c.* 
-        FROM categories c
-        LEFT JOIN business_categories bc ON c.id = bc.category_id AND bc.business_id = ?
-        LEFT JOIN products p ON c.id = p.category_id AND p.business_id = ?
-        WHERE (bc.is_active = 1) OR (p.id IS NOT NULL)
-        ORDER BY c.id ASC
+        (SELECT c.* 
+         FROM categories c
+         JOIN business_categories bc ON c.id = bc.category_id
+         WHERE bc.business_id = ? AND bc.is_active = 1)
+        UNION
+        (SELECT * FROM categories WHERE business_id = ?)
+        ORDER BY id ASC
       `;
       params = [business_id, business_id];
     }
@@ -51,12 +54,13 @@ exports.create = async (req, res) => {
       return res.status(403).json({ message: "Security Violation: You do not have permission to manage global categories." });
     }
 
-    const { name, default_moods, default_sizes, default_addons } = req.body;
+    const { name, industry_code, default_moods, default_sizes, default_addons } = req.body;
     const image = req.file ? req.file.path : req.body.image;
 
-    const sql = "INSERT INTO categories (business_id, name, image, default_moods, default_sizes, default_addons) VALUES (1, ?, ?, ?, ?, ?)";
+    const sql = "INSERT INTO categories (business_id, name, industry_code, image, default_moods, default_sizes, default_addons) VALUES (1, ?, ?, ?, ?, ?, ?)";
     const [data] = await db.query(sql, [
       name, 
+      industry_code || 'coffee_cafe',
       image, 
       default_moods ? (typeof default_moods === 'object' ? JSON.stringify(default_moods) : default_moods) : null, 
       default_sizes ? (typeof default_sizes === 'object' ? JSON.stringify(default_sizes) : default_sizes) : null, 
@@ -84,16 +88,17 @@ exports.update = async (req, res) => {
       return res.status(403).json({ message: "Security Violation: You do not have permission to manage global categories." });
     }
 
-    const { id, name, default_moods, default_sizes, default_addons } = req.body;
+    const { id, name, industry_code, default_moods, default_sizes, default_addons } = req.body;
     const image = req.file ? req.file.path : req.body.image;
 
     const sql = `
       UPDATE categories 
-      SET name = ?, image = ?, default_moods = ?, default_sizes = ?, default_addons = ? 
+      SET name = ?, industry_code = ?, image = ?, default_moods = ?, default_sizes = ?, default_addons = ? 
       WHERE id = ? AND business_id = 1
     `;
     await db.query(sql, [
       name, 
+      industry_code || 'coffee_cafe',
       image, 
       default_moods ? (typeof default_moods === 'object' ? JSON.stringify(default_moods) : default_moods) : null, 
       default_sizes ? (typeof default_sizes === 'object' ? JSON.stringify(default_sizes) : default_sizes) : null, 

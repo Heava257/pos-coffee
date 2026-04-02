@@ -23,7 +23,7 @@ exports.create = async (req, res) => {
     try {
         if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
         
-        const { name, code, description, icon, permission_ids } = req.body;
+        const { name, code, industry_code, description, icon, permission_ids } = req.body;
         
         const conn = await db.getConnection();
         try {
@@ -31,8 +31,8 @@ exports.create = async (req, res) => {
             
             // A. Create Package
             const [pkg] = await conn.query(
-                "INSERT INTO modular_packages (name, code, description, icon) VALUES (?, ?, ?, ?)",
-                [name, code, description, icon]
+                "INSERT INTO modular_packages (name, code, industry_code, description, icon) VALUES (?, ?, ?, ?, ?)",
+                [name, code, industry_code || 'coffee_cafe', description, icon]
             );
             const package_id = pkg.insertId;
             
@@ -63,7 +63,7 @@ exports.update = async (req, res) => {
     try {
         if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
         
-        const { id, name, description, icon, permission_ids } = req.body;
+        const { id, name, code, industry_code, description, icon, permission_ids } = req.body;
         
         const conn = await db.getConnection();
         try {
@@ -71,8 +71,8 @@ exports.update = async (req, res) => {
             
             // A. Update Package Info
             await conn.query(
-                "UPDATE modular_packages SET name = ?, description = ?, icon = ? WHERE id = ?",
-                [name, description, icon, id]
+                "UPDATE modular_packages SET name = ?, code = ?, industry_code = ?, description = ?, icon = ? WHERE id = ?",
+                [name, code, industry_code || 'coffee_cafe', description, icon, id]
             );
             
             // B. Refresh Permissions

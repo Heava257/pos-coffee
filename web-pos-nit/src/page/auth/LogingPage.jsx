@@ -42,7 +42,10 @@ function LoginPage() {
         setProfile(res.profile || {}); // Now using Zustand setProfile
         setPermission(res.permission || []);
         message.success("Logged in successfully!");
-        navigate("/dashboard");
+        // A small delay to ensure storage is synced before navigation
+        setTimeout(() => {
+           navigate("/");
+        }, 300);
       } else {
         message.error(res.message || "Login failed.");
       }

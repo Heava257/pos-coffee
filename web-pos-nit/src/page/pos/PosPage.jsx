@@ -18,8 +18,10 @@ import {
   Badge,
   Drawer,
   List,
+  Space,
+  Popconfirm,
 } from "antd";
-import { request } from "../../util/helper";
+import { request, isPermission } from "../../util/helper";
 import { configStore } from "../../store/configStore";
 import { getIconForCategory, getColorForCategory } from "../../util/helper";
 import { Config } from "../../util/config";
@@ -43,6 +45,9 @@ import {
   ExpandOutlined,
   CompressOutlined,
   PrinterOutlined,
+  UnorderedListOutlined,
+  TableOutlined,
+  PushpinOutlined,
 } from "@ant-design/icons";
 import { FiSettings } from "react-icons/fi";
 import { useUIStore } from "../../store/uiStore";
@@ -80,14 +85,36 @@ const COLORS = {
 };
 
 // ─── Default categories ──────────────────────────────────────────────────────
-const defaultParentCategories = [
-  { id: 51, name: "Coffee", icon: "☕", color: COLORS.darkGreen },
-  { id: 52, name: "Juice", icon: "🧃", color: "#4a8a3a" },
-  { id: 53, name: "Milk", icon: "🥛", color: "#3a6a9a" },
-  { id: 54, name: "Snack", icon: "🍪", color: "#9a5a2a" },
-  { id: 55, name: "Rice", icon: "🍚", color: "#7a4a8a" },
-  { id: 56, name: "Dessert", icon: "🍰", color: "#c0543a" },
-];
+const getLocalizedDefaultCategories = (layout) => {
+  if (layout === "pharmacy") {
+    return [
+      { id: 51, name: "Medicine", icon: "💊", color: "#2196f3" },
+      { id: 52, name: "Supplements", icon: "🧴", color: "#64b5f6" },
+      { id: 53, name: "HealthCare", icon: "🏥", color: "#90caf9" },
+      { id: 54, name: "Equipment", icon: "🩹", color: "#1976d2" },
+      { id: 55, name: "Personal Care", icon: "🪥", color: "#42a5f5" },
+      { id: 56, name: "Others", icon: "📦", color: "#bbdefb" },
+    ];
+  }
+  if (layout === "retail") {
+    return [
+      { id: 51, name: "Grocery", icon: "🛒", color: "#1e4a2d" },
+      { id: 52, name: "Beverage", icon: "🥤", color: "#2d6a42" },
+      { id: 53, name: "Ice Cream", icon: "🍦", color: "#3a7d52" },
+      { id: 54, name: "Home Care", icon: "🧼", color: "#4a8a3a" },
+      { id: 55, name: "Snack", icon: "🍿", color: "#5a9a4a" },
+      { id: 56, name: "Others", icon: "📦", color: "#6aa05a" },
+    ];
+  }
+  return [
+    { id: 51, name: "Coffee", icon: "☕", color: COLORS.darkGreen },
+    { id: 52, name: "Juice", icon: "🧃", color: "#4a8a3a" },
+    { id: 53, name: "Milk", icon: "🥛", color: "#3a6a9a" },
+    { id: 54, name: "Snack", icon: "🍪", color: "#9a5a2a" },
+    { id: 55, name: "Rice", icon: "🍚", color: "#7a4a8a" },
+    { id: 56, name: "Dessert", icon: "🍰", color: "#c0543a" },
+  ];
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function getDayLabel() {
@@ -308,6 +335,216 @@ const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
   );
 });
 
+// ─── Compact Product List View (New) ──────────────────────────────
+const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS }) => {
+  return (
+    <div style={{
+      background: COLORS.white,
+      borderRadius: 16,
+      border: `1px solid ${COLORS.softBorder}`,
+      overflow: 'hidden',
+      marginTop: 8,
+      boxShadow: '0 4px 15px rgba(0,0,0,0.04)'
+    }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead style={{ background: '#f8fafc', borderBottom: `2px solid ${COLORS.softBorder}` }}>
+          <tr>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>PRODUCT & CATEGORY / ទំនិញ និងប្រភេទ</th>
+            <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>UNIT PRICE / តម្លៃ</th>
+            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>STOCK / ស្តុក</th>
+            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>ADD</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map(p => {
+            const cartQty = getCartQty(p.id);
+            const isOOS = p.qty <= 0;
+            const price = Number(p.unit_price || p.price || 0);
+            const finalPrice = price - (price * (parseFloat(p.discount) || 0) / 100);
+
+            return (
+              <tr
+                key={p.id}
+                onClick={() => !isOOS && onAdd(p)}
+                style={{ borderBottom: `1px solid ${COLORS.softBorder}`, cursor: isOOS ? 'default' : 'pointer', transition: 'all 0.2s', opacity: isOOS ? 0.6 : 1 }}
+                onMouseEnter={e => !isOOS && (e.currentTarget.style.background = '#fcfbf7')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <td style={{ padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: '#f8f7f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${COLORS.softBorder}` }}>
+                      {p.image ? (
+                        <img src={Config.getFullImagePath(p.image)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
+                      ) : (
+                        <span style={{ fontSize: 18 }}>{getIconForCategory(p.category_name)}</span>
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: COLORS.textPrimary }}>{p.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
+                        <Tag color="blue" style={{ fontSize: 10, borderRadius: 4, margin: 0 }}>{p.category_name}</Tag>
+                        {p.generic_name && <span style={{ fontSize: 11, color: COLORS.textSecondary, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>({p.generic_name})</span>}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                  <div style={{ fontWeight: 800, color: COLORS.darkGreen, fontSize: 15 }}>${finalPrice.toFixed(2)}</div>
+                  {p.discount > 0 && <div style={{ fontSize: 10, color: COLORS.textSecondary, textDecoration: 'line-through' }}>${price.toFixed(2)}</div>}
+                </td>
+                <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                  <Badge
+                    count={p.qty}
+                    overflowCount={999}
+                    showZero
+                    style={{ background: isOOS ? COLORS.redBadge : p.qty < 5 ? COLORS.softGold : COLORS.darkGreen, boxShadow: 'none' }}
+                  />
+                </td>
+                <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                  <Badge count={cartQty} size="small" offset={[5, -5]}>
+                    <Button
+                      type="primary"
+                      shape="circle"
+                      icon={<PlusOutlined />}
+                      size="small"
+                      disabled={isOOS}
+                      style={{ background: COLORS.darkGreen, border: 'none' }}
+                    />
+                  </Badge>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+// ─── Table Selector Modal (New) ──────────────────────────────
+const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, heldOrders, onResume, guestCount, setGuestCount }) => {
+  const [tables, setTables] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (visible && branchId) {
+      fetchTables();
+    }
+  }, [visible, branchId]);
+
+  const fetchTables = async () => {
+    setLoading(true);
+    try {
+      const res = await request("table", "get", { branch_id: branchId });
+      if (res && res.list) {
+        setTables(res.list);
+      }
+    } catch (error) {
+      console.error("Fetch tables error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ background: `${COLORS.darkGreen}10`, padding: 8, borderRadius: 10 }}><TableOutlined style={{ color: COLORS.darkGreen }} /></div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: 18, color: COLORS.darkGreen }}>TABLE DASHBOARD / គ្រប់គ្រងតុ</div>
+            <div style={{ fontSize: 11, color: COLORS.textSecondary, marginTop: -2 }}>Select a table and update guest headcount</div>
+          </div>
+          {/* Compact Guest Select in Header */}
+          <div style={{ background: '#f8fafc', padding: '4px 12px', borderRadius: 12, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.textSecondary }}>PEOPLE 👥</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button onClick={() => setGuestCount(Math.max(1, guestCount - 1))} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, fontWeight: 700, color: COLORS.textSecondary }}>−</button>
+              <span style={{ fontSize: 16, fontWeight: 800, minWidth: 20, textAlign: 'center' }}>{guestCount}</span>
+              <button onClick={() => setGuestCount(guestCount + 1)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, fontWeight: 700, color: COLORS.darkGreen }}>+</button>
+            </div>
+          </div>
+        </div>
+      }
+      open={visible}
+      onCancel={onCancel}
+      footer={null}
+      width={720}
+      centered
+      bodyStyle={{ padding: '20px' }}
+    >
+      <Spin spinning={loading}>
+        {tables.length === 0 && !loading ? (
+          <Empty description={t.no_data || "No tables configured"} />
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+            gap: 16
+          }}>
+            {tables.map(table => {
+              // Check if table is occupied in heldOrders
+              const activeOrder = heldOrders.find(o => String(o.tableNo) === String(table.table_name));
+              const isOccupied = !!activeOrder;
+
+              return (
+                <div
+                  key={table.id}
+                  onClick={() => {
+                    if (isOccupied) {
+                      onResume(activeOrder);
+                    } else {
+                      onSelect(table.table_name);
+                    }
+                  }}
+                  style={{
+                    background: isOccupied ? `${COLORS.redBadge}08` : (table.status === 'Occupied' ? '#fcfcfc' : COLORS.white),
+                    border: `2px solid ${isOccupied ? COLORS.redBadge : COLORS.softBorder}`,
+                    borderRadius: 16,
+                    padding: '16px 12px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    position: 'relative',
+                    boxShadow: isOccupied ? '0 4px 15px rgba(232,93,93,0.1)' : '0 2px 8px rgba(0,0,0,0.04)'
+                  }}
+                  onMouseEnter={e => {
+                    if (!isOccupied) {
+                      e.currentTarget.style.borderColor = COLORS.darkGreen;
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isOccupied) {
+                      e.currentTarget.style.borderColor = COLORS.softBorder;
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  <div style={{ fontSize: 24, marginBottom: 4 }}>{isOccupied ? '🍱' : '🪑'}</div>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: COLORS.textPrimary }}>{table.table_name}</div>
+
+                  {isOccupied ? (
+                    <>
+                      <div style={{ fontSize: 13, fontWeight: 900, color: COLORS.redBadge, marginTop: 4 }}>${(activeOrder.objSummary?.total || 0).toFixed(2)}</div>
+                      <Tag color="volcano" style={{ fontSize: 9, borderRadius: 10, margin: '6px 0 0' }}>OCCUPIED</Tag>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 11, color: COLORS.textSecondary, marginTop: 4 }}>FREE</div>
+                      <Tag color="green" style={{ fontSize: 9, borderRadius: 10, margin: '6px 0 0' }}>AVAILABLE</Tag>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Spin>
+    </Modal>
+  );
+};
+
 // ─── Bill Cart Item (Memoized) ────────────────────────────────────────────────
 const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove, onEdit }) => {
   const imgUrl = item.image ? Config.getFullImagePath(item.image) : null;
@@ -318,94 +555,71 @@ const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove, onEdi
   return (
     <div
       style={{
-        padding: "12px 0",
-        borderBottom: `1px solid ${COLORS.softBorder}`,
+        padding: "10px 0",
+        borderBottom: `1px solid #f0f0f0`,
         display: "flex",
-        flexDirection: "column",
-        gap: 8,
+        alignItems: "center",
+        gap: 10,
+        animation: 'fadeIn 0.2s ease-out'
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        {/* Image */}
+      {/* 1. Compact Thumbnail */}
+      <div style={{
+        width: 42, height: 42, borderRadius: 8, overflow: "hidden",
+        background: "#f8f9fa", flexShrink: 0, display: "flex",
+        alignItems: "center", justifyContent: "center", border: `1px solid #eee`
+      }}>
+        {imgUrl ? (
+          <img src={imgUrl} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <span style={{ fontSize: 20 }}>{getIconForCategory(item.category_name)}</span>
+        )}
+      </div>
+
+      {/* 2. Middle Info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          width: 44, height: 44, borderRadius: 10, overflow: "hidden",
-          background: "#f0ede6", flexShrink: 0, display: "flex",
-          alignItems: "center", justifyContent: "center", border: `1px solid ${COLORS.softBorder}`
+          fontWeight: 700, fontSize: 13, color: COLORS.textPrimary,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 1
         }}>
-          {imgUrl ? (
-            <img src={imgUrl} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            <span style={{ fontSize: 20 }}>{getIconForCategory(item.category_name)}</span>
-          )}
+          {item.name}
         </div>
-
-        {/* Info & Metadata */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: COLORS.textPrimary, marginBottom: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {item.name}
-            </span>
-            <span style={{ color: COLORS.darkGreen, fontWeight: 800 }}>
-              ${(finalPrice * item.cart_qty).toFixed(2)}
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 4 }}>
-            {item.mood && (
-              <Tag size="small" color={item.mood === 'hot' ? 'orange' : 'blue'} style={{ fontSize: 9, margin: 0, borderRadius: 4, height: 18, lineHeight: '16px' }}>
-                {item.mood === 'hot' ? '🔥 Hot' : '❄️ Ice'} {item.size}
-              </Tag>
-            )}
-            {item.sugar && (
-              <Tag size="small" style={{ fontSize: 9, margin: 0, borderRadius: 4, height: 18, lineHeight: '16px' }}>
-                🍬 {item.sugar}
-              </Tag>
-            )}
-          </div>
-
-          {item.addons_selected && item.addons_selected.length > 0 && (
-            <div style={{ fontSize: 10, color: COLORS.textSecondary, fontStyle: 'italic', marginBottom: 2 }}>
-              +{item.addons_selected.join(", ")}
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 11, color: COLORS.textSecondary, fontWeight: 600 }}>
+            ${finalPrice.toFixed(2)}
+          </span>
+          {discountPercent > 0 && (
+            <span style={{ fontSize: 10, color: COLORS.redBadge, opacity: 0.8 }}>(-{discountPercent}%)</span>
           )}
+          {item.note && (
+            <span style={{
+              fontSize: 10,
+              color: COLORS.midGreen,
+              fontStyle: 'italic',
+              background: '#f1f8f4',
+              padding: '1px 6px',
+              borderRadius: 4
+            }}>
+              "{item.note}"
+            </span>
+          )}
+          <button onClick={() => onEdit(item)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 4px', color: COLORS.midGreen, fontSize: 10, fontWeight: 700 }}>EDIT</button>
+          <button onClick={() => onRemove(item)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 4px', color: COLORS.redBadge, fontSize: 10 }}><DeleteOutlined /></button>
         </div>
       </div>
 
-      {/* Controls Row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingLeft: 54 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={() => onEdit(item)}
-            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 4, color: COLORS.midGreen, display: 'flex' }}
-            title="Edit"
-          >
-            <span style={{ fontSize: 14 }}>✎</span>
-          </button>
-          <button
-            onClick={() => onRemove(item)}
-            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 4, color: COLORS.redBadge, display: 'flex' }}
-            title="Remove"
-          >
-            <DeleteOutlined style={{ fontSize: 14 }} />
-          </button>
+      {/* 3. Right: Subtotal & Qty */}
+      <div style={{ textAlign: "right", display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: COLORS.textPrimary }}>
+          ${(finalPrice * item.cart_qty).toFixed(2)}
         </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 10, background: '#f8f7f2', padding: '2px 8px', borderRadius: 20, border: `1px solid ${COLORS.softBorder}` }}>
-          <button
-            onClick={() => onDecrease(item)}
-            style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, padding: 0, color: COLORS.textSecondary }}
-          >
-            −
-          </button>
-          <span style={{ fontSize: 13, fontWeight: 700, minWidth: 20, textAlign: "center" }}>
-            {item.cart_qty}
-          </span>
-          <button
-            onClick={() => onIncrease(item)}
-            style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, padding: 0, color: COLORS.darkGreen }}
-          >
-            +
-          </button>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8, background: '#f8f9fa',
+          padding: '2px 6px', borderRadius: 8, border: `1px solid #eee`
+        }}>
+          <button onClick={() => onDecrease(item)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, color: COLORS.textSecondary, width: 18 }}>−</button>
+          <span style={{ fontSize: 12, fontWeight: 800, minWidth: 16, textAlign: "center" }}>{item.cart_qty}</span>
+          <button onClick={() => onIncrease(item)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, color: COLORS.darkGreen, width: 18 }}>+</button>
         </div>
       </div>
     </div>
@@ -428,9 +642,69 @@ function PosPage() {
   const { profile } = useProfileStore(); // Reactive profile
   const { isFullScreen, toggleFullScreen } = useUIStore();
   const [isDisabled, setIsDisabled] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(51);
+
+  // ── LAYOUT ENGINE CONFIGURATION ──
+  const LAYOUTS = {
+    coffee: {
+      hasSidebar: false,
+      hasHorizontalCats: true,
+      hasKitchen: true,
+      hasTables: true,
+      hasDrafts: true,
+      hasOrderTypes: true,
+      denseGrid: false,
+      primaryColor: COLORS.darkGreen
+    },
+    retail: {
+      hasSidebar: true,
+      hasHorizontalCats: false,
+      hasKitchen: false,
+      hasTables: false,
+      hasDrafts: false,
+      hasOrderTypes: false,
+      denseGrid: true,
+      primaryColor: COLORS.darkGreen
+    },
+    pharmacy: {
+      hasSidebar: true,
+      hasHorizontalCats: false,
+      hasKitchen: false,
+      hasTables: false,
+      hasDrafts: false,
+      hasOrderTypes: false,
+      denseGrid: true,
+      hasExpiry: true,
+      primaryColor: "#2196f3"
+    },
+    restaurant: {
+      hasSidebar: false,
+      hasHorizontalCats: true,
+      hasKitchen: true,
+      hasTables: true,
+      hasDrafts: true,
+      hasOrderTypes: true,
+      hasSplitBill: true,
+      denseGrid: false,
+      primaryColor: "#e65100"
+    }
+  };
+
+  const getLayoutType = () => {
+    if (profile?.business_layout) return profile.business_layout;
+    const bp = profile?.blueprint_name?.toLowerCase() || "";
+    if (bp.includes("pharmacy") || bp.includes("medical")) return "pharmacy";
+    if (bp.includes("mart") || bp.includes("retail")) return "retail";
+    if (bp.includes("restaurant")) return "restaurant";
+    return "coffee";
+  };
+
+  const layoutType = getLayoutType();
+  const layoutConfig = LAYOUTS[layoutType] || LAYOUTS.coffee;
+  const isRetail = layoutConfig.hasSidebar;
+  const primaryColor = layoutConfig.primaryColor || COLORS.darkGreen;
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [isEditingUniqueId, setIsEditingUniqueId] = useState(null);
-  const [parentCategories, setParentCategories] = useState(defaultParentCategories);
+  const [parentCategories, setParentCategories] = useState([{ id: 'all', name: "All Products", icon: "🌐", color: primaryColor }]);
   const [searchText, setSearchText] = useState("");
   const [orderType, setOrderType] = useState("dine_in");
   const [customerName, setCustomerName] = useState("");
@@ -441,12 +715,19 @@ function PosPage() {
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [selectedProductForOptions, setSelectedProductForOptions] = useState(null);
-  const [tempOptions, setTempOptions] = useState({ mood: "hot", size: "M", sugar: "100%", addons: [] });
+  const [tempOptions, setTempOptions] = useState({
+    mood: "hot",
+    size: "M",
+    sugar: "100%",
+    addons: [],
+    note: ""
+  });
   const [paymentData, setPaymentData] = useState({ paymentLink: "", orderNo: "", total: 0 });
   const [pendingOrdersVisible, setPendingOrdersVisible] = useState(false);
   const [pendingOrders, setPendingOrders] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [branchInfo, setBranchInfo] = useState(null);
+  const [viewMode, setViewMode] = useState("grid"); // grid or list
 
   const [currentOrderId, setCurrentOrderId] = useState(null);
   const { exchangeRate } = useExchangeRate();
@@ -459,6 +740,9 @@ function PosPage() {
   const { heldOrders, holdOrder, resumeOrder, removeHeldOrder } = useHeldOrdersStore();
   const [heldOrdersVisible, setHeldOrdersVisible] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState(null);
+  const [tableModalVisible, setTableModalVisible] = useState(false);
+  const [guestCount, setGuestCount] = useState(1); // Restaurant: number of guests
+  const [tempUnassignedItems, setTempUnassignedItems] = useState([]); // Items picked in current session but not yet saved/printed
 
   const { config } = configStore();
   const refInvoice = useRef(null);
@@ -489,9 +773,9 @@ function PosPage() {
   });
 
   const userId = profile?.id || profile?.user_id;
-  const isAdmin = profile?.is_super_admin === 1 || 
-                ['Owner', 'Executive', 'Admin'].includes(profile?.role_name) ||
-                profile?.role_id === 1; // Fallback for common admin IDs
+  const isAdmin = profile?.is_super_admin === 1 ||
+    ['Owner', 'Executive', 'Admin'].includes(profile?.role_name) ||
+    profile?.role_id === 1; // Fallback for common admin IDs
 
 
   // ── time disable ──
@@ -505,10 +789,14 @@ function PosPage() {
     return () => clearInterval(iv);
   }, []);
 
-  // ── set user id ──
+  // ── set user id and name ──
   useEffect(() => {
-    setObjSummary((p) => ({ ...p, user_id: userId }));
-  }, [userId]);
+    setObjSummary((p) => ({
+      ...p,
+      user_id: userId,
+      user_name: profile?.name || profile?.first_name || "Admin"
+    }));
+  }, [userId, profile]);
 
   // ── initial data ──
   useEffect(() => {
@@ -516,8 +804,14 @@ function PosPage() {
       checkShiftStatus();
       getParentCategories();
       getBranchInfo();
-      getPendingOrders();
-      const iv = setInterval(getPendingOrders, 30000); // Check every 30s
+      if (isPermission("Table Management")) {
+        getPendingOrders();
+      }
+      const iv = setInterval(() => {
+        if (isPermission("Table Management")) {
+          getPendingOrders();
+        }
+      }, 30000);
       return () => clearInterval(iv);
     }
   }, [userId]);
@@ -531,7 +825,7 @@ function PosPage() {
       } else {
         setCurrentShift(null);
         // User requested: don't auto-open modal. They will click to open.
-        setOpenShiftModalVisible(false); 
+        setOpenShiftModalVisible(false);
       }
     } catch (error) {
       console.error("Error checking shift status:", error);
@@ -608,22 +902,33 @@ function PosPage() {
   const getParentCategories = async () => {
     try {
       const res = await request("category", "get");
-      if (res && res.list) {
+      if (res && res.list && res.list.length > 0) {
         const cats = res.list.map((c) => ({
           id: c.id,
           name: c.name,
           icon: getIconForCategory(c.name),
-          color: getColorForCategory(c.name) || COLORS.darkGreen,
+          color: getColorForCategory(c.name) || (layoutType === "pharmacy" ? "#2196f3" : COLORS.darkGreen),
         }));
-        setParentCategories(cats.length > 0 ? cats : defaultParentCategories);
-        if (cats.length > 0 && !cats.find(c => c.id === selectedCategory)) {
-          setSelectedCategory(cats[0].id);
+
+        // ADDED: Prepend 'All Products' category
+        setParentCategories([
+          { id: 'all', name: t.all_products || "All Products", icon: "🌐", color: COLORS.darkGreen },
+          ...cats
+        ]);
+
+        if (cats.length > 0 && selectedCategory === null) {
+          setSelectedCategory('all');
         }
       } else {
-        setParentCategories(defaultParentCategories);
+        // Use localized defaults if no categories in DB
+        const defaults = getLocalizedDefaultCategories(layoutType);
+        setParentCategories([
+          { id: 'all', name: t.all_products || "All Products", icon: "🌐", color: COLORS.darkGreen },
+          ...defaults
+        ]);
       }
     } catch {
-      setParentCategories(defaultParentCategories);
+      setParentCategories(getLocalizedDefaultCategories(layoutType));
     }
   };
 
@@ -646,7 +951,7 @@ function PosPage() {
     setState((p) => ({ ...p, loading: true }));
     try {
       const res = await request(`product`, "get", {
-        category_id: selectedCategory,
+        category_id: selectedCategory === 'all' ? null : selectedCategory,
       });
       if (res && !res.error) {
         // API already filters by parent_id — no need to filter client-side
@@ -700,35 +1005,53 @@ function PosPage() {
           return prev;
         }
 
-        const isCoffee = product.category_name?.toLowerCase().includes("coffee");
+        const moods = safeParse(product.moods);
         const sizes = safeParse(product.sizes);
         const addons = safeParse(product.addons);
-        const hasOptions = (Array.isArray(sizes) && sizes.length > 0) || (Array.isArray(addons) && addons.length > 0);
+        const isDrink = product.category_name?.toLowerCase().includes("coffee") || product.category_name?.toLowerCase().includes("drink") || product.category_name?.toLowerCase().includes("juice");
+        const isRestaurant = profile?.business_layout === 'restaurant' || product.industry_code === 'restaurant';
 
-        if (isCoffee || hasOptions) {
+        const hasOptions = (Array.isArray(moods) && moods.length > 0) || (Array.isArray(sizes) && sizes.length > 0) || (Array.isArray(addons) && addons.length > 0);
+
+        const uniqueId = `${product.id}-standard`;
+
+        if (hasOptions) {
           setSelectedProductForOptions(product);
           // Default options
           setTempOptions({
-            mood: "ice",
-            size: Array.isArray(safeParse(product.sizes)) ? safeParse(product.sizes)[0]?.label : "M",
-            sugar: "100%",
-            addons: []
+            mood: Array.isArray(moods) && moods.length > 0 ? (typeof moods[0] === 'object' ? moods[0].value : moods[0]) : (isDrink ? "ice" : ""),
+            size: Array.isArray(sizes) && sizes.length > 0 ? (typeof sizes[0] === 'object' ? sizes[0].label : sizes[0]) : "M",
+            sugar: isDrink ? "100%" : "",
+            addons: [],
+            note: ""
           });
           setOptionsModalVisible(true);
           return prev;
         }
 
-        cart.push({ ...product, cart_qty: 1 });
+        const newItem = { ...product, cart_qty: 1, unique_id: uniqueId };
+        setTempUnassignedItems(prev => [...prev, newItem]);
+        cart.push(newItem);
       } else {
         if (cart[idx].cart_qty >= product.qty) {
           notification.warning({ message: `Only ${product.qty} available` });
           return prev;
         }
+        const uId = cart[idx].unique_id || `${cart[idx].id}-standard`;
+        setTempUnassignedItems(prevTemp => {
+            const tIdx = prevTemp.findIndex(it => it.unique_id === uId);
+            if (tIdx > -1) {
+                const updated = [...prevTemp];
+                updated[tIdx].cart_qty += 1;
+                return updated;
+            }
+            return [...prevTemp, { ...cart[idx], cart_qty: 1, unique_id: uId }];
+        });
         cart[idx] = { ...cart[idx], cart_qty: (cart[idx].cart_qty || 0) + 1 };
       }
       return { ...prev, cart_list: cart };
     });
-  }, []);
+  }, [profile, setTempUnassignedItems]);
 
   const handleEditCartItem = useCallback((item) => {
     // Find the original product from the list to get full metadata (sizes, addons)
@@ -740,7 +1063,8 @@ function PosPage() {
       mood: item.mood || "hot",
       size: item.size || "M",
       sugar: item.sugar || "100%",
-      addons: item.addons_selected || []
+      addons: item.addons_selected || [],
+      note: item.note || ""
     });
     setIsEditingUniqueId(item.unique_id);
     setOptionsModalVisible(true);
@@ -748,12 +1072,50 @@ function PosPage() {
 
   const handleConfirmOptions = () => {
     const product = selectedProductForOptions;
+    if (!product) return;
+
+    if (orderType === 'dine_in' && !tableNo) {
+      setTableModalVisible(true);
+      message.info("Please select a table to start this order / សូមជ្រើសរើសតុដើម្បីចាប់ផ្ដើម");
+    }
+
+    // Prepare options string for unique identification
+    let adjustedPrice = Number(product.price || product.unit_price || 0);
+    if (product.sizes) {
+      const sizes = safeParse(product.sizes) || [];
+      const selectedSizeObj = sizes.find(s => s.label === tempOptions.size);
+      if (selectedSizeObj && Number(selectedSizeObj.price) > 0) {
+        adjustedPrice = Number(selectedSizeObj.price);
+      }
+    }
+
+    if (product.addons && tempOptions.addons.length > 0) {
+      const addonsList = safeParse(product.addons) || [];
+      tempOptions.addons.forEach(addonLabel => {
+        const addonObj = addonsList.find(a => a.label === addonLabel);
+        if (addonObj && addonObj.price) {
+          adjustedPrice += Number(addonObj.price);
+        }
+      });
+    }
+
+    const addonStr = tempOptions.addons.length > 0 ? ` + ${tempOptions.addons.join(", ")}` : "";
+    const sizeStr = tempOptions.size ? `${tempOptions.size}` : "";
+    const moodStr = tempOptions.mood ? `${tempOptions.mood}` : "";
+    const sugarStr = tempOptions.sugar ? `, ${tempOptions.sugar} Sugar` : "";
+
+    let noteParts = [];
+    if (moodStr) noteParts.push(moodStr);
+    if (sizeStr) noteParts.push(sizeStr);
+
+    const optionNote = `${noteParts.join(", ")}${sugarStr}${addonStr}`;
+    const uniqueName = `${product.name} [${optionNote}]`;
+    const uniqueId = `${product.id}-${optionNote}-${tempOptions.note}`;
+
     setState((prev) => {
       let cart = [...prev.cart_list];
       let currentQty = 1;
 
-      // If editing, we find the old item to get its quantity and then remove it
-      // so we can re-add/re-merge with the new unique_id
       if (isEditingUniqueId) {
         const oldIndex = cart.findIndex(c => c.unique_id === isEditingUniqueId);
         if (oldIndex > -1) {
@@ -762,53 +1124,41 @@ function PosPage() {
         }
       }
 
-      let adjustedPrice = Number(product.price || product.unit_price || 0);
-      if (product.sizes) {
-        const sizes = safeParse(product.sizes) || [];
-        const selectedSizeObj = sizes.find(s => s.label === tempOptions.size);
-        // Use size price if it exists and is greater than 0, otherwise fallback to base price
-        if (selectedSizeObj && Number(selectedSizeObj.price) > 0) {
-          adjustedPrice = Number(selectedSizeObj.price);
-        }
-      }
+      const newItem = {
+        ...product,
+        unique_id: uniqueId,
+        display_name: uniqueName,
+        unit_price: adjustedPrice,
+        price: adjustedPrice,
+        cart_qty: currentQty,
+        mood: tempOptions.mood,
+        size: tempOptions.size,
+        sugar: tempOptions.sugar,
+        addons_selected: tempOptions.addons,
+        note: optionNote,
+        kitchen_note: tempOptions.note
+      };
 
-      if (product.addons && tempOptions.addons.length > 0) {
-        const addonsList = safeParse(product.addons) || [];
-        tempOptions.addons.forEach(addonLabel => {
-          const addonObj = addonsList.find(a => a.label === addonLabel);
-          if (addonObj && addonObj.price) {
-            adjustedPrice += Number(addonObj.price);
+      // Add to temp unassigned so it follows table switches
+      setTempUnassignedItems(prevTemp => {
+          const tidx = prevTemp.findIndex(it => it.unique_id === uniqueId);
+          if (tidx > -1) {
+              const updated = [...prevTemp];
+              updated[tidx].cart_qty += currentQty;
+              return updated;
           }
-        });
-      }
+          return [...prevTemp, newItem];
+      });
 
-      const addonStr = tempOptions.addons.length > 0 ? ` + ${tempOptions.addons.join(", ")}` : "";
-      const sizeStr = tempOptions.size ? `${tempOptions.size}, ` : "";
-      const optionNote = `${tempOptions.mood === "hot" ? "🔥 Hot" : "❄️ Ice"} (${sizeStr}${tempOptions.sugar} Sugar)${addonStr}`;
-
-      const uniqueName = `${product.name} [${optionNote}]`;
-      const uniqueId = `${product.id}-${optionNote}`;
       const idx = cart.findIndex((c) => c.unique_id === uniqueId);
-
       if (idx === -1) {
-        cart.push({
-          ...product,
-          unique_id: uniqueId,
-          display_name: uniqueName,
-          unit_price: adjustedPrice,
-          price: adjustedPrice,
-          cart_qty: currentQty,
-          mood: tempOptions.mood,
-          size: tempOptions.size,
-          sugar: tempOptions.sugar,
-          addons_selected: tempOptions.addons,
-          note: optionNote
-        });
+        cart.push(newItem);
       } else {
         cart[idx] = { ...cart[idx], cart_qty: cart[idx].cart_qty + currentQty };
       }
       return { ...prev, cart_list: cart };
     });
+
     setOptionsModalVisible(false);
     setSelectedProductForOptions(null);
     setIsEditingUniqueId(null);
@@ -847,35 +1197,76 @@ function PosPage() {
     }));
   }, []);
 
-  const handleHoldOrder = () => {
-    if (state.cart_list.length === 0) {
-      message.warning("Cart is empty");
+  const handleHoldOrder = (directCart = null) => {
+    const cartToSave = directCart || state.cart_list;
+    if (cartToSave.length === 0) {
+      if (!directCart) message.warning("Cart is empty");
       return;
     }
+
+    // Smart logic for restaurant: If tableNo is set, check if an active draft already exists for this table
+    let draftIdToUpdate = currentDraftId;
+    if (!draftIdToUpdate && tableNo && orderType === 'dine_in') {
+      const existingTableDraft = heldOrders.find(o => String(o.tableNo) === String(tableNo));
+      if (existingTableDraft) {
+        draftIdToUpdate = existingTableDraft.id;
+      }
+    }
+
     holdOrder({
-      id: currentDraftId,
-      cart_list: state.cart_list,
+      id: draftIdToUpdate,
+      cart_list: cartToSave,
       customerName,
       tableNo,
+      guestCount,
       orderType,
       objSummary,
-      currentOrderId, // Preserve if it was from pending
+      currentOrderId,
     });
-    handleClearCart();
-    message.success(currentDraftId ? "Draft updated!" : "Order held as draft!");
+
+    // We don't clear here anymore, we let the caller decide if they want handleClearCart()
+    // This allows kitchen print to save then clear manually.
   };
 
   const handleResumeHeldOrder = (order) => {
     const resumed = resumeOrder(order.id);
     if (resumed) {
-      setState((prev) => ({ ...prev, cart_list: resumed.cart_list }));
+      setState((prev) => {
+        const resumedCart = resumed.cart_list || [];
+        
+        // Items picked in THIS session that haven't been 'settled' into a table yet
+        let mergedCart = [...resumedCart];
+        
+        // SMART MERGE: Only carry over floating (unassigned) items
+        tempUnassignedItems.forEach(floatingItem => {
+            const fUId = floatingItem.unique_id || `${floatingItem.id}-standard`;
+
+            const existingIdx = mergedCart.findIndex(c => 
+                c.id === floatingItem.id && 
+                (c.unique_id || `${c.id}-standard`) === fUId
+            );
+
+            if (existingIdx > -1) {
+                mergedCart[existingIdx] = {
+                    ...mergedCart[existingIdx],
+                    cart_qty: (mergedCart[existingIdx].cart_qty || 0) + (floatingItem.cart_qty || 0)
+                };
+            } else {
+                mergedCart.push({ ...floatingItem });
+            }
+        });
+
+        return { ...prev, cart_list: mergedCart };
+      });
+
       setCustomerName(resumed.customerName || "");
       setTableNo(resumed.tableNo || "");
+      setGuestCount(resumed.guestCount || 1);
       setOrderType(resumed.orderType || "dine_in");
-      setCurrentDraftId(resumed.id); // Track we are editing this draft
-      setCurrentOrderId(resumed.currentOrderId || null); // Restore if it was from pending
+      setCurrentDraftId(resumed.id);
+      setCurrentOrderId(resumed.currentOrderId || null);
       setHeldOrdersVisible(false);
-      message.info(`Resumed draft for ${resumed.tableNo || resumed.customerName || "Guest"}`);
+      message.success(`Merged items into Table ${resumed.tableNo || ''}`);
     }
   };
 
@@ -902,8 +1293,14 @@ function PosPage() {
 
 
 
-  const handleClearCart = useCallback(() => {
+  const handleClearCart = useCallback((isCheckout = false) => {
+    // CRITICAL: For restaurant workflow, only remove from held storage on SUCCESSFUL checkout
+    if (isCheckout && currentDraftId) {
+      removeHeldOrder(currentDraftId);
+    }
+
     setState((p) => ({ ...p, cart_list: [] }));
+    setTempUnassignedItems([]); // Reset session floating items
     setObjSummary((p) => ({
       ...p,
       sub_total: 0, total_qty: 0, save_discount: 0,
@@ -912,15 +1309,15 @@ function PosPage() {
     }));
     setCustomerName("");
     setTableNo("");
+    setGuestCount(1);
     setCurrentOrderId(null);
     setCurrentDraftId(null);
     setCashReceivedUSD(0);
-
     setCashReceivedKHR(0);
     setCashPaymentModalVisible(false);
-    form.resetFields();
+    if (form) form.resetFields();
     getPendingOrders();
-  }, []);
+  }, [currentDraftId, removeHeldOrder, form, setTempUnassignedItems]);
 
   const handleSelectPendingOrder = useCallback(async (order) => {
     setState((p) => ({ ...p, loading: true }));
@@ -996,17 +1393,18 @@ function PosPage() {
     });
     const param = {
       ...objSummary,
-      cart_items: items, // renamed from items to cart_items for SaaS API
+      cart_items: items,
       customer_name: customerName,
       table_no: tableNo,
       order_type: orderType,
+      guest_count: guestCount,
       sub_total: +objSummary.sub_total,
-      total_amount: +objSummary.total, // renamed from total to total_amount
+      total_amount: +objSummary.total,
       total_qty: +objSummary.total_qty,
       tax: 0,
       discount: 0,
       payment_method: objSummary.payment_method,
-      shift_id: currentShift?.id, // Link order to current active shift
+      shift_id: currentShift?.id,
       total_paid: objSummary.payment_method === "Cash"
         ? (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate))
         : +objSummary.total
@@ -1027,14 +1425,14 @@ function PosPage() {
       if (res && !res.error) {
         message.success(currentOrderId ? t.order_completed : t.order_placed);
         getPendingOrders();
-        
+
         const isBankPayment = objSummary.payment_method !== "Cash";
-        
+
         if (isBankPayment) {
-          setPaymentData({ 
-            paymentLink: res.payment_link || "", 
-            orderNo: res.order_no || res.order_id || "TEMP", 
-            total: +objSummary.total 
+          setPaymentData({
+            paymentLink: res.payment_link || "",
+            orderNo: res.order_no || res.order_id || "TEMP",
+            total: +objSummary.total
           });
           setQrModalVisible(true);
         }
@@ -1044,7 +1442,7 @@ function PosPage() {
           order_no: res.order_no || res.order_id,
           order_date: new Date().toISOString(),
         }));
-        
+
         // If cash, print immediately. If bank, don't auto-print so user can see QR.
         if (!isBankPayment) {
           setTimeout(() => handlePrintInvoice(), 2000);
@@ -1060,12 +1458,35 @@ function PosPage() {
   // ── print ──
   const handlePrintInvoice = useReactToPrint({
     contentRef: refInvoice,
-    onAfterPrint: () => handleClearCart(),
+    onAfterPrint: () => handleClearCart(true), // Explicitly clear and remove draft after payment print
   });
 
   const handlePrintKitchen = useReactToPrint({
     contentRef: refKitchen,
+    onBeforeGetContent: () => {
+      if (kitchenItems.length === 0) {
+        message.warning("All items already sent to kitchen / មុខម្ហូបទាំងអស់ត្រូវបានផ្ញើរួចហើយ");
+        return Promise.reject("Empty");
+      }
+      return Promise.resolve();
+    },
+    onAfterPrint: () => {
+      // Mark all currently in-cart items as sent to kitchen
+      const updatedItems = state.cart_list.map(item => ({
+        ...item,
+        isSentToKitchen: true
+      }));
+
+      // We must hold the order WITH the updated flags before clearing
+      handleHoldOrder(updatedItems);
+
+      // Now safe to clear the cart
+      handleClearCart();
+      message.success("Order sent to kitchen and saved to table / ផ្ញើទៅចង្ក្រាន និងរក្សាទុកក្នុងតុរួចរាល់");
+    }
   });
+
+  const kitchenItems = state.cart_list.filter(item => !item.isSentToKitchen);
 
   // ── filtered products (Memoized for performance) ──
   const filteredProducts = React.useMemo(() => {
@@ -1110,8 +1531,8 @@ function PosPage() {
     >
       {/* Hidden print containers - unreachable by user but reachable by browser for printing */}
       <div style={{ position: "absolute", top: -9999, left: -9999, height: 0, overflow: "hidden" }}>
-        <PrintInvoice ref={refInvoice} cart_list={state.cart_list} objSummary={objSummary} />
-        <PrintKitchenTicket ref={refKitchen} cart_list={state.cart_list} objSummary={{...objSummary, customerName, tableNo, order_type: orderType, remark: ""}} />
+        <PrintInvoice ref={refInvoice} cart_list={state.cart_list} objSummary={objSummary} layoutType={layoutType} tableNo={tableNo} cashReceivedUSD={cashReceivedUSD} cashReceivedKHR={cashReceivedKHR} exchangeRate={exchangeRate} branchInfo={branchInfo} />
+        <PrintKitchenTicket ref={refKitchen} cart_list={kitchenItems} objSummary={{ ...objSummary, customerName, tableNo, order_type: orderType, remark: "" }} />
       </div>
 
       {/* ══ HEADER ══════════════════════════════════════════════════════════ */}
@@ -1122,10 +1543,108 @@ function PosPage() {
           flex: 1,
           gap: 0,
           overflow: "hidden",
-          height: "calc(100vh - 140px)", // Adjusted for MainLayout padding/header
-
+          height: "calc(100vh - 140px)",
         }}
       >
+        {/* Categories Sidebar (Retail/Pharmacy) */}
+        {layoutConfig.hasSidebar && (
+          <div
+            style={{
+              width: 200,
+              background: COLORS.white,
+              borderRight: `1px solid ${COLORS.softBorder}`,
+              display: "flex",
+              flexDirection: "column",
+              padding: "24px 12px",
+              gap: 12,
+              overflowY: "auto",
+              scrollbarWidth: "none",
+              boxShadow: "4px 0 15px rgba(0,0,0,0.02)"
+            }}
+          >
+            <div style={{
+              fontSize: 11,
+              fontWeight: 900,
+              color: COLORS.textSecondary,
+              marginBottom: 12,
+              paddingLeft: 8,
+              letterSpacing: "1.5px",
+              textTransform: "uppercase",
+              opacity: 0.6
+            }}>
+              Browse Categories
+            </div>
+            {parentCategories.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              const catColor = cat.color || primaryColor;
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "14px 16px",
+                    borderRadius: 16,
+                    cursor: "pointer",
+                    background: isSelected ? `${catColor}15` : "transparent",
+                    color: isSelected ? catColor : COLORS.textPrimary,
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    border: `1px solid ${isSelected ? `${catColor}30` : "transparent"}`,
+                    position: "relative",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = "#f8f9fa";
+                      e.currentTarget.style.transform = "translateX(4px)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.transform = "translateX(0)";
+                    }
+                  }}
+                >
+                  {/* Active Indicator Bar */}
+                  {isSelected && (
+                    <div style={{
+                      position: 'absolute',
+                      left: 0,
+                      top: '20%',
+                      bottom: '20%',
+                      width: 4,
+                      background: catColor,
+                      borderRadius: '0 4px 4px 0',
+                    }} />
+                  )}
+
+                  <div style={{
+                    fontSize: 24,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    filter: isSelected ? 'grayscale(0)' : 'grayscale(0.4)',
+                    transition: 'all 0.3s'
+                  }}>
+                    {cat.icon}
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{
+                      fontSize: 13,
+                      fontWeight: isSelected ? 800 : 600,
+                      lineHeight: 1.2
+                    }}>
+                      {cat.name}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
         {/* ── LEFT PANEL ── */}
         <div
           style={{
@@ -1177,21 +1696,25 @@ function PosPage() {
                 <span>Open New Shift / បើកបញ្ជីថ្មី</span>
               </button>
             ) : (
-               <div style={{ 
-                  display: "flex", alignItems: "center", gap: 6, 
-                  background: "#e6f4ea", borderRadius: 8, padding: "6px 12px", 
-                  color: COLORS.darkGreen, fontSize: 13, fontWeight: 700 
-               }}>
-                  <div style={{ width: 8, height: 8, background: COLORS.midGreen, borderRadius: "50%" }} />
-                  Shift Started: {new Date(currentShift.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-               </div>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 6,
+                background: "#e6f4ea", borderRadius: 8, padding: "6px 12px",
+                color: COLORS.darkGreen, fontSize: 13, fontWeight: 700
+              }}>
+                <div style={{ width: 8, height: 8, background: COLORS.midGreen, borderRadius: "50%" }} />
+                Shift Started: {currentShift?.start_date ? new Date(currentShift.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just Now"}
+              </div>
             )}
 
             <Divider type="vertical" />
 
             <SearchOutlined style={{ color: COLORS.textSecondary, fontSize: 18 }} />
             <input
-              placeholder="Discover your coffee..."
+              placeholder={
+                layoutType === "pharmacy" ? "Search medicine, SKU, or generic name..." :
+                  layoutType === "retail" ? "Search items or scan barcode..." :
+                    "Discover your coffee or snacks..."
+              }
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               style={{
@@ -1223,61 +1746,108 @@ function PosPage() {
             <Divider type="vertical" />
 
             <div style={{ fontSize: 13, color: COLORS.textSecondary, fontWeight: 500, whiteSpace: "nowrap" }}>
-              {t.total}: <span style={{ fontWeight: 700, color: COLORS.darkGreen }}>{state.cart_list.length}</span>
+              {t.total}: <span style={{ fontWeight: 700, color: primaryColor }}>{state.cart_list.length}</span>
             </div>
 
             <Divider type="vertical" />
 
-            {/* Held Orders Button */}
-            <Badge count={heldOrders.length} size="small" offset={[-2, 2]} color={COLORS.softGold}>
+            {/* Held Orders Button (Coffee/Restaurant) */}
+            {layoutConfig.hasDrafts && (
+              <Badge count={heldOrders.length} size="small" offset={[-2, 2]} color={COLORS.softGold}>
+                <button
+                  onClick={() => setHeldOrdersVisible(true)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: COLORS.white,
+                    border: `1px solid ${COLORS.softBorder}`,
+                    borderRadius: 8,
+                    padding: "6px 14px",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: COLORS.textPrimary,
+                    transition: "all 0.25s",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <FolderOpenOutlined style={{ fontSize: 16, color: COLORS.softGold }} />
+                  <span>Held Drafts</span>
+                </button>
+              </Badge>
+            )}
+
+            {/* View Mode Toggle */}
+            <div style={{
+              display: 'flex',
+              background: COLORS.white,
+              border: `1px solid ${COLORS.softBorder}`,
+              borderRadius: 8,
+              padding: 2,
+              gap: 2
+            }}>
               <button
-                onClick={() => setHeldOrdersVisible(true)}
+                onClick={() => setViewMode("grid")}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: COLORS.white,
-                  border: `1px solid ${COLORS.softBorder}`,
-                  borderRadius: 8,
-                  padding: "6px 14px",
-                  cursor: "pointer",
-                  fontSize: 13,
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: viewMode === "grid" ? COLORS.darkGreen : 'transparent',
+                  color: viewMode === "grid" ? '#fff' : COLORS.textPrimary,
+                  cursor: 'pointer',
+                  fontSize: 12,
                   fontWeight: 700,
-                  color: COLORS.textPrimary,
-                  transition: "all 0.25s",
-                  whiteSpace: "nowrap",
+                  transition: 'all 0.2s'
                 }}
               >
-                <FolderOpenOutlined style={{ fontSize: 16, color: COLORS.softGold }} />
-                <span>Held Drafts</span>
+                Grid
               </button>
-            </Badge>
+              <button
+                onClick={() => setViewMode("list")}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: viewMode === "list" ? COLORS.darkGreen : 'transparent',
+                  color: viewMode === "list" ? '#fff' : COLORS.textPrimary,
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  transition: 'all 0.2s'
+                }}
+              >
+                List
+              </button>
+            </div>
 
             {/* Table Orders Button */}
-            <Badge count={pendingCount} size="small" offset={[-2, 2]} overflowCount={99}>
-              <button
-                onClick={() => setPendingOrdersVisible(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: pendingCount > 0 ? COLORS.darkGreen : COLORS.white,
-                  border: `1px solid ${pendingCount > 0 ? COLORS.darkGreen : COLORS.softBorder}`,
-                  borderRadius: 8,
-                  padding: "6px 14px",
-                  cursor: "pointer",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: pendingCount > 0 ? "#fff" : COLORS.textPrimary,
-                  transition: "all 0.25s",
-                  whiteSpace: "nowrap",
-                  boxShadow: pendingCount > 0 ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
-                }}
-              >
-                <ClockCircleOutlined style={{ fontSize: 16 }} />
-                <span>{t.pending_table}</span>
-              </button>
-            </Badge>
+            {isPermission("Table Management") && (
+              <Badge count={pendingCount} size="small" offset={[-2, 2]} overflowCount={99}>
+                <button
+                  onClick={() => setPendingOrdersVisible(true)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: pendingCount > 0 ? primaryColor : COLORS.white,
+                    border: `1px solid ${pendingCount > 0 ? primaryColor : COLORS.softBorder}`,
+                    borderRadius: 8,
+                    padding: "6px 14px",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: pendingCount > 0 ? "#fff" : COLORS.textPrimary,
+                    transition: "all 0.25s",
+                    whiteSpace: "nowrap",
+                    boxShadow: pendingCount > 0 ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
+                  }}
+                >
+                  <ClockCircleOutlined style={{ fontSize: 16 }} />
+                  <span>{t.pending_table}</span>
+                </button>
+              </Badge>
+            )}
 
             <button
               onClick={() => {
@@ -1333,13 +1903,8 @@ function PosPage() {
 
             <button
               onClick={() => {
-                if (isAdmin) {
-                  window.location.href = "/report_Sale_Summary";
-                } else {
-                  window.location.href = "/order";
-                }
+                window.location.href = "/product";
               }}
-
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -1347,160 +1912,119 @@ function PosPage() {
                 background: COLORS.white,
                 border: `1px solid ${COLORS.softBorder}`,
                 borderRadius: 8,
-                padding: "4px 10px",
+                padding: "6px 14px",
                 cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 600,
+                fontSize: 13,
+                fontWeight: 700,
                 color: COLORS.textPrimary,
-                transition: "all 0.2s",
+                transition: "all 0.25s",
                 whiteSpace: "nowrap"
               }}
-              onMouseEnter={(e) =>
-              ((e.currentTarget.style.borderColor = COLORS.darkGreen),
-                (e.currentTarget.style.color = COLORS.darkGreen))
-              }
-              onMouseLeave={(e) =>
-              ((e.currentTarget.style.borderColor = COLORS.softBorder),
-                (e.currentTarget.style.color = COLORS.textPrimary))
-              }
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = COLORS.darkGreen;
+                e.currentTarget.style.color = COLORS.darkGreen;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = COLORS.softBorder;
+                e.currentTarget.style.color = COLORS.textPrimary;
+              }}
+            >
+              <UnorderedListOutlined style={{ fontSize: 16 }} />
+              <span>{t.product_list || "Product List"}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (isAdmin) {
+                  window.location.href = "/report_Sale_Summary";
+                } else {
+                  window.location.href = "/order";
+                }
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: COLORS.white,
+                border: `1px solid ${COLORS.softBorder}`,
+                borderRadius: 8,
+                padding: "6px 14px",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 700,
+                color: COLORS.textPrimary,
+                transition: "all 0.25s",
+                whiteSpace: "nowrap"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = COLORS.darkGreen;
+                e.currentTarget.style.color = COLORS.darkGreen;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = COLORS.softBorder;
+                e.currentTarget.style.color = COLORS.textPrimary;
+              }}
             >
               {isAdmin ? (
                 <>
-                  <FileTextOutlined /> {t.report}
+                  <FileTextOutlined style={{ fontSize: 16 }} /> {t.report}
                 </>
               ) : (
                 <>
-                  <HistoryOutlined /> {t.order_history}
+                  <HistoryOutlined style={{ fontSize: 16 }} /> {t.order_history}
                 </>
               )}
             </button>
 
           </div>
 
-          {/* Category cards */}
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              overflowX: "auto",
-              paddingBottom: 4,
-              scrollbarWidth: "none",
-            }}
-          >
-            {parentCategories.map((cat) => {
-              const isSelected = selectedCategory === cat.id;
-              // Estimate items in this category
-              const total = state.list.filter(
-                (p) => p.category_id === cat.id
-              ).length;
-              const inStockCount = state.list.filter(
-                (p) => p.category_id === cat.id && p.qty > 0
-              ).length;
-              const needsRestock =
-                selectedCategory === cat.id
-                  ? outOfStock.length > 0 && inStock.length === 0
-                  : false;
+          {/* Horizontal Category selection (Coffee/Restaurant) */}
+          {layoutConfig.hasHorizontalCats && (
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                overflowX: "auto",
+                paddingBottom: 6,
+                scrollbarWidth: "none",
+                marginBottom: 4
+              }}
+            >
+              {parentCategories.map((cat) => {
+                const isSelected = selectedCategory === cat.id;
+                const total = state.list.filter((p) => p.category_id === cat.id).length;
+                const needsRestock = selectedCategory === cat.id ? outOfStock.length > 0 && inStock.length === 0 : false;
 
-              return (
-                <div
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  style={{
-                    minWidth: 150,
-                    borderRadius: 18,
-                    padding: "14px 16px",
-                    background: isSelected ? COLORS.darkGreen : COLORS.white,
-                    border: `1px solid ${isSelected ? COLORS.darkGreen : COLORS.softBorder}`,
-                    cursor: "pointer",
-                    position: "relative",
-                    overflow: "hidden",
-                    transition: "all 0.25s ease",
-                    boxShadow: isSelected
-                      ? "0 6px 20px rgba(30,74,45,0.3)"
-                      : "0 2px 8px rgba(0,0,0,0.05)",
-                    flexShrink: 0,
-                  }}
-                >
-                  {/* Stock badge */}
+                return (
                   <div
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
                     style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      background: needsRestock
-                        ? "rgba(232,93,93,0.15)"
-                        : isSelected
-                          ? "rgba(255,255,255,0.15)"
-                          : "rgba(30,74,45,0.08)",
-                      borderRadius: 20,
-                      padding: "3px 10px",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: needsRestock
-                        ? COLORS.redBadge
-                        : isSelected
-                          ? "#fff"
-                          : COLORS.darkGreen,
-                      border: needsRestock ? `1px solid ${COLORS.redBadge}` : "none",
-                      marginBottom: 10,
+                      minWidth: 130,
+                      borderRadius: 14,
+                      padding: "10px 12px",
+                      background: isSelected ? primaryColor : COLORS.white,
+                      border: `1px solid ${isSelected ? primaryColor : COLORS.softBorder}`,
+                      cursor: "pointer",
+                      position: "relative",
+                      overflow: "hidden",
+                      transition: "all 0.25s ease",
+                      boxShadow: isSelected ? `0 4px 15px ${primaryColor}33` : "0 2px 6px rgba(0,0,0,0.04)",
+                      flexShrink: 0,
                     }}
                   >
-                    {needsRestock && (
-                      <span style={{ width: 6, height: 6, background: COLORS.redBadge, borderRadius: "50%", display: "inline-block" }} />
-                    )}
-                    {needsRestock ? t.need_restock : t.available}
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: needsRestock ? "rgba(232,93,93,0.15)" : isSelected ? "rgba(255,255,255,0.15)" : "rgba(30,74,45,0.06)", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 600, color: needsRestock ? COLORS.redBadge : isSelected ? "#fff" : COLORS.darkGreen, border: needsRestock ? `1px solid ${COLORS.redBadge}` : "none", marginBottom: 6 }}>
+                      {needsRestock && <span style={{ width: 5, height: 5, background: COLORS.redBadge, borderRadius: "50%", display: "inline-block" }} />}
+                      {isSelected ? t.viewing || "Selected" : t.available}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: isSelected ? COLORS.white : COLORS.textPrimary, marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.name}</div>
+                    <div style={{ fontSize: 11, color: isSelected ? "rgba(255,255,255,0.7)" : COLORS.textSecondary }}>{selectedCategory === cat.id ? `${state.list.length} ${t.items}` : `${total} ${t.items}`}</div>
+                    <div style={{ position: "absolute", right: 6, bottom: 4, fontSize: 28, opacity: isSelected ? 0.2 : 0.06 }}>{cat.icon}</div>
                   </div>
-
-                  <div
-                    style={{
-                      fontSize: 20,
-                      fontWeight: 700,
-                      color: isSelected ? COLORS.white : COLORS.textPrimary,
-                      marginBottom: 2,
-                    }}
-                  >
-                    {cat.name}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: isSelected ? "rgba(255,255,255,0.7)" : COLORS.textSecondary,
-                    }}
-                  >
-                    {selectedCategory == cat.id
-                      ? `${state.list.length} ${t.items}`
-                      : "..."}
-                  </div>
-
-                  {/* Decorative circle for selected */}
-                  {isSelected && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        right: -20,
-                        bottom: -20,
-                        width: 80,
-                        height: 80,
-                        borderRadius: "50%",
-                        background: "rgba(255,255,255,0.08)",
-                      }}
-                    />
-                  )}
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: 8,
-                      bottom: 6,
-                      fontSize: 36,
-                      opacity: isSelected ? 0.18 : 0.06,
-                    }}
-                  >
-                    {cat.icon}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Product Grid */}
           <Spin spinning={state.loading}>
@@ -1522,12 +2046,12 @@ function PosPage() {
                     </span>
                   }
                 />
-              ) : (
+              ) : viewMode === "grid" ? (
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-                    gap: 14,
+                    gridTemplateColumns: `repeat(auto-fill, minmax(${layoutConfig.denseGrid ? '135px' : '150px'}, 1fr))`,
+                    gap: layoutConfig.denseGrid ? 10 : 14,
                   }}
                 >
                   {allVisible.map((product) => (
@@ -1539,6 +2063,14 @@ function PosPage() {
                     />
                   ))}
                 </div>
+              ) : (
+                <ProductListView
+                  products={allVisible}
+                  onAdd={handleAdd}
+                  getCartQty={getCartQty}
+                  COLORS={COLORS}
+                  layoutType={layoutType}
+                />
               )}
             </div>
           </Spin>
@@ -1549,152 +2081,176 @@ function PosPage() {
           style={{
             width: 420,
             flexShrink: 0,
-
             background: COLORS.white,
             borderLeft: `1px solid ${COLORS.softBorder}`,
             display: "flex",
             flexDirection: "column",
             height: "100%",
-            overflowY: "auto",
+            overflow: "hidden", // Control scroll behavior manually
           }}
         >
-          {/* Receipt header */}
+          {/* 1. Receipt Header */}
           <div
             style={{
-              padding: "18px 18px 14px",
+              padding: "20px 18px",
               borderBottom: `1px solid ${COLORS.softBorder}`,
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center"
+              alignItems: "center",
+              background: "#fff"
             }}
           >
             <div>
-              <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 2 }}>
-                {t.purchase_receipt}
+              <div style={{ fontSize: 10, fontWeight: 800, color: COLORS.textSecondary, letterSpacing: 1, marginBottom: 2 }}>
+                PURCHASE RECEIPT
               </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
-                #{String(objSummary.order_no || Math.floor(Math.random() * 90000) + 10000).padStart(5, "0")}
+                #{String(objSummary.order_no || "00000").padStart(5, "0")}
               </div>
             </div>
-            
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button 
-                size="small" 
-                icon={<PrinterOutlined />} 
-                onClick={handlePrintKitchen}
-                disabled={state.cart_list.length === 0}
-                title="Print Kitchen Ticket"
-                style={{ borderRadius: 6 }}
-              >
-                Cook
-              </Button>
-              <Button 
-                size="small" 
-                type="primary"
-                icon={<FileTextOutlined />} 
-                onClick={handlePrintInvoice}
-                disabled={state.cart_list.length === 0}
-                style={{ borderRadius: 6, background: COLORS.darkGreen }}
-              >
-                Receipt
-              </Button>
+
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', width: '100%' }}>
+              {layoutConfig.hasKitchen && (
+                <>
+                  <Button
+                    size="small"
+                    icon={<PrinterOutlined />}
+                    onClick={() => {
+                      if (kitchenItems.length > 0) {
+                        handlePrintKitchen();
+                      } else {
+                        message.info("No new items to send / គ្មានមុខម្ហូបថ្មីសម្រាប់ផ្ញើទេ");
+                      }
+                    }}
+                    disabled={state.cart_list.length === 0 || kitchenItems.length === 0}
+                    style={{
+                      borderRadius: 8,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      height: 32,
+                      background: kitchenItems.length === 0 ? '#f5f5f5' : '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      color: kitchenItems.length === 0 ? '#bfbfbf' : COLORS.textPrimary
+                    }}
+                  >
+                    {kitchenItems.length === 0 ? "Sent ✅" : "Kitchen"}
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<PushpinOutlined />}
+                    onClick={() => {
+                      handleHoldOrder();
+                      handleClearCart();
+                      message.success(tableNo ? `Tab for Table ${tableNo} saved / រក្សាទុកតុលេខ ${tableNo} រួចរាល់` : "Draft saved!");
+                    }}
+                    disabled={state.cart_list.length === 0}
+                    style={{
+                      borderRadius: 8,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      height: 32,
+                      background: '#fff',
+                      color: COLORS.darkGreen,
+                      border: `1px solid ${COLORS.darkGreen}`
+                    }}
+                  >
+                    {currentDraftId ? "Update" : "Save"}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Order type tabs */}
-          <div style={{ padding: "14px 18px 0" }}>
-            <div
-              style={{
-                display: "flex",
-                background: "#f5f3ee",
-                borderRadius: 12,
-                padding: 4,
-                gap: 4,
-                marginBottom: 16,
-              }}
-            >
-              {[
-                { key: "dine_in", label: t.dine_in },
-                { key: "take_away", label: t.take_away },
-              ].map((t) => (
-                <button
-                  key={t.key}
-                  onClick={() => setOrderType(t.key)}
-                  style={{
-                    flex: 1,
-                    padding: "8px 0",
-                    borderRadius: 9,
-                    border: "none",
-                    background:
-                      orderType === t.key ? COLORS.darkGreen : "transparent",
-                    color: orderType === t.key ? "#fff" : COLORS.textSecondary,
-                    fontWeight: 600,
-                    fontSize: 13,
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Customer name + table */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 500 }}>
-                  {t.customer_name}
-                </div>
-                <input
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Name..."
-                  style={{
-                    width: "100%",
-                    border: `1px solid ${COLORS.softBorder}`,
-                    borderRadius: 8,
-                    padding: "7px 10px",
-                    fontSize: 13,
-                    outline: "none",
-                    fontFamily: "inherit",
-                    background: "#fafaf8",
-                    color: COLORS.textPrimary,
-                    boxSizing: "border-box",
-                  }}
-                />
+          {/* 2. Order Info (Customer/Table) */}
+          {layoutConfig.hasOrderTypes && (
+            <div style={{ padding: "16px 18px 12px", borderBottom: `1px solid #f8f9fa`, background: '#fff' }}>
+              {/* Order Type Toggle */}
+              <div style={{ display: "flex", background: "#f1f3f5", borderRadius: 12, padding: 4, gap: 4, marginBottom: 12 }}>
+                {[
+                  { key: "dine_in", label: t.dine_in, icon: "🍽️" },
+                  { key: "take_away", label: t.take_away, icon: "📦" },
+                ].map(({ key, label, icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setOrderType(key)}
+                    style={{
+                      flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
+                      background: orderType === key ? (key === 'take_away' ? '#e65100' : COLORS.darkGreen) : "transparent",
+                      color: orderType === key ? "#fff" : COLORS.textSecondary,
+                      fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "all 0.2s",
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
+                    }}
+                  >
+                    <span>{icon}</span> {label}
+                  </button>
+                ))}
               </div>
-              <div style={{ width: 70 }}>
-                <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 500 }}>
-                  {t.table_label}
-                </div>
-                <input
-                  value={tableNo}
-                  onChange={(e) => setTableNo(e.target.value)}
-                  placeholder="T1"
-                  style={{
-                    width: "100%",
-                    border: `1px solid ${COLORS.softBorder}`,
-                    borderRadius: 8,
-                    padding: "7px 8px",
-                    fontSize: 13,
-                    outline: "none",
-                    fontFamily: "inherit",
-                    background: "#fafaf8",
-                    color: COLORS.textPrimary,
-                    boxSizing: "border-box",
-                  }}
-                />
+
+              {/* Takeaway / Table Selection Row */}
+              <div style={{ display: "flex", gap: 12 }}>
+                {/* Table Section (Only for Dine-in) */}
+                {orderType === 'dine_in' ? (
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
+                      TABLE / តុ
+                      <span onClick={() => setTableModalVisible(true)} style={{ color: COLORS.darkGreen, cursor: 'pointer', textDecoration: 'underline', fontWeight: 800 }}>DASHBOARD 📋</span>
+                    </div>
+                    <div
+                      onClick={() => setTableModalVisible(true)}
+                      style={{
+                        width: "100%", border: `1px solid ${COLORS.softBorder}`, borderRadius: 10,
+                        padding: "8px 12px", fontSize: 13, background: "#fafafa", textAlign: 'center', cursor: 'pointer', fontWeight: 800, color: COLORS.textPrimary,
+                        animation: (!tableNo && state.cart_list.length > 0) ? 'pulse-border 1.5s infinite' : 'none'
+                      }}
+                    >
+                      {tableNo ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                          <span>TABLE {tableNo}</span>
+                          <span style={{ fontSize: 11, color: COLORS.textSecondary, fontWeight: 500, background: '#eee', padding: '1px 8px', borderRadius: 20 }}>{guestCount} 👥</span>
+                        </div>
+                      ) : (
+                        <span style={{ color: state.cart_list.length > 0 ? COLORS.redBadge : 'inherit' }}>SELECT TABLE</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  // Takeaway Mode UI 
+                  <div style={{ flex: 1, padding: '12px', background: `${COLORS.darkGreen}08`, border: `1px dashed ${COLORS.darkGreen}`, borderRadius: 10, textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: COLORS.darkGreen, fontWeight: 700, marginBottom: 4 }}>TAKEAWAY QUEUE / លេខរៀងកក់ខ្ចប់</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: COLORS.darkGreen }}>
+                      #{String(objSummary.order_no || "00000").padStart(5, "0")}
+                    </div>
+                    <div style={{ fontSize: 9, color: COLORS.textSecondary, marginTop: 2 }}>Order is marked for packaging</div>
+                  </div>
+                )}
               </div>
             </div>
+          )}
 
-            {/* Order list label */}
-            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 6 }}>
-              {t.order_list}
-            </div>
-          </div>
+          <TableSelectorModal
+            visible={tableModalVisible}
+            onCancel={() => setTableModalVisible(false)}
+            onSelect={(val) => {
+              setTableNo(val);
+              setCurrentDraftId(null);
+              // When moving to an empty table, we only take our floatingItems
+              setState(prev => ({ ...prev, cart_list: [...tempUnassignedItems] }));
+              setTableModalVisible(false);
+            }}
+            onResume={(order) => {
+              // Switch to this existing table draft
+              handleResumeHeldOrder(order);
+              setTableModalVisible(false);
+            }}
+            heldOrders={heldOrders}
+            guestCount={guestCount}
+            setGuestCount={setGuestCount}
+            branchId={profile?.branch_id}
+            COLORS={COLORS}
+            t={t}
+          />
 
-          {/* Cart items */}
+          {/* 3. Scrollable List of Items */}
           <div
             style={{
               flex: 1,
@@ -1702,21 +2258,18 @@ function PosPage() {
               padding: "0 18px",
               scrollbarWidth: "thin",
               scrollbarColor: `${COLORS.softBorder} transparent`,
+              background: '#fff'
             }}
           >
+            <div style={{ padding: "16px 0 8px" }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: COLORS.textSecondary }}>ORDER ITEMS ({state.cart_list.length})</div>
+            </div>
+
             {state.cart_list.length === 0 ? (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "40px 0",
-                  color: COLORS.textSecondary,
-                }}
-              >
-                <div style={{ fontSize: 36, marginBottom: 10 }}>🛒</div>
-                <div style={{ fontSize: 13 }}>{t.cart_empty}</div>
-                <div style={{ fontSize: 11, marginTop: 4 }}>
-                  {t.add_from_menu}
-                </div>
+              <div style={{ textAlign: "center", padding: "60px 0", color: COLORS.textSecondary }}>
+                <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.5 }}>🛒</div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{t.cart_empty}</div>
+                <div style={{ fontSize: 11, marginTop: 4, opacity: 0.7 }}>{t.add_from_menu}</div>
               </div>
             ) : (
               state.cart_list.map((item, idx) => (
@@ -1732,269 +2285,126 @@ function PosPage() {
             )}
           </div>
 
-          {/* Payment section */}
+          {/* 4. Payment Section (Fixed at Bottom) */}
           <div
             style={{
-              padding: "14px 18px 18px",
+              padding: "12px 20px",
               borderTop: `1px solid ${COLORS.softBorder}`,
               background: COLORS.white,
+              boxShadow: "0 -8px 20px rgba(0,0,0,0.03)",
+              zIndex: 10
             }}
           >
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: COLORS.textPrimary,
-                marginBottom: 10,
-              }}
-            >
-              {t.payment_details}
-            </div>
-
-            {/* Subtotal */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 6,
-                fontSize: 13,
-              }}
-            >
-              <span style={{ color: COLORS.textSecondary }}>
-                {t.subtotal} ({objSummary.total_qty} {t.items})
-              </span>
-              <div style={{ textAlign: "right" }}>
-                <span style={{ color: COLORS.textPrimary, fontWeight: 500, display: 'block' }}>
-                  ${objSummary.sub_total.toFixed(2)}
-                </span>
-                <span style={{ fontSize: 11, color: COLORS.textSecondary }}>
-                  ≈ {(objSummary.sub_total * exchangeRate).toLocaleString()} ៛
-                </span>
+            {/* Quick Stats Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
+              <div style={{ background: '#f8f9fa', padding: '6px 10px', borderRadius: 8, border: '1px solid #f1f3f5' }}>
+                <div style={{ fontSize: 8, color: COLORS.textSecondary, marginBottom: 1, fontWeight: 700 }}>SUBTOTAL</div>
+                <div style={{ fontSize: 13, fontWeight: 800 }}>${objSummary.sub_total.toFixed(2)}</div>
+              </div>
+              <div style={{ background: objSummary.save_discount > 0 ? '#fff5f5' : '#f8f9fa', padding: '6px 10px', borderRadius: 8, border: `1px solid ${objSummary.save_discount > 0 ? '#ffe3e3' : '#f1f3f5'}` }}>
+                <div style={{ fontSize: 8, color: objSummary.save_discount > 0 ? '#e85d5d' : COLORS.textSecondary, marginBottom: 1, fontWeight: 700 }}>DISCOUNT</div>
+                <div style={{ fontSize: 13, fontWeight: 800 }}>-${objSummary.save_discount.toFixed(2)}</div>
               </div>
             </div>
 
-            {/* Discount Summary */}
-            {objSummary.save_discount > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 6,
-                  fontSize: 13,
-                  color: "#e85d5d",
-                }}
-              >
-                <span style={{ fontWeight: 500 }}>{t.total_savings}</span>
-                <span style={{ fontWeight: 700 }}>
-                  -${objSummary.save_discount.toFixed(2)}
-                </span>
-              </div>
-            )}
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 12,
-                fontSize: 13,
-              }}
-            >
-              <span style={{ color: COLORS.textSecondary }}>{t.tax_fees}</span>
-              <span style={{ color: COLORS.textPrimary, fontWeight: 500 }}>$0.00</span>
-            </div>
-
-            <div
-              style={{
-                borderTop: `1px dashed ${COLORS.softBorder}`,
-                paddingTop: 10,
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 14,
-              }}
-            >
-              <div style={{ textAlign: "right", marginTop: 4 }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: COLORS.textPrimary, marginRight: 8 }}>
-                  {t.total}
-                </span>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                  <span style={{ fontWeight: 900, fontSize: 24, color: COLORS.darkGreen, lineHeight: 1 }}>
-                    ${objSummary.total.toFixed(2)}
-                  </span>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: COLORS.textSecondary, marginTop: 4 }}>
-                    ≈ {(objSummary.total * exchangeRate).toLocaleString()} ៛
-                  </span>
+            {/* GRAND TOTAL CARD */}
+            <div style={{
+              background: primaryColor,
+              padding: '8px 14px',
+              borderRadius: 10,
+              color: '#fff',
+              marginBottom: 8,
+              boxShadow: `0 4px 10px ${primaryColor}20`,
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 700, opacity: 0.9 }}>TOTAL / សរុប</div>
+                  <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>${objSummary.total.toFixed(2)}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 8, opacity: 0.9 }}>KHR / រៀល</div>
+                  <div style={{ fontSize: 13, fontWeight: 800 }}>{(objSummary.total * exchangeRate).toLocaleString()} ៛</div>
                 </div>
               </div>
             </div>
 
-            {/* Payment method */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 6, fontWeight: 500 }}>
-                {t.payment_method}
-              </div>
+            {/* Payment method Selection */}
+            <div style={{ marginBottom: 8 }}>
               <Select
-                size="large"
-                style={{ width: "100%", borderRadius: 10 }}
-                placeholder={t.select_payment}
+                size="middle"
+                style={{ width: "100%", height: 38 }}
+                placeholder={<span style={{ color: COLORS.textPrimary, opacity: 0.7, fontWeight: 500, fontSize: 12 }}>{t.select_payment}</span>}
                 value={objSummary.payment_method}
-                onChange={(v) =>
-                  setObjSummary((p) => ({ ...p, payment_method: v }))
-                }
+                className="custom-select-checkout-compact"
+                onChange={(v) => setObjSummary((p) => ({ ...p, payment_method: v }))}
                 options={[
-                  { label: "💵 Cash", value: "Cash" },
-                  { label: "📱 Wing", value: "Wing" },
-                  { label: "🏦 ABA", value: "ABA" },
-                  { label: "💳 Card", value: "Card" },
-                  { label: `❤️ ${t.all}`, value: "Other" },
+                  { label: "💵 Cash (សាច់ប្រាក់)", value: "Cash" },
+                  { label: "📱 Wing Pay", value: "Wing" },
+                  { label: "🏦 ABA Pay", value: "ABA" },
+                  { label: "💳 Credit Card", value: "Card" },
+                  { label: `❤️ Other Methods`, value: "Other" },
                 ]}
               />
 
               {objSummary.payment_method === "Cash" && (
-                <div style={{
-                  marginTop: 12,
-                  padding: 12,
-                  background: COLORS.white,
-                  borderRadius: 12,
-                  border: `1px solid ${COLORS.softBorder}`,
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
-                }}>
+                <div style={{ marginTop: 10, padding: "10px 14px", background: '#f8f9fa', borderRadius: 12, border: `1px solid #eee` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.textPrimary }}>Cash Received</span>
-                    <Button
-                      size="small"
-                      type="link"
-                      style={{ height: 20, padding: 0, fontSize: 11 }}
-                      onClick={() => setCashPaymentModalVisible(true)}
-                    >
-                      Calc Change
-                    </Button>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: COLORS.textPrimary }}>CASH COLLECTED</span>
+                    <Button size="small" type="link" style={{ height: 18, padding: 0, fontSize: 10, fontWeight: 700 }} onClick={() => setCashPaymentModalVisible(true)}>Calc</Button>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 30, fontSize: 12, fontWeight: 700 }}>$</span>
-                      <InputNumber
-                        placeholder="USD"
-                        style={{ flex: 1 }}
-                        value={cashReceivedUSD}
-                        onChange={v => setCashReceivedUSD(v || 0)}
-                        min={0}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 30, fontSize: 12, fontWeight: 700 }}>៛</span>
-                      <InputNumber
-                        placeholder="KHR"
-                        style={{ flex: 1 }}
-                        value={cashReceivedKHR}
-                        onChange={v => setCashReceivedKHR(v || 0)}
-                        min={0}
-                        step={100}
-                      />
-                    </div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <InputNumber prefix="$" placeholder="USD" size="middle" style={{ flex: 1, borderRadius: 8 }} value={cashReceivedUSD} onChange={v => setCashReceivedUSD(v || 0)} min={0} />
+                    <InputNumber prefix="៛" placeholder="KHR" size="middle" style={{ flex: 1, borderRadius: 8 }} value={cashReceivedKHR} onChange={v => setCashReceivedKHR(v || 0)} min={0} step={100} />
+                  </div>
 
-                    {(cashReceivedUSD > 0 || cashReceivedKHR > 0) && (
-                      <div style={{
-                        marginTop: 4,
-                        padding: '8px 0 0 0',
-                        borderTop: `1px dashed ${COLORS.softBorder}`
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                          <span>Total Received:</span>
-                          <span style={{ fontWeight: 700 }}>
-                            ${(Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)).toFixed(2)}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: COLORS.darkGreen, marginTop: 4 }}>
-                          <span style={{ fontWeight: 700 }}>Change:</span>
-                          <span style={{ fontWeight: 900 }}>
-                            ${Math.max(0, (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)) - objSummary.total).toFixed(2)}
-                          </span>
-                        </div>
-                        <div style={{ textAlign: 'right', fontSize: 11, color: COLORS.textSecondary }}>
-                          ≈ {Math.max(0, Math.round(((Number(cashReceivedUSD) + (Number(cashReceivedKHR) / (exchangeRate || 4000))) - objSummary.total) * (exchangeRate || 4000) / 100) * 100).toLocaleString()} ៛
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  {(cashReceivedUSD > 0 || cashReceivedKHR > 0) && (
+                    <div style={{ marginTop: 4, padding: '8px 10px', background: '#fff', borderRadius: 8, border: `1px solid #eee`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.darkGreen }}>CHANGE:</span>
+                      <span style={{ fontSize: 14, fontWeight: 900, color: COLORS.darkGreen }}>${Math.max(0, (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)) - objSummary.total).toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Hold and Clear buttons */}
-            {state.cart_list.length > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                <button
-                  onClick={handleHoldOrder}
-                  style={{
-                    background: "#fdf8ef",
-                    border: `1px solid ${COLORS.softGold}`,
-                    color: "#9a6a1a",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "6px 12px",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  <PauseCircleOutlined /> {currentDraftId ? "Update Draft" : "Hold Draft"}
+            {/* Action Row */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Popconfirm
+                title="Clear current cart?"
+                description="This will remove all items from the screen."
+                onConfirm={() => handleClearCart(false)}
+                okText="Yes, Clear"
+                cancelText="No"
+                okButtonProps={{ danger: true }}
+              >
+                <Button
+                    danger
+                    ghost
+                    icon={<DeleteOutlined />}
+                    style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }}
+                    title={t.clear_cart}
+                />
+              </Popconfirm>
 
-                </button>
-
-                <button
-                  onClick={handleClearCart}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: COLORS.textSecondary,
-                    fontSize: 12,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    fontFamily: "inherit",
-                    padding: 0,
-                  }}
-                >
-                  <DeleteOutlined /> {t.purge}
-                </button>
-              </div>
-            )}
-
-            {/* Place Order button */}
-            <button
-              disabled={isDisabled || state.cart_list.length === 0 || !objSummary.payment_method}
-              onClick={handleClickOut}
-              style={{
-                width: "100%",
-                padding: "14px 0",
-                borderRadius: 14,
-                border: "none",
-                background:
-                  isDisabled || state.cart_list.length === 0 || !objSummary.payment_method
-                    ? "#c5c5c5"
-                    : COLORS.darkGreen,
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 15,
-                cursor:
-                  isDisabled || state.cart_list.length === 0 || !objSummary.payment_method
-                    ? "not-allowed"
-                    : "pointer",
-                transition: "all 0.25s ease",
-                boxShadow:
-                  state.cart_list.length > 0 && objSummary.payment_method
-                    ? "0 6px 20px rgba(30,74,45,0.35)"
-                    : "none",
-                fontFamily: "inherit",
-                letterSpacing: 0.3,
-              }}
-            >
-              {t.place_order}
-            </button>
+              <button
+                disabled={isDisabled || state.cart_list.length === 0 || !objSummary.payment_method}
+                onClick={handleClickOut}
+                style={{
+                  flex: 1, height: 44, borderRadius: 12, border: "none",
+                  background: isDisabled || state.cart_list.length === 0 || !objSummary.payment_method ? "#eff1f3" : primaryColor,
+                  color: isDisabled || state.cart_list.length === 0 || !objSummary.payment_method ? "#bcc1c7" : "#fff",
+                  fontWeight: 800, fontSize: 15, transition: "all 0.3s",
+                  boxShadow: state.cart_list.length > 0 && objSummary.payment_method ? `0 6px 15px ${primaryColor}30` : "none",
+                  cursor: isDisabled || state.cart_list.length === 0 || !objSummary.payment_method ? "not-allowed" : "pointer",
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                }}
+              >
+                <ShoppingOutlined style={{ fontSize: 18 }} />
+                {t.place_order.toUpperCase()}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2052,34 +2462,26 @@ function PosPage() {
 
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 <div style={{ flex: 1, display: 'flex', gap: 6 }}>
-                  <Button 
-                    type="primary" 
+                  <Button
+                    type="primary"
                     icon={<FolderOpenOutlined />}
-                    style={{ background: COLORS.darkGreen }}
+                    style={{ background: COLORS.darkGreen, borderRadius: 8, padding: '0 20px' }}
                     onClick={() => handleResumeHeldOrder(order)}
-                    title="Replace current cart"
                   >
-                    Resume
-                  </Button>
-                  <Button 
-                    icon={<PlusCircleOutlined />}
-                    onClick={() => handleMergeHeldOrder(order)}
-                    title="Add to current cart"
-                  >
-                    Merge
+                    Open / បើកតុ
                   </Button>
                 </div>
 
                 <div style={{ textAlign: 'right', minWidth: 80 }}>
-                   <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.darkGreen }}>
-                     ${(order.objSummary?.total || 0).toFixed(2)}
-                   </div>
-                   <div style={{ fontSize: 10, color: COLORS.textSecondary }}>
-                      ≈ {((order.objSummary?.total || 0) * exchangeRate).toLocaleString()} ៛
-                   </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.darkGreen }}>
+                    ${(order.objSummary?.total || 0).toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: 10, color: COLORS.textSecondary }}>
+                    ≈ {((order.objSummary?.total || 0) * exchangeRate).toLocaleString()} ៛
+                  </div>
                 </div>
-                <Button 
-                  danger 
+                <Button
+                  danger
                   icon={<DeleteOutlined />}
                   onClick={() => removeHeldOrder(order.id)}
                 />
@@ -2089,22 +2491,22 @@ function PosPage() {
           )}
         />
         {heldOrders.length > 0 && (
-           <div style={{ padding: 20 }}>
-              <Button 
-                block 
-                danger 
-                type="dashed"
-                onClick={() => {
-                  Modal.confirm({
-                    title: 'Clear all held orders?',
-                    content: 'This action cannot be undone.',
-                    onOk: () => useHeldOrdersStore.getState().clearAllHeldOrders()
-                  })
-                }}
-              >
-                Clear All Drafts
-              </Button>
-           </div>
+          <div style={{ padding: 20 }}>
+            <Button
+              block
+              danger
+              type="dashed"
+              onClick={() => {
+                Modal.confirm({
+                  title: 'Clear all held orders?',
+                  content: 'This action cannot be undone.',
+                  onOk: () => useHeldOrdersStore.getState().clearAllHeldOrders()
+                })
+              }}
+            >
+              Clear All Drafts
+            </Button>
+          </div>
         )}
       </Drawer>
 
@@ -2113,7 +2515,7 @@ function PosPage() {
         onClose={() => {
           setQrModalVisible(false);
           setPaymentData({ paymentLink: "", orderNo: "", total: 0 });
-          handleClearCart();
+          handleClearCart(true); // Clear and remove draft after bank payment
         }}
         paymentLink={paymentData.paymentLink}
         orderNo={paymentData.orderNo}
@@ -2123,8 +2525,8 @@ function PosPage() {
 
       <Modal
         title={
-          <div style={{ textAlign: 'center', fontSize: 18, color: COLORS.darkGreen }}>
-            {t.customize_coffee}
+          <div style={{ fontSize: 17, color: COLORS.darkGreen, fontWeight: 800 }}>
+            {selectedProductForOptions?.name || t.customize_coffee}
           </div>
         }
         open={optionsModalVisible}
@@ -2132,76 +2534,172 @@ function PosPage() {
           setOptionsModalVisible(false);
           setIsEditingUniqueId(null);
         }}
-        onOk={handleConfirmOptions}
-        okText="Add to Order"
-        cancelText="Cancel"
-        okButtonProps={{ style: { background: COLORS.darkGreen, borderRadius: 8 } }}
+        footer={[
+          <Button key="cancel" onClick={() => { setOptionsModalVisible(false); setIsEditingUniqueId(null); }}>
+            {t.cancel || "Cancel"}
+          </Button>,
+          // "Add Directly" - adds the item without any customization (useful for simple/standard orders)
+          !isEditingUniqueId && (
+            <Button key="direct" onClick={() => {
+              const product = selectedProductForOptions;
+              if (!product) return;
+              setState(prev => {
+                const cart = [...prev.cart_list];
+                const idx = cart.findIndex(c => c.id === product.id && !c.unique_id);
+                if (idx === -1) {
+                  cart.push({ ...product, cart_qty: 1 });
+                } else {
+                  cart[idx] = { ...cart[idx], cart_qty: cart[idx].cart_qty + 1 };
+                }
+                return { ...prev, cart_list: cart };
+              });
+              setOptionsModalVisible(false);
+              setSelectedProductForOptions(null);
+            }}>
+              ➕ {t.add_to_cart || "Add Standard"}
+            </Button>
+          ),
+          <Button key="confirm" type="primary" onClick={handleConfirmOptions}
+            style={{ background: COLORS.darkGreen, borderRadius: 8 }}>
+            ✅ {t.confirm || "Confirm Options"}
+          </Button>
+        ].filter(Boolean)}
+        width={520}
+        centered
+        destroyOnClose
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '10px 0' }}>
-          {/* Mood Selector */}
-          <div>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>{t.mood}</div>
-            <Radio.Group
-              value={tempOptions.mood}
-              onChange={e => setTempOptions(p => ({ ...p, mood: e.target.value }))}
-              buttonStyle="solid"
-            >
-              <Radio.Button value="hot">{t.hot}</Radio.Button>
-              <Radio.Button value="ice">{t.ice}</Radio.Button>
-            </Radio.Group>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: '10px 0' }}>
+          {/* 1. Mood Selector (Instructions / Taste) */}
+          {(selectedProductForOptions?.moods && Array.isArray(safeParse(selectedProductForOptions.moods)) && safeParse(selectedProductForOptions.moods).length > 0) && (
+            <div>
+              <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>🌶️</span> {layoutType === 'restaurant' ? "Taste Options / រសជាតិ" : (t.mood || "Choice")}
+              </div>
+              <Radio.Group
+                value={tempOptions.mood}
+                onChange={e => setTempOptions(p => ({ ...p, mood: e.target.value }))}
+                buttonStyle="solid"
+                style={{ width: '100%' }}
+              >
+                <Space wrap>
+                  {(safeParse(selectedProductForOptions.moods) || []).map(m => {
+                    const mLabel = typeof m === 'object' ? (m.label || m.value) : m;
+                    const mValue = typeof m === 'object' ? (m.value || m.label) : m;
+                    return (
+                      <Radio.Button key={mValue} value={mValue} style={{ borderRadius: 8, margin: '2px' }}>
+                        {mLabel}
+                      </Radio.Button>
+                    );
+                  })}
+                </Space>
+              </Radio.Group>
+            </div>
+          )}
 
-          {/* Size Selector */}
-          <div>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>{t.size}</div>
-            <Radio.Group
-              value={tempOptions.size}
-              onChange={e => setTempOptions(p => ({ ...p, size: e.target.value }))}
-            >
-              {(selectedProductForOptions?.sizes ? (safeParse(selectedProductForOptions.sizes) || []) : [
-                { label: 'S', price: selectedProductForOptions?.price },
-                { label: 'M', price: selectedProductForOptions?.price },
-                { label: 'L', price: selectedProductForOptions?.price }
-              ]).map(s => (
-                <Radio key={s.label} value={s.label}>
-                  {s.label} {s.price && s.price != selectedProductForOptions?.price ? `($${Number(s.price).toFixed(2)})` : ""}
-                </Radio>
-              ))}
-            </Radio.Group>
-          </div>
+          {/* 2. Size Selector (Portion) */}
+          {(selectedProductForOptions?.sizes && Array.isArray(safeParse(selectedProductForOptions.sizes)) && safeParse(selectedProductForOptions.sizes).length > 0) && (
+            <div>
+              <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>🍽️</span> {layoutType === 'restaurant' ? "Portion / ទំហំ" : (t.size || "Size")}
+              </div>
+              <Radio.Group
+                value={tempOptions.size}
+                onChange={e => setTempOptions(p => ({ ...p, size: e.target.value }))}
+                style={{ width: '100%' }}
+              >
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {(safeParse(selectedProductForOptions.sizes) || []).map(s => (
+                    <Radio.Button
+                      key={s.label}
+                      value={s.label}
+                      style={{
+                        height: 'auto',
+                        padding: '10px',
+                        borderRadius: 12,
+                        textAlign: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        lineHeight: 1.2
+                      }}
+                    >
+                      <div style={{ fontWeight: 700 }}>{s.label}</div>
+                      <div style={{ fontSize: 12, color: COLORS.midGreen }}>
+                        ${Number(s.price || 0).toFixed(2)}
+                      </div>
+                    </Radio.Button>
+                  ))}
+                </div>
+              </Radio.Group>
+            </div>
+          )}
 
-          {/* Sugar Selector */}
-          <div>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>{t.sugar_level}</div>
-            <Radio.Group
-              value={tempOptions.sugar}
-              onChange={e => setTempOptions(p => ({ ...p, sugar: e.target.value }))}
-            >
-              <Radio value="0%">0%</Radio>
-              <Radio value="25%">25%</Radio>
-              <Radio value="50%">50%</Radio>
-              <Radio value="100%">100%</Radio>
-            </Radio.Group>
-          </div>
+          {/* 3. Sugar Selector (Only for Drinks) */}
+          {(selectedProductForOptions?.category_name?.toLowerCase().includes("coffee") ||
+            selectedProductForOptions?.category_name?.toLowerCase().includes("drink") ||
+            selectedProductForOptions?.category_name?.toLowerCase().includes("juice")) && (
+              <div>
+                <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>🍯</span> {t.sugar_level || "Sugar Level"}
+                </div>
+                <Radio.Group
+                  value={tempOptions.sugar}
+                  onChange={e => setTempOptions(p => ({ ...p, sugar: e.target.value }))}
+                  buttonStyle="solid"
+                >
+                  <Radio.Button value="0%" style={{ borderRadius: '8px 0 0 8px' }}>0%</Radio.Button>
+                  <Radio.Button value="25%">25%</Radio.Button>
+                  <Radio.Button value="50%">50%</Radio.Button>
+                  <Radio.Button value="100%" style={{ borderRadius: '0 8px 8px 0' }}>100%</Radio.Button>
+                </Radio.Group>
+              </div>
+            )}
 
-          {/* Add-ons Selector */}
+          {/* 4. Add-ons Selector (Side Dishes) */}
           {(selectedProductForOptions?.addons && Array.isArray(safeParse(selectedProductForOptions.addons)) && safeParse(selectedProductForOptions.addons).length > 0) && (
             <div>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>{t.addons}</div>
+              <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>🥗</span> {layoutType === 'restaurant' ? "Side Dishes / គ្រឿមបន្ថែម" : (t.addons || "Add-ons")}
+              </div>
               <Checkbox.Group
                 value={tempOptions.addons}
                 onChange={v => setTempOptions(p => ({ ...p, addons: v }))}
+                style={{ width: '100%' }}
               >
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {(safeParse(selectedProductForOptions.addons) || []).map(a => (
-                    <Checkbox key={a.label} value={a.label}>
-                      {a.label} (+${Number(a.price).toFixed(2)})
-                    </Checkbox>
+                    <div key={a.label} style={{
+                      background: '#f8fafc',
+                      padding: '8px 12px',
+                      borderRadius: 10,
+                      border: `1px solid ${tempOptions.addons.includes(a.label) ? COLORS.darkGreen : '#e2e8f0'}`,
+                      transition: 'all 0.2s'
+                    }}>
+                      <Checkbox value={a.label}>
+                        <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: 600, fontSize: 13 }}>{a.label}</span>
+                          <span style={{ fontSize: 11, color: COLORS.midGreen }}>+${Number(a.price).toFixed(2)}</span>
+                        </div>
+                      </Checkbox>
+                    </div>
                   ))}
                 </div>
               </Checkbox.Group>
             </div>
           )}
+
+          {/* 5. Kitchen Note */}
+          <div style={{ marginTop: 4 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8, color: COLORS.textPrimary, fontSize: 14 }}>
+              🗒️ {layoutType === 'restaurant' ? "Kitchen Note / ចំណាំទៅចុងភៅ" : "Note / ចំណាំ"}
+            </div>
+            <Input.TextArea
+              placeholder={layoutType === 'restaurant' ? "e.g. Less Spicy, No Peanuts..." : "Add your note here..."}
+              value={tempOptions.note}
+              onChange={e => setTempOptions(p => ({ ...p, note: e.target.value }))}
+              rows={2}
+              style={{ borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0' }}
+            />
+          </div>
         </div>
       </Modal>
 
@@ -2376,8 +2874,8 @@ function PosPage() {
       {/* 🚀 Open Shift Modal */}
       <Modal
         title={
-          <div style={{textAlign: 'center', padding: '10px 0'}}>
-            <Typography.Title level={4} style={{margin: 0}}><ShoppingOutlined /> Open New Shift / បើកបញ្ជីថ្មី</Typography.Title>
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <Typography.Title level={4} style={{ margin: 0 }}><ShoppingOutlined /> Open New Shift / បើកបញ្ជីថ្មី</Typography.Title>
             <Typography.Text type="secondary">Enter your opening cash to start / បញ្ចូលសាច់ប្រាក់ដើមគ្រាដើម្បីចាប់ផ្តើម</Typography.Text>
           </div>
         }
@@ -2388,54 +2886,54 @@ function PosPage() {
         maskClosable={false}
       >
         <Form layout="vertical" onFinish={onOpenShift}>
-          <div style={{background: '#f8fafc', padding: 20, borderRadius: 12, marginBottom: 20}}>
-            <Form.Item 
-              name="opening_cash_usd" 
-              label="Opening Cash (USD) / លុយដើម ($)" 
+          <div style={{ background: '#f8fafc', padding: 20, borderRadius: 12, marginBottom: 20 }}>
+            <Form.Item
+              name="opening_cash_usd"
+              label="Opening Cash (USD) / លុយដើម ($)"
               initialValue={0}
             >
-              <InputNumber 
-                style={{ width: '100%' }} 
+              <InputNumber
+                style={{ width: '100%' }}
                 size="large"
-                prefix="$" 
-                min={0} 
+                prefix="$"
+                min={0}
               />
             </Form.Item>
-            <Form.Item 
-              name="opening_cash_khr" 
-              label="Opening Cash (KHR) / លុយដើម (៛)" 
+            <Form.Item
+              name="opening_cash_khr"
+              label="Opening Cash (KHR) / លុយដើម (៛)"
               initialValue={0}
             >
-              <InputNumber 
-                style={{ width: '100%' }} 
+              <InputNumber
+                style={{ width: '100%' }}
                 size="large"
-                prefix="៛" 
-                min={0} 
+                prefix="៛"
+                min={0}
                 step={100}
               />
             </Form.Item>
           </div>
 
-          <div style={{textAlign: 'center', marginBottom: 10}}>
-            <Typography.Text type="secondary" style={{fontSize: 12}}>
+          <div style={{ textAlign: 'center', marginBottom: 10 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
               Authorized By: <Typography.Text strong>{profile?.name}</Typography.Text>
             </Typography.Text>
           </div>
 
-          <Button 
-            type="primary" 
-            htmlType="submit" 
-            block 
-            size="large" 
-            style={{height: 50, borderRadius: 8, background: COLORS.darkGreen}}
+          <Button
+            type="primary"
+            htmlType="submit"
+            block
+            size="large"
+            style={{ height: 50, borderRadius: 8, background: COLORS.darkGreen }}
           >
             Open Shift Now / បើកបញ្ជីឥឡូវនេះ
           </Button>
-          
-          <div style={{marginTop: 15, textAlign: 'center'}}>
-             <Button type="link" onClick={() => window.location.href = '/'}>
-                Back to Dashboard / ត្រឡប់ទៅផ្ទាំងគ្រប់គ្រង
-             </Button>
+
+          <div style={{ marginTop: 15, textAlign: 'center' }}>
+            <Button type="link" onClick={() => window.location.href = '/'}>
+              Back to Dashboard / ត្រឡប់ទៅផ្ទាំងគ្រប់គ្រង
+            </Button>
           </div>
         </Form>
       </Modal>

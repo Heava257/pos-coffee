@@ -15,7 +15,7 @@ exports.getList = async (req, res) => {
     if (activatedCount[0].cnt > 0) {
       // Business has made their selection — return only active ones
       const [rows] = await db.query(`
-        SELECT c.id AS value, c.name AS label, c.default_moods, c.default_sizes, c.default_addons
+        SELECT c.id AS value, c.name AS label, c.default_moods, c.default_sizes, c.default_addons, c.industry_code
         FROM categories c
         INNER JOIN business_categories bc ON c.id = bc.category_id
         WHERE bc.business_id = ? AND bc.is_active = 1
@@ -25,7 +25,7 @@ exports.getList = async (req, res) => {
     } else {
       // New business — show all platform categories as default
       const [rows] = await db.query(
-        "SELECT id AS value, name AS label, default_moods, default_sizes, default_addons FROM categories WHERE business_id = 1 ORDER BY id ASC"
+        "SELECT id AS value, name AS label, default_moods, default_sizes, default_addons, industry_code FROM categories WHERE business_id = 1 ORDER BY id ASC"
       );
       categories = rows;
     }

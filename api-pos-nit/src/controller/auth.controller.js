@@ -105,11 +105,13 @@ exports.login = async (req, res) => {
                r.name as role_name, r.code as role_code,
                b.name as business_name, b.status as business_status, b.logo as business_logo,
                b.active_modules, b.plan_type,
-               p.name as plan_name, p.max_branches, p.max_staff, p.max_products
+               p.name as plan_name, p.max_branches, p.max_staff, p.max_products,
+               mp.ui_layout as business_layout
         FROM users u
         INNER JOIN roles r ON u.role_id = r.id
         INNER JOIN businesses b ON u.business_id = b.id
         LEFT JOIN subscription_plans p ON b.plan_id = p.id
+        LEFT JOIN modular_packages mp ON b.package_id = mp.id
         WHERE u.email = ?
     `;
 
@@ -156,7 +158,8 @@ exports.login = async (req, res) => {
       business_logo: user.business_logo,
       profile_image: user.image,
       active_modules: user.active_modules, // Comma-separated string like 'POS,Inventory'
-      plan_type: user.plan_type
+      plan_type: user.plan_type,
+      business_layout: user.business_layout
     };
 
     // Fetch Permissions for Backend/Frontend checks
@@ -203,11 +206,12 @@ exports.getProfile = async (req, res) => {
     const [fullUser] = await db.query(`
       SELECT u.*, r.name as role_name, r.code as role_code, 
              b.name as business_name, b.active_modules, b.plan_type,
-             br.name as branch_name
+             br.name as branch_name, mp.ui_layout as business_layout
       FROM users u
       INNER JOIN roles r ON u.role_id = r.id
       INNER JOIN businesses b ON u.business_id = b.id
       LEFT JOIN branches br ON u.branch_id = br.id
+      LEFT JOIN modular_packages mp ON b.package_id = mp.id
       WHERE u.id = ?
     `, [req.user_id]);
 
@@ -266,11 +270,13 @@ exports.updateProfile = async (req, res) => {
       SELECT 
         u.id, u.name, u.email, u.image as profile_image, u.branch_id, u.business_id, u.role_id,
         b.name as business_name, b.logo as business_logo, b.active_modules, b.plan_type,
-        r.name as role_name, r.code as role_code, br.name as branch_name
+        r.name as role_name, r.code as role_code, br.name as branch_name,
+        mp.ui_layout as business_layout
       FROM users u
       JOIN businesses b ON u.business_id = b.id
       JOIN roles r ON u.role_id = r.id
       LEFT JOIN branches br ON u.branch_id = br.id
+      LEFT JOIN modular_packages mp ON b.package_id = mp.id
       WHERE u.id = ?
     `, [user_id]);
 

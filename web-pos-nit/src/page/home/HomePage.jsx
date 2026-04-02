@@ -108,9 +108,9 @@ function HomePage() {
             const saleAmt = Number(item.total);
             return {
               name: item.title,
-              coffee: saleAmt,
-              tea: expenseAmt,
-              snack: saleAmt - expenseAmt > 0 ? saleAmt - expenseAmt : 0,
+              category1: saleAmt,
+              category2: expenseAmt,
+              category3: saleAmt - expenseAmt > 0 ? saleAmt - expenseAmt : 0,
             };
           });
           setSalesData(lineData);
@@ -235,19 +235,21 @@ function HomePage() {
             </div>
           </Col>
 
-          {/* On Progress 2 (Duplicate per mock) */}
-          <Col xs={24} sm={12} lg={5}>
-            <div className="dash-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <MdOutlineTableChart size={16} color="#1e4a2d" />
-                <span style={{ fontWeight: 700, fontSize: 12, color: '#1e4a2d' }}>Tables Active</span>
+          {/* Tables Active (Hospitality only) */}
+          {["coffee", "restaurant"].includes(profile?.business_layout) && (
+            <Col xs={24} sm={12} lg={5}>
+              <div className="dash-card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                  <MdOutlineTableChart size={16} color="#1e4a2d" />
+                  <span style={{ fontWeight: 700, fontSize: 12, color: '#1e4a2d' }}>Tables Active</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>14</span>
+                  <span style={{ color: '#6b7c6b', fontSize: 12, fontWeight: 600 }}>/ 20</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>14</span>
-                <span style={{ color: '#6b7c6b', fontSize: 12, fontWeight: 600 }}>/ 20</span>
-              </div>
-            </div>
-          </Col>
+            </Col>
+          )}
         </Row>
 
         {/* Middle Row: Sales Statistic & Score */}
@@ -262,9 +264,18 @@ function HomePage() {
                     <span style={{ fontWeight: 900, fontSize: 16, color: '#1e4a2d' }}>Sales Statistic</span>
                   </div>
                   <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}><Badge color="#fadb14" /> Tea</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}><Badge color="#1e4a2d" /> Coffee</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}><Badge color="#f5222d" /> Snack</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
+                      <Badge color="#fadb14" /> 
+                      {profile?.business_layout === 'pharmacy' ? 'Medicine' : (profile?.business_layout === 'retail' ? 'Grocery' : 'Tea')}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
+                      <Badge color="#1e4a2d" /> 
+                      {profile?.business_layout === 'pharmacy' ? 'Supplements' : (profile?.business_layout === 'retail' ? 'Beverage' : 'Coffee')}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
+                      <Badge color="#f5222d" /> 
+                      {profile?.business_layout === 'pharmacy' ? 'Healthcare' : (profile?.business_layout === 'retail' ? 'Others' : 'Snack')}
+                    </span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -293,9 +304,9 @@ function HomePage() {
                       contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
                       itemStyle={{ fontWeight: 700 }}
                     />
-                    <Line type="monotone" dataKey="coffee" stroke="#1e4a2d" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="tea" stroke="#fadb14" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="snack" stroke="#f5222d" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="category1" stroke="#1e4a2d" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="category2" stroke="#fadb14" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="category3" stroke="#f5222d" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

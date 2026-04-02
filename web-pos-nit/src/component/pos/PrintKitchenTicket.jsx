@@ -135,8 +135,22 @@ const PrintKitchenTicket = React.forwardRef((props, ref) => {
                   <div>→ Sugar: {item.sugar}</div>
                 )}
                 {item.note && (
-                  <div style={{ color: '#000', borderLeft: '3px solid #000', paddingLeft: '5px', marginTop: '2px' }}>
+                  <div style={{ color: '#666', borderLeft: '3px solid #ccc', paddingLeft: '5px', marginTop: '2px', fontSize: '13px' }}>
                     * {item.note}
+                  </div>
+                )}
+                {item.kitchen_note && (
+                  <div style={{ 
+                    color: '#000', 
+                    border: '2px solid #000', 
+                    padding: '4px 6px', 
+                    marginTop: '6px', 
+                    fontSize: '18px', 
+                    fontWeight: '900',
+                    textAlign: 'center',
+                    backgroundColor: '#f1f1f1'
+                  }}>
+                    !!! REMARK: {item.kitchen_note.toUpperCase()}
                   </div>
                 )}
                 {item.addons_selected && item.addons_selected.length > 0 && (

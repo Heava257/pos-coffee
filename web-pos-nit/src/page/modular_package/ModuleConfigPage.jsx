@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space,
-    Typography, Checkbox, Divider, Avatar
+    Typography, Checkbox, Divider, Avatar, Select
 } from "antd";
 import {
     PlusOutlined,
@@ -103,8 +103,16 @@ const ModuleConfigPage = () => {
                         <AppstoreAddOutlined style={{ fontSize: '22px' }} />
                     </div>
                     <div>
-                        <Text strong style={{ fontSize: '15px', color: '#1e4a2d' }}>{text}</Text>
-                        <br />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <Text strong style={{ fontSize: '15px', color: '#1e4a2d' }}>{text}</Text>
+                            <Tag color={
+                                record.industry_code === 'pharmacy' ? 'blue' : 
+                                record.industry_code === 'restaurant' ? 'orange' :
+                                record.industry_code === 'retail' ? 'green' : 'gold'
+                            } style={{ borderRadius: 20, fontSize: '10px' }}>
+                                {record.industry_code?.toUpperCase() || 'COFFEE'}
+                            </Tag>
+                        </div>
                         <Text type="secondary" style={{ fontSize: '11px' }}>Code: {record.code}</Text>
                     </div>
                 </Space>
@@ -195,14 +203,24 @@ const ModuleConfigPage = () => {
                 >
                     <Form form={form} layout="vertical" onFinish={onFinish}>
                         <Row gutter={24}>
-                            <Col span={12}>
+                            <Col span={8}>
                                 <Form.Item name="name" label="Blueprint Name (e.g. Mart Basic)" rules={[{ required: true }]}>
                                     <Input size="large" placeholder="Enter package name" />
                                 </Form.Item>
                             </Col>
-                            <Col span={12}>
-                                <Form.Item name="code" label="Internal Code (e.g. mart_basic)" rules={[{ required: true }]}>
-                                    <Input size="large" placeholder="unique_code" disabled={!!editId} />
+                            <Col span={8}>
+                                <Form.Item name="code" label="Internal Code (unique_code)" rules={[{ required: true }]}>
+                                    <Input size="large" placeholder="unique_code" />
+                                </Form.Item>
+                            </Col>
+                            <Col span={8}>
+                                <Form.Item name="industry_code" label="Industry Package" rules={[{ required: true }]}>
+                                    <Select size="large" placeholder="Select Industry">
+                                        <Select.Option value="coffee_cafe">☕ Coffee & Cafe</Select.Option>
+                                        <Select.Option value="restaurant">🍽️ Restaurant & Dining</Select.Option>
+                                        <Select.Option value="pharmacy">💊 Pharmacy & Medical</Select.Option>
+                                        <Select.Option value="retail">🛒 Retail & Mart</Select.Option>
+                                    </Select>
                                 </Form.Item>
                             </Col>
                             <Col span={24}>

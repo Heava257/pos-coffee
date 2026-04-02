@@ -2,7 +2,7 @@ import {
     Table, Button, Card, Row, Col, Input, 
     Modal, Form, message, Tag, Space, 
     Typography, Divider, Avatar, Tooltip,
-    Empty, List, Upload
+    Empty, List, Upload, Select
 } from "antd";
 import {
     PlusOutlined,
@@ -29,6 +29,7 @@ const GlobalCategoryPage = () => {
     const [form] = Form.useForm();
     const [editId, setEditId] = useState(null);
     const [fileList, setFileList] = useState([]);
+    const industryValue = Form.useWatch("industry_code", form);
 
     useEffect(() => {
         getList();
@@ -106,6 +107,8 @@ const GlobalCategoryPage = () => {
                 formData.append("image", fileList[0].url); // Keep existing
             }
 
+            formData.append("industry_code", values.industry_code || "coffee_cafe");
+
             const method = editId ? "put" : "post";
             const res = await request("category", method, formData);
             if (res) {
@@ -158,9 +161,17 @@ const GlobalCategoryPage = () => {
         {
             title: "Product Config Template (JSON)",
             key: "config",
-            width: 400,
             render: (record) => (
                 <div style={{ padding: '8px', background: '#fcfcfc', borderRadius: '8px', border: '1px solid #f0f0f0' }}>
+                    <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Tag color={
+                            record.industry_code === 'pharmacy' ? 'blue' : 
+                            record.industry_code === 'restaurant' ? 'orange' :
+                            record.industry_code === 'retail' ? 'green' : 'gold'
+                        } style={{ borderRadius: 20, fontWeight: 700, textTransform: 'uppercase' }}>
+                            📦 {record.industry_code?.replace('_', ' ') || 'COFFEE CAFE'}
+                        </Tag>
+                    </div>
                     <ConfigPreview label="Moods" items={record.default_moods} color="blue" />
                     <ConfigPreview label="Sizes" items={record.default_sizes} color="purple" />
                     <ConfigPreview label="Add-ons" items={record.default_addons} color="orange" />
@@ -252,6 +263,15 @@ const GlobalCategoryPage = () => {
                                 <Form.Item name="name" label="Category Identity / ឈ្មោះ" rules={[{ required: true }]}>
                                     <Input placeholder="e.g., Signature Coffee" size="large" />
                                 </Form.Item>
+
+                                <Form.Item name="industry_code" label="Industry Package / កញ្ចប់វិស័យ" rules={[{ required: true }]}>
+                                    <Select size="large" placeholder="Select Industry Package">
+                                        <Select.Option value="coffee_cafe">☕ Coffee & Cafe</Select.Option>
+                                        <Select.Option value="restaurant">🍽️ Restaurant & Dining</Select.Option>
+                                        <Select.Option value="pharmacy">💊 Pharmacy & Medical</Select.Option>
+                                        <Select.Option value="retail">🛒 Retail & Mart</Select.Option>
+                                    </Select>
+                                </Form.Item>
                                 
                                 <Form.Item label="Identity Icon / Photo (Upload)">
                                     <Upload
@@ -293,23 +313,67 @@ const GlobalCategoryPage = () => {
                         <div style={{ background: '#f4f7f6', padding: 24, borderRadius: 20 }}>
                             <Row gutter={24}>
                                 <Col span={24}>
-                                    <Tooltip title="Example: Hot, Iced, Frappe">
-                                        <Form.Item name="default_moods" label={<Space>Moods / Option (e.g. Hot/Iced) <InfoCircleOutlined /></Space>}>
-                                            <Input placeholder="Separate with commas: Hot, Iced, Frappe" size="large" />
+                                    <Tooltip title={
+                                        industryValue === 'pharmacy' ? "Morning, Afternoon, Before Meal" : 
+                                        industryValue === 'restaurant' ? "No Spicy, Mild, Hot" : "Hot, Iced, Frappe"
+                                    }>
+                                        <Form.Item 
+                                            name="default_moods" 
+                                            label={
+                                                <Space>
+                                                    {industryValue === 'pharmacy' ? "Instruction / ការណែនាំ" : 
+                                                     industryValue === 'restaurant' ? "Spice Level / កម្រិតហឹរ" : 
+                                                     industryValue === 'retail' ? "Variant / ជម្រើសរូបរាង" :
+                                                     "Moods / Option (e.g. Hot/Iced)"} 
+                                                    <InfoCircleOutlined />
+                                                </Space>
+                                            }
+                                        >
+                                            <Input placeholder="Separate with commas..." size="large" />
                                         </Form.Item>
                                     </Tooltip>
                                 </Col>
                                 <Col span={24}>
-                                    <Tooltip title="Example: Small, Regular, Large">
-                                        <Form.Item name="default_sizes" label={<Space>Sizes / ទំហំ <InfoCircleOutlined /></Space>}>
-                                            <Input placeholder="Separate with commas: S, M, L, XL" size="large" />
+                                    <Tooltip title={
+                                        industryValue === 'pharmacy' ? "Box, Strip, Pill" : 
+                                        industryValue === 'restaurant' ? "Regular, Large, Set" : 
+                                        industryValue === 'retail' ? "Kg, Pack, Bottle" : "S, M, L, XL"
+                                    }>
+                                        <Form.Item 
+                                            name="default_sizes" 
+                                            label={
+                                                <Space>
+                                                    {industryValue === 'pharmacy' ? "Unit / ឯកតា" : 
+                                                     industryValue === 'restaurant' ? "Portion / ផ្នែក" : 
+                                                     industryValue === 'retail' ? "Unit / ឯកតា" :
+                                                     "Sizes / ទំហំ"} 
+                                                    <InfoCircleOutlined />
+                                                </Space>
+                                            }
+                                        >
+                                            <Input placeholder="Separate with commas..." size="large" />
                                         </Form.Item>
                                     </Tooltip>
                                 </Col>
                                 <Col span={24}>
-                                    <Tooltip title="Example: Extra Shot, Caramel, Pearl">
-                                        <Form.Item name="default_addons" label={<Space>Add-ons / បន្ថែម <InfoCircleOutlined /></Space>}>
-                                            <Input.TextArea rows={3} placeholder="Separate with commas: Extra Shot, Cream, Honey" />
+                                    <Tooltip title={
+                                        industryValue === 'pharmacy' ? "Avoid Alcohol, Keep in cool place" : 
+                                        industryValue === 'restaurant' ? "No Onions, Extra Cheese" : 
+                                        industryValue === 'retail' ? "Warranty info, fragile" : "Extra Shot, Cream, Honey"
+                                    }>
+                                        <Form.Item 
+                                            name="default_addons" 
+                                            label={
+                                                <Space>
+                                                    {industryValue === 'pharmacy' ? "Warnings / ការប្រុងប្រយ័ត្ន" : 
+                                                     industryValue === 'restaurant' ? "Notes / ចំណាំ" : 
+                                                     industryValue === 'retail' ? "Remarks / ចំណាំ" :
+                                                     "Add-ons / បន្ថែម"} 
+                                                    <InfoCircleOutlined />
+                                                </Space>
+                                            }
+                                        >
+                                            <Input.TextArea rows={3} placeholder="Separate with commas..." />
                                         </Form.Item>
                                     </Tooltip>
                                 </Col>

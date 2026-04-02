@@ -153,24 +153,63 @@ export const updateAddons = (itemId, addonValue, checked, availableAddons) => {
 export const getIconForCategory = (name) => {
   if (!name) return '🍽️';
   const lowerName = name.toLowerCase();
+  
+  // Restaurant & Food (New)
+  if (lowerName.includes('seafood') || lowerName.includes('គ្រឿងសមុទ្រ')) return '🦞';
+  if (lowerName.includes('soup') || lowerName.includes('សម្ល')) return '🥣';
+  if (lowerName.includes('stir-fry') || lowerName.includes('ម្ហូបឆា')) return '🍳';
+  if (lowerName.includes('roasted') || lowerName.includes('deep-fried') || lowerName.includes('បំពង')) return '🍗';
+  if (lowerName.includes('salad') || lowerName.includes('spicy') || lowerName.includes('ញាំ')) return '🥗';
+  if (lowerName.includes('dessert') || lowerName.includes('បង្អែម')) return '🍰';
+  if (lowerName.includes('drink') || lowerName.includes('ភេសជ្ជៈ')) return '🥤';
+
+  // Pharmacy 
+  if (lowerName.includes('medicine') || lowerName.includes('ថ្នាំ')) return '💊';
+  if (lowerName.includes('antibiotics') || lowerName.includes('ថ្នាំផ្សះ')) return '🦠';
+  if (lowerName.includes('supplement') || lowerName.includes('vitamin') || lowerName.includes('វីតាមីន')) return '🧪';
+  if (lowerName.includes('skincare') || lowerName.includes('care') || lowerName.includes('ថែរក្សា')) return '🧴';
+  if (lowerName.includes('medical') || lowerName.includes('equipment') || lowerName.includes('ឧបករណ៍')) return '🩺';
+  if (lowerName.includes('baby') || lowerName.includes('mom') || lowerName.includes('ម្តាយ')) return '👶';
+  if (lowerName.includes('first aid') || lowerName.includes('សង្គ្រោះ')) return '🩹';
+
+  // Cafe/Food
   if (lowerName.includes('coffee')) return '☕';
   if (lowerName.includes('juice')) return '🧃';
   if (lowerName.includes('milk')) return '🥛';
   if (lowerName.includes('snack')) return '🍪';
   if (lowerName.includes('rice')) return '🍚';
-  if (lowerName.includes('dessert')) return '🍰';
+  
   return '🍽️';
 };
 
 export const getColorForCategory = (name) => {
   if (!name) return '#ff6b35';
   const lowerName = name.toLowerCase();
+
+  // Restaurant & Food Colors
+  if (lowerName.includes('seafood') || lowerName.includes('គ្រឿងសមុទ្រ')) return '#13c2c2'; 
+  if (lowerName.includes('soup') || lowerName.includes('សម្ល')) return '#1890ff';
+  if (lowerName.includes('stir-fry') || lowerName.includes('ម្ហូបឆា')) return '#fa541c';
+  if (lowerName.includes('roasted') || lowerName.includes('deep-fried') || lowerName.includes('បំពង')) return '#faad14';
+  if (lowerName.includes('salad') || lowerName.includes('spicy') || lowerName.includes('ញាំ')) return '#52c41a';
+  if (lowerName.includes('dessert') || lowerName.includes('បង្អែម')) return '#eb2f96';
+  if (lowerName.includes('drink') || lowerName.includes('ភេសជ្ជៈ')) return '#597ef7';
+
+  // Pharmacy Colors
+  if (lowerName.includes('medicine') || lowerName.includes('ថ្នាំ')) return '#13c2c2';
+  if (lowerName.includes('antibiotics') || lowerName.includes('ថ្នាំផ្សះ')) return '#f5222d'; 
+  if (lowerName.includes('supplement') || lowerName.includes('vitamin')) return '#eb2f96';
+  if (lowerName.includes('skincare') || lowerName.includes('care')) return '#faad14';
+  if (lowerName.includes('medical') || lowerName.includes('equipment')) return '#0958d9';
+  if (lowerName.includes('baby') || lowerName.includes('mom')) return '#2f54eb';
+
+  // Cafe/Food Colors
   if (lowerName.includes('coffee')) return '#8B4513';
   if (lowerName.includes('juice')) return '#4CAF50';
   if (lowerName.includes('milk')) return '#2196F3';
   if (lowerName.includes('snack')) return '#FF9800';
   if (lowerName.includes('rice')) return '#E91E63';
-  if (lowerName.includes('dessert')) return '#9C27B0';
+  
   return '#ff6b35';
 };
 

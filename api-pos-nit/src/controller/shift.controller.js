@@ -232,10 +232,17 @@ exports.getShiftSummary = async (req, res) => {
         let wingSales = 0;
 
         sales.forEach(s => {
-            totalSales += parseFloat(s.total || 0);
-            if (s.payment_method === 'cash') cashSales = parseFloat(s.total || 0);
-            if (s.payment_method === 'qr' || s.payment_method === 'aba' || s.payment_method === 'transfer') abaSales += parseFloat(s.total || 0);
-            if (s.payment_method === 'wing') wingSales = parseFloat(s.total || 0);
+            const method = (s.payment_method || "").toLowerCase();
+            const amount = parseFloat(s.total || 0);
+            totalSales += amount;
+            
+            if (method === 'cash') {
+                cashSales += amount;
+            } else if (method === 'wing') {
+                wingSales += amount;
+            } else {
+                abaSales += amount;
+            }
         });
 
         const expenseTotal = parseFloat(expenses[0]?.total || 0);

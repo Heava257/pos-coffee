@@ -21,7 +21,21 @@ const PrintInvoice = React.forwardRef((props, ref) => {
       order_date: null,
     },
     cart_list = [],
+    layoutType = "retail", // industry type
+    cashReceivedUSD = 0,
+    cashReceivedKHR = 0,
+    exchangeRate = 4000,
+    branchInfo = null,
   } = props;
+
+  const branchName = branchInfo?.branch_name || branchInfo?.name;
+  const businessName = profile?.business_name || profile?.name;
+  const displayBusinessName = branchName && businessName && branchName !== businessName 
+    ? `${businessName} (${branchName})` 
+    : (businessName || branchName || "COFFEE SHOP");
+
+  const displayAddress = branchInfo?.address || profile?.address || profile?.business_address || "Phnom Penh, Cambodia";
+  const displayPhone = branchInfo?.tel || branchInfo?.phone || profile?.tel || profile?.phone || profile?.phone_number || "0977296971";
 
   const calculateItemTotal = (item) => {
     const qty = Number(item.cart_qty) || 0;
@@ -93,13 +107,13 @@ const PrintInvoice = React.forwardRef((props, ref) => {
           />
         )}
         <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px', textTransform: 'uppercase' }}>
-          {profile?.business_name || "COFFEE SHOP"}
+          {displayBusinessName}
         </div>
         <div style={{ fontSize: '11px', whiteSpace: 'pre-wrap' }}>
-          {profile?.address || "123 Street, City"}
+          {displayAddress}
         </div>
         <div style={{ fontSize: '11px', marginTop: '3px' }}>
-          Tel: {profile?.tel || profile?.phone || "+855 67 733 335"}
+          Tel: {displayPhone}
         </div>
       </div>
 
@@ -130,6 +144,20 @@ const PrintInvoice = React.forwardRef((props, ref) => {
             <span>{objSummary.customer_name}</span>
           </div>
         )}
+        
+        {/* Industry specific Header Info */}
+        {layoutType === "pharmacy" && (
+           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+             <span>Industry:</span>
+             <span>MEDICAL / វេជ្ជសាស្ត្រ</span>
+           </div>
+        )}
+        {(layoutType === "restaurant" || layoutType === "coffee") && props.tableNo && (
+           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+             <span>Table / តុ:</span>
+             <span>#{props.tableNo}</span>
+           </div>
+        )}
       </div>
 
       {/* Divider */}
@@ -153,9 +181,14 @@ const PrintInvoice = React.forwardRef((props, ref) => {
                 justifyContent: 'space-between',
                 fontWeight: 'bold'
               }}>
-                <span style={{ flex: 1 }}>
-                  {item.name}
-                </span>
+                <div style={{ flex: 1 }}>
+                  <div>{item.name}</div>
+                  {layoutType === "pharmacy" && (item.generic_name || item.strength) && (
+                    <div style={{ fontSize: '10px', fontWeight: 'normal', color: '#333', marginTop: '2px' }}>
+                      {item.generic_name} {item.strength}
+                    </div>
+                  )}
+                </div>
                 <span>${formatNumber(itemTotal)}</span>
               </div>
 
@@ -167,7 +200,7 @@ const PrintInvoice = React.forwardRef((props, ref) => {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>
-                    {item.cart_qty} x ${formatNumber(item.unit_price)}
+                    {item.cart_qty} x ${formatNumber(item.unit_price || item.price)}
                     {item.unit && ` (${item.unit})`}
                   </span>
                   {hasDiscount && (
@@ -177,12 +210,19 @@ const PrintInvoice = React.forwardRef((props, ref) => {
                   )}
                 </div>
 
+                {/* Pharmacy / Medical Details (Expiry) */}
+                {layoutType === "pharmacy" && item.expiry_date && (
+                  <div style={{ fontSize: '9px', fontStyle: 'italic', color: '#555' }}>
+                    Exp: {formatDate(item.expiry_date).split(',')[0]}
+                  </div>
+                )}
+
                 {/* Customizations */}
                 {(item.mood || item.size || item.sugar || item.ice || item.note) && (
                   <div style={{ fontSize: '9px', color: '#888' }}>
                     {item.note && `[${item.note}] `}
                     {!item.note && item.mood && `${item.mood} `}
-                    {!item.note && item.size && `Size:${item.size} `}
+                    {!item.note && item.size && `${layoutType === 'pharmacy' ? 'Unit' : 'Size'}:${item.size} `}
                     {!item.note && item.sugar && `Sugar:${item.sugar} `}
                     {!item.note && item.ice && `Ice:${item.ice}`}
                   </div>
@@ -246,17 +286,33 @@ const PrintInvoice = React.forwardRef((props, ref) => {
       {objSummary.payment_method && (
         <div style={{ marginBottom: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Payment:</span>
-            <span>{objSummary.payment_method}</span>
+            <span>Payment / ចំនួ​នត្រូវបង់:</span>
+            <span>${formatNumber(finalTotal)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Paid:</span>
-            <span>${formatNumber(objSummary.total_paid || finalTotal)}</span>
-          </div>
-          {objSummary.total_paid > finalTotal && (
+          
+          {objSummary.payment_method === "Cash" && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                <span>Received / លុយទទួល:</span>
+                <span>
+                   {cashReceivedUSD > 0 && `$${formatNumber(cashReceivedUSD)}`}
+                   {cashReceivedKHR > 0 && ` ${cashReceivedUSD > 0 ? '+' : ''}${cashReceivedKHR.toLocaleString()}៛`}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #000', marginTop: '4px', paddingTop: '4px' }}>
+                <span>Change / លុយអាប់:</span>
+                <div style={{ textAlign: 'right' }}>
+                   <div style={{ fontWeight: 'bold' }}>${formatNumber(Math.max(0, (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)) - finalTotal))}</div>
+                   <div style={{ fontSize: '10px' }}>{Math.max(0, Math.round(((Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)) - finalTotal) * exchangeRate)).toLocaleString()} ៛</div>
+                </div>
+              </div>
+            </>
+          )}
+          
+          {objSummary.payment_method !== "Cash" && (
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Change:</span>
-              <span>${formatNumber(objSummary.total_paid - finalTotal)}</span>
+              <span>Method:</span>
+              <span>{objSummary.payment_method}</span>
             </div>
           )}
         </div>
@@ -276,16 +332,16 @@ const PrintInvoice = React.forwardRef((props, ref) => {
         marginBottom: '10px'
       }}>
         <div style={{ marginBottom: '5px' }}>
-          Thank you for your visit!
+          {layoutType === 'pharmacy' ? 'Please follow the dosage strictly!' : 'Thank you for your visit!'}
         </div>
         <div style={{ marginBottom: '5px' }}>
-          សូមអរគុណសម្រាប់ការមកទិញ!
+          {layoutType === 'pharmacy' ? 'សូមប្រើប្រាស់ឱសថតាមវេជ្ជបញ្ជាឱ្យបានត្រឹមត្រូវ!' : 'សូមអរគុណសម្រាប់ការមកទិញ!'}
         </div>
         <div style={{ marginBottom: '5px' }}>
           Items: {objSummary.total_qty || cart_list.length}
         </div>
         <div>
-          Support: {profile?.tel || profile?.phone || "+855 67 733 335"}
+          Support: {displayPhone}
         </div>
       </div>
 

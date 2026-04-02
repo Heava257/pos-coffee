@@ -183,7 +183,7 @@ const MENU_STRUCTURE = [
 const MainLayout = () => {
   const { lang, setLang } = useLanguage();
   const t = translations[lang];
-  const [permision, setPermision] = useState([]);
+  const [permision, setPermision] = useState(getPermission() || []);
   const [subAlert, setSubAlert] = useState(null);
   const { setConfig } = configStore();
   const { profile, setProfile: setProfileStore } = useProfileStore(); // Use reactive profile from the store
@@ -196,6 +196,31 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [openKeys, setOpenKeys] = useState([]);
+
+  // Dynamic Theme Injected based on Layout
+  useEffect(() => {
+    const getLayoutType = () => {
+      if (profile?.business_layout) return profile.business_layout;
+      const bp = (profile?.blueprint_name || "").toLowerCase();
+      if (bp.includes("pharmacy") || bp.includes("medical")) return "pharmacy";
+      if (bp.includes("mart") || bp.includes("retail")) return "retail";
+      if (bp.includes("restaurant")) return "restaurant";
+      return "coffee";
+    };
+
+    const layout = getLayoutType();
+    const themes = {
+      pharmacy: { primary: "#2196f3", accent: "#64b5f6", shadow: "0 4px 12px rgba(33, 150, 243, 0.3)" },
+      restaurant: { primary: "#e65100", accent: "#fb8c00", shadow: "0 4px 12px rgba(230, 81, 0, 0.3)" },
+      retail: { primary: "#1e4a2d", accent: "#2d6a42", shadow: "0 4px 12px rgba(30, 74, 45, 0.3)" },
+      coffee: { primary: "#1e4a2d", accent: "#2d6a42", shadow: "0 4px 12px rgba(30, 74, 45, 0.3)" }
+    };
+
+    const theme = themes[layout] || themes.coffee;
+    document.documentElement.style.setProperty('--primary-color', theme.primary);
+    document.documentElement.style.setProperty('--accent-color', theme.accent);
+    document.documentElement.style.setProperty('--primary-shadow', theme.shadow);
+  }, [profile]);
 
   useEffect(() => {
     const list = getPermission();
@@ -253,6 +278,7 @@ const MainLayout = () => {
 
   useEffect(() => {
     if (!profile || profile === "" || profile === "null") {
+      console.warn("MainLayout: No profile found. Redirecting to customer page.");
       navigate("/customer");
       return;
     }
@@ -290,7 +316,7 @@ const MainLayout = () => {
     if (parentKey) {
       setOpenKeys([parentKey]);
     }
-  }, [location.pathname, lang]);
+  }, [location.pathname, lang, permision]); // Added permision to dependencies
 
   const checkISnotPermissionViewPage = () => {
     // Guard: if no profile or permissions loaded yet, don't redirect
@@ -331,10 +357,13 @@ const MainLayout = () => {
       // 3. Last fallback to login
       const posPerm = permision.find(p => p.web_route_key?.includes('invoices'));
       if (posPerm) {
+        console.warn("Redirecting to /invoices (POS) as default permitted route.");
         navigate("/invoices");
       } else if (permision[0] && permision[0].web_route_key) {
+        console.warn(`Redirecting to first permitted route: ${permision[0].web_route_key}`);
         navigate(permision[0].web_route_key);
       } else {
+        console.warn("No permitted routes found. Redirecting to login.");
         navigate("/login");
       }
     }
@@ -356,6 +385,19 @@ const MainLayout = () => {
         return p1 === p2;
       });
     };
+
+    // 1. Pre-calculate layout to avoid repetitive safe checks in recursion
+    const getLayoutType = () => {
+      if (profile?.business_layout) return profile.business_layout;
+      const bp = profile?.blueprint_name?.toLowerCase() || "";
+      if (bp.includes("pharmacy") || bp.includes("medical")) return "pharmacy";
+      if (bp.includes("mart") || bp.includes("retail")) return "retail";
+      if (bp.includes("restaurant")) return "restaurant";
+      return "coffee";
+    };
+
+    const currentLayout = getLayoutType();
+    const isHospitality = ["coffee", "restaurant"].includes(currentLayout);
 
     // Recursive filtering function
     const filterMenuItems = (menuList) => {
@@ -379,7 +421,8 @@ const MainLayout = () => {
           newItem.label = t.my_shift_report || "My Shift report";
         }
 
-        // 1. Contextual Visibility Rules
+        if (newItem.key === "kds" && !isHospitality) return null;
+        if (newItem.key === "table" && !isHospitality) return null;
         if (newItem.key === "business" && profile?.business_id !== 1) return null;
         if (newItem.key === "my-plan" && profile?.business_id === 1) return null;
 
@@ -393,35 +436,13 @@ const MainLayout = () => {
           return null;
         }
 
-        // 2. Modular Filtering Logic
-        // Map menu keys/groups to active_modules
-        // Some menus are shared between Core POS and Web Ordering
-        const isPOS = activeModules.includes('POS');
-        const isOrdering = activeModules.includes('Ordering');
-        const isInventory = activeModules.includes('Inventory');
+        // 2. Platform Admin Exceptions
+        if (newItem.key === "business" || newItem.key === "service-blueprints") {
+          return profile?.business_id === 1 ? newItem : null;
+        }
 
-        const moduleMap = {
-          'inventory': isInventory,
-          'purchase': isInventory,
-          'supplier': isInventory,
-          'stock': isInventory,
-          'raw_material': isInventory,
-          'recipe': isInventory,
-
-          'invoices': isPOS, // POS Terminal only for POS module
-
-          // Shared modules for both POS and Ordering
-          'kds': isPOS || isOrdering,
-          'order': isPOS || isOrdering,
-          'shop_managment': isPOS || isOrdering,
-          'category': isPOS || isOrdering,
-          'product': isPOS || isOrdering,
-          'table': isPOS || isOrdering
-        };
-
-        const isAllowedByModule = moduleMap[newItem.key];
-        if (isAllowedByModule === false) {
-          return null;
+        if (newItem.key === "dashboard" && profile?.business_id === 1) {
+          return newItem;
         }
 
         // Case: Group or Submenu
@@ -434,11 +455,6 @@ const MainLayout = () => {
         }
 
         // Case: Simple menu item
-        if (newItem.key === "business") return profile?.business_id === 1 ? newItem : null;
-        if (newItem.key === "dashboard") {
-          if (profile?.business_id === 1) return newItem;
-        }
-
         return checkPath(newItem.key) ? newItem : null;
       }).filter(Boolean);
     };
@@ -644,7 +660,8 @@ const MainLayout = () => {
               position: "sticky",
               top: 0,
               zIndex: 999,
-              boxShadow: "0 2px 10px rgba(30, 74, 45, 0.05)",
+              boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
+              borderTop: `4px solid ${["pharmacy", "medical"].some(k => (profile?.blueprint_name || "").toLowerCase().includes(k)) ? "#2196f3" : "#1e4a2d"}`,
             }}
           >
             {/* Mobile Menu Button */}

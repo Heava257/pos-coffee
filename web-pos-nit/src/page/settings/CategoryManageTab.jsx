@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
-  Card, Switch, Row, Col, Typography, Button, message, Spin, Tag, Empty, Badge
+  Card, Switch, Row, Col, Typography, Button, message, Spin, Tag, Empty, Badge, Input, Space, Radio
 } from "antd";
 import {
-  AppstoreOutlined, SaveOutlined, CheckCircleOutlined, CloseCircleOutlined
+  AppstoreOutlined, SaveOutlined, CheckCircleOutlined, CloseCircleOutlined, SearchOutlined, FilterOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 
@@ -25,6 +25,14 @@ const CATEGORY_ICONS = {
   soup: "🍲",
   bread: "🥖",
   cake: "🎂",
+  pharmacy: "💊",
+  medicine: "💊",
+  vitamin: "🧪",
+  skincare: "🧴",
+  equipment: "🩺",
+  baby: "👶",
+  first: "🩹",
+  fever: "🌡️",
 };
 
 const getCategoryIcon = (name) => {
@@ -39,6 +47,8 @@ const CategoryManageTab = ({ targetBusinessId }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [filterIndustry, setFilterIndustry] = useState("all");
 
   useEffect(() => {
     fetchCategories();
@@ -47,7 +57,6 @@ const CategoryManageTab = ({ targetBusinessId }) => {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      // If targetBusinessId is provided, fetch for that specific business
       const url = targetBusinessId 
         ? `business-categories?business_id=${targetBusinessId}` 
         : "business-categories";
@@ -94,7 +103,14 @@ const CategoryManageTab = ({ targetBusinessId }) => {
     }
   };
 
+  const filteredCategories = categories.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(searchText.toLowerCase());
+    const matchesIndustry = filterIndustry === "all" || c.industry_code === filterIndustry;
+    return matchesSearch && matchesIndustry;
+  });
+
   const activeCount = categories.filter(c => c.is_active).length;
+  const industries = ["all", ...new Set(categories.map(c => c.industry_code))];
 
   if (loading) {
     return (
@@ -105,134 +121,130 @@ const CategoryManageTab = ({ targetBusinessId }) => {
     );
   }
 
+  const Divider = ({ style }) => <div style={{ height: "1px", background: "#f0f0f0", ...style }} />;
+
   return (
-    <div>
-      {/* Header */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        marginBottom: 24,
-        flexWrap: "wrap",
-        gap: 16
-      }}>
-        <div>
-          <Title level={4} style={{ margin: 0, color: "#1e4a2d", display: "flex", alignItems: "center", gap: 8 }}>
-            <AppstoreOutlined /> ជ្រើសរើស Category / Select Your Categories
-          </Title>
-          <Text type="secondary" style={{ fontSize: 13 }}>
-            ជ្រើសរើស Category ដែលហាងលោកអ្នកប្រើ ។ Category ដែលជ្រើស នឹងបង្ហាញក្នុង Product Form.
-          </Text>
+    <div style={{ animation: "fadeIn 0.3s ease-in-out" }}>
+      {/* Header & Controls */}
+      <div style={{ background: "#ffffff", padding: "20px", borderRadius: "16px", marginBottom: "20px", border: "1px solid #f0f0f0", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, color: "#1e4a2d", display: "flex", alignItems: "center", gap: 10 }}>
+              <AppstoreOutlined style={{ fontSize: 24 }} /> Category Access Control
+            </Title>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              Select categories that are active for this business unit.
+            </Text>
+          </div>
+          <Space>
+             <Badge count={`${activeCount} Active`} style={{ background: "#1e4a2d", fontSize: 12, borderRadius: 8 }} />
+             <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave} style={{ background: "#1e4a2d", borderColor: "#1e4a2d", borderRadius: 10, height: 40, fontWeight: 600, padding: "0 24px" }}>
+                Save Settings
+              </Button>
+          </Space>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Badge
-            count={`${activeCount} Active`}
-            style={{ background: "#1e4a2d", fontSize: 12, borderRadius: 8, padding: "0 10px" }}
-          />
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            loading={saving}
-            onClick={handleSave}
-            style={{
-              background: "#1e4a2d",
-              borderColor: "#1e4a2d",
-              borderRadius: 10,
-              height: 40,
-              fontWeight: 600,
-              paddingLeft: 20,
-              paddingRight: 20
-            }}
-          >
-            Save
-          </Button>
-        </div>
+
+        <Divider style={{ margin: "16px 0" }} />
+
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} md={10}>
+            <Input 
+              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />} 
+              placeholder="Search category name..." 
+              allowClear
+              onChange={e => setSearchText(e.target.value)}
+              style={{ borderRadius: "10px", height: "40px" }}
+            />
+          </Col>
+          <Col xs={24} md={14}>
+            <Space size="middle" wrap>
+              <Text strong style={{ fontSize: 13, color: "#666" }}><FilterOutlined /> INDUSTRY:</Text>
+              <Radio.Group value={filterIndustry} onChange={e => setFilterIndustry(e.target.value)} buttonStyle="solid">
+                {industries.map(ind => (
+                  <Radio.Button key={ind} value={ind} style={{ textTransform: "capitalize", borderRadius: "8px", margin: "0 4px" }}>
+                    {ind === "all" ? "All Sectors" : (ind || "general").replace("_", " ")}
+                  </Radio.Button>
+                ))}
+              </Radio.Group>
+            </Space>
+          </Col>
+        </Row>
       </div>
 
       {/* Category Grid */}
-      {categories.length === 0 ? (
-        <Empty description="No categories found. Please contact support." />
+      {filteredCategories.length === 0 ? (
+        <Empty 
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<Text type="secondary">No categories match your current filters.</Text>} 
+          style={{ padding: "40px 0" }}
+        />
       ) : (
-        <Row gutter={[16, 16]}>
-          {categories.map(cat => {
+        <Row gutter={[12, 12]}>
+          {filteredCategories.map(cat => {
             const icon = getCategoryIcon(cat.name);
-            const hasConfig = cat.default_moods || cat.default_sizes || cat.default_addons;
+            const isActive = cat.is_active;
+            const industryColor = cat.industry_code === 'pharmacy' ? '#08979c' : '#1e4a2d';
+
             return (
-              <Col xs={24} sm={12} md={8} lg={6} key={cat.id}>
+              <Col xs={24} sm={12} lg={8} key={cat.id}>
                 <Card
+                  hoverable
+                  onClick={() => handleToggle(cat.id, !isActive)}
                   style={{
-                    borderRadius: 16,
-                    border: cat.is_active
-                      ? "2px solid #1e4a2d"
-                      : "2px solid #e8e3d8",
-                    background: cat.is_active ? "#f0f7f2" : "#fafafa",
-                    transition: "all 0.25s ease",
-                    cursor: "pointer",
-                    boxShadow: cat.is_active
-                      ? "0 4px 15px rgba(30,74,45,0.12)"
-                      : "0 2px 8px rgba(0,0,0,0.04)",
+                    borderRadius: "14px",
+                    border: isActive ? `1.5px solid ${industryColor}` : "1.5px solid #f0f0f0",
+                    background: isActive ? `${industryColor}05` : "#fff",
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    overflow: "hidden"
                   }}
-                  bodyStyle={{ padding: "16px 20px" }}
-                  onClick={() => handleToggle(cat.id, !cat.is_active)}
+                  bodyStyle={{ padding: "12px 16px" }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, overflow: "hidden" }}>
                       <div style={{
-                        fontSize: 32,
-                        width: 52,
-                        height: 52,
-                        background: cat.is_active ? "#1e4a2d" : "#f0ede6",
-                        borderRadius: 14,
+                        width: "44px",
+                        height: "44px",
+                        background: isActive ? industryColor : "#f5f5f5",
+                        color: isActive ? "#fff" : "#999",
+                        borderRadius: "10px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        transition: "all 0.25s ease"
+                        fontSize: "22px",
+                        flexShrink: 0,
+                        transition: "all 0.2s"
                       }}>
                         {icon}
                       </div>
-                      <div>
-                        <div style={{
-                          fontWeight: 700,
-                          fontSize: 15,
-                          color: cat.is_active ? "#1e4a2d" : "#374151"
+                      <div style={{ overflow: "hidden", flex: 1 }}>
+                        <Text strong style={{ 
+                          fontSize: "14px", 
+                          display: "block", 
+                          whiteSpace: "nowrap", 
+                          overflow: "hidden", 
+                          textOverflow: "ellipsis",
+                          color: isActive ? industryColor : "#262626"
                         }}>
                           {cat.name}
-                        </div>
-                        {hasConfig && (
-                          <Tag
-                            color="green"
-                            style={{ fontSize: 10, borderRadius: 6, marginTop: 4, border: "none" }}
-                          >
-                            ✨ Has Config
-                          </Tag>
-                        )}
+                        </Text>
+                        <Space size={4} wrap>
+                            <Tag color={cat.industry_code === 'pharmacy' ? 'cyan' : 'green'} style={{ fontSize: '9px', borderRadius: '4px', margin: 0, border: 'none' }}>
+                                {cat.industry_code?.toUpperCase()}
+                            </Tag>
+                            {(cat.default_moods || cat.default_sizes || cat.default_addons) && (
+                                <Tag color="gold" style={{ fontSize: '9px', borderRadius: '4px', border: 'none' }}>CONFIGURED</Tag>
+                            )}
+                        </Space>
                       </div>
                     </div>
-                    <Switch
-                      checked={cat.is_active}
-                      onChange={(checked, e) => { e.stopPropagation(); handleToggle(cat.id, checked); }}
-                      style={{
-                        background: cat.is_active ? "#1e4a2d" : undefined
-                      }}
-                    />
-                  </div>
-
-                  {/* Active State Footer */}
-                  <div style={{
-                    marginTop: 14,
-                    paddingTop: 12,
-                    borderTop: `1px dashed ${cat.is_active ? "#c3dac8" : "#e8e3d8"}`,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 12,
-                    color: cat.is_active ? "#2d6a42" : "#9ca3af",
-                    fontWeight: 500
-                  }}>
-                    {cat.is_active
-                      ? <><CheckCircleOutlined /> Showing in Product Form</>
-                      : <><CloseCircleOutlined /> Hidden from Product Form</>
-                    }
+                    <div style={{ marginLeft: 8 }}>
+                      <Switch
+                        size="small"
+                        checked={isActive}
+                        onChange={(checked, e) => { e.stopPropagation(); handleToggle(cat.id, checked); }}
+                        style={{ background: isActive ? industryColor : undefined }}
+                      />
+                    </div>
                   </div>
                 </Card>
               </Col>
@@ -243,15 +255,18 @@ const CategoryManageTab = ({ targetBusinessId }) => {
 
       <div style={{
         marginTop: 24,
-        padding: "16px 20px",
-        background: "#fff9ef",
-        borderRadius: 12,
-        border: "1px solid #f0d9a0",
-        fontSize: 13,
-        color: "#8a6d2f"
+        padding: "12px 16px",
+        background: "#fafafa",
+        borderRadius: "12px",
+        border: "1px dashed #d9d9d9",
+        fontSize: "12px",
+        color: "#8c8c8c",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px"
       }}>
-        💡 <strong>Note:</strong> Categories ថ្មី ឬ Configuration ថ្មី ត្រូវបង្កើតដោយ Platform Admin ។ 
-        ហាងរបស់លោកអ្នកគ្រាន់តែ <strong>ជ្រើស</strong> Category ដែលពាក់ព័ន្ធ។
+        <CloseCircleOutlined style={{ color: "#bfbfbf" }} />
+        <span>Only activated categories will be available for this enterprise to use when creating new products.</span>
       </div>
     </div>
   );

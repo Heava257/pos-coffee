@@ -109,8 +109,8 @@ function OrderPage() {
         setOpeningCashKHR(Number(res.data.opening_cash_khr || 0).toFixed(0));
       } else {
         setCurrentShift(null);
-        // If no shift is open, we might want to prompt the user to open one
-        setVisibleOpenShiftModal(true);
+        // Removed auto-open: user will click 'Open Shift' manually.
+        setVisibleOpenShiftModal(false); 
       }
     } catch (error) {
       console.error("Error getting current shift:", error);
@@ -229,7 +229,10 @@ function OrderPage() {
         from_date: formatDateServer(filter.from_date),
         to_date: formatDateServer(filter.to_date),
         txtSearch: state.txtSearch,
-        user_id: user_id
+        user_id: user_id,
+        // For staff, strictly filter by current shift ID if open. 
+        // If no shift open, hide orders (send -1 as ID)
+        shift_id: currentShift?.id || (canSeeAllReports ? "" : -1)
       };
 
       // Standardized API endpoint to match backend route

@@ -30,14 +30,8 @@ export const useHeldOrdersStore = create(
       
       resumeOrder: (id) => {
         const order = get().heldOrders.find((o) => o.id === id);
-        // We DON'T remove it automatically if we want to allow "Update" 
-        // But usually, resume means we take it out of the drawer.
-        // Let's keep it simple: resume removes it, but we track its ID in the page state.
-        if (order) {
-          set((state) => ({
-            heldOrders: state.heldOrders.filter((o) => o.id !== id),
-          }));
-        }
+        // FOR RESTAURANT: We DON'T remove it automatically on resume!
+        // We only remove it when it is PAID or manually deleted.
         return order;
       },
       

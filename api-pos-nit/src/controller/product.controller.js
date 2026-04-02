@@ -26,6 +26,7 @@ exports.getList = async (req, res) => {
         SELECT 
             p.id, p.name, p.image, p.category_id, p.status, p.barcode, p.brand, p.description,
             p.sizes, p.addons, p.moods, p.discount,
+            p.expiry_date, p.strength, p.generic_name,
             bp.price, bp.cost_price, bp.stock_qty AS qty, bp.is_available, bp.min_stock_alert,
             c.name as category_name
         FROM products p
@@ -71,7 +72,11 @@ exports.create = async (req, res) => {
         conn = await db.getConnection();
         await conn.beginTransaction();
         const { business_id, branch_id } = req;
-        const { name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, moods, discount, min_stock_alert } = req.body;
+        const { 
+            name, category_id, barcode, brand, price, cost_price, description, status, qty, 
+            sizes, addons, moods, discount, min_stock_alert,
+            expiry_date, strength, generic_name 
+        } = req.body;
         const image = req.file?.path || req.file?.filename || null;
 
         // Optimized Subscription Limit Check
@@ -86,7 +91,7 @@ exports.create = async (req, res) => {
 
         // A. Insert into Global Products (Template)
         const [p_res] = await conn.query(
-            "INSERT INTO products (business_id, category_id, barcode, brand, name, description, image, status, sizes, addons, moods, discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO products (business_id, category_id, barcode, brand, name, description, image, status, sizes, addons, moods, discount, expiry_date, strength, generic_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 Number(business_id),
                 Number(cleanVal(category_id)),
@@ -99,7 +104,10 @@ exports.create = async (req, res) => {
                 cleanVal(sizes),
                 cleanVal(addons),
                 cleanVal(moods),
-                Number(cleanVal(discount) || 0)
+                Number(cleanVal(discount) || 0),
+                cleanVal(expiry_date),
+                cleanVal(strength),
+                cleanVal(generic_name)
             ]
         );
         const product_id = p_res.insertId;
@@ -135,7 +143,11 @@ exports.update = async (req, res) => {
     try {
         conn = await db.getConnection();
         await conn.beginTransaction();
-        const { id, name, category_id, barcode, brand, price, cost_price, description, status, qty, sizes, addons, moods, discount, min_stock_alert } = req.body;
+        const { 
+            id, name, category_id, barcode, brand, price, cost_price, description, status, qty, 
+            sizes, addons, moods, discount, min_stock_alert,
+            expiry_date, strength, generic_name
+        } = req.body;
         const { business_id, branch_id } = req;
 
         const image = req.file?.path || req.file?.filename;
@@ -144,7 +156,8 @@ exports.update = async (req, res) => {
         let sql = `
             UPDATE products SET 
                 name = ?, category_id = ?, barcode = ?, brand = ?, 
-                description = ?, status = ?, sizes = ?, addons = ?, moods = ?, discount = ?
+                description = ?, status = ?, sizes = ?, addons = ?, moods = ?, discount = ?,
+                expiry_date = ?, strength = ?, generic_name = ?
         `;
         let params = [
             name,
@@ -156,7 +169,10 @@ exports.update = async (req, res) => {
             cleanVal(sizes),
             cleanVal(addons),
             cleanVal(moods),
-            Number(cleanVal(discount) || 0)
+            Number(cleanVal(discount) || 0),
+            cleanVal(expiry_date),
+            cleanVal(strength),
+            cleanVal(generic_name)
         ];
 
         if (image) {

@@ -60,6 +60,20 @@ const SettingsPage = () => {
             if (res && res.settings) {
                 setSettings(res.settings);
                 form.setFieldsValue(res.settings);
+                
+                // NEW: Sync local profile store whenever settings are fetched
+                const currentProfile = getProfile() || {};
+                const updatedProfile = {
+                    ...currentProfile,
+                    business_name: res.settings.name,
+                    address: res.settings.address,
+                    tel: res.settings.phone,
+                    phone: res.settings.phone,
+                    email: res.settings.email,
+                    business_logo: res.settings.logo || currentProfile.business_logo
+                };
+                setProfile(updatedProfile);
+
                 if (res.settings.logo && res.settings.logo !== "null" && res.settings.logo !== "undefined") {
                     setPreviewUrl(Config.getFullImagePath(res.settings.logo));
                 } else {
@@ -91,21 +105,23 @@ const SettingsPage = () => {
             const res = await request("settings", "put", formData);
             if (res && res.success) {
                 message.success("Settings updated successfully!");
-
-                // Update Local Profile for real-time logo change in sidebar
-                const currentProfile = getProfile();
-                if (currentProfile) {
+    
+                    // Update Local Profile for real-time changes
+                    const currentProfile = getProfile() || {};
                     const updatedProfile = {
                         ...currentProfile,
                         business_name: values.name,
-                        business_logo: res.logo || currentProfile.business_logo // Assume API returns new filename
+                        address: values.address,
+                        tel: values.phone,
+                        phone: values.phone,
+                        email: values.email,
+                        business_logo: res.logo || currentProfile.business_logo
                     };
                     setProfile(updatedProfile);
+    
+                    fetchSettings(); 
+                    refreshRate();
                 }
-
-                fetchSettings(); // Refresh UI
-                refreshRate(); // Refresh the global exchange rate context
-            }
         } catch (error) {
             console.error("Update settings error:", error);
             message.error("Failed to update settings");
