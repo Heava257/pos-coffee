@@ -49,6 +49,12 @@ export const Config = {
   getFullImagePath: (imagePart) => {
     if (!imagePart) return "";
     if (imagePart.startsWith('http')) return Config.optimizeCloudinary(imagePart);
+
+    // If it's a Cloudinary ID from our backend (e.g., coffee-pos/img-...)
+    if (imagePart.startsWith('coffee-pos/')) {
+      return `https://res.cloudinary.com/dq2iul0rv/image/upload/${imagePart}`;
+    }
+
     const base = Config.image_path.endsWith('/') ? Config.image_path : `${Config.image_path}/`;
     return Config.optimizeCloudinary(`${base}${imagePart}`);
   },

@@ -14,7 +14,8 @@ import {
     InputNumber,
     Select,
     Avatar,
-    Tabs
+    Tabs,
+    Switch
 } from "antd";
 import CategoryManageTab from "./CategoryManageTab";
 import {
@@ -28,13 +29,19 @@ import {
     PhoneOutlined,
     MailOutlined,
     FacebookOutlined,
-    SendOutlined
+    SendOutlined,
+    PrinterOutlined,
+    RocketOutlined,
+    OrderedListOutlined,
+    CheckCircleOutlined,
+    InfoCircleOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
 import { getProfile } from "../../store/profile.store";
 import { useProfileStore } from "../../store/profileStore";
 import { useExchangeRate } from "../../component/pos/ExchangeRateContext";
+import { getPrinterSettings, setPrinterSettings } from "../../store/printer.store";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -46,6 +53,7 @@ const SettingsPage = () => {
     const [settings, setSettings] = useState(null);
     const [imageFile, setImageFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
+    const [testLoading, setTestLoading] = useState(false);
     const { setProfile } = useProfileStore();
     const { refreshRate } = useExchangeRate();
 
@@ -60,7 +68,7 @@ const SettingsPage = () => {
             if (res && res.settings) {
                 setSettings(res.settings);
                 form.setFieldsValue(res.settings);
-                
+
                 // NEW: Sync local profile store whenever settings are fetched
                 const currentProfile = getProfile() || {};
                 const updatedProfile = {
@@ -105,28 +113,60 @@ const SettingsPage = () => {
             const res = await request("settings", "put", formData);
             if (res && res.success) {
                 message.success("Settings updated successfully!");
-    
-                    // Update Local Profile for real-time changes
-                    const currentProfile = getProfile() || {};
-                    const updatedProfile = {
-                        ...currentProfile,
-                        business_name: values.name,
-                        address: values.address,
-                        tel: values.phone,
-                        phone: values.phone,
-                        email: values.email,
-                        business_logo: res.logo || currentProfile.business_logo
-                    };
-                    setProfile(updatedProfile);
-    
-                    fetchSettings(); 
-                    refreshRate();
-                }
+
+                // Update Local Profile for real-time changes
+                const currentProfile = getProfile() || {};
+                const updatedProfile = {
+                    ...currentProfile,
+                    business_name: values.name,
+                    address: values.address,
+                    tel: values.phone,
+                    phone: values.phone,
+                    email: values.email,
+                    business_logo: res.logo || currentProfile.business_logo
+                };
+                setProfile(updatedProfile);
+
+                fetchSettings();
+                refreshRate();
+            }
         } catch (error) {
             console.error("Update settings error:", error);
             message.error("Failed to update settings");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleTestTelegram = async () => {
+        const token = form.getFieldValue("telegram_token");
+        const chatId = form.getFieldValue("telegram_chat_id");
+        const mode = form.getFieldValue("telegram_mode");
+        const webhookUrl = form.getFieldValue("telegram_webhook_url");
+
+        if (!token || !chatId) {
+            message.warning("Please fill in Telegram Token and Chat ID first!");
+            return;
+        }
+
+        setTestLoading(true);
+        try {
+            const res = await request("settings/test-telegram", "post", {
+                telegram_token: token,
+                telegram_chat_id: chatId,
+                telegram_mode: mode,
+                telegram_webhook_url: webhookUrl
+            });
+            if (res && res.success) {
+                message.success(res.message);
+            } else {
+                message.error(res.message || "Test failed");
+            }
+        } catch (error) {
+            console.error("Test telegram error:", error);
+            message.error(error.message || "Failed to connect to Telegram bot");
+        } finally {
+            setTestLoading(false);
         }
     };
 
@@ -256,7 +296,7 @@ const SettingsPage = () => {
 
                                             <Card
                                                 title={<Space><GlobalOutlined /> Social & Online Connectivity</Space>}
-                                                style={{ borderRadius: "16px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                                                style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
                                             >
                                                 <Row gutter={16}>
                                                     <Col xs={24} md={12}>
@@ -267,6 +307,73 @@ const SettingsPage = () => {
                                                     <Col xs={24} md={12}>
                                                         <Form.Item label="Facebook Page" name="facebook_link">
                                                             <Input prefix={<FacebookOutlined style={{ color: '#1877f2' }} />} placeholder="https://fb.com/yourpage" />
+                                                        </Form.Item>
+                                                    </Col>
+                                                </Row>
+                                            </Card>
+
+                                            <Card
+                                                title={
+                                                    <Space>
+                                                        <SendOutlined style={{ color: '#0088cc' }} />
+                                                        <span>Telegram Bot Notifications (Order Alerts)</span>
+                                                    </Space>
+                                                }
+                                                extra={
+                                                    <Button 
+                                                        type="primary" 
+                                                        ghost 
+                                                        size="small"
+                                                        loading={testLoading}
+                                                        onClick={handleTestTelegram}
+                                                    >
+                                                        Test Connection
+                                                    </Button>
+                                                }
+                                                style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                                            >
+                                                <div style={{ marginBottom: 16, padding: '10px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 8, fontSize: 13 }}>
+                                                    <Space align="start">
+                                                        <InfoCircleOutlined style={{ color: '#1890ff', marginTop: 3 }} />
+                                                        <div>
+                                                            Get your <b>Bot Token</b> from <a href="https://t.me/botfather" target="_blank" rel="noreferrer">@BotFather</a> and your <b>Chat ID</b> from <a href="https://t.me/GetIDsBot" target="_blank" rel="noreferrer">@GetIDsBot</a>.
+                                                        </div>
+                                                    </Space>
+                                                </div>
+                                                <Row gutter={16}>
+                                                    <Col xs={24} md={12}>
+                                                        <Form.Item
+                                                            label="Telegram Bot Token"
+                                                            name="telegram_token"
+                                                            tooltip="Example: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                                                        >
+                                                            <Input.Password placeholder="Enter your bot token here" size="large" />
+                                                        </Form.Item>
+                                                    </Col>
+                                                    <Col xs={24} md={12}>
+                                                        <Form.Item
+                                                            label="Telegram Chat ID"
+                                                            name="telegram_chat_id"
+                                                            tooltip="Can be a private chat ID or a Group/Channel ID (must start with -100 for groups)"
+                                                        >
+                                                            <Input placeholder="e.g. -100123456789" size="large" />
+                                                        </Form.Item>
+                                                    </Col>
+                                                    <Col xs={24} md={12}>
+                                                        <Form.Item label="Listening Mode" name="telegram_mode">
+                                                            <Select size="large">
+                                                                <Option value="polling">Stable Mode (Polling) - Works Everywhere</Option>
+                                                                <Option value="webhook">Real-time Mode (Webhook) - Fast but needs URL</Option>
+                                                            </Select>
+                                                        </Form.Item>
+                                                    </Col>
+                                                    <Col xs={24} md={12}>
+                                                        <Form.Item 
+                                                            label="Server Webhook URL" 
+                                                            name="telegram_webhook_url"
+                                                            tooltip="Only used for Webhook mode. Must be a public HTTPS URL."
+                                                        >
+                                                            <Input prefix={<RocketOutlined />} placeholder="https://your-api.com" size="large" />
                                                         </Form.Item>
                                                     </Col>
                                                 </Row>
@@ -344,6 +451,13 @@ const SettingsPage = () => {
                                 </Form>
                             )
                         },
+                        {
+                            key: "printer",
+                            label: <span><PrinterOutlined /> ម៉ាស៊ីនព្រីន / Printer</span>,
+                            children: (
+                                <PrinterSettingsTab />
+                            )
+                        },
                         isAdmin && {
                             key: "categories",
                             label: <span>🏷️ Category / ប្រភេទទំនិញ</span>,
@@ -355,6 +469,107 @@ const SettingsPage = () => {
                         }
                     ].filter(Boolean)}
                 />
+            </div>
+        </div>
+    );
+};
+
+// --- NEW COMPONENT: PrinterSettingsTab ---
+const PrinterSettingsTab = () => {
+    const [pSettings, setPSettings] = useState(getPrinterSettings());
+
+    const updateSetting = (key, value) => {
+        const newSettings = { ...pSettings, [key]: value };
+        setPSettings(newSettings);
+        setPrinterSettings(newSettings);
+        message.success("Printer settings updated locally!");
+    };
+
+    return (
+        <div style={{ paddingTop: 24, paddingBottom: 24, maxWidth: 800 }}>
+            <Title level={4}><PrinterOutlined /> Printing Workflow Configuration</Title>
+            <Divider />
+
+            <Row gutter={[24, 24]}>
+                <Col xs={24} md={12}>
+                    <Card
+                        hoverable
+                        style={{ borderRadius: 16, border: '1px solid #e8e3d8' }}
+                        title={<Space><RocketOutlined style={{ color: '#1e4a2d' }} /> Automation</Space>}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <div>
+                                <Text strong>Auto Print on Checkout</Text>
+                                <br />
+                                <Text type="secondary" style={{ fontSize: 12 }}>Automatically trigger print dialog after each sale</Text>
+                            </div>
+                            <Switch
+                                checked={pSettings.auto_print}
+                                onChange={(val) => updateSetting('auto_print', val)}
+                                checkedChildren="ON"
+                                unCheckedChildren="OFF"
+                            />
+                        </div>
+                    </Card>
+                </Col>
+
+                <Col xs={24} md={12}>
+                    <Card
+                        hoverable
+                        style={{ borderRadius: 16, border: '1px solid #e8e3d8' }}
+                        title={<Space><OrderedListOutlined style={{ color: '#c0a060' }} /> Execution Order</Space>}
+                    >
+                        <Form layout="vertical">
+                            <Form.Item label="Which should print first?">
+                                <Select
+                                    size="large"
+                                    value={pSettings.label_first ? 'label' : 'invoice'}
+                                    onChange={(val) => updateSetting('label_first', val === 'label')}
+                                >
+                                    <Option value="label">Label (Sticker) First</Option>
+                                    <Option value="invoice">Invoice (Receipt) First</Option>
+                                </Select>
+                            </Form.Item>
+                        </Form>
+                    </Card>
+                </Col>
+
+                <Col xs={24}>
+                    <Card
+                        title={<Space><CheckCircleOutlined style={{ color: '#52c41a' }} /> Document Availability</Space>}
+                        style={{ borderRadius: 16, border: '1px solid #e8e3d8' }}
+                    >
+                        <Row gutter={24}>
+                            <Col xs={24} sm={12}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
+                                    <Text>Enable Customer Invoice</Text>
+                                    <Switch
+                                        checked={pSettings.invoice_enabled}
+                                        onChange={(val) => updateSetting('invoice_enabled', val)}
+                                    />
+                                </div>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
+                                    <Text>Enable Cup Labels (Stickers)</Text>
+                                    <Switch
+                                        checked={pSettings.label_enabled}
+                                        onChange={(val) => updateSetting('label_enabled', val)}
+                                    />
+                                </div>
+                            </Col>
+                        </Row>
+                    </Card>
+                </Col>
+            </Row>
+
+            <div style={{ marginTop: 40, padding: 20, background: '#fffbe6', borderRadius: 12, border: '1px solid #ffe58f' }}>
+                <Text type="warning" strong>💡 Pro Tip:</Text>
+                <br />
+                <Text size="small">
+                    For maximum speed during busy hours, enable <b>Auto Print</b> and set <b>Label First</b>.
+                    Combine this with browser "Kiosk Printing" for a truly silent experience.
+                </Text>
             </div>
         </div>
     );

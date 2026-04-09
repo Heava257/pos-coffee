@@ -1,9 +1,7 @@
 import React from "react";
-import "./fonts.css";
-import { Config } from "../../util/config";
 import dayjs from "dayjs";
 
-const PrintShiftReport = React.forwardRef((props, ref) => {
+const PrintShiftReport = (props) => {
     const { 
         summary = {}, 
         profile = {}, 
@@ -39,177 +37,165 @@ const PrintShiftReport = React.forwardRef((props, ref) => {
     const diff = actual_total_usd - expected_total_usd;
 
     return (
-        <div ref={ref} style={{
-            width: '80mm',
-            maxWidth: '300px',
-            margin: '0 auto',
-            padding: '10px',
-            fontFamily: 'monospace',
-            fontSize: '12px',
-            lineHeight: '1.4',
-            color: '#000',
-            backgroundColor: '#fff'
-        }}>
-            {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px', textTransform: 'uppercase' }}>
-                    SHIFT REPORT
-                </div>
-                <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
-                    {profile?.business_name || "COFFEE SHOP"}
-                </div>
-                <div style={{ fontSize: '11px' }}>
-                    {profile?.branch_name || "Main Branch"}
-                </div>
-            </div>
-
-            <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-            {/* Info */}
-            <div style={{ marginBottom: '10px', fontSize: '11px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Staff:</span>
-                    <span style={{ fontWeight: 'bold' }}>{staff_name}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Date:</span>
-                    <span>{dayjs(filter.from_date).format("DD MMM YYYY")}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Print Time:</span>
-                    <span>{dayjs().format("HH:mm:ss")}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Exchange Rate:</span>
-                    <span>1$ = {exchange_rate}៛</span>
-                </div>
-            </div>
-
-            <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-            {/* Statistics */}
-            <div style={{ marginBottom: '15px' }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>SALES SUMMARY:</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Total Orders:</span>
-                    <span>{summary.total_order || 0}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Total Qty:</span>
-                    <span>{summary.total_qty || 0}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                    <span>GROSS SALES:</span>
-                    <span>${formatUSD(summary.total_amount)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
-                    <span>TOTAL EXPENSE:</span>
-                    <span>-${formatUSD(summary.total_expense)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '5px', fontSize: '14px', borderTop: '1px solid #eee', paddingTop: '5px' }}>
-                    <span>NET PROFIT:</span>
-                    <span>${formatUSD(Number(summary.total_amount) - Number(summary.total_expense))}</span>
-                </div>
-            </div>
-
-            <div style={{ borderTop: '1px dashed #000', margin: '10px 0' }}></div>
-
-            {/* Payment Methods */}
-            <div style={{ marginBottom: '15px' }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>PAYMENT METHODS:</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>CASH ($):</span>
-                    <span>${formatUSD(summary.total_cash)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>ABA (QR):</span>
-                    <span>${formatUSD(summary.total_aba)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>WING/OTHER:</span>
-                    <span>${formatUSD(Number(summary.total_wing) + Number(summary.total_other || 0))}</span>
-                </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid #000', margin: '10px 0', paddingTop: '10px' }}></div>
-
-            {/* Reconciliation */}
-            <div style={{ marginBottom: '15px', background: '#f9f9f9', padding: '10px', border: '1px solid #eee' }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '8px', textAlign: 'center' }}>RECONCILIATION</div>
-                
-                <div style={{ marginBottom: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                        <span>Opening Cash:</span>
-                        <span>${formatUSD(opening_cash)} | {formatKHR(opening_cash_khr)}៛</span>
+        <div className="print-shift-report-wrapper" style={{ width: '80mm', color: '#000', margin: '0 auto', backgroundColor: '#fff', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
+            <div style={{
+                width: '74mm',
+                margin: '0 auto',
+                padding: '4mm 1mm',
+                lineHeight: '1.3',
+            }}>
+                {/* Header */}
+                <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '18px', fontWeight: '900', marginBottom: '4px', textTransform: 'uppercase' }}>
+                        SHIFT REPORT
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                        <span>Expected Sales (Cash):</span>
-                         <span>${formatUSD(summary.total_cash)}</span>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                        {profile?.business_name || "COFFEE SHOP"}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#ef4444' }}>
-                        <span>Expense (Cash):</span>
-                         <span>-${formatUSD(summary.total_cash_expense)}</span>
+                    <div style={{ fontSize: '11px', opacity: 0.8 }}>
+                        {profile?.branch_name || "Main Branch"}
                     </div>
                 </div>
 
-                <div style={{ borderTop: '1px dashed #ccc', margin: '5px 0' }}></div>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666' }}>
-                    <span>Expected Total:</span>
-                    <span style={{ fontWeight: 'bold' }}>${formatUSD(expected_total_usd)}</span>
+                <div style={{ borderTop: '0.5pt solid #000', margin: '8px 0' }}></div>
+
+                {/* Info Section */}
+                <div style={{ fontSize: '12px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>STAFF:</span>
+                        <span style={{ fontWeight: 'bold' }}>{staff_name}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>DATE:</span>
+                        <span>{dayjs(filter.from_date).format("DD MMM YYYY")}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>PRINT TIME:</span>
+                        <span>{dayjs().format("HH:mm:ss")}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>RATE:</span>
+                        <span>1$ = {exchange_rate}៛</span>
+                    </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
-                    <span>Actual Cash:</span>
-                    <span style={{ fontWeight: 'bold' }}>${formatUSD(actual_cash)} | {formatKHR(actual_cash_khr)}៛</span>
+                <div style={{ borderTop: '0.5pt solid #000', margin: '8px 0' }}></div>
+
+                {/* Sales Summary */}
+                <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontWeight: '900', fontSize: '13px', marginBottom: '4px' }}>SALES SUMMARY:</div>
+                    <div style={{ fontSize: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Total Orders:</span>
+                            <span>{summary.total_order || 0}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Total Qty:</span>
+                            <span>{summary.total_qty || 0}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '900', marginTop: '2px' }}>
+                            <span>GROSS SALES:</span>
+                            <span>${formatUSD(summary.total_amount)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#000', fontStyle: 'italic' }}>
+                            <span>Total Expense:</span>
+                            <span>-${formatUSD(summary.total_expense)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '900', marginTop: '4px', fontSize: '15px', borderTop: '0.5pt solid #000', paddingTop: '4px' }}>
+                            <span>NET PROFIT:</span>
+                            <span>${formatUSD(Number(summary.total_amount) - Number(summary.total_expense))}</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div style={{ borderTop: '1px solid #aaa', margin: '5px 0' }}></div>
+                <div style={{ borderTop: '0.5pt dashed #000', margin: '8px 0' }}></div>
 
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    fontWeight: 'bold',
-                    fontSize: '14px',
-                    color: Math.abs(diff) < 0.01 ? '#1e4a2d' : diff > 0 ? '#2563eb' : '#ef4444'
-                }}>
-                    <span>DIFFERENCE:</span>
-                    <span>${formatUSD(diff)}</span>
+                {/* Payment Methods */}
+                <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontWeight: '900', fontSize: '13px', marginBottom: '4px' }}>PAYMENT METHODS:</div>
+                    <div style={{ fontSize: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>CASH ($):</span>
+                            <span>${formatUSD(summary.total_cash)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>ABA (QR):</span>
+                            <span>${formatUSD(summary.total_aba)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>WING/OTHER:</span>
+                            <span>${formatUSD(Number(summary.total_wing) + Number(summary.total_other || 0))}</span>
+                        </div>
+                    </div>
                 </div>
 
-                {remark && (
-                    <div style={{ marginTop: '10px', fontSize: '10px', fontStyle: 'italic', borderTop: '1px dashed #eee', paddingTop: '5px' }}>
-                        Note: {remark}
+                <div style={{ borderTop: '0.5pt solid #000', margin: '8px 0' }}></div>
+
+                {/* Reconciliation */}
+                <div style={{ marginBottom: '12px', border: '0.5pt solid #000', padding: '6px' }}>
+                    <div style={{ fontWeight: '900', fontSize: '13px', marginBottom: '6px', textAlign: 'center' }}>RECONCILIATION</div>
+                    <div style={{ fontSize: '11px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Opening Cash:</span>
+                            <span>${formatUSD(opening_cash)} | {formatKHR(opening_cash_khr)}៛</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Expected (Cash):</span>
+                            <span>${formatUSD(summary.total_cash)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Expense (Cash):</span>
+                            <span>-${formatUSD(summary.total_cash_expense)}</span>
+                        </div>
+                        <div style={{ borderTop: '0.5pt dashed #000', margin: '4px 0' }}></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.8 }}>
+                            <span>Expected Total:</span>
+                            <span>${formatUSD(expected_total_usd)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '2px' }}>
+                            <span>Actual Cash:</span>
+                            <span>${formatUSD(actual_cash)} | {formatKHR(actual_cash_khr)}៛</span>
+                        </div>
+                        <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            fontWeight: '900',
+                            fontSize: '14px',
+                            marginTop: '4px',
+                            borderTop: '0.5pt solid #000',
+                            paddingTop: '2px'
+                        }}>
+                            <span>DIFFERENCE:</span>
+                            <span>${formatUSD(diff)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Top Products */}
+                {summary.top_products && summary.top_products.length > 0 && (
+                    <div style={{ marginBottom: '15px' }}>
+                        <div style={{ fontWeight: '900', fontSize: '11px', borderBottom: '0.5pt solid #ccc', marginBottom: '2px' }}>TOP SELLING ITEMS:</div>
+                        {summary.top_products.map((item, index) => (
+                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                                <span>{item.name}</span>
+                                <span>{item.total_qty} qty</span>
+                            </div>
+                        ))}
                     </div>
                 )}
-            </div>
 
-            {/* Top Products */}
-            {summary.top_products && summary.top_products.length > 0 && (
-                <div style={{ marginBottom: '15px' }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '11px', borderBottom: '1px solid #eee' }}>TOP SELLING ITEMS:</div>
-                    {summary.top_products.map((item, index) => (
-                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
-                            <span>{item.name}</span>
-                            <span>{item.total_qty} qty</span>
-                        </div>
-                    ))}
+                <div style={{ marginTop: '30px', textAlign: 'center' }}>
+                    <div style={{ borderTop: '0.5pt solid #000', width: '60%', margin: '0 auto' }}></div>
+                    <div style={{ fontSize: '10px', marginTop: '5px' }}>Staff Signature</div>
                 </div>
-            )}
 
-            <div style={{ marginTop: '30px', textAlign: 'center' }}>
-                <div style={{ borderTop: '1px solid #000', width: '60%', margin: '0 auto' }}></div>
-                <div style={{ fontSize: '10px', marginTop: '5px' }}>Staff Signature</div>
+                <div style={{ marginTop: '40px', textAlign: 'center', paddingBottom: '20px' }}>
+                    <div style={{ borderTop: '0.5pt solid #000', width: '60%', margin: '0 auto' }}></div>
+                    <div style={{ fontSize: '10px', marginTop: '5px' }}>Manager Signature</div>
+                </div>
             </div>
-
-            <div style={{ marginTop: '40px', textAlign: 'center' }}>
-                <div style={{ borderTop: '1px solid #000', width: '60%', margin: '0 auto' }}></div>
-                <div style={{ fontSize: '10px', marginTop: '5px' }}>Manager Signature</div>
-            </div>
-
-            <div style={{ height: '30px' }}></div>
         </div>
     );
-});
+};
 
 export default PrintShiftReport;

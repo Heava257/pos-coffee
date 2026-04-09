@@ -47,32 +47,41 @@ exports.adjustStock = async (req, res) => {
     try {
         await conn.beginTransaction();
         const { business_id, branch_id, user_id } = req;
-        const { item_type, item_id, qty_changed, type, reason } = req.body;
-        // type: 'adjustment' (for corrections), 'waste' (for spills/spoiled)
+        const {
+            item_id, item_type, qty_changed, type, reason
+        } = req.body;
+        const REASON_MAP = {
+            'BAR_ERR': 'Barista Error (Wrong Make/Taste)',
+            'SPILL': 'Spillage / Dropped',
+            'EXP': 'Product Expired',
+            'SMPL': 'Customer Sampling',
+            'ST_USE': 'Internal Store Use'
+        };
+        const displayReason = REASON_MAP[reason] || reason;
 
         if (item_type === 'raw_material') {
             const [rm] = await conn.query("SELECT qty FROM raw_material WHERE id = ?", [item_id]);
             const old_qty = rm[0]?.qty || 0;
-            const new_qty = old_qty + parseFloat(qty_changed); // qty_changed can be negative (e.g. -2 for waste)
+            const new_qty = old_qty + (parseFloat(qty_changed) || 0);
 
             await conn.query("UPDATE raw_material SET qty = ? WHERE id = ?", [new_qty, item_id]);
 
             await conn.query(`
                 INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, reason, created_by)
                 VALUES (?, ?, 'raw_material', ?, ?, ?, ?, ?, ?, ?)
-            `, [business_id, branch_id, item_id, old_qty, new_qty, qty_changed, type, reason, user_id]);
+            `, [business_id, branch_id, item_id, old_qty, new_qty, qty_changed, type, displayReason, user_id]);
 
         } else {
             const [bp] = await conn.query("SELECT stock_qty FROM branch_products WHERE product_id = ? AND branch_id = ?", [item_id, branch_id]);
             const old_qty = bp[0]?.stock_qty || 0;
-            const new_qty = old_qty + parseFloat(qty_changed);
+            const new_qty = old_qty + (parseFloat(qty_changed) || 0);
 
             await conn.query("UPDATE branch_products SET stock_qty = ? WHERE product_id = ? AND branch_id = ?", [new_qty, item_id, branch_id]);
 
             await conn.query(`
                 INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, reason, created_by)
                 VALUES (?, ?, 'product', ?, ?, ?, ?, ?, ?, ?)
-            `, [business_id, branch_id, item_id, old_qty, new_qty, qty_changed, type, reason, user_id]);
+            `, [business_id, branch_id, item_id, old_qty, new_qty, qty_changed, type, displayReason, user_id]);
         }
 
         await conn.commit();

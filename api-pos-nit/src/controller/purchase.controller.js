@@ -45,15 +45,18 @@ exports.create = async (req, res) => {
             purchase_date,
             status, // Pending, Received, etc.
             items, // [{ product_id, qty, cost, item_type }]
-            ref: custom_ref
+            ref: custom_ref,
+            tax_amount,
+            discount_amount,
+            payment_method
         } = req.body;
 
         const ref = custom_ref || `PO-${Date.now()}`;
 
         // 1. Create Purchase record
         const [p_res] = await conn.query(
-            "INSERT INTO purchase (business_id, branch_id, supplier_id, ref, total_amount, paid_amount, note, purchase_date, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [business_id, branch_id, supplier_id, ref, total_amount, paid_amount, note, purchase_date || new Date(), status || 'Pending', user_id]
+            "INSERT INTO purchase (business_id, branch_id, supplier_id, ref, total_amount, paid_amount, note, purchase_date, status, created_by, tax_amount, discount_amount, payment_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [business_id, branch_id, supplier_id, ref, total_amount, paid_amount, note, purchase_date || new Date(), status || 'Pending', user_id, tax_amount || 0, discount_amount || 0, payment_method || 'Cash']
         );
         const purchase_id = p_res.insertId;
 
@@ -65,15 +68,19 @@ exports.create = async (req, res) => {
 
                 // A. Insert detail
                 await conn.query(
-                    `INSERT INTO purchase_product (purchase_id, product_id, raw_material_id, qty, received_qty, cost) 
-                     VALUES (?, ?, ?, ?, ?, ?)`,
+                    `INSERT INTO purchase_product (purchase_id, product_id, raw_material_id, qty, received_qty, cost, batch_no, expiry_date, unit, remark) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         purchase_id,
                         isRM ? null : item.product_id,
                         isRM ? item.product_id : null,
                         item.qty,
                         status === 'Received' ? item.qty : 0,
-                        item.cost
+                        item.cost,
+                        item.batch_no || null,
+                        item.expiry_date || null,
+                        item.unit || null,
+                        item.remark || null
                     ]
                 );
 
@@ -105,7 +112,7 @@ exports.create = async (req, res) => {
                              ON DUPLICATE KEY UPDATE 
                              stock_qty = stock_qty + VALUES(stock_qty),
                              cost_price = VALUES(cost_price)`,
-                            [branch_id, item.product_id, item.cost * 1.5, item.cost, item.qty]
+                            [branch_id, item.product_id, (Number(item.cost) || 0) * 1.5, (Number(item.cost) || 0), (Number(item.qty) || 0)]
                         );
 
                         await conn.query(`
@@ -135,7 +142,9 @@ exports.getDetails = async (req, res) => {
             SELECT 
                 pp.*,
                 COALESCE(p.name, rm.name) as name,
-                CASE WHEN pp.raw_material_id IS NOT NULL THEN 'raw_material' ELSE 'product' END as item_type
+                COALESCE(p.barcode, rm.code) as barcode,
+                CASE WHEN pp.raw_material_id IS NOT NULL THEN 'raw_material' ELSE 'product' END as item_type,
+                pp.batch_no, pp.expiry_date
             FROM purchase_product pp
             LEFT JOIN products p ON pp.product_id = p.id
             LEFT JOIN raw_material rm ON pp.raw_material_id = rm.id
@@ -159,19 +168,21 @@ exports.receive = async (req, res) => {
 
         for (const item of items) {
             if (item.receive_now > 0) {
-                // 1. Update purchase_product
+                // 1. Update purchase_product with new cost if provided
                 await conn.query(
-                    "UPDATE purchase_product SET received_qty = received_qty + ? WHERE id = ?",
-                    [item.receive_now, item.id]
+                    "UPDATE purchase_product SET received_qty = received_qty + ?, batch_no = ?, expiry_date = ?, cost = ? WHERE id = ?",
+                    [item.receive_now, item.batch_no || null, item.expiry_date || null, item.cost || 0, item.id]
                 );
 
-                // 2. Update stock
+                const currentCost = item.cost || 0;
+
+                // 2. Update stock & cost
                 if (item.item_type === 'raw_material') {
                     const [rm] = await conn.query("SELECT qty FROM raw_material WHERE id = ?", [item.real_id]);
                     const old_qty = rm[0]?.qty || 0;
                     const new_qty = old_qty + item.receive_now;
 
-                    await conn.query("UPDATE raw_material SET qty = qty + ? WHERE id = ?", [item.receive_now, item.real_id]);
+                    await conn.query("UPDATE raw_material SET qty = qty + ?, price = ? WHERE id = ?", [item.receive_now, currentCost, item.real_id]);
 
                     await conn.query(`
                         INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
@@ -182,15 +193,13 @@ exports.receive = async (req, res) => {
                     const old_qty = bp[0]?.stock_qty || 0;
                     const new_qty = old_qty + item.receive_now;
 
-                    const [pp_rows] = await conn.query("SELECT cost FROM purchase_product WHERE id = ?", [item.id]);
-                    const cost = pp_rows[0]?.cost || 0;
                     await conn.query(
                         `INSERT INTO branch_products (branch_id, product_id, price, cost_price, stock_qty) 
                          VALUES (?, ?, ?, ?, ?) 
                          ON DUPLICATE KEY UPDATE 
                          stock_qty = stock_qty + VALUES(stock_qty),
                          cost_price = VALUES(cost_price)`,
-                        [branch_id, item.real_id, cost * 1.5, cost, item.receive_now]
+                        [branch_id, item.real_id, (Number(currentCost) || 0) * 1.5, (Number(currentCost) || 0), (Number(item.receive_now) || 0)]
                     );
 
                     await conn.query(`

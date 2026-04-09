@@ -5,7 +5,7 @@ import "./MainLayout.css";
 import logo from "../../assets/coffee.png";
 import ImgUser from "../../assets/profile.png";
 import { Tooltip } from "antd";
-import { MdOutlineMarkEmailUnread, MdRestaurantMenu } from "react-icons/md";
+import { MdOutlineMarkEmailUnread, MdRestaurantMenu, MdCompareArrows } from "react-icons/md";
 import { IoMdNotificationsOutline } from "react-icons/io";
 import { CoffeeOutlined, LockOutlined, MenuOutlined, PartitionOutlined, UnlockOutlined } from "@ant-design/icons";
 import {
@@ -95,6 +95,7 @@ const MENU_STRUCTURE = [
           { key: "raw_material", labelKey: "raw_material", icon: <FileProtectOutlined /> },
           { key: "recipe", labelKey: "recipe", icon: <SolutionOutlined /> },
           { key: "stock", labelKey: "stock", icon: <FileProtectOutlined /> },
+          { key: "stock-transfer", labelKey: "stock_transfer", icon: <MdCompareArrows /> },
         ]
       },
     ]

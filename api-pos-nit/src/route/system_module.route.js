@@ -6,4 +6,7 @@ module.exports = (app) => {
     app.post("/api/system_module", authMiddleware(), controller.create);
     app.put("/api/system_module", authMiddleware(), controller.update);
     app.delete("/api/system_module", authMiddleware(), controller.remove);
+
+    app.get("/api/system_module/:id/permissions", authMiddleware(), controller.getPermissions);
+    app.post("/api/system_module/:id/permissions", authMiddleware(), controller.savePermissions);
 };

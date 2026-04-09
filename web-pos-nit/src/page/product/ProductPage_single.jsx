@@ -53,10 +53,10 @@ const CategoryOptions = ({ selectedCategory, t }) => {
   const parseBlueprint = (val) => {
     if (!val) return null;
     if (Array.isArray(val)) return val;
-    try { 
+    try {
       const parsed = JSON.parse(val);
       return Array.isArray(parsed) ? parsed : [parsed];
-    } catch { 
+    } catch {
       // Handle comma-separated string
       return val.split(',').map(s => s.trim()).filter(Boolean);
     }
@@ -68,32 +68,32 @@ const CategoryOptions = ({ selectedCategory, t }) => {
 
   const isPharmacy = selectedCategory?.industry_code === 'pharmacy';
   const isRestaurant = selectedCategory?.industry_code === 'restaurant' || selectedCategory?.industry_code === 'coffee_cafe';
-  
+
   // If category has no special configuration, hide this panel
   const hasConfig = defaultMoods?.length > 0 || defaultSizes?.length > 0 || defaultAddons?.length > 0;
   if (!selectedCategory || !hasConfig) return null;
 
   return (
-    <div style={{ 
-      background: isPharmacy ? "#f0f7ff" : "#f0f7f2", 
-      padding: "24px", 
-      borderRadius: "16px", 
-      marginBottom: "20px", 
+    <div style={{
+      background: isPharmacy ? "#f0f7ff" : "#f0f7f2",
+      padding: "24px",
+      borderRadius: "16px",
+      marginBottom: "20px",
       border: `1px solid ${isPharmacy ? "#d6e4ff" : "#d9e6dc"}`,
       boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)"
     }}>
-      <div style={{ 
-        fontWeight: 800, 
-        marginBottom: 20, 
-        color: isPharmacy ? "#0958d9" : COLORS.darkGreen, 
-        fontSize: 17, 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        fontWeight: 800,
+        marginBottom: 20,
+        color: isPharmacy ? "#0958d9" : COLORS.darkGreen,
+        fontSize: 17,
+        display: 'flex',
+        alignItems: 'center',
         gap: 10,
         borderBottom: `2px solid ${isPharmacy ? "#d6e4ff" : "#d9e6dc"}`,
         paddingBottom: 10
       }}>
-        {isPharmacy ? <span style={{fontSize: 22}}>📋</span> : <span style={{fontSize: 22}}>🍳</span>} 
+        {isPharmacy ? <span style={{ fontSize: 22 }}>📋</span> : <span style={{ fontSize: 22 }}>🍳</span>}
         {selectedCategory?.name || selectedCategory?.label} {isPharmacy ? "Blueprint" : (isRestaurant ? "Cooking & Options" : (typeof t?.customize_coffee === 'string' ? t.customize_coffee : "Customization"))}
       </div>
 
@@ -104,12 +104,12 @@ const CategoryOptions = ({ selectedCategory, t }) => {
             {isPharmacy ? "💊 Usage / Dosage Instructions" : (isRestaurant ? "🌶️ Taste / Special Instructions" : `🔥❄️ ${t.mood || "Temperature"}`)}
           </div>
           <Form.Item name="moods" label={false} style={{ marginBottom: 16 }}>
-            <Checkbox.Group 
+            <Checkbox.Group
               options={defaultMoods.map(m => {
                 const label = typeof m === 'object' ? (m.label || m.value) : m;
                 const value = typeof m === 'object' ? (m.value || m.label) : m;
                 return { label, value };
-              })} 
+              })}
             />
           </Form.Item>
         </>
@@ -123,22 +123,22 @@ const CategoryOptions = ({ selectedCategory, t }) => {
             {(fields, { add, remove }) => (
               <>
                 <div style={{ fontWeight: 800, marginBottom: 4, color: isPharmacy ? "#0958d9" : COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
-                   <span>{isPharmacy ? "📦" : (isRestaurant ? "🍽️" : "☕")}</span> {isPharmacy ? "Packaging / Units" : (isRestaurant ? "Portions / Sizes" : (typeof t?.sizes === 'string' ? t.sizes : "Sizes"))}
+                  <span>{isPharmacy ? "📦" : (isRestaurant ? "🍽️" : "☕")}</span> {isPharmacy ? "Packaging / Units" : (isRestaurant ? "Portions / Sizes" : (typeof t?.sizes === 'string' ? t.sizes : "Sizes"))}
                 </div>
                 <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 12, fontStyle: 'italic' }}>
-                   {isPharmacy ? "Define unit types and their specific pricing" : (t.sizes_override_msg || "Price per size overrides the base price")}
+                  {isPharmacy ? "Define unit types and their specific pricing" : (t.sizes_override_msg || "Price per size overrides the base price")}
                 </div>
                 {fields.map(({ key, name, ...restField }) => (
                   <div key={key} style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: 'center' }}>
-                    <Form.Item 
-                      {...restField} 
-                      name={[name, 'label']} 
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'label']}
                       rules={[{ required: true, message: 'Required' }]}
                       style={{ marginBottom: 0, flex: 2 }}
                     >
-                      <Select 
+                      <Select
                         size="large"
-                        placeholder={isPharmacy ? "Select Unit" : (isRestaurant ? "Portion" : "Size")} 
+                        placeholder={isPharmacy ? "Select Unit" : (isRestaurant ? "Portion" : "Size")}
                         options={defaultSizes.map(s => {
                           const label = typeof s === 'object' ? (s.label || s.value) : s;
                           const value = typeof s === 'object' ? (s.value || s.label) : s;
@@ -147,35 +147,35 @@ const CategoryOptions = ({ selectedCategory, t }) => {
                         style={{ width: '100%' }}
                       />
                     </Form.Item>
-                    <Form.Item 
-                      {...restField} 
-                      name={[name, 'price']} 
+                    <Form.Item
+                      {...restField}
+                      name={[name, 'price']}
                       rules={[{ required: true, message: 'Required' }]}
                       style={{ marginBottom: 0, flex: 1 }}
                     >
-                      <InputNumber 
+                      <InputNumber
                         size="large"
-                        placeholder="Price" 
-                        style={{ width: '100%' }} 
-                        min={0} 
+                        placeholder="Price"
+                        style={{ width: '100%' }}
+                        min={0}
                         step={0.1}
                         precision={2}
                       />
                     </Form.Item>
-                    <Button 
-                      danger 
-                      type="text" 
-                      onClick={() => remove(name)} 
-                      icon={<MdDelete style={{ fontSize: 20 }} />} 
+                    <Button
+                      danger
+                      type="text"
+                      onClick={() => remove(name)}
+                      icon={<MdDelete style={{ fontSize: 20 }} />}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     />
                   </div>
                 ))}
-                <Button 
-                  type="dashed" 
-                  onClick={() => add()} 
-                  icon={<MdAdd />} 
-                  block 
+                <Button
+                  type="dashed"
+                  onClick={() => add()}
+                  icon={<MdAdd />}
+                  block
                   style={{ marginBottom: 20, borderRadius: 10, height: 40, borderColor: isPharmacy ? "#4096ff" : COLORS.midGreen, color: isPharmacy ? "#4096ff" : COLORS.midGreen }}
                 >
                   {isPharmacy ? "+ Add Packaging Unit" : (isRestaurant ? "+ Add Portion" : (t.add_size || "+ Add Size"))}
@@ -197,15 +197,15 @@ const CategoryOptions = ({ selectedCategory, t }) => {
               </div>
               {fields.map(({ key, name, ...restField }) => (
                 <div key={key} style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: 'center' }}>
-                  <Form.Item 
-                    {...restField} 
-                    name={[name, 'label']} 
+                  <Form.Item
+                    {...restField}
+                    name={[name, 'label']}
                     rules={[{ required: true, message: 'Required' }]}
                     style={{ marginBottom: 0, flex: 2 }}
                   >
-                    <Select 
+                    <Select
                       size="large"
-                      placeholder={isPharmacy ? "Select Warning" : (isRestaurant ? "Select Side" : "Add-on")} 
+                      placeholder={isPharmacy ? "Select Warning" : (isRestaurant ? "Select Side" : "Add-on")}
                       options={defaultAddons.map(a => {
                         const label = typeof a === 'object' ? (a.label || a.value) : a;
                         const value = typeof a === 'object' ? (a.value || a.label) : a;
@@ -214,35 +214,35 @@ const CategoryOptions = ({ selectedCategory, t }) => {
                       style={{ width: '100%' }}
                     />
                   </Form.Item>
-                  <Form.Item 
-                    {...restField} 
-                    name={[name, 'price']} 
+                  <Form.Item
+                    {...restField}
+                    name={[name, 'price']}
                     rules={[{ required: true, message: 'Required' }]}
                     style={{ marginBottom: 0, flex: 1 }}
                     hidden={isPharmacy}
                   >
-                    <InputNumber 
+                    <InputNumber
                       size="large"
-                      placeholder="Price" 
-                      style={{ width: '100%' }} 
-                      min={0} 
+                      placeholder="Price"
+                      style={{ width: '100%' }}
+                      min={0}
                       step={0.1}
                       precision={2}
                     />
                   </Form.Item>
-                  <Button 
-                    danger 
-                    type="text" 
-                    onClick={() => remove(name)} 
-                    icon={<MdDelete style={{ fontSize: 20 }} />} 
+                  <Button
+                    danger
+                    type="text"
+                    onClick={() => remove(name)}
+                    icon={<MdDelete style={{ fontSize: 20 }} />}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   />
                 </div>
               ))}
-              <Button 
-                type="dashed" 
-                onClick={() => add()} 
-                icon={<MdAdd />} 
+              <Button
+                type="dashed"
+                onClick={() => add()}
+                icon={<MdAdd />}
                 block
                 style={{ borderRadius: 10, height: 40, borderColor: isPharmacy ? "#ffa940" : COLORS.midGreen, color: isPharmacy ? "#ffa940" : COLORS.midGreen }}
               >
@@ -288,6 +288,8 @@ function ProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Track the full category object (with its default configs) for the selected category
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const sizes = Form.useWatch('sizes', form);
+  const hasSizes = sizes && sizes.length > 0;
 
   const userId = useProfileStore(s => s.profile?.id || s.profile?.user_id);
   useEffect(() => {
@@ -404,6 +406,15 @@ function ProductPage() {
       if (res && res.barcode) {
         form.setFieldValue("barcode", res.barcode);
       }
+      // Set default status to Active (1)
+      form.setFieldValue("status", "1");
+
+      // Select first category by default if available
+      const firstCat = state.categoryList?.[0];
+      if (firstCat) {
+        form.setFieldValue("category_id", String(firstCat.id));
+        setSelectedCategory(firstCat);
+      }
     } catch (err) {
       console.error("Barcode generation failed:", err);
     } finally {
@@ -462,11 +473,11 @@ function ProductPage() {
 
     // Map moods to labels if they are objects, to match Checkbox.Group values
     // Use a clean array of strings
-    const finalMoods = Array.isArray(moods) 
+    const finalMoods = Array.isArray(moods)
       ? moods.map(m => {
-          if (m && typeof m === 'object') return String(m.value || m.label || "");
-          return String(m || "");
-        }) 
+        if (m && typeof m === 'object') return String(m.value || m.label || "");
+        return String(m || "");
+      })
       : [];
 
     form.setFieldsValue({
@@ -588,7 +599,7 @@ function ProductPage() {
                   <span style={{ background: '#e6f0e9', padding: '6px', borderRadius: '8px' }}>📦</span>
                   Basic Details
                 </div>
-                
+
                 <Form.Item
                   name={"category_id"}
                   label={t.category}
@@ -603,7 +614,7 @@ function ProductPage() {
                       const cat = (state.categoryList || []).find(c => String(c.id) === String(value));
                       setSelectedCategory(cat || null);
                       form.setFieldsValue({ moods: [], sizes: [], addons: [] });
-                      
+
                       if (cat) {
                         const parseMoods = (val) => { try { return val ? (typeof val === 'string' ? JSON.parse(val) : val) : []; } catch { return []; } };
                         const defaultMoods = parseMoods(cat.default_moods);
@@ -631,10 +642,24 @@ function ProductPage() {
                 <Form.Item
                   label={`${t.price || "Price"} (${t.base_price_label})`}
                   name="price"
-                  rules={[{ required: true, message: t.price_required }]}
-                  tooltip={t.price_tooltip || "តម្លៃទូទៅ ឬតម្លៃទាបបំផុតប្រសិនបើមានច្រើនទំហំ"}
+                  rules={[{ required: !hasSizes, message: t.price_required }]}
+                  tooltip={hasSizes ? "Disabled because multiple sizes are defined" : "Default price for this product"}
+                  style={{ marginBottom: 24 }}
                 >
-                  <InputNumber size="large" min={0} step={0.01} style={{ width: '100%' }} placeholder="2.50" />
+                  <InputNumber 
+                    size="large" 
+                    min={0} 
+                    step={0.01} 
+                    style={{ width: '100%' }} 
+                    placeholder={hasSizes ? "Sizes override this" : "2.50"} 
+                    disabled={hasSizes}
+                    value={hasSizes ? 0 : undefined}
+                  />
+                  {hasSizes && (
+                    <div style={{ color: '#fa8c16', fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+                      ⚠️ ប្រើតម្លៃតាមទំហំ (Sizes) ជំនួសវិញ
+                    </div>
+                  )}
                 </Form.Item>
 
                 <Form.Item label={t.status} name="status">
@@ -649,38 +674,38 @@ function ProductPage() {
 
             {/* Column 2: Blueprint Customization (SPAN 6) */}
             <Col span={selectedCategory ? 6 : 0}>
-               <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
-                 <CategoryOptions selectedCategory={selectedCategory} t={t} />
-               </div>
+              <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
+                <CategoryOptions selectedCategory={selectedCategory} t={t} />
+              </div>
             </Col>
 
             {/* Column 3: Medical Specifications (SPAN 6 - Pharmacy Only) */}
             {selectedCategory?.industry_code === 'pharmacy' && (
               <Col span={6}>
-                 <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 20, color: '#0958d9', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ background: '#e6f4ff', padding: '6px', borderRadius: '8px' }}>💊</span>
-                      Medical Specifications
-                    </div>
+                <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 20, color: '#0958d9', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ background: '#e6f4ff', padding: '6px', borderRadius: '8px' }}>💊</span>
+                    Medical Specifications
+                  </div>
 
-                    <Form.Item name="generic_name" label="Generic Name (Chemical)">
-                      <Input size="large" placeholder="e.g. Paracetamol" />
-                    </Form.Item>
+                  <Form.Item name="generic_name" label="Generic Name (Chemical)">
+                    <Input size="large" placeholder="e.g. Paracetamol" />
+                  </Form.Item>
 
-                    <Form.Item name="strength" label="Strength (mg/ml)">
-                      <Input size="large" placeholder="500mg" />
-                    </Form.Item>
+                  <Form.Item name="strength" label="Strength (mg/ml)">
+                    <Input size="large" placeholder="500mg" />
+                  </Form.Item>
 
-                    <Form.Item name="expiry_date" label="Expiry Date">
-                      <DatePicker size="large" style={{ width: '100%' }} format="DD/MM/YYYY" />
-                    </Form.Item>
-                    
-                    <div style={{ background: '#f0f7ff', padding: 16, borderRadius: 12, marginTop: 20, border: '1px solid #d6e4ff' }}>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                           💡 <strong>Note:</strong> ព័ត៌មានទាំងនេះនឹងបង្ហាញនៅលើប័ណ្ណបញ្ជាទិញ និងសម្រាប់គ្រប់គ្រងថ្ងៃផុតកំណត់។
-                        </Text>
-                    </div>
-                 </div>
+                  <Form.Item name="expiry_date" label="Expiry Date">
+                    <DatePicker size="large" style={{ width: '100%' }} format="DD/MM/YYYY" />
+                  </Form.Item>
+
+                  <div style={{ background: '#f0f7ff', padding: 16, borderRadius: 12, marginTop: 20, border: '1px solid #d6e4ff' }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      💡 <strong>Note:</strong> ព័ត៌មានទាំងនេះនឹងបង្ហាញនៅលើប័ណ្ណបញ្ជាទិញ និងសម្រាប់គ្រប់គ្រងថ្ងៃផុតកំណត់។
+                    </Text>
+                  </div>
+                </div>
               </Col>
             )}
 
@@ -693,16 +718,16 @@ function ProductPage() {
                 </div>
 
                 <Row gutter={12}>
-                   <Col span={12}>
-                      <Form.Item name={"qty"} label={t.quantity}>
-                        <InputNumber size="large" placeholder={t.quantity} style={{ width: "100%" }} />
-                      </Form.Item>
-                   </Col>
-                   <Col span={12}>
-                      <Form.Item name={"discount"} label={t.discount}>
-                        <InputNumber size="large" placeholder={t.discount} style={{ width: "100%" }} />
-                      </Form.Item>
-                   </Col>
+                  <Col span={12}>
+                    <Form.Item name={"qty"} label={t.quantity}>
+                      <InputNumber size="large" placeholder={t.quantity} style={{ width: "100%" }} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item name={"discount"} label={t.discount}>
+                      <InputNumber size="large" placeholder={t.discount} style={{ width: "100%" }} />
+                    </Form.Item>
+                  </Col>
                 </Row>
 
                 <Form.Item name={"description"} label={t.description}>
@@ -730,10 +755,10 @@ function ProductPage() {
               <Button size="large" onClick={onCloseModal} style={{ borderRadius: 12, padding: '0 32px', height: 48, fontWeight: 600 }}>
                 {t.cancel}
               </Button>
-              <Button 
-                type="primary" 
-                size="large" 
-                htmlType="submit" 
+              <Button
+                type="primary"
+                size="large"
+                htmlType="submit"
                 loading={isSubmitting}
                 style={{
                   background: COLORS.darkGreen,
@@ -788,6 +813,25 @@ function ProductPage() {
             key: "price",
             title: t.price,
             dataIndex: "price",
+            render: (price, record) => {
+              try {
+                const sizes = record.sizes ? (typeof record.sizes === 'string' ? JSON.parse(record.sizes) : record.sizes) : [];
+                if (Array.isArray(sizes) && sizes.length > 0) {
+                  const prices = sizes.map(s => Number(s.price || 0));
+                  const min = Math.min(...prices);
+                  const max = Math.max(...prices);
+                  return (
+                    <div style={{ fontWeight: 800, color: COLORS.darkGreen }}>
+                      {min === max ? `$${min.toFixed(2)}` : `$${min.toFixed(2)} - $${max.toFixed(2)}`}
+                      <div style={{ fontSize: 10, color: COLORS.textSecondary, fontWeight: 400 }}>({sizes.length} Sizes)</div>
+                    </div>
+                  );
+                }
+              } catch (e) {
+                console.error("Price parse error", e);
+              }
+              return <span style={{ fontWeight: 700 }}>${Number(price || 0).toFixed(2)}</span>;
+            }
           },
           {
             key: "discount",

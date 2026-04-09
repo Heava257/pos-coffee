@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Button, message, Spin, Image } from 'antd';
 import QRCode from 'react-qr-code';
-import { QrcodeOutlined, CopyOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { QrcodeOutlined, CopyOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { Config } from '../util/config';
 
 const CRC16 = (data) => {
@@ -14,24 +14,32 @@ const CRC16 = (data) => {
   return crc.toString(16).toUpperCase().padStart(4, '0');
 };
 
-const generateKHQR = (merchantId, name, amount, currency = "USD") => {
-  const f = (id, val) => id + val.length.toString().padStart(2, '0') + val;
+const generateKHQR = (merchantId, name, amount, orderNo, currency = "USD") => {
+  const f = (id, val) => id + String(val).length.toString().padStart(2, '0') + String(val);
+  const numAmount = Number(amount) || 0;
 
-  // Merchant ID format (ID 29)
-  const merchantInfo = f("00", merchantId);
+  // Safe Merchant Name: EMVCo strict requirement for Tag 59 is ASCII only.
+  const safeName = name.replace(/[^\x00-\x7F]/g, "").trim().substring(0, 25) || "POS COFFEE";
+
+  // Tag 29 — Bakong Solo/Individual Merchant Account Info
+  // Per NBC KHQR Spec: Sub-tag 00 = the Bakong Account ID itself (NO Sub-tag 01)
+  // e.g. "pong_chiva@bkrt" goes directly into Sub-tag 00
+  const subTag00 = f("00", merchantId);
+  const merchantInfo = f("29", subTag00);
 
   let payload =
     f("00", "01") + // Payload Format Indicator
-    f("01", "12") + // Point of Initiation Method (12 = dynamic)
-    f("29", merchantInfo) + // Merchant Account Information
+    f("01", "12") + // Method 12 = Dynamic (Wing/Bakong P2P compatible — use static KHQR image for ABA)
+    merchantInfo +  // Tag 29: Bakong Account
     f("52", "5999") + // Merchant Category Code
-    f("53", currency === "USD" ? "840" : "116") + // Currency (840=USD, 116=KHR)
-    f("54", amount.toFixed(2)) + // Amount
+    f("53", currency === "USD" ? "840" : "116") + // Currency
+    f("54", numAmount.toFixed(2)) + // Amount
     f("58", "KH") + // Country Code
-    f("59", name.substring(0, 25)) + // Merchant Name
-    f("60", "PHNOM PENH"); // City
+    f("59", safeName) + // Merchant Name (ASCII only)
+    f("60", "PHNOM PENH") + // City
+    f("62", f("01", String(orderNo))); // Bill Number (Order No)
 
-  payload += "6304"; // CRC ID and length
+  payload += "6304"; // CRC placeholder
   return payload + CRC16(payload);
 };
 
@@ -39,16 +47,20 @@ const QRPaymentModal = ({ visible, onClose, paymentLink, orderNo, total, branchI
   const [copying, setCopying] = useState(false);
 
   const staticQR = branchInfo?.khqr_image;
-  const merchantId = branchInfo?.payment_merchant_id || "pong_chiva@bkrt";
+  // Only use merchant ID if explicitly configured for this branch — no shared fallback
+  const merchantId = branchInfo?.payment_merchant_id || null;
   const receiverName = branchInfo?.payment_receiver_name || branchInfo?.name || "POS COFFEE";
-  const paymentProvider = branchInfo?.payment_provider || "KHQR";
-  const apiUrl = branchInfo?.payment_api_url;
+  const branchName = branchInfo?.name || "Branch";
 
   let dynamicKHQR = null;
-  if (merchantId && total > 0) {
-    // Standard KHQR generation - works with most Cambodian banks
-    dynamicKHQR = generateKHQR(merchantId, receiverName, total);
+  // Only generate dynamic QR when NO static image is uploaded.
+  // Static KHQR image (from bank app) = universally compatible (Wing, ABA, Acleda).
+  // Dynamic generated QR = Wing/Bakong only.
+  if (merchantId && total > 0 && !staticQR) {
+    dynamicKHQR = generateKHQR(merchantId, receiverName, total, orderNo);
   }
+
+  const isNotConfigured = !dynamicKHQR && !staticQR && !paymentLink;
 
   const handleCopyLink = async () => {
     try {
@@ -66,9 +78,11 @@ const QRPaymentModal = ({ visible, onClose, paymentLink, orderNo, total, branchI
   return (
     <Modal
       title={
-        <div style={{ textAlign: 'center' }}>
-          <QrcodeOutlined style={{ fontSize: '24px', marginRight: '8px', color: '#1e4a2d' }} />
-          <span style={{ fontWeight: 600 }}>Payment QR Code</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f0f7f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <QrcodeOutlined style={{ fontSize: '18px', color: '#1e4a2d' }} />
+          </div>
+          <span style={{ fontWeight: 700, fontSize: 16 }}>Payment QR Code</span>
         </div>
       }
       open={visible}
@@ -79,64 +93,120 @@ const QRPaymentModal = ({ visible, onClose, paymentLink, orderNo, total, branchI
             Copy {dynamicKHQR ? "QR Data" : "Link"}
           </Button>
         ),
-        <Button key="close" type="primary" onClick={onClose} style={{ background: '#1e4a2d' }}>
+        <Button key="close" type="primary" onClick={onClose} style={{ background: '#1e4a2d', borderColor: '#1e4a2d', fontWeight: 600 }}>
           Done
         </Button>
       ]}
-      width={400}
+      width={dynamicKHQR || staticQR || paymentLink ? 560 : 420}
       centered
+      bodyStyle={{ padding: '24px' }}
     >
-      <div style={{ textAlign: 'center', padding: '10px 0' }}>
+      <div style={{ padding: '4px 0' }}>
         {dynamicKHQR ? (
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
             <div style={{
               background: '#fff',
-              padding: '15px',
-              borderRadius: '12px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              display: 'inline-block',
-              marginBottom: 16
+              padding: '16px',
+              borderRadius: '16px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+              border: '1px solid #f0f0f0',
+              flexShrink: 0
             }}>
               <QRCode
                 value={dynamicKHQR}
-                size={240}
-                style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                size={200}
+                style={{ height: "auto", maxWidth: "100%", width: "200px" }}
               />
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#1e4a2d' }}>${total.toFixed(2)}</div>
-              <div style={{ fontSize: 12, color: '#666' }}>Order: {orderNo}</div>
-              <div style={{ fontSize: 13, fontWeight: 500, marginTop: 4 }}>{receiverName}</div>
-            </div>
-            <div style={{
-              background: '#f6ffed',
-              padding: '8px',
-              borderRadius: '6px',
-              border: '1px solid #b7eb8f',
-              fontSize: '12px',
-              color: '#52c41a'
-            }}>
-              <CheckCircleOutlined /> Dynamic QR Generated for this order
+
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, color: '#8c8c8c', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Amount</div>
+                <div style={{ fontSize: 32, fontWeight: 800, color: '#1e4a2d', lineHeight: 1.2 }}>${total.toFixed(2)}</div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f0f0f0', paddingBottom: 4 }}>
+                  <span style={{ color: '#8c8c8c', fontSize: 13 }}>Order No</span>
+                  <span style={{ fontWeight: 700, color: '#262626' }}>#{orderNo}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f0f0f0', paddingBottom: 4 }}>
+                  <span style={{ color: '#8c8c8c', fontSize: 13 }}>To</span>
+                  <span style={{ fontWeight: 700, color: '#262626' }}>{receiverName}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#8c8c8c', fontSize: 13 }}>Branch</span>
+                  <span style={{ fontWeight: 600, color: '#1e4a2d' }}>{branchName}</span>
+                </div>
+              </div>
+
+              <div style={{
+                background: '#f6ffed',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: '1px solid #b7eb8f',
+                fontSize: '12px',
+                color: '#52c41a',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <CheckCircleOutlined />
+                <span>Dynamic KHQR generated for {branchName}</span>
+              </div>
             </div>
           </div>
         ) : staticQR ? (
-          <div style={{ textAlign: 'center' }}>
-            <Image
-              src={Config.getFullImagePath(staticQR)}
-              style={{ width: '100%', borderRadius: 8, border: '1px solid #eee' }}
-              placeholder={<Spin />}
-            />
-            <div style={{ marginTop: 16, fontWeight: 700, color: '#1e4a2d' }}>
-              Scan to Pay (${total.toFixed(2)})
+          <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+            <div style={{ flexShrink: 0, width: 232 }}>
+              <Image
+                src={Config.getFullImagePath(staticQR)}
+                style={{ width: '100%', borderRadius: 16, border: '1px solid #f0f0f0', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}
+                placeholder={<Spin />}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, color: '#8c8c8c', fontWeight: 500, textTransform: 'uppercase' }}>Scan to Pay</div>
+                <div style={{ fontSize: 32, fontWeight: 800, color: '#1e4a2d' }}>${Number(total || 0).toFixed(2)}</div>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#262626', marginBottom: 4 }}>{receiverName}</div>
+              <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 16 }}>📍 {branchName}</div>
+              <div style={{ fontSize: 13, color: '#595959', padding: '10px', background: '#f5f5f5', borderRadius: 8 }}>
+                Please show this QR to pay at <b>{branchName}</b>.
+              </div>
+            </div>
+          </div>
+        ) : isNotConfigured ? (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ width: 64, height: 64, borderRadius: 32, background: '#fff7e6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <WarningOutlined style={{ fontSize: 32, color: '#faad14' }} />
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 17, color: '#262626', marginBottom: 8 }}>
+              QR Payment Not Configured
+            </div>
+            <div style={{ fontSize: 14, color: '#8c8c8c', marginBottom: 24 }}>
+              Branch: <b>{branchName}</b> has no payment settings.
+            </div>
+            <div style={{
+              background: '#fff7e6', border: '1px solid #ffd591',
+              borderRadius: 12, padding: '16px', fontSize: 13, color: '#d46b08', textAlign: 'left'
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>How to fix:</div>
+              1. Go to <b>Shop Management → Branch</b><br />
+              2. Edit <b>{branchName}</b><br />
+              3. Set a <b>Merchant ID</b> or upload <b>KHQR Image</b>.
             </div>
           </div>
         ) : paymentLink ? (
-          <>
+          <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
             <div style={{
-              background: '#f5f5f5',
-              padding: '20px',
-              borderRadius: '8px',
-              marginBottom: '16px'
+              background: '#fff',
+              padding: '16px',
+              borderRadius: '16px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+              border: '1px solid #f0f0f0',
+              flexShrink: 0
             }}>
               <QRCode
                 value={paymentLink}
@@ -144,25 +214,27 @@ const QRPaymentModal = ({ visible, onClose, paymentLink, orderNo, total, branchI
                 style={{ height: "auto", maxWidth: "100%", width: "200px" }}
               />
             </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <p><strong>Order:</strong> {orderNo}</p>
-              <p><strong>Amount:</strong> ${total.toFixed(2)}</p>
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, color: '#8c8c8c', fontWeight: 500 }}>Payment for Order</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#1e4a2d' }}>${Number(total || 0).toFixed(2)}</div>
+                <div style={{ fontSize: 13, color: '#595959' }}>Order: #{orderNo}</div>
+              </div>
+              <div style={{
+                background: '#e6f7ff',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #91d5ff',
+                fontSize: '12px',
+                color: '#0050b3'
+              }}>
+                Scan or click "Copy Link" to complete payment via the secure link.
+              </div>
             </div>
-
-            <div style={{
-              background: '#e6f7ff',
-              padding: '12px',
-              borderRadius: '4px',
-              fontSize: '12px',
-              color: '#1890ff'
-            }}>
-              Scan QR code or click "Copy Link" to complete payment
-            </div>
-          </>
+          </div>
         ) : (
-          <div style={{ padding: '40px' }}>
-            <Spin size="large" tip="Generating..." />
+          <div style={{ padding: '60px 0', textAlign: 'center' }}>
+            <Spin size="large" tip="Generating Secure QR Code..." />
           </div>
         )}
       </div>

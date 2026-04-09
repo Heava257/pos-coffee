@@ -44,6 +44,7 @@ import {
   ArrowDownOutlined,
   ShopOutlined,
   FileTextOutlined,
+  TagOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { formatDateClient, formatDateServer, isPermission, request } from "../../util/helper";
@@ -53,6 +54,9 @@ import { useProfileStore } from "../../store/profileStore";
 import { useLanguage, translations } from "../../store/language.store";
 import { useExchangeRate } from "../../component/pos/ExchangeRateContext";
 
+import QRPaymentModal from "../../QRPaymentModal/QRPaymentModal";
+import PrintLabel from "../../component/pos/PrintLabel";
+import PrintInvoice from "../../component/pos/PrintInvoice";
 const { RangePicker } = DatePicker;
 const { TabPane } = Tabs;
 const { Title, Text } = Typography;
@@ -95,6 +99,11 @@ function OrderPage() {
   const isAdmin = profile?.role_name?.toUpperCase().includes("ADMIN") || profile?.role_code === "admin";
   const canSeeAllReports = isOwner || isAdmin; 
   const { exchangeRate } = useExchangeRate();
+  const [branchInfo, setBranchInfo] = useState(null);
+  const refLabel = useRef(null);
+  const refInvoice = useRef(null);
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [qrData, setQrData] = useState({ orderNo: "", total: 0 });
 
   const handlePrintShift = useReactToPrint({
     contentRef: refShiftReport,
@@ -203,6 +212,15 @@ function OrderPage() {
       setIsClosingShift(false);
     }
   };
+
+  const handlePrintLabel = useReactToPrint({
+    contentRef: refLabel,
+    pageStyle: `@page { size: 40mm 30mm !important; margin: 0 !important; } @media print { body { -webkit-print-color-adjust: exact; margin: 0 !important; } }`,
+  });
+
+  const handlePrintInvoice = useReactToPrint({
+    contentRef: refInvoice,
+  });
 
   const [state, setState] = useState({
     visibleModal: false,
@@ -336,11 +354,24 @@ function OrderPage() {
     }
   }, [profileUserId, canSeeAllReports]);
 
+  const getBranchInfo = async () => {
+    try {
+      const res = await request("branch", "get");
+      if (res && res.list) {
+        const currentBranch = res.list.find(b => b.id === profile?.branch_id) || res.list[0];
+        setBranchInfo(currentBranch);
+      }
+    } catch (error) {
+      console.error("Error fetching branch info:", error);
+    }
+  };
+
   useEffect(() => {
     if (profileUserId) {
       getList();
       getCurrentShift(); 
       getShiftHistory(); 
+      getBranchInfo();
     }
   }, [profileUserId, filter.user_id, filter.from_date, filter.to_date]);
 
@@ -710,11 +741,50 @@ function OrderPage() {
                   )
                 },
                 {
-                  title: t.action,
-                  width: 80,
-                  align: 'center',
                   render: (_, rec) => (
-                    <Button type="link" icon={<EyeOutlined />} onClick={() => getOrderDetail(rec)} />
+                    <Space>
+                      {(rec.payment_method !== "Cash" && rec.status !== "Cancel") && (
+                        <Button style={{ color: '#10b981' }} icon={<ShoppingCartOutlined />} onClick={() => {
+                          setQrData({ orderNo: rec.order_no || `#${rec.id}`, total: rec.total_amount });
+                          setQrModalVisible(true);
+                        }} />
+                      )}
+                      <Button style={{ color: '#eb2f96' }} icon={<TagOutlined />} onClick={async () => {
+                        setState(p => ({ ...p, loading: true }));
+                        try {
+                          const res = await request(`order/${rec.id}`, "get");
+                          if (res && res.details) {
+                            setOrderDetail(res.details);
+                            setCurrentOrder({ ...rec, ...res }); // Merge record with full order data
+                            setTimeout(() => {
+                              handlePrintLabel();
+                              setState(p => ({ ...p, loading: false }));
+                            }, 1000);
+                          }
+                        } catch (error) {
+                          console.error("Print Label Error:", error);
+                          setState(p => ({ ...p, loading: false }));
+                        }
+                      }} />
+                      <Button style={{ color: '#722ed1' }} icon={<FileTextOutlined />} onClick={async () => {
+                        setState(p => ({ ...p, loading: true }));
+                        try {
+                          const res = await request(`order/${rec.id}`, "get");
+                          if (res && res.details) {
+                            setOrderDetail(res.details);
+                            setCurrentOrder({ ...rec, ...res });
+                            setTimeout(() => {
+                              handlePrintInvoice();
+                              setState(p => ({ ...p, loading: false }));
+                            }, 1000);
+                          }
+                        } catch (error) {
+                          console.error("Print Invoice Error:", error);
+                          setState(p => ({ ...p, loading: false }));
+                        }
+                      }} />
+                      <Button type="link" icon={<EyeOutlined />} onClick={() => getOrderDetail(rec)} />
+                    </Space>
                   )
                 }
               ]}
@@ -1057,9 +1127,49 @@ function OrderPage() {
             }}
           />
         </div>
+        <Divider style={{margin: 0}} />
+        <div style={{ marginTop: 24, textAlign: 'right' }}>
+            {(currentOrder?.payment_method !== "Cash" && currentOrder?.status !== "Cancel") && (
+                <Button 
+                    type="primary" 
+                    size="large"
+                    icon={<ShoppingCartOutlined />}
+                    style={{ background: '#10b981', borderColor: '#10b981' }}
+                    onClick={() => {
+                       setQrData({ orderNo: currentOrder?.order_no || `#${currentOrder?.id}`, total: currentOrder?.total_amount });
+                       setQrModalVisible(true);
+                    }}
+                >
+                    Re-Scan KHQR
+                </Button>
+            )}
+            <Button 
+                icon={<TagOutlined />}
+                size="large"
+                onClick={handlePrintLabel}
+                style={{ marginLeft: 8 }}
+            >
+                Reprint Labels
+            </Button>
+            <Button 
+                icon={<FileTextOutlined />}
+                size="large"
+                onClick={handlePrintInvoice}
+                style={{ marginLeft: 8 }}
+            >
+                Reprint Invoice
+            </Button>
+        </div>
       </Modal>
 
-      {/* Hidden component for printing */}
+      <QRPaymentModal
+        visible={qrModalVisible}
+        onClose={() => setQrModalVisible(false)}
+        orderNo={qrData.orderNo}
+        total={qrData.total}
+        branchInfo={branchInfo}
+      />
+
       <div style={{ display: "none" }}>
         <PrintShiftReport
           ref={refShiftReport}
@@ -1073,6 +1183,22 @@ function OrderPage() {
           exchange_rate={exchangeRate}
           staff_name={filter.user_id ? (config?.user?.find(u => u.value === filter.user_id)?.label) : 'All Business (សរុបទាំងអស់)'}
         />
+        <div ref={refLabel}>
+          <PrintLabel 
+            cart_list={orderDetail} 
+            objSummary={currentOrder} 
+            branchInfo={branchInfo} 
+          />
+        </div>
+        <div ref={refInvoice}>
+          <PrintInvoice 
+            cart_list={orderDetail} 
+            objSummary={currentOrder} 
+            branchInfo={branchInfo} 
+            layoutType={"coffee"}
+            exchangeRate={exchangeRate}
+          />
+        </div>
       </div>
 
       {/* Quick Expense Modal */}

@@ -2,7 +2,7 @@ const { db, logError, removeFile, checkPlanLimit } = require("../util/helper");
 const { getCache, setCache, clearCache } = require("../util/redisClient");
 
 const cleanVal = (val) => {
-    if (val === "undefined" || val === "null" || val === undefined || val === null) return null;
+    if (val === "undefined" || val === "null" || val === undefined || val === null || val === "") return null;
     return val;
 };
 
@@ -25,10 +25,20 @@ exports.getList = async (req, res) => {
         let sql = `
         SELECT 
             p.id, p.name, p.image, p.category_id, p.status, p.barcode, p.brand, p.description,
-            p.sizes, p.addons, p.moods, p.discount,
+            p.sizes, p.addons, p.moods, p.discount, p.product_type,
             p.expiry_date, p.strength, p.generic_name,
             bp.price, bp.cost_price, bp.stock_qty AS qty, bp.is_available, bp.min_stock_alert,
-            c.name as category_name
+            c.name as category_name,
+            (SELECT EXISTS (
+                SELECT 1 FROM recipe_detail rd 
+                JOIN raw_material rm ON rd.raw_material_id = rm.id 
+                WHERE rd.product_id = p.id AND rd.business_id = p.business_id AND rm.qty < rd.qty
+            )) as is_recipe_oos,
+            (SELECT MIN(FLOOR(rm.qty / rd.qty)) 
+             FROM recipe_detail rd 
+             JOIN raw_material rm ON rd.raw_material_id = rm.id 
+             WHERE rd.product_id = p.id AND rd.business_id = p.business_id
+            ) as estimated_servings
         FROM products p
         LEFT JOIN branch_products bp ON p.id = bp.product_id AND bp.branch_id = ?
         LEFT JOIN categories c ON p.category_id = c.id
@@ -118,10 +128,10 @@ exports.create = async (req, res) => {
             [
                 Number(branch_id),
                 Number(product_id),
-                Number(price || 0),
-                Number(cost_price || 0),
-                Number(qty || 0),
-                Number(min_stock_alert || 5)
+                (Number(price) || 0),
+                (Number(cost_price) || 0),
+                (Number(qty) || 0),
+                (Number(min_stock_alert) || 5)
             ]
         );
 
@@ -189,10 +199,10 @@ exports.update = async (req, res) => {
         await conn.query(
             "UPDATE branch_products SET price = ?, cost_price = ?, stock_qty = ?, min_stock_alert = ? WHERE product_id = ? AND branch_id = ?",
             [
-                Number(cleanVal(price) || 0),
-                Number(cleanVal(cost_price) || 0),
-                Number(cleanVal(qty) || 0),
-                Number(cleanVal(min_stock_alert) || 5),
+                (Number(cleanVal(price)) || 0),
+                (Number(cleanVal(cost_price)) || 0),
+                (Number(cleanVal(qty)) || 0),
+                (Number(cleanVal(min_stock_alert)) || 5),
                 Number(id),
                 Number(branch_id)
             ]

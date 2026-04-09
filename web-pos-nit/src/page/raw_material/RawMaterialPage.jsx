@@ -334,68 +334,75 @@ function RawMaterialPage() {
 
             <Modal
                 open={state.visibleModal}
-                title={<b>{form.getFieldValue("id") ? t.edit_material : t.add_new_material}</b>}
+                title={<b>{form.getFieldValue("id") ? "📝 " + t.edit_material : "➕ " + t.add_new_material}</b>}
                 footer={null}
                 onCancel={onCloseModal}
-                width={700}
+                width={850}
+                centered
+                destroyOnClose
             >
                 <Form layout="vertical" onFinish={onFinish} form={form}>
-                    <Row gutter={16}>
+                    <Row gutter={24}>
                         <Col span={12}>
                             <Form.Item
                                 name="name"
                                 label={t.material_name}
                                 rules={[{ required: true, message: t.material_name + " is required" }]}
                             >
-                                <Input placeholder="e.g. Coffee Beans" />
+                                <Input size="large" placeholder="e.g. Coffee Beans" />
                             </Form.Item>
-
+ 
                             <Form.Item name="code" label={t.code}>
-                                <Input placeholder="e.g. RM-001" />
+                                <Input size="large" placeholder="e.g. RM-001" />
                             </Form.Item>
-
+ 
                             <Form.Item
                                 name="unit"
                                 label={t.unit}
                                 rules={[{ required: true, message: t.unit + " is required" }]}
                             >
                                 <Select
+                                    size="large"
                                     placeholder={t.unit}
                                     options={[
-                                        { label: "Gram (g)", value: "g" },
-                                        { label: "Kilogram (kg)", value: "kg" },
-                                        { label: "Milliliter (ml)", value: "ml" },
-                                        { label: "Liter (l)", value: "l" },
-                                        { label: "Piece (pcs)", value: "pcs" },
-                                        { label: "Can", value: "can" },
-                                        { label: "Pack", value: "pack" },
+                                        { label: "⚖️ ក្រាម (g)", value: "g" },
+                                        { label: "⚖️ គីឡូ (kg)", value: "kg" },
+                                        { label: "🛢️ មីលីលីត្រ (ml)", value: "ml" },
+                                        { label: "🛢️ លីត្រ (l)", value: "l" },
+                                        { label: "🔘 គ្រាប់ (pcs)", value: "pcs" },
+                                        { label: "🥡 កំប៉ុង (can)", value: "can" },
+                                        { label: "🎁 យួរ/កញ្ចប់ (pack)", value: "pack" },
+                                        { label: "💰 បាវ (bag)", value: "bag" },
+                                        { label: "📦 កេស (case)", value: "case" },
                                     ]}
+                                    showSearch
                                 />
                             </Form.Item>
-
+ 
                             <Form.Item name="status" label={t.status} initialValue={1}>
                                 <Select
+                                    size="large"
                                     options={[
-                                        { label: t.active, value: 1 },
-                                        { label: t.inactive, value: 0 },
+                                        { label: "✅ " + t.active, value: 1 },
+                                        { label: "❌ " + t.inactive, value: 0 },
                                     ]}
                                 />
                             </Form.Item>
                         </Col>
-
+ 
                         <Col span={12}>
                             <Form.Item name="price" label={t.last_cost} initialValue={0}>
-                                <InputNumber style={{ width: "100%" }} min={0} step={0.01} addonBefore="$" />
+                                <InputNumber size="large" style={{ width: "100%" }} min={0} step={0.01} addonBefore="$" />
                             </Form.Item>
-
+ 
                             <Form.Item name="qty" label={t.initial_stock} initialValue={0}>
-                                <InputNumber style={{ width: "100%" }} min={0} />
+                                <InputNumber size="large" style={{ width: "100%" }} min={0} />
                             </Form.Item>
-
+ 
                             <Form.Item name="min_stock" label={t.min_stock_alert} initialValue={10}>
-                                <InputNumber style={{ width: "100%" }} min={0} />
+                                <InputNumber size="large" style={{ width: "100%" }} min={0} />
                             </Form.Item>
-
+ 
                             <Form.Item name="image_default" label={t.image}>
                                 <Upload
                                     customRequest={(options) => options.onSuccess()}
@@ -411,11 +418,11 @@ function RawMaterialPage() {
                             </Form.Item>
                         </Col>
                     </Row>
-
-                    <div style={{ textAlign: "right", marginTop: 20 }}>
-                        <Space>
-                            <Button onClick={onCloseModal}>{t.cancel}</Button>
-                            <Button type="primary" htmlType="submit">
+ 
+                    <div style={{ textAlign: "right", marginTop: 30, paddingBottom: 10 }}>
+                        <Space size="middle">
+                            <Button size="large" onClick={onCloseModal} style={{ width: 120 }}>{t.cancel}</Button>
+                            <Button size="large" type="primary" htmlType="submit" style={{ width: 150, fontWeight: 'bold' }}>
                                 {form.getFieldValue("id") ? t.edit : t.save}
                             </Button>
                         </Space>

@@ -1,18 +1,15 @@
 import React from "react";
-import "./fonts.css";
 
-const PrintKitchenTicket = React.forwardRef((props, ref) => {
-  const {
-    objSummary = {
-      order_no: null,
-      order_date: null,
-      table_no: null,
-      order_type: "take_away",
-      remark: null,
-    },
-    cart_list = [],
-  } = props;
-
+const PrintKitchenTicket = ({
+  objSummary = {
+    order_no: null,
+    order_date: null,
+    table_no: null,
+    order_type: "take_away",
+    remark: null,
+  },
+  cart_list = [],
+}) => {
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -25,7 +22,7 @@ const PrintKitchenTicket = React.forwardRef((props, ref) => {
   };
 
   return (
-    <div ref={ref} style={{
+    <div style={{
       width: '80mm', // Thermal printer width
       maxWidth: '300px',
       margin: '0 auto',
@@ -172,6 +169,6 @@ const PrintKitchenTicket = React.forwardRef((props, ref) => {
       </div>
     </div>
   );
-});
+};
 
 export default PrintKitchenTicket;

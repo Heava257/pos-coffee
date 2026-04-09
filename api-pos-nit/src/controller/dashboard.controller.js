@@ -28,9 +28,7 @@ exports.getList = async (req, res) => {
       from_date = `${currentDate.getFullYear()}-01-01`;
     }
 
-    // Common WHERE clause builder helper
-    const getBranchFilter = () => target_branch_id ? 'AND branch_id = ?' : '';
-    const getBranchParams = () => target_branch_id ? [target_branch_id] : [];
+    const today = new Date().toISOString().split('T')[0];
 
     // 1. Top Sale Query
     const topSaleQuery = `
@@ -49,19 +47,64 @@ exports.getList = async (req, res) => {
       ORDER BY total_sale_amount DESC
       LIMIT 10
     `;
-    const topSaleParams = [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date];
-    const [Top_Sale] = await db.query(topSaleQuery, topSaleParams);
+    const [Top_Sale] = await db.query(topSaleQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
-    // 2. Customer count (Business wide or branch wide)
-    const customerQuery = `
-      SELECT COUNT(id) AS total 
-      FROM customers
-      WHERE business_id = ?
-      AND DATE(created_at) BETWEEN ? AND ?
-    `;
-    const [customer] = await db.query(customerQuery, [business_id, from_date, to_date]);
+    // 2. Today Summary (Income vs Expense)
+    const [todaySale] = await db.query(`
+      SELECT COALESCE(SUM(total_amount), 0) as total FROM orders 
+      WHERE business_id = ? ${target_branch_id ? 'AND branch_id = ?' : ''} AND DATE(created_at) = ?
+    `, [business_id, ...(target_branch_id ? [target_branch_id] : []), today]);
 
-    // 3. Expense Query
+    const [todayExpense] = await db.query(`
+      SELECT COALESCE(SUM(amount), 0) as total FROM expense 
+      WHERE business_id = ? ${target_branch_id ? 'AND branch_id = ?' : ''} AND DATE(expense_date) = ?
+    `, [business_id, ...(target_branch_id ? [target_branch_id] : []), today]);
+
+    // 3. Stock Status
+    const [prodStats] = await db.query(`
+      SELECT 
+        COUNT(DISTINCT p.id) as total_items,
+        SUM(CASE WHEN bp.stock_qty <= bp.min_stock_alert THEN 1 ELSE 0 END) as low_stock_count,
+        SUM(bp.stock_qty * bp.cost_price) as total_stock_value
+      FROM products p
+      JOIN branch_products bp ON p.id = bp.product_id
+      WHERE p.business_id = ? ${target_branch_id ? 'AND bp.branch_id = ?' : ''}
+    `, [business_id, ...(target_branch_id ? [target_branch_id] : [])]);
+
+    const [matStats] = await db.query(`
+      SELECT 
+        COUNT(id) as total_items,
+        SUM(CASE WHEN qty <= min_stock THEN 1 ELSE 0 END) as low_stock_count,
+        SUM(qty * price) as total_stock_value
+      FROM raw_material
+      WHERE business_id = ? ${target_branch_id ? 'AND branch_id = ?' : ''} AND status = 1
+    `, [business_id, ...(target_branch_id ? [target_branch_id] : [])]);
+
+    const [lowProdList] = await db.query(`
+      SELECT p.name, bp.stock_qty as qty, 'product' as type
+      FROM products p
+      JOIN branch_products bp ON p.id = bp.product_id
+      WHERE p.business_id = ? AND bp.stock_qty <= bp.min_stock_alert
+      ${target_branch_id ? 'AND bp.branch_id = ?' : ''}
+      ORDER BY bp.stock_qty ASC LIMIT 5
+    `, [business_id, ...(target_branch_id ? [target_branch_id] : [])]);
+
+    const [lowMatList] = await db.query(`
+      SELECT name, qty, 'material' as type
+      FROM raw_material
+      WHERE business_id = ? AND qty <= min_stock AND status = 1
+      ${target_branch_id ? 'AND branch_id = ?' : ''}
+      ORDER BY qty ASC LIMIT 5
+    `, [business_id, ...(target_branch_id ? [target_branch_id] : [])]);
+
+    const combinedStats = {
+      total_items: (prodStats[0]?.total_items || 0) + (matStats[0]?.total_items || 0),
+      low_stock_count: (prodStats[0]?.low_stock_count || 0) + (matStats[0]?.low_stock_count || 0),
+      total_stock_value: (prodStats[0]?.total_stock_value || 0) + (matStats[0]?.total_stock_value || 0)
+    };
+    const combinedLowList = [...lowProdList, ...lowMatList].sort((a, b) => a.qty - b.qty).slice(0, 5);
+
+    // 4. Expense Query (Range)
     const expenseQuery = `
       SELECT 
         COALESCE(SUM(amount), 0) AS total, 
@@ -71,10 +114,9 @@ exports.getList = async (req, res) => {
       ${target_branch_id ? 'AND branch_id = ?' : ''}
       AND DATE(expense_date) BETWEEN ? AND ?
     `;
-    const expenseParams = [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date];
-    const [expanse] = await db.query(expenseQuery, expenseParams);
+    const [expanse] = await db.query(expenseQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
-    // 4. Sales data
+    // 5. Sales data (Range)
     const saleQuery = `
       SELECT 
         COALESCE(SUM(total_amount), 0) AS total_amount, 
@@ -84,10 +126,9 @@ exports.getList = async (req, res) => {
       ${target_branch_id ? 'AND branch_id = ?' : ''}
       AND DATE(created_at) BETWEEN ? AND ?
     `;
-    const saleParams = [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date];
-    const [sale] = await db.query(saleQuery, saleParams);
+    const [sale] = await db.query(saleQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
-    // 5. Sales summary by month
+    // 6. Sales summary by month
     const saleSummaryQuery = `
       SELECT 
         DATE_FORMAT(created_at, '%M') AS title, 
@@ -99,9 +140,9 @@ exports.getList = async (req, res) => {
       GROUP BY DATE_FORMAT(created_at, '%M'), DATE_FORMAT(created_at, '%Y-%m')
       ORDER BY DATE_FORMAT(created_at, '%Y-%m')
     `;
-    const [Sale_Summary_By_Month] = await db.query(saleSummaryQuery, saleParams);
+    const [Sale_Summary_By_Month] = await db.query(saleSummaryQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
-    // 6. Expense summary by month
+    // 7. Expense summary by month
     const expenseSummaryQuery = `
       SELECT 
         DATE_FORMAT(expense_date, '%M') AS title, 
@@ -113,65 +154,44 @@ exports.getList = async (req, res) => {
       GROUP BY DATE_FORMAT(expense_date, '%M'), DATE_FORMAT(expense_date, '%Y-%m')
       ORDER BY DATE_FORMAT(expense_date, '%Y-%m')
     `;
-    const [Expense_Summary_By_Month] = await db.query(expenseSummaryQuery, expenseParams);
+    const [Expense_Summary_By_Month] = await db.query(expenseSummaryQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
-    // 7. Recent Orders (Live Stream)
+    // 8. Recent Orders
     const recentOrdersQuery = `
-      SELECT 
-        o.id, 
-        o.total_amount, 
-        o.created_at,
-        b.name as branch_name
-      FROM orders o
-      JOIN branches b ON o.branch_id = b.id
-      WHERE o.business_id = ?
-      ${target_branch_id ? 'AND o.branch_id = ?' : ''}
-      ORDER BY o.created_at DESC
-      LIMIT 10
+      SELECT o.id, o.total_amount, o.created_at, b.name as branch_name
+      FROM orders o JOIN branches b ON o.branch_id = b.id
+      WHERE o.business_id = ? ${target_branch_id ? 'AND o.branch_id = ?' : ''}
+      ORDER BY o.created_at DESC LIMIT 10
     `;
     const [recentOrders] = await db.query(recentOrdersQuery, [business_id, ...(target_branch_id ? [target_branch_id] : [])]);
 
     const totalSale = Number(sale[0].total_amount) || 0;
     const totalOrder = Number(sale[0].total_order) || 0;
     const totalExpense = Number(expanse[0].total) || 0;
-    const avgTransaction = totalOrder > 0 ? (totalSale / totalOrder).toFixed(2) : 0;
     const netProfit = totalSale - totalExpense;
-    const profitMargin = totalSale > 0 ? ((netProfit / totalSale) * 100).toFixed(1) : 0;
-
-    const dashboard = [
-      {
-        title: "Customer Overview",
-        Summary: {
-          "Total": customer[0].total,
-          "Period": `${from_date} - ${to_date}`
-        }
-      },
-      {
-        title: "Financial Summary",
-        Summary: {
-          "Total Sales": `$${totalSale.toLocaleString()}`,
-          "Total Expenses": `$${totalExpense.toLocaleString()}`,
-          "Net Profit": `$${netProfit.toLocaleString()}`
-        }
-      },
-      {
-        title: "Sales Performance",
-        Summary: {
-          "Order Count": totalOrder,
-          "Avg Transaction": `$${avgTransaction}`,
-          "Profit Margin": `${profitMargin}%`
-        }
-      }
-    ];
 
     res.json({
-      dashboard,
+      today_summary: {
+        income: Number(todaySale[0].total),
+        expense: Number(todayExpense[0].total)
+      },
+      stock_summary: {
+        ...combinedStats,
+        low_stock_list: combinedLowList
+      },
+      range_summary: {
+        total_sale: totalSale,
+        total_expense: totalExpense,
+        net_profit: netProfit,
+        order_count: totalOrder
+      },
       Top_Sale,
       Sale_Summary_By_Month,
       Expense_Summary_By_Month,
       recentOrders,
       success: true,
-      scope: target_branch_id ? 'branch' : 'business'
+      from_date,
+      to_date
     });
 
   } catch (error) {

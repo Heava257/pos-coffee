@@ -3,7 +3,7 @@ import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space,
     Typography, DatePicker, Select, InputNumber,
-    Badge, Tooltip, Empty
+    Badge, Tooltip, Empty, Statistic, Divider
 } from "antd";
 import {
     PlusOutlined,
@@ -14,7 +14,9 @@ import {
     CalendarOutlined,
     FilterOutlined,
     FileTextOutlined,
-    TagOutlined
+    TagOutlined,
+    PieChartOutlined,
+    AccountBookOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import moment from "moment";
@@ -23,15 +25,25 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
+const COLORS = {
+    primary: "#006241",    // Starbucks Green
+    secondary: "#1e3932",  // Deep Green
+    cogs: "#cf1322",       // Red for COGS
+    opex: "#0958d9",       // Blue for OpEx
+    admin: "#722ed1",      // Purple for Admin
+    lightBg: "#f4f1eb",
+};
+
 const ExpensePage = () => {
-    const [list, setList] = useState([]);
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [loading, setLoading] = useState(false);
     const [visible, setVisible] = useState(false);
     const [types, setTypes] = useState([]);
     const [form] = Form.useForm();
     const [editId, setEditId] = useState(null);
     const [searchText, setSearchText] = useState("");
-    const [dateRange, setDateRange] = useState([null, null]);
+    const [dateRange, setDateRange] = useState([moment().startOf('month'), moment().endOf('month')]);
 
     useEffect(() => {
         getTypes();
@@ -41,9 +53,7 @@ const ExpensePage = () => {
     const getTypes = async () => {
         try {
             const res = await request("expense/type", "get");
-            if (res && res.list) {
-                setTypes(res.list);
-            }
+            if (res && res.list) setTypes(res.list);
         } catch (error) {
             console.error("Failed to fetch expense types");
         }
@@ -53,17 +63,11 @@ const ExpensePage = () => {
         setLoading(true);
         try {
             let url = "expense";
-            const params = [];
             if (dateRange[0] && dateRange[1]) {
-                params.push(`from_date=${dateRange[0].format("YYYY-MM-DD")}`);
-                params.push(`to_date=${dateRange[1].format("YYYY-MM-DD")}`);
+                url += `?from_date=${dateRange[0].format("YYYY-MM-DD")}&to_date=${dateRange[1].format("YYYY-MM-DD")}`;
             }
-            if (params.length > 0) url += "?" + params.join("&");
-
             const res = await request(url, "get");
-            if (res && res.list) {
-                setList(res.list);
-            }
+            if (res && res.list) setList(res.list);
         } catch (error) {
             message.error("Failed to fetch expenses");
         } finally {
@@ -82,32 +86,30 @@ const ExpensePage = () => {
 
             const res = await request("expense", method, payload);
             if (res) {
-                message.success(res.message || `Expense ${editId ? 'updated' : 'recorded'} successfully`);
+                message.success(res.message);
                 setVisible(false);
                 form.resetFields();
                 setEditId(null);
                 getList();
             }
         } catch (error) {
-            message.error(error.message || "Operation failed");
+            message.error("Operation failed");
         }
     };
 
     const onClickEdit = (item) => {
         setEditId(item.id);
         form.setFieldsValue({
-            expense_type_id: item.expense_type_id,
-            amount: item.amount,
-            expense_date: moment(item.expense_date),
-            description: item.description
+            ...item,
+            expense_date: moment(item.expense_date)
         });
         setVisible(true);
     };
 
     const onClickDelete = (id) => {
         Modal.confirm({
-            title: "Remove Expense Record?",
-            content: "This action cannot be undone.",
+            title: "Delete Expense?",
+            content: "This will remove the record from financial reports.",
             okText: "Delete",
             okType: "danger",
             onOk: async () => {
@@ -124,43 +126,47 @@ const ExpensePage = () => {
         {
             title: "Date",
             dataIndex: "expense_date",
-            key: "expense_date",
+            width: 150,
             render: (date) => (
                 <Space>
-                    <CalendarOutlined style={{ color: '#1e4a2d' }} />
-                    <Text>{moment(date).format("DD MMM YYYY")}</Text>
+                    <CalendarOutlined style={{ color: COLORS.primary }} />
+                    <Text strong>{moment(date).format("DD MMM YYYY")}</Text>
                 </Space>
             )
         },
         {
-            title: "Type",
+            title: "Classification",
+            dataIndex: "category_class",
+            width: 150,
+            render: (v) => {
+                let color = "blue";
+                if (v === 'COGS') color = "red";
+                if (v === 'Administrative') color = "purple";
+                return <Tag color={color} style={{ borderRadius: 10, fontWeight: 700 }}>{v?.toUpperCase()}</Tag>
+            }
+        },
+        {
+            title: t.categories,
             dataIndex: "type_name",
-            key: "type_name",
-            render: (text) => (
-                <Tag color="blue" icon={<TagOutlined />}>{text}</Tag>
-            )
+            render: (text) => <Text style={{ fontWeight: 600 }}>{text}</Text>
         },
         {
-            title: "Description",
+            title: t.description,
             dataIndex: "description",
-            key: "description",
             ellipsis: true,
-            render: (text) => text || "-"
         },
         {
-            title: "Amount",
+            title: t.amount,
             dataIndex: "amount",
-            key: "amount",
             align: 'right',
             render: (amount) => (
-                <Text strong style={{ color: '#cf1322', fontSize: '15px' }}>
-                    ${parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                <Text strong style={{ color: COLORS.secondary, fontSize: '16px' }}>
+                    ${parseFloat(amount).toFixed(2)}
                 </Text>
             )
         },
         {
-            title: "Actions",
-            key: "actions",
+            title: t.action,
             align: 'right',
             render: (record) => (
                 <Space>
@@ -176,29 +182,26 @@ const ExpensePage = () => {
         (item.description && item.description.toLowerCase().includes(searchText.toLowerCase()))
     );
 
-    const totalExpense = filteredList.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+    const totalCOGS = filteredList.filter(i => i.category_class === 'COGS').reduce((s, i) => s + parseFloat(i.amount), 0);
+    const totalOpEx = filteredList.filter(i => i.category_class === 'Operational').reduce((s, i) => s + parseFloat(i.amount), 0);
+    const totalAll = filteredList.reduce((s, i) => s + parseFloat(i.amount), 0);
 
     return (
-        <div style={{ padding: '24px', background: '#f4f1eb', minHeight: '100vh' }}>
-            <div style={{
-                marginBottom: '24px',
-                background: '#fff',
-                padding: '24px',
-                borderRadius: '16px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
-            }}>
+        <div style={{ padding: '24px', background: COLORS.lightBg, minHeight: '100vh' }}>
+            <Card bordered={false} style={{ borderRadius: 20, marginBottom: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                 <Row justify="space-between" align="middle">
                     <Col>
-                        <Title level={2} style={{ margin: 0, color: '#1e4a2d', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <DollarOutlined /> Expense Tracker
+                        <Title level={2} style={{ margin: 0, color: COLORS.secondary, display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <AccountBookOutlined /> Professional Expense Ledger
                         </Title>
-                        <Text type="secondary">Monitor and manage your operational costs</Text>
+                        <Text type="secondary">Categorize operational costs vs. cost of goods sold (COGS)</Text>
                     </Col>
                     <Col>
                         <Space size="middle">
                             <RangePicker
+                                value={dateRange}
                                 onChange={(dates) => setDateRange(dates || [null, null])}
-                                style={{ borderRadius: '8px' }}
+                                style={{ borderRadius: 8 }}
                             />
                             <Button icon={<FilterOutlined />} onClick={getList}>Apply Filter</Button>
                             <Button
@@ -207,122 +210,104 @@ const ExpensePage = () => {
                                 onClick={() => {
                                     setEditId(null);
                                     form.resetFields();
-                                    form.setFieldsValue({ expense_date: moment() });
+                                    form.setFieldsValue({ expense_date: moment(), category_class: 'Operational' });
                                     setVisible(true);
                                 }}
-                                style={{
-                                    background: '#cf1322',
-                                    borderColor: '#cf1322',
-                                    height: '40px',
-                                    borderRadius: '8px'
-                                }}
+                                style={{ background: COLORS.primary, borderColor: COLORS.primary, height: 40, borderRadius: 10, fontWeight: 700 }}
                             >
-                                Record Expense
+                                {t.add_expense_btn}
                             </Button>
                         </Space>
                     </Col>
                 </Row>
-            </div>
+            </Card>
 
-            <Row gutter={24} style={{ marginBottom: '24px' }}>
-                <Col span={6}>
-                    <Card borderRadius="12px" style={{ border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-                        <Statistic
-                            title="Total Selected period"
-                            value={totalExpense}
-                            prefix="$"
-                            valueStyle={{ color: '#cf1322', fontWeight: 700 }}
-                        />
+            <Row gutter={24} style={{ marginBottom: 24 }}>
+                <Col span={8}>
+                    <Card style={{ borderRadius: 15, borderLeft: `6px solid ${COLORS.cogs}` }}>
+                        <Statistic title={t.cogs} value={totalCOGS} prefix="$" valueStyle={{ color: COLORS.cogs, fontWeight: 800 }} />
                     </Card>
                 </Col>
-                <Col span={18}>
-                    <Input
-                        prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                        placeholder="Search by type or description..."
-                        onChange={(e) => setSearchText(e.target.value)}
-                        style={{ height: '45px', borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}
-                    />
+                <Col span={8}>
+                    <Card style={{ borderRadius: 15, borderLeft: `6px solid ${COLORS.opex}` }}>
+                        <Statistic title={t.operational} value={totalOpEx} prefix="$" valueStyle={{ color: COLORS.opex, fontWeight: 800 }} />
+                    </Card>
+                </Col>
+                <Col span={8}>
+                    <Card style={{ borderRadius: 15, borderLeft: `6px solid ${COLORS.secondary}`, background: COLORS.secondary }}>
+                        <Statistic title={<span style={{ color: 'rgba(255,255,255,0.7)' }}>{t.total_expenses}</span>} value={totalAll} prefix="$" valueStyle={{ color: '#fff', fontWeight: 900 }} />
+                    </Card>
                 </Col>
             </Row>
 
-            <Card
-                style={{ borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: 'none' }}
-                bodyStyle={{ padding: 0 }}
-            >
+            <div style={{ marginBottom: 20 }}>
+                <Input
+                    prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                    placeholder={t.search}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    style={{ height: 50, borderRadius: 15, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}
+                />
+            </div>
+
+            <Card style={{ borderRadius: 20, overflow: 'hidden', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }} bodyStyle={{ padding: 0 }}>
                 <Table
                     columns={columns}
                     dataSource={filteredList}
                     rowKey="id"
                     loading={loading}
-                    pagination={{ pageSize: 10 }}
+                    pagination={{ pageSize: 12 }}
                 />
             </Card>
 
             <Modal
-                title={<Title level={4} style={{ margin: 0 }}><FileTextOutlined /> {editId ? "Edit Expense Report" : "Record New Expense"}</Title>}
+                title={<Title level={4} style={{ margin: 0 }}><PlusOutlined /> {editId ? "Update Expense Record" : "New Financial Entry"}</Title>}
                 open={visible}
                 onCancel={() => setVisible(false)}
                 onOk={() => form.submit()}
-                okText="Save Record"
-                width={500}
+                width={550}
+                centered
+                styles={{ content: { borderRadius: 24, padding: 30 } }}
             >
-                <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ expense_date: moment() }}>
+                <Form form={form} layout="vertical" onFinish={onFinish}>
                     <Row gutter={16}>
-                        <Col span={14}>
-                            <Form.Item
-                                name="expense_type_id"
-                                label="Expense Category"
-                                rules={[{ required: true, message: "Select a category" }]}
-                            >
-                                <Select placeholder="Pick a type" size="large">
-                                    {types.map(t => <Option key={t.id} value={t.id}>{t.name}</Option>)}
+                        <Col span={12}>
+                            <Form.Item name="category_class" label="Accounting Class" rules={[{ required: true }]}>
+                                <Select size="large">
+                                    <Option value="COGS">📦 COGS (Raw Materials)</Option>
+                                    <Option value="Operational">🏢 Operational (OpEx)</Option>
+                                    <Option value="Administrative">⚖️ Administrative</Option>
                                 </Select>
                             </Form.Item>
                         </Col>
-                        <Col span={10}>
-                            <Form.Item
-                                name="expense_date"
-                                label="Date"
-                                rules={[{ required: true }]}
-                            >
+                        <Col span={12}>
+                            <Form.Item name="expense_date" label="Date" rules={[{ required: true }]}>
                                 <DatePicker style={{ width: '100%' }} size="large" />
                             </Form.Item>
                         </Col>
                     </Row>
 
-                    <Form.Item
-                        name="amount"
-                        label="Amount (USD)"
-                        rules={[{ required: true, message: "Enter amount" }]}
-                    >
-                        <InputNumber
-                            style={{ width: '100%' }}
-                            precision={2}
-                            prefix="$"
-                            size="large"
-                            placeholder="0.00"
-                        />
-                    </Form.Item>
+                    <Row gutter={16}>
+                        <Col span={14}>
+                            <Form.Item name="expense_type_id" label="Expense Category" rules={[{ required: true }]}>
+                                <Select placeholder="Pick category" size="large">
+                                    {types.map(t => <Option key={t.id} value={t.id}>{t.name}</Option>)}
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={10}>
+                            <Form.Item name="amount" label="Amount (USD)" rules={[{ required: true }]}>
+                                <InputNumber style={{ width: '100%' }} precision={2} prefix="$" size="large" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
-                    <Form.Item
-                        name="description"
-                        label="Notes / Description"
-                    >
-                        <Input.TextArea placeholder="What was this for?" rows={3} />
+                    <Form.Item name="description" label="Nature of Expense / Description">
+                        <Input.TextArea placeholder="Describe the transaction..." rows={3} style={{ borderRadius: 12 }} />
                     </Form.Item>
                 </Form>
             </Modal>
         </div>
     );
 };
-
-const Statistic = ({ title, value, prefix, valueStyle }) => (
-    <div>
-        <Text type="secondary" style={{ fontSize: '13px' }}>{title}</Text>
-        <div style={{ fontSize: '24px', marginTop: '4px', ...valueStyle }}>
-            {prefix}{value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-        </div>
-    </div>
-);
 
 export default ExpensePage;

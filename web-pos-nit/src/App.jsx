@@ -44,6 +44,7 @@ import KdsPage from "./page/pos/KdsPage";
 import RecipePage from "./page/recipe/RecipePage";
 import ModuleConfigPage from "./page/modular_package/ModuleConfigPage";
 import SystemModulePage from "./page/modular_package/SystemModulePage";
+import StockTransferPage from "./page/stock/StockTransferPage";
 import { getProfile } from "./store/profile.store";
 
 const RootRedirect = () => {
@@ -106,6 +107,7 @@ function App() {
             <Route path="/raw_material" element={<RawMaterialPage />} />
             <Route path="/purchase" element={<PurchasePage />} />
             <Route path="/stock" element={<StockPage />} />
+            <Route path="/stock-transfer" element={<StockTransferPage />} />
             <Route path="/recipe" element={<RecipePage />} />
             <Route path="/kds" element={<KdsPage />} />
             <Route path="*" element={<Navigate to="/customer" replace />} />

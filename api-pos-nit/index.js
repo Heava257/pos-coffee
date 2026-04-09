@@ -2,6 +2,9 @@
 require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
+const telegramPolling = require("./src/service/telegramPolling.service");
+telegramPolling.start();
+
 const app = express();
 
 app.use(express.json({ limit: "50mb" }));
@@ -53,11 +56,13 @@ require("./src/route/payment.route")(app);
 require("./src/route/stock.route")(app);
 require("./src/route/table.route")(app);
 require("./src/route/settings.route")(app);
+require("./src/route/telegram.route")(app);
 require("./src/route/favorite.route")(app);
 require("./src/route/shift.route")(app);
 require("./src/route/business_category.route")(app);
 require("./src/route/modular_package.route")(app);
 require("./src/route/system_module.route")(app);
+require("./src/route/stock_transfer.route")(app);
 
 app.use((err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
@@ -201,19 +206,31 @@ app.listen(PORT, async () => {
   }
 
   // Migration Fix: Ensure businesses table has all setting columns
-  try {
-    await db.query("ALTER TABLE businesses ADD COLUMN address TEXT");
-    await db.query("ALTER TABLE businesses ADD COLUMN website VARCHAR(255)");
-    await db.query("ALTER TABLE businesses ADD COLUMN tax_percent DECIMAL(10, 2) DEFAULT 0");
-    await db.query("ALTER TABLE businesses ADD COLUMN service_charge DECIMAL(10, 2) DEFAULT 0");
-    await db.query("ALTER TABLE businesses ADD COLUMN kh_exchange_rate INT DEFAULT 4000");
-    await db.query("ALTER TABLE businesses ADD COLUMN currency_symbol VARCHAR(10) DEFAULT '$'");
-    await db.query("ALTER TABLE businesses ADD COLUMN telegram_link VARCHAR(255)");
-    await db.query("ALTER TABLE businesses ADD COLUMN facebook_link VARCHAR(255)");
-    await db.query("ALTER TABLE businesses ADD COLUMN plan_type VARCHAR(50) DEFAULT 'basic'");
-    await db.query("ALTER TABLE businesses ADD COLUMN active_modules TEXT");
-    console.log("Migration: 'businesses' table settings and modular columns added");
-  } catch (err) { }
+  const bizCols = [
+    { name: "address", type: "TEXT" },
+    { name: "website", type: "VARCHAR(255)" },
+    { name: "tax_percent", type: "DECIMAL(10, 2) DEFAULT 0" },
+    { name: "service_charge", type: "DECIMAL(10, 2) DEFAULT 0" },
+    { name: "kh_exchange_rate", type: "INT DEFAULT 4000" },
+    { name: "currency_symbol", type: "VARCHAR(10) DEFAULT '$'" },
+    { name: "telegram_link", type: "VARCHAR(255)" },
+    { name: "facebook_link", type: "VARCHAR(255)" },
+    { name: "telegram_token", type: "VARCHAR(255) DEFAULT NULL" },
+    { name: "telegram_chat_id", type: "VARCHAR(50) DEFAULT NULL" },
+    { name: "plan_type", type: "VARCHAR(50) DEFAULT 'basic'" },
+    { name: "active_modules", type: "TEXT" }
+  ];
+
+  for (const col of bizCols) {
+    try {
+      await db.query(`ALTER TABLE businesses ADD COLUMN ${col.name} ${col.type}`);
+      console.log(`Migration: Added 'businesses.${col.name}'`);
+    } catch (err) {
+      if (!err.message.includes("Duplicate")) {
+        console.error(`Migration Error (businesses.${col.name}):`, err.message);
+      }
+    }
+  }
 
   // Migration Fix: Add payment fields to branches table (Safe Check)
   try {

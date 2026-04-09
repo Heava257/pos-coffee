@@ -12,6 +12,7 @@ exports.create = async (req, res) => {
             table_no,
             sub_total,
             total_amount,
+            total_paid,
             payment_method,
             order_type,
             cart_items,
@@ -20,7 +21,7 @@ exports.create = async (req, res) => {
         } = req.body;
 
         console.log("Creating new order:", {
-            business_id, branch_id, user_id, customer_name, table_no, total_amount, itemsCount: cart_items?.length, shift_id
+            business_id, branch_id, user_id, customer_name, table_no, total_amount, total_paid, itemsCount: cart_items?.length, shift_id
         });
 
         // Default status: if guest ordered without paying yet -> 'ordered' or 'unpaid'
@@ -29,8 +30,20 @@ exports.create = async (req, res) => {
         if (payment_method === 'Cash' && !user_id) order_status = 'unpaid';
 
         // A. Insert into Orders Table (Dynamic to handle null user_id/shift_id)
-        const fields = ["business_id", "branch_id", "customer_name", "table_no", "sub_total", "total_amount", "payment_method", "order_type", "status", "kitchen_status"];
-        const values = [business_id, branch_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, order_status, 'pending'];
+        const fields = ["business_id", "branch_id", "customer_name", "table_no", "sub_total", "total_amount", "total_paid", "payment_method", "order_type", "status", "kitchen_status"];
+        const values = [
+            business_id, 
+            branch_id, 
+            customer_name, 
+            table_no, 
+            (Number(sub_total) || 0), 
+            (Number(total_amount) || 0), 
+            (Number(total_paid || total_amount) || 0), 
+            payment_method, 
+            order_type, 
+            order_status, 
+            'pending'
+        ];
 
         if (user_id) {
             fields.push("user_id");
@@ -58,27 +71,95 @@ exports.create = async (req, res) => {
                 [order_id, item.product_id, itemQty, itemPrice, item.note || ""]
             );
 
-            // 2. [Optional] Fetch Recipe if exists (Commented out until recipes table is created)
-            /*
-            const [recipe] = await conn.query(
-                "SELECT raw_material_id, quantity FROM recipes WHERE product_id = ?",
-                [item.product_id]
-            );
+            // 2. 🚀 AUTOMATED STOCK DEDUCTION (Recipe, Add-on, Size, & Waste Aware)
+            const deductStock = async (productId, qtyMultiplier, itemName, sizeLabel = null) => {
+                const [recipe] = await conn.query(
+                    "SELECT raw_material_id, qty as quantity, waste_factor FROM recipe_detail WHERE product_id = ? AND business_id = ? AND (size_label = ? OR size_label IS NULL OR size_label = '')",
+                    [productId, business_id, sizeLabel]
+                );
 
-            if (recipe.length > 0) {
-                // Deduct materials
-                for (const ingredient of recipe) {
+                if (recipe.length > 0) {
+                    // A. RECIPE-BASED DEDUCTION (e.g. Coffee Beans, Milk)
+                    for (const ingredient of recipe) {
+                        const baseQty = ingredient.quantity * qtyMultiplier;
+                        const waste = ingredient.waste_factor || 0;
+                        const deductQty = baseQty * (1 + waste / 100);
+
+                        const [rm] = await conn.query("SELECT name, qty FROM raw_material WHERE id = ?", [ingredient.raw_material_id]);
+                        const old_qty = rm[0]?.qty || 0;
+                        const new_qty = old_qty - deductQty;
+
+                        await conn.query("UPDATE raw_material SET qty = qty - ? WHERE id = ?", [deductQty, ingredient.raw_material_id]);
+                        await conn.query(`
+                            INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
+                            VALUES (?, ?, 'raw_material', ?, ?, ?, ?, 'sale', ?, ?, ?)
+                        `, [business_id, branch_id, ingredient.raw_material_id, old_qty, new_qty, -deductQty, `ORD-${order_id}`, `Sale: ${itemName}${sizeLabel?' ('+sizeLabel+')':''}`, user_id]);
+                    }
+                } else {
+                    // B. DIRECT PRODUCT DEDUCTION (e.g. Bottled Water, Cake)
+                    const [bp] = await conn.query("SELECT stock_qty FROM branch_products WHERE product_id = ? AND branch_id = ?", [productId, branch_id]);
+                    const old_qty = bp[0]?.stock_qty || 0;
+                    const new_qty = old_qty - qtyMultiplier;
+
                     await conn.query(
-                        "UPDATE raw_materials SET quantity = quantity - ? WHERE id = ?",
-                        [ingredient.quantity * item.qty, ingredient.raw_material_id]
+                        "UPDATE branch_products SET stock_qty = stock_qty - ? WHERE product_id = ? AND branch_id = ?",
+                        [qtyMultiplier, productId, branch_id]
                     );
+
+                    await conn.query(`
+                        INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
+                        VALUES (?, ?, 'product', ?, ?, ?, ?, 'sale', ?, ?, ?)
+                    `, [business_id, branch_id, productId, old_qty, new_qty, -qtyMultiplier, `ORD-${order_id}`, `Sale: ${itemName}`, user_id]);
+                }
+            };
+
+            // Deduct Main Product
+            const sizeLabel = item.options?.size || null;
+            await deductStock(item.product_id, itemQty, item.note || 'Regular', sizeLabel);
+
+            // 🌟 Deduct Add-ons (Starbucks Model: each addon can have its own recipe)
+            if (item.options && item.options.addons && Array.isArray(item.options.addons)) {
+                for (const addonName of item.options.addons) {
+                    const [addonProducts] = await conn.query("SELECT id FROM products WHERE name = ? AND business_id = ?", [addonName, business_id]);
+                    if (addonProducts.length > 0) {
+                        await deductStock(addonProducts[0].id, itemQty, `Addon: ${addonName}`);
+                    }
                 }
             }
-            */
         }
 
         await conn.commit();
         res.json({ success: true, message: "Order Placed Successfully!", order_id });
+
+        // --- ASYNC TELEGRAM NOTIFICATION ---
+        try {
+            const { sendTelegramMessage } = require("../util/helper");
+            const itemsText = cart_items.map(item => `• ${item.qty} x ${item.name}${item.options?.size ? ` (${item.options.size})` : ""}`).join("\n");
+            const msg = `🧾 <b>NEW ORDER #${order_id}</b>\n` +
+                        `--------------------------\n` +
+                        `👤 <b>Customer:</b> ${customer_name || 'Guest'}\n` +
+                        `📍 <b>Type:</b> ${order_type === 'dine_in' ? `Table ${table_no}` : 'Take Away'}\n` +
+                        `💵 <b>Total:</b> $${Number(total_amount).toFixed(2)}\n` +
+                        `💳 <b>Payment:</b> ${payment_method}\n` +
+                        `--------------------------\n` +
+                        `🛒 <b>ITEMS:</b>\n${itemsText}\n` +
+                        `--------------------------\n` +
+                        `📅 ${new Date().toLocaleString()}`;
+            const keyboard = {
+                inline_keyboard: [
+                  [
+                    { text: "📊 Today Sales", callback_data: "report_today_sale" },
+                    { text: "💸 Today Expense", callback_data: "report_today_expense" }
+                  ],
+                  [
+                    { text: "⚠️ Stock Alert", callback_data: "report_stock_alert" }
+                  ]
+                ]
+            };
+            sendTelegramMessage(business_id, msg, [], keyboard);
+        } catch (tgErr) {
+            console.error("Telegram Notification Fail:", tgErr.message);
+        }
 
     } catch (error) {
         await conn.rollback();

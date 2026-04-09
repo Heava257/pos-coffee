@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { request } from "../../util/helper";
 import { useNavigate } from "react-router-dom";
-import { Card, Row, Col, Typography, Select, Table, Badge, Spin, Button, Tabs, Dropdown, Menu } from "antd";
+import { Card, Row, Col, Typography, Select, Table, Badge, Spin, Button, Space, DatePicker, Divider, Tooltip as AntTooltip, Tag } from "antd";
 import {
   MoreOutlined,
   SearchOutlined,
-  BellOutlined,
-  WarningFilled,
-  StarFilled,
   SyncOutlined,
-  CheckSquareFilled,
-  BarChartOutlined
+  BarChartOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  InfoCircleOutlined,
+  CalendarOutlined,
+  WarningOutlined
 } from "@ant-design/icons";
 import {
   LineChart,
@@ -20,97 +21,68 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis
 } from "recharts";
-import moment from "moment";
+import dayjs from "dayjs";
 import { useLanguage, translations } from "../../store/language.store";
 import { useProfileStore } from "../../store/profileStore";
-import { MdOutlineTableChart } from "react-icons/md";
-import { DollarSign, Activity, ShoppingBag, Loader, AlertTriangle, TrendingUp } from "lucide-react";
-import SuperAdminDashboard from "./SuperAdminDashboard";
+import { DollarSign, ShoppingBag, TrendingUp, Wallet, Package, AlertCircle } from "lucide-react";
 
 const { Title, Text } = Typography;
-const { Option } = Select;
+const { RangePicker } = DatePicker;
 
 function HomePage() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
   const profile = useProfileStore(s => s.profile);
-  const userId = profile?.id || profile?.user_id;
   const isPlatformAdmin = profile?.business_id === 1;
 
-  const t = translations[lang];
   const [isLoading, setIsLoading] = useState(false);
-  const [dbStats, setDbStats] = useState({ revenue: 0, orders: 0, customers: 0, performance: 'Good 2/24', netProfit: 0 });
+  const [dates, setDates] = useState([dayjs().startOf('month'), dayjs()]);
 
+  // Data States
+  const [todaySummary, setTodaySummary] = useState({ income: 0, expense: 0 });
+  const [stockSummary, setStockSummary] = useState({ total_items: 0, low_stock_count: 0, total_stock_value: 0, low_stock_list: [] });
+  const [rangeSummary, setRangeSummary] = useState({ total_sale: 0, total_expense: 0, net_profit: 0, order_count: 0 });
   const [salesData, setSalesData] = useState([]);
-  const [performanceData, setPerformanceData] = useState([]);
   const [transactionData, setTransactionData] = useState([]);
 
   useEffect(() => {
-    if (userId && !isPlatformAdmin) fetchAllData();
-  }, [userId, isPlatformAdmin]);
+    if (!isPlatformAdmin) {
+      fetchAllData();
+    }
+  }, [dates, isPlatformAdmin]);
 
   if (isPlatformAdmin) {
+    const SuperAdminDashboard = require("./SuperAdminDashboard").default;
     return <SuperAdminDashboard />;
   }
 
   const fetchAllData = async () => {
     setIsLoading(true);
     try {
-      const res = await request('dashboard', "get");
+      const params = {
+        from_date: dates[0].format("YYYY-MM-DD"),
+        to_date: dates[1].format("YYYY-MM-DD")
+      };
+
+      const res = await request('dashboard', "get", params);
       if (res && res.success) {
-        let totalRev = 0;
-        let totalOrders = 0;
-        let totalCustomers = 0;
-        let netProfit = 0;
-
-        if (res.dashboard && res.dashboard.length >= 3) {
-          totalCustomers = parseInt(res.dashboard[0].Summary["Total"] || 0);
-          totalRev = parseFloat(String(res.dashboard[1].Summary["Total Sales"]).replace(/[$,]/g, '') || 0);
-          netProfit = parseFloat(String(res.dashboard[1].Summary["Net Profit"]).replace(/[$,]/g, '') || 0);
-          totalOrders = parseInt(res.dashboard[2].Summary["Order Count"] || 0);
-        }
-
-        setDbStats({ revenue: totalRev, orders: totalOrders, customers: totalCustomers, performance: 'Good', netProfit });
-
-        if (res.Top_Sale) {
-          const maxVal = Math.max(...res.Top_Sale.map(i => Number(i.total_sale_amount)), 100);
-          const radarData = res.Top_Sale.map(item => ({
-            subject: item.product_name?.substring(0, 10),
-            A: Number(item.total_sale_amount),
-            fullMark: maxVal * 1.2
-          }));
-          setPerformanceData(radarData);
-        }
+        setTodaySummary(res.today_summary || { income: 0, expense: 0 });
+        setStockSummary(res.stock_summary || { total_items: 0, low_stock_count: 0, total_stock_value: 0, low_stock_list: [] });
+        setRangeSummary(res.range_summary || { total_sale: 0, total_expense: 0, net_profit: 0, order_count: 0 });
 
         if (res.recentOrders) {
-          const tableData = res.recentOrders.slice(0, 5).map((item, idx) => ({
-            key: idx.toString(),
-            customer: `Order #${item.id}`,
-            email: item.branch_name || '-',
-            phone: moment(item.created_at).format('YYYY-MM-DD HH:mm'),
-            items: 'View Details',
-            value: `$${Number(item.total_amount).toFixed(2)}`,
-            avatar: `https://ui-avatars.com/api/?name=${item.id}&background=1e4a2d&color=fff`
-          }));
-          setTransactionData(tableData);
+          setTransactionData(res.recentOrders.map((item, idx) => ({ ...item, key: idx })));
         }
 
         if (res.Sale_Summary_By_Month) {
           const lineData = res.Sale_Summary_By_Month.map((item) => {
             const expenseItem = res.Expense_Summary_By_Month?.find(e => e.title === item.title);
-            const expenseAmt = Number(expenseItem?.total || 0);
-            const saleAmt = Number(item.total);
             return {
               name: item.title,
-              category1: saleAmt,
-              category2: expenseAmt,
-              category3: saleAmt - expenseAmt > 0 ? saleAmt - expenseAmt : 0,
+              Sale: Number(item.total),
+              Expense: Number(expenseItem?.total || 0),
+              Profit: Number(item.total) - Number(expenseItem?.total || 0),
             };
           });
           setSalesData(lineData);
@@ -123,388 +95,243 @@ function HomePage() {
     }
   };
 
-  const columns = [
-    {
-      title: 'Customer Name',
-      dataIndex: 'customer',
-      key: 'customer',
-      render: (text, record) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src={record.avatar} alt="avatar" style={{ width: 32, height: 32, borderRadius: '50%' }} />
-          <span style={{ fontWeight: 600, color: '#1e4a2d' }}>{text}</span>
-        </div>
-      ),
-    },
-    {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-      render: text => <span style={{ color: '#6b7c6b', fontWeight: 500 }}>{text}</span>
-    },
-    {
-      title: 'Phone',
-      dataIndex: 'phone',
-      key: 'phone',
-      render: text => <span style={{ color: '#6b7c6b', fontWeight: 500 }}>{text}</span>
-    },
-    {
-      title: 'Items',
-      dataIndex: 'items',
-      key: 'items',
-      render: text => <span style={{ color: '#6b7c6b', fontWeight: 500 }}>{text}</span>
-    },
-    {
-      title: 'Value',
-      dataIndex: 'value',
-      key: 'value',
-      render: text => <span style={{ fontWeight: 700, color: '#1e4a2d' }}>{text}</span>
-    },
-    {
-      title: '',
-      key: 'action',
-      render: () => <MoreOutlined style={{ color: '#c0a060', cursor: 'pointer', fontSize: 18 }} />
-    }
-  ];
+  const formatCurrency = (val) => `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
   return (
-    <div style={{ padding: '24px 0', background: 'transparent' }}>
+    <div style={{ padding: '0 0 24px 0' }}>
 
-      {/* Top Cards Row */}
+      {/* Header & Date Filter */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div>
+          <Title level={4} style={{ margin: 0, color: '#1e4a2d', fontWeight: 800 }}>
+            Welcome back, {profile?.name || 'Partner'}!
+          </Title>
+          <Text type="secondary">Here's what's happening with your store today.</Text>
+        </div>
+        <Space direction="vertical" align="end">
+          <RangePicker
+            value={dates}
+            onChange={(v) => v && setDates(v)}
+            style={{ borderRadius: 8, border: '1px solid #e6f2eb', padding: '8px 16px' }}
+            presets={[
+              { label: 'Today', value: [dayjs(), dayjs()] },
+              { label: 'This Week', value: [dayjs().startOf('week'), dayjs()] },
+              { label: 'This Month', value: [dayjs().startOf('month'), dayjs()] },
+            ]}
+          />
+        </Space>
+      </div>
+
       <Spin spinning={isLoading}>
+        {/* Row 1: Range Summary (Filterable) */}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          {/* Total Revenue */}
-          <Col xs={24} sm={12} lg={4}>
+          <Col xs={24} sm={12} lg={6}>
+            <div className="dash-card primary">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div className="icon-box"><DollarSign size={20} color="#1e4a2d" /></div>
+                <AntTooltip title="Total Sales in selected period"><InfoCircleOutlined style={{ color: '#c0a060' }} /></AntTooltip>
+              </div>
+              <div style={{ marginTop: 16 }}>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>PERIOD REVENUE</Text>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>{formatCurrency(rangeSummary.total_sale)}</div>
+              </div>
+            </div>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
             <div className="dash-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <DollarSign size={16} color="#1e4a2d" />
-                  <span style={{ fontWeight: 700, fontSize: 12, color: '#1e4a2d' }}>Total Revenue</span>
-                </div>
-                <span style={{ fontSize: 10, color: '#c0a060', fontWeight: 700 }}>Details</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div className="icon-box expense"><Wallet size={20} color="#f5222d" /></div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>${dbStats.revenue.toLocaleString()}</span>
-                <span style={{ display: 'flex', alignItems: 'center', color: '#00c257', fontSize: 12, fontWeight: 700, background: '#e6f8ed', padding: '2px 6px', borderRadius: 4 }}>
-                  <TrendingUp size={12} style={{ marginRight: 2 }} /> 2%
-                </span>
+              <div style={{ marginTop: 16 }}>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>PERIOD EXPENSES</Text>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#f5222d' }}>{formatCurrency(rangeSummary.total_expense)}</div>
               </div>
             </div>
           </Col>
 
-          {/* On Progress 1 */}
-          <Col xs={24} sm={12} lg={5}>
+          <Col xs={24} sm={12} lg={6}>
             <div className="dash-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <Loader size={16} color="#1e4a2d" />
-                <span style={{ fontWeight: 700, fontSize: 12, color: '#1e4a2d' }}>On Progress</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div className="icon-box profit"><TrendingUp size={20} color="#52c41a" /></div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>10</span>
-                <span style={{ color: '#6b7c6b', fontSize: 12, fontWeight: 600 }}>Orders</span>
-              </div>
-            </div>
-          </Col>
-
-          {/* Performance */}
-          <Col xs={24} sm={12} lg={5}>
-            <div className="dash-card" style={{ borderTop: '4px solid #00c257' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <CheckSquareFilled style={{ color: '#00c257', fontSize: 16 }} />
-                <span style={{ fontWeight: 700, fontSize: 12, color: '#1e4a2d' }}>Performance</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>Good</span>
-                <span style={{ color: '#6b7c6b', fontSize: 12, fontWeight: 600 }}>2/24</span>
+              <div style={{ marginTop: 16 }}>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>NET PROFIT</Text>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#52c41a' }}>{formatCurrency(rangeSummary.net_profit)}</div>
               </div>
             </div>
           </Col>
 
-          {/* Today Sales */}
-          <Col xs={24} sm={12} lg={5}>
+          <Col xs={24} sm={12} lg={6}>
             <div className="dash-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <Activity size={16} color="#1e4a2d" />
-                <span style={{ fontWeight: 700, fontSize: 12, color: '#1e4a2d' }}>Today Sales</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div className="icon-box order"><ShoppingBag size={20} color="#1890ff" /></div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>{dbStats.orders}</span>
-                <span style={{ display: 'flex', alignItems: 'center', color: '#00c257', fontSize: 12, fontWeight: 700, background: '#e6f8ed', padding: '2px 6px', borderRadius: 4 }}>
-                  <TrendingUp size={12} style={{ marginRight: 2 }} /> 2%
-                </span>
+              <div style={{ marginTop: 16 }}>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>ORDERS</Text>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>{rangeSummary.order_count}</div>
               </div>
             </div>
           </Col>
-
-          {/* Tables Active (Hospitality only) */}
-          {["coffee", "restaurant"].includes(profile?.business_layout) && (
-            <Col xs={24} sm={12} lg={5}>
-              <div className="dash-card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                  <MdOutlineTableChart size={16} color="#1e4a2d" />
-                  <span style={{ fontWeight: 700, fontSize: 12, color: '#1e4a2d' }}>Tables Active</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>14</span>
-                  <span style={{ color: '#6b7c6b', fontSize: 12, fontWeight: 600 }}>/ 20</span>
-                </div>
-              </div>
-            </Col>
-          )}
         </Row>
 
-        {/* Middle Row: Sales Statistic & Score */}
+        {/* Row 2: Charts & Live Today */}
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-          {/* Sales Statistic Line Chart */}
+          {/* Main Chart */}
           <Col xs={24} lg={16}>
-            <div className="dash-card" style={{ height: '400px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <BarChartOutlined style={{ color: '#1e4a2d', fontSize: 18 }} />
-                    <span style={{ fontWeight: 900, fontSize: 16, color: '#1e4a2d' }}>Sales Statistic</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
-                      <Badge color="#fadb14" /> 
-                      {profile?.business_layout === 'pharmacy' ? 'Medicine' : (profile?.business_layout === 'retail' ? 'Grocery' : 'Tea')}
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
-                      <Badge color="#1e4a2d" /> 
-                      {profile?.business_layout === 'pharmacy' ? 'Supplements' : (profile?.business_layout === 'retail' ? 'Beverage' : 'Coffee')}
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
-                      <Badge color="#f5222d" /> 
-                      {profile?.business_layout === 'pharmacy' ? 'Healthcare' : (profile?.business_layout === 'retail' ? 'Others' : 'Snack')}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <MoreOutlined style={{ fontSize: 20, color: '#6b7c6b' }} />
-                  <SyncOutlined style={{ fontSize: 16, color: '#6b7c6b' }} />
-                  <div style={{ background: '#f4f1eb', padding: '4px', borderRadius: 20, display: 'flex' }}>
-                    <div className="filter-pill active">Day</div>
-                    <div className="filter-pill">Month</div>
-                    <div className="filter-pill">Year</div>
-                    <div className="filter-pill">All</div>
-                    <div className="filter-pill">Custom</div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-                <span style={{ color: '#c0a060', fontWeight: 800, fontSize: 18 }}>${dbStats.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-
-              <div style={{ flex: 1, minHeight: 0 }}>
+            <Card
+              title={<Space><BarChartOutlined /> Financial Trend</Space>}
+              style={{ borderRadius: 20, boxShadow: '0 4px 15px rgba(0,0,0,0.02)', border: '1px solid #f0f0f0' }}
+            >
+              <div style={{ height: 350 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={salesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={false} stroke="#f0f0f0" />
-                    <XAxis dataKey="name" axisLine={true} tickLine={false} tick={{ fill: '#c0c0c0', fontSize: 10 }} stroke="#e0e0e0" />
+                  <LineChart data={salesData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#c0c0c0', fontSize: 12 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#c0c0c0', fontSize: 12 }} />
                     <Tooltip
-                      contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
-                      itemStyle={{ fontWeight: 700 }}
+                      contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
                     />
-                    <Line type="monotone" dataKey="category1" stroke="#1e4a2d" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="category2" stroke="#fadb14" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="category3" stroke="#f5222d" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="Sale" stroke="#1e4a2d" strokeWidth={3} dot={{ r: 4, fill: '#1e4a2d' }} />
+                    <Line type="monotone" dataKey="Expense" stroke="#f5222d" strokeWidth={2} dot={false} strokeDasharray="5 5" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </Card>
           </Col>
 
-          {/* Score Widget */}
+          {/* Side Widgets: Today & Stock */}
           <Col xs={24} lg={8}>
-            <div className="dash-card" style={{ height: '400px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <StarFilled style={{ color: '#1e4a2d', fontSize: 18 }} />
-                  <span style={{ fontWeight: 900, fontSize: 16, color: '#1e4a2d' }}>Score</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {/* Today's Live Info */}
+              <Card
+                title={<Space><SyncOutlined spin={isLoading} /> Live Summary (Today)</Space>}
+                style={{ borderRadius: 20, border: '1px solid #e6f2eb', background: '#fdfdfd' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>TODAY'S INCOME</Text>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1e4a2d' }}>{formatCurrency(todaySummary.income)}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>TODAY'S EXPENSE</Text>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#f5222d' }}>{formatCurrency(todaySummary.expense)}</div>
+                  </div>
                 </div>
-                <MoreOutlined style={{ fontSize: 20, color: '#6b7c6b' }} />
-              </div>
+                <Divider style={{ margin: '12px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text strong>Net Daily Profit</Text>
+                  <Tag color={todaySummary.income - todaySummary.expense >= 0 ? "green" : "red"} style={{ borderRadius: 20 }}>
+                    {formatCurrency(todaySummary.income - todaySummary.expense)}
+                  </Tag>
+                </div>
+              </Card>
 
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-                {/* SVG for Dashed Capsule Progress */}
-                <div style={{ position: 'relative', width: '260px', height: '100px' }}>
-                  <svg width="260" height="100" viewBox="0 0 260 100">
-                    <rect x="5" y="5" width="250" height="90" rx="45" fill="none" stroke="#e6f2eb" strokeWidth="8" strokeDasharray="4 6" />
-                    <rect x="5" y="5" width="250" height="90" rx="45" fill="none" stroke="#a0d911" strokeWidth="8" strokeDasharray="4 6" strokeDashoffset="0" />
-                  </svg>
-                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontSize: 48, fontWeight: 900, color: '#1e4a2d', lineHeight: 1 }}>98</span>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: '#6b7c6b' }}>2/98 order</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#1e4a2d' }}>Complains</span>
+              {/* Stock Warning Widget */}
+              <Card
+                title={<Space><Package color="#c0a060" size={18} /> Stock Inventory</Space>}
+                style={{ borderRadius: 20 }}
+              >
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <div style={{ textAlign: 'center', background: '#f9f9f9', padding: '12px', borderRadius: 12 }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: '#1e4a2d' }}>{stockSummary.total_items}</div>
+                      <Text type="secondary" style={{ fontSize: 10 }}>TOTAL PRODUCTS</Text>
                     </div>
-                  </div>
-                </div>
-              </div>
+                  </Col>
+                  <Col span={12}>
+                    <div style={{ textAlign: 'center', background: stockSummary.low_stock_count > 0 ? '#fff1f0' : '#f9f9f9', padding: '12px', borderRadius: 12, border: stockSummary.low_stock_count > 0 ? '1px solid #ffa39e' : 'none' }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: stockSummary.low_stock_count > 0 ? '#f5222d' : '#1e4a2d' }}>
+                        {stockSummary.low_stock_count}
+                      </div>
+                      <Text type="secondary" style={{ fontSize: 10, color: stockSummary.low_stock_count > 0 ? '#f5222d' : '' }}>LOW STOCK!</Text>
+                    </div>
+                  </Col>
+                </Row>
 
-              {/* Complains List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', border: '1px solid #f0f0f0', borderRadius: 16, padding: '12px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ background: '#ffccc7', width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <AlertTriangle size={18} color="#f5222d" />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontWeight: 800, color: '#1e4a2d', fontSize: 13 }}>Wrong Menu</span>
-                      <span style={{ color: '#a0a0a0', fontSize: 11, fontWeight: 600 }}>Andrew Tate</span>
-                    </div>
+                {stockSummary.low_stock_list?.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>URGENT RESTOCK:</Text>
+                    {stockSummary.low_stock_list.map((item, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                        <Text style={{ fontSize: 12 }}>{item.name}</Text>
+                        <Badge count={item.qty} color="#f5222d" size="small" />
+                      </div>
+                    ))}
+                    <Button type="link" size="small" style={{ padding: 0, marginTop: 8 }} onClick={() => navigate('/stock')}>Manage Stock</Button>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Button shape="round" size="small" style={{ fontWeight: 700, fontSize: 11, padding: '0 16px' }}>Solve</Button>
-                    <Button type="text" style={{ padding: 0 }} icon={<div style={{ display: 'flex', gap: 2 }}><span className="dotr"></span><span className="dotr"></span><span className="dotr"></span></div>} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', border: '1px solid #f0f0f0', borderRadius: 16, padding: '12px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ background: '#d9f7be', width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <StarFilled style={{ color: '#52c41a', fontSize: 18 }} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontWeight: 800, color: '#1e4a2d', fontSize: 13 }}>Bad Rating</span>
-                      <span style={{ color: '#a0a0a0', fontSize: 11, fontWeight: 600 }}>Don Ozwald</span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Button shape="round" size="small" style={{ fontWeight: 700, fontSize: 11, padding: '0 16px' }}>Solve</Button>
-                    <Button type="text" style={{ padding: 0 }} icon={<div style={{ display: 'flex', gap: 2 }}><span className="dotr active"></span><span className="dotr active"></span><span className="dotr active"></span><span className="dotr active"></span></div>} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Col>
-        </Row>
-
-        {/* Bottom Row: Radar & Table */}
-        <Row gutter={[24, 24]}>
-          {/* Items Performance Custom Radar */}
-          <Col xs={24} lg={8}>
-            <div className="dash-card" style={{ height: '100%', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <ShoppingBag size={18} color="#1e4a2d" />
-                  <span style={{ fontWeight: 900, fontSize: 16, color: '#1e4a2d' }}>Items Performance</span>
-                </div>
-                <MoreOutlined style={{ fontSize: 20, color: '#6b7c6b' }} />
-              </div>
-              <div style={{ width: '100%', height: '280px', position: 'relative' }}>
-                {performanceData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={performanceData}>
-                      <PolarGrid stroke="#e0e0e0" />
-                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#1e4a2d', fontSize: 11, fontWeight: 700 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
-                      <Radar name="Performance" dataKey="A" stroke="#a0d911" strokeWidth={2} fill="#ecfdd8" fillOpacity={0.8} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#a0a0a0', fontWeight: 'bold' }}>No Data Available</div>
                 )}
-                {/* Dots on radar intersections to match the mock */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none' }}>
-                  {/* Pseudo elements for points handled by Recharts mostly, but customized styles */}
-                </div>
-              </div>
-            </div>
-          </Col>
-
-          {/* Recent Transaction Table */}
-          <Col xs={24} lg={16}>
-            <div className="dash-card" style={{ height: '100%', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e4a2d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-                  <span style={{ fontWeight: 900, fontSize: 16, color: '#1e4a2d' }}>Recent Transaction</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <SyncOutlined style={{ fontSize: 16, color: '#888' }} />
-                  <div style={{ background: '#f4f1eb', padding: '4px', borderRadius: 20, display: 'flex' }}>
-                    <div className="filter-pill active">All</div>
-                    <div className="filter-pill">Tea</div>
-                    <div className="filter-pill">Coffee</div>
-                    <div className="filter-pill">Snack</div>
-                  </div>
-                </div>
-              </div>
-
-              <Table
-                columns={columns}
-                dataSource={transactionData}
-                pagination={false}
-                rowSelection={{
-                  type: 'checkbox',
-                }}
-                className="custom-table"
-              />
-
-              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
-                <Button onClick={() => navigate('/order')} type="link" size="small" style={{ color: '#c0a060', fontWeight: 700, fontSize: 13 }}>
-                  View All Transactions
-                </Button>
-              </div>
+              </Card>
             </div>
           </Col>
         </Row>
+
+        {/* Row 3: Recent Transactions */}
+        <Card
+          title={<Space><CalendarOutlined /> Recent Transactions</Space>}
+          style={{ borderRadius: 20 }}
+          extra={<Button type="link" onClick={() => navigate('/order')}>View All</Button>}
+        >
+          <Table
+            dataSource={transactionData}
+            pagination={false}
+            size="middle"
+            columns={[
+              { title: 'Order ID', dataIndex: 'id', key: 'id', render: (val) => <Text strong>#{val}</Text> },
+              { title: 'Branch', dataIndex: 'branch_name', key: 'branch_name' },
+              { title: 'Date', dataIndex: 'created_at', key: 'created_at', render: (val) => dayjs(val).format('YYYY-MM-DD HH:mm') },
+              {
+                title: 'Amount',
+                dataIndex: 'total_amount',
+                key: 'total_amount',
+                align: 'right',
+                render: (val) => <span style={{ fontWeight: 800, color: '#1e4a2d' }}>{formatCurrency(val)}</span>
+              },
+              {
+                title: 'Status',
+                key: 'status',
+                render: () => <Badge status="success" text="Completed" />
+              }
+            ]}
+          />
+        </Card>
       </Spin>
 
-      <style jsx>{`
+      <style jsx global>{`
         .dash-card {
           background: #ffffff;
           border-radius: 20px;
-          border: 1px solid rgba(0,0,0,0.03);
-          box-shadow: 0 4px 15px rgba(30, 74, 45, 0.03);
-          padding: 16px 20px;
+          padding: 20px;
+          border: 1px solid #f0f0f0;
           height: 100%;
           transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
         }
         .dash-card:hover {
-          box-shadow: 0 10px 25px rgba(30, 74, 45, 0.08);
-          transform: translateY(-2px);
+          transform: translateY(-4px);
+          box-shadow: 0 10px 30px rgba(30, 74, 45, 0.08);
         }
-        .filter-pill {
-          padding: 4px 16px;
-          border-radius: 16px;
-          font-size: 11px;
-          font-weight: 700;
-          color: #a0a0a0;
-          cursor: pointer;
-          transition: all 0.2s ease;
+        .dash-card.primary {
+           border-bottom: 4px solid #c0a060;
         }
-        .filter-pill:hover {
-          color: #1e4a2d;
+        .icon-box {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          background: #f4f1eb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-        .filter-pill.active {
-          background: #ffffff;
-          color: #1e4a2d;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .dotr {
-          display: inline-block;
-          width: 4px;
-          height: 12px;
-          background: #ffccc7;
-          border-radius: 4px;
-        }
-        .dotr.active {
-          background: #ff4d4f;
-        }
-        .custom-table .ant-table-thead > tr > th {
-          background: transparent !important;
-          border-bottom: 2px solid #f0f0f0;
-          color: #000;
-          font-weight: 800;
-          font-size: 13px;
-        }
-        .custom-table .ant-table-tbody > tr > td {
-          border-bottom: 1px solid #f8f8f8;
-          padding: 16px 16px;
-        }
-        .custom-table .ant-table-tbody > tr:hover > td {
-          background: #fdfdfd !important;
+        .icon-box.expense { background: #fff1f0; }
+        .icon-box.profit { background: #f6ffed; }
+        .icon-box.order { background: #e6f7ff; }
+        
+        .ant-table-thead > tr > th {
+            background: #fafafa !important;
+            font-weight: 700 !important;
+            font-size: 13px;
         }
       `}</style>
     </div>

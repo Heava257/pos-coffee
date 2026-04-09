@@ -70,7 +70,7 @@ export const request = (url = "", method = "get", data = {}) => {
             // Update local storage
             setProfile(response.data.profile);
             setPermission(response.data.permission);
-            console.log("✅ Security session synchronized automatically.");
+            // console.log("✅ Security session synchronized automatically.");
             
             // Note: Menu/Sidebar should ideally listen to this change. 
             // In our current MainLayout, it depends on location.pathname.
@@ -99,11 +99,13 @@ export const request = (url = "", method = "get", data = {}) => {
           message.error("Access Denied: You don't have permission for this action.");
         }
         setServerSatus(status);
+        // Important: Return the response data so caller can see { message: "..." }
+        return { ...response.data, error: true, status: status };
       } else if (err.code == "ERR_NETWORK") {
         setServerSatus("error");
       }
       console.log(">>>", err);
-      return false;
+      return { error: true, message: err.message || "Network Error" };
     });
 };
 
@@ -268,5 +270,12 @@ export const compressImage = (file, maxWidth = 1024) => {
         }, "image/jpeg", 0.7); // 0.7 quality is perfect for receipts/products
       };
     };
+  });
+};
+
+export const formatNumber = (num, decimals = 2) => {
+  return Number(num || 0).toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
   });
 };

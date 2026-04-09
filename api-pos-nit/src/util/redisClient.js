@@ -66,34 +66,34 @@ if (redisConnectionURL) {
 
 // Global caching helper
 const getCache = async (key) => {
-  if (!redis) return null;
   try {
+    if (!redis || redis.status !== 'ready') return null; // 🛡️ Fail-soft check
     const data = await redis.get(key);
     return data ? JSON.parse(data) : null;
   } catch (error) {
-    console.error("Redis Get Error:", error);
+    // Silently ignore Redis errors to prevent console spam & latency
     return null;
   }
 };
 
 const setCache = async (key, value, expiresInSec = 3600) => {
-  if (!redis) return;
   try {
+    if (!redis || redis.status !== 'ready') return;
     await redis.setex(key, expiresInSec, JSON.stringify(value));
   } catch (error) {
-    console.error("Redis Set Error:", error);
+    // Silently ignore
   }
 };
 
 const clearCache = async (pattern) => {
-  if (!redis) return;
   try {
+    if (!redis || redis.status !== 'ready') return;
     const keys = await redis.keys(pattern);
     if (keys.length > 0) {
       await redis.del(...keys);
     }
   } catch (error) {
-    console.error("Redis Clear Error:", error);
+    // Silently ignore
   }
 };
 
@@ -101,5 +101,6 @@ module.exports = {
   redis,
   getCache,
   setCache,
-  clearCache
+  clearCache,
+  isConnected: () => redis && redis.status === 'ready'
 };

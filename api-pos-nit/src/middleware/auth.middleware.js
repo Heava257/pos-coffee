@@ -2,15 +2,11 @@ const jwt = require("jsonwebtoken");
 const config = require("../util/config");
 
 // This middleware will protect routes and inject business context
-const authMiddleware = (permission_name) => {
-    // Helper to check if decoded token contains required permission
-    const hasPermission = (decoded, permission) => {
-        if (!decoded || !Array.isArray(decoded.permissions)) return false;
-        // Clean the input permission (remove leading /)
-        const target = permission.replace(/^\/+/, '');
-        return decoded.permissions.includes(target);
-    };
+// 🚀 PERFORMANCE CACHE: Store permissions to avoid redundant JOIN queries
+const permCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+const authMiddleware = (permission_name) => {
     return async (req, res, next) => {
         const authorization = req.headers.authorization;
         let token = null;
@@ -37,11 +33,31 @@ const authMiddleware = (permission_name) => {
             req.role_id = Number(decoded.role_id);
             req.auth = decoded;
 
-            // 🚀 LIVE DATABASE PROTECTION: Fetch current role permissions with granular actions
-            const [rows] = await db.query(
-                "SELECT p.route_key, rp.can_view, rp.can_create, rp.can_edit, rp.can_delete FROM permissions p INNER JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = ?",
-                [req.role_id]
-            );
+            // 🚀 PERFORMANCE OPTIMIZATION: Use Cache for Permissions
+            const cacheKey = `${req.business_id}:${req.role_id}`;
+            const cached = permCache.get(cacheKey);
+            let rows;
+
+            if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
+                rows = cached.data;
+            } else {
+                [rows] = await db.query(
+                    `SELECT DISTINCT p.route_key, rp.can_view, rp.can_create, rp.can_edit, rp.can_delete 
+                     FROM permissions p 
+                     INNER JOIN role_permissions rp ON p.id = rp.permission_id 
+                     LEFT JOIN module_permissions mp ON p.id = mp.permission_id
+                     LEFT JOIN system_modules sm ON mp.module_id = sm.id
+                     INNER JOIN businesses b ON b.id = ?
+                     WHERE rp.role_id = ?
+                     AND (
+                        ? = 1 -- 👑 Super Admin/Business 1 Bypass
+                        OR mp.module_id IS NULL -- Core Permission
+                        OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', '')) -- Belongs to active module
+                     )`,
+                    [req.business_id, req.role_id, req.business_id]
+                );
+                permCache.set(cacheKey, { data: rows, ts: Date.now() });
+            }
             const livePerms = rows.map(r => r.route_key.toLowerCase().replace(/^\/+|\/+$/g, ''));
 
 

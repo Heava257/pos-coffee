@@ -25,10 +25,13 @@ import { request, isPermission } from "../../util/helper";
 import { configStore } from "../../store/configStore";
 import { getIconForCategory, getColorForCategory } from "../../util/helper";
 import { Config } from "../../util/config";
+import { getPrinterSettings } from "../../store/printer.store";
 import { useProfileStore } from "../../store/profileStore";
 import { useReactToPrint } from "react-to-print";
 import PrintInvoice from "../../component/pos/PrintInvoice";
 import PrintKitchenTicket from "../../component/pos/PrintKitchenTicket";
+import PrintShiftReport from "../../component/pos/PrintShiftReport";
+import PrintLabel from "../../component/pos/PrintLabel";
 import QRPaymentModal from "../../QRPaymentModal/QRPaymentModal";
 import { PriceDisplay, useExchangeRate } from "../../component/pos/ExchangeRateContext";
 import {
@@ -48,6 +51,7 @@ import {
   UnorderedListOutlined,
   TableOutlined,
   PushpinOutlined,
+  TagOutlined,
 } from "@ant-design/icons";
 import { FiSettings } from "react-icons/fi";
 import { useUIStore } from "../../store/uiStore";
@@ -68,6 +72,18 @@ import {
 const BELL_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3";
 
 const { Text } = Typography;
+
+// ─── Utility ────────────────────────────────────────────────────────────────
+const safeParse = (str) => {
+  if (!str) return [];
+  if (Array.isArray(str)) return str;
+  try {
+    const res = JSON.parse(str);
+    return Array.isArray(res) ? res : [res];
+  } catch (e) {
+    return [];
+  }
+};
 
 // ─── Color Palette ──────────────────────────────────────────────────────────
 const COLORS = {
@@ -135,10 +151,14 @@ function getCategoryEmoji(catId) {
 const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
   const [hovered, setHovered] = useState(false);
   const [isImgLoaded, setIsImgLoaded] = useState(false);
-  const price = Number(
-    product.unit_price || product.price || product.actual_price || 0
-  );
-  const isOOS = product.qty <= 0;
+  const productSizes = safeParse(product.sizes) || [];
+  const productMoods = safeParse(product.moods) || [];
+  const basePrice = Number(product.unit_price || product.price || product.actual_price || 0);
+  const price = productSizes.length > 0
+    ? Math.min(...productSizes.map(s => Number(s.price || 0)))
+    : basePrice;
+
+  const isOOS = product.product_type === 'recipe' ? false : Number(product.qty) <= 0;
   const imgUrl = product.image ? Config.optimizeCloudinary(Config.getFullImagePath(product.image), "w_300,h_300,c_fill,f_auto,q_auto") : null;
 
   return (
@@ -262,6 +282,14 @@ const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
 
       {/* name + price */}
       <div style={{ width: "100%", textAlign: "left" }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+          <Tag color={product.product_type === 'recipe' ? "orange" : "blue"} style={{ fontSize: 9, borderRadius: 4, margin: 0, padding: '0 4px' }}>
+            {product.product_type === 'recipe'
+              ? `RECIPE (${product.estimated_servings ?? 0} Srv)`
+              : `STOCK: ${product.qty}`}
+          </Tag>
+          <span style={{ fontSize: 9, color: COLORS.textSecondary, fontWeight: 700 }}>#{product.barcode || product.id}</span>
+        </div>
         <div
           style={{
             fontWeight: 700,
@@ -276,10 +304,34 @@ const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
         >
           {product.name}
         </div>
+        <div style={{ fontSize: 10, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 600 }}>{product.category_name}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: COLORS.darkGreen }}>
-            ${(price - (price * (parseFloat(product.discount) || 0) / 100)).toFixed(2)}
-          </span>
+          <div>
+            {productSizes.length > 0 && (
+              <div style={{ fontSize: 9, color: COLORS.textSecondary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                from
+              </div>
+            )}
+            <span style={{ fontSize: 15, fontWeight: 800, color: COLORS.darkGreen }}>
+              ${(price - (price * (parseFloat(product.discount) || 0) / 100)).toFixed(2)}
+            </span>
+          </div>
+          {productSizes.length > 0 && (
+            <span style={{
+              fontSize: 9, fontWeight: 700, background: '#e6f0ea',
+              color: COLORS.midGreen, borderRadius: 4, padding: '2px 5px'
+            }}>
+              📏 {productSizes.length} sizes
+            </span>
+          )}
+          {productMoods.length > 0 && (
+            <span style={{
+              fontSize: 9, fontWeight: 700, background: '#fff7e6',
+              color: '#d46b08', borderRadius: 4, padding: '2px 5px'
+            }}>
+              🔥 {productMoods.length} moods
+            </span>
+          )}
           {product.discount > 0 && (
             <span style={{ fontSize: 11, color: COLORS.textSecondary, textDecoration: "line-through", fontWeight: 500 }}>
               ${price.toFixed(2)}
@@ -358,8 +410,13 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS }) => 
         <tbody>
           {products.map(p => {
             const cartQty = getCartQty(p.id);
-            const isOOS = p.qty <= 0;
-            const price = Number(p.unit_price || p.price || 0);
+            const isOOS = p.product_type === 'recipe' ? false : Number(p.qty) <= 0;
+            const productSizes = safeParse(p.sizes) || [];
+            const productMoods = safeParse(p.moods) || [];
+            const basePrice = Number(p.unit_price || p.price || 0);
+            const price = productSizes.length > 0
+              ? Math.min(...productSizes.map(s => Number(s.price || 0)))
+              : basePrice;
             const finalPrice = price - (price * (parseFloat(p.discount) || 0) / 100);
 
             return (
@@ -389,15 +446,28 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS }) => 
                   </div>
                 </td>
                 <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                  <div style={{ fontWeight: 800, color: COLORS.darkGreen, fontSize: 15 }}>${finalPrice.toFixed(2)}</div>
+                  <div style={{ fontWeight: 800, color: COLORS.darkGreen, fontSize: 15 }}>
+                    {productSizes.length > 0 && (
+                      <div style={{ fontSize: 9, color: COLORS.textSecondary, fontWeight: 600, textTransform: 'uppercase' }}>from</div>
+                    )}
+                    ${finalPrice.toFixed(2)}
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', marginTop: 3 }}>
+                      {productSizes.length > 0 && (
+                        <span style={{ fontSize: 9, background: '#e6f0ea', color: COLORS.midGreen, borderRadius: 4, padding: '1px 4px', fontWeight: 600 }}>📏 {productSizes.length} sizes</span>
+                      )}
+                      {productMoods.length > 0 && (
+                        <span style={{ fontSize: 9, background: '#fff7e6', color: '#d46b08', borderRadius: 4, padding: '1px 4px', fontWeight: 600 }}>🔥 {productMoods.length} moods</span>
+                      )}
+                    </div>
+                  </div>
                   {p.discount > 0 && <div style={{ fontSize: 10, color: COLORS.textSecondary, textDecoration: 'line-through' }}>${price.toFixed(2)}</div>}
                 </td>
                 <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                   <Badge
-                    count={p.qty}
+                    count={p.product_type === 'recipe' ? p.estimated_servings : p.qty}
                     overflowCount={999}
                     showZero
-                    style={{ background: isOOS ? COLORS.redBadge : p.qty < 5 ? COLORS.softGold : COLORS.darkGreen, boxShadow: 'none' }}
+                    style={{ background: isOOS ? COLORS.redBadge : (p.qty < 5 || (p.product_type === 'recipe' && p.estimated_servings < 5)) ? COLORS.softGold : COLORS.darkGreen, boxShadow: 'none' }}
                   />
                 </td>
                 <td style={{ padding: '12px 16px', textAlign: 'center' }}>
@@ -471,7 +541,7 @@ const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, 
       footer={null}
       width={720}
       centered
-      bodyStyle={{ padding: '20px' }}
+      styles={{ body: { padding: '20px' } }}
     >
       <Spin spinning={loading}>
         {tables.length === 0 && !loading ? (
@@ -638,6 +708,8 @@ function PosPage() {
     }
   };
   const { lang } = useLanguage();
+  const refShiftReport = useRef(null);
+  const refLabel = useRef(null);
   const t = translations[lang];
   const { profile } = useProfileStore(); // Reactive profile
   const { isFullScreen, toggleFullScreen } = useUIStore();
@@ -706,6 +778,25 @@ function PosPage() {
   const [isEditingUniqueId, setIsEditingUniqueId] = useState(null);
   const [parentCategories, setParentCategories] = useState([{ id: 'all', name: "All Products", icon: "🌐", color: primaryColor }]);
   const [searchText, setSearchText] = useState("");
+  const [branchInfo, setBranchInfo] = useState(null);
+  const [tables, setTables] = useState([]);
+
+  useEffect(() => {
+    if (branchInfo?.id) {
+      fetchTables(branchInfo.id);
+    }
+  }, [branchInfo]);
+
+  const fetchTables = async (branchId) => {
+    try {
+      const res = await request("table", "get", { branch_id: branchId });
+      if (res && res.list) {
+        setTables(res.list);
+      }
+    } catch (error) {
+      console.error("Fetch tables error:", error);
+    }
+  };
   const [orderType, setOrderType] = useState("dine_in");
   const [customerName, setCustomerName] = useState("");
   const [tableNo, setTableNo] = useState("");
@@ -726,7 +817,6 @@ function PosPage() {
   const [pendingOrdersVisible, setPendingOrdersVisible] = useState(false);
   const [pendingOrders, setPendingOrders] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
-  const [branchInfo, setBranchInfo] = useState(null);
   const [viewMode, setViewMode] = useState("grid"); // grid or list
 
   const [currentOrderId, setCurrentOrderId] = useState(null);
@@ -755,6 +845,10 @@ function PosPage() {
     total: 0,
     loading: false,
     cart_list: [],
+    printCart: [],
+    printSummary: null,
+    rawMaterials: [],
+    lowStockItems: [],
   });
 
   const [objSummary, setObjSummary] = useState({
@@ -854,6 +948,7 @@ function PosPage() {
   useEffect(() => {
     if (userId) {
       getList();
+      getMaterials();
     }
   }, [selectedCategory, userId]);
 
@@ -945,6 +1040,20 @@ function PosPage() {
   };
 
   // ── fetch products ──
+
+  const getMaterials = async () => {
+    try {
+      const res = await request("raw_material", "get");
+      if (res && res.list) {
+        setState(p => ({ ...p, rawMaterials: res.list }));
+        const low = res.list.filter(rm => Number(rm.qty) <= (Number(rm.min_stock) || 5));
+        setState(p => ({ ...p, lowStockItems: low }));
+      }
+    } catch (error) {
+      console.error("Error fetching materials:", error);
+    }
+  };
+
   const getList = async () => {
     const currentUserId = profile?.id || profile?.user_id;
     if (!currentUserId) return;
@@ -996,62 +1105,72 @@ function PosPage() {
 
   // ── cart helpers ──
   const handleAdd = useCallback((product) => {
+    // 1. Check if product has options (moods, sizes, or addons)
+    const moods = safeParse(product.moods);
+    const sizes = safeParse(product.sizes);
+    const addons = safeParse(product.addons);
+    const hasOptions = (Array.isArray(moods) && moods.length > 0) || (Array.isArray(sizes) && sizes.length > 0) || (Array.isArray(addons) && addons.length > 0);
+
+    const isDrink = product.category_name?.toLowerCase().includes("coffee") || product.category_name?.toLowerCase().includes("drink") || product.category_name?.toLowerCase().includes("juice");
+
+    // 2. If it has options, ALWAYS open the modal to get specific choices
+    if (hasOptions) {
+      if (product.product_type !== 'recipe' && Number(product.qty) <= 0) {
+        notification.error({ message: "Out of Stock" });
+        return;
+      }
+      setSelectedProductForOptions(product);
+      setTempOptions({
+        // Only pre-select mood if this product actually has moods configured
+        mood: Array.isArray(moods) && moods.length > 0
+          ? (typeof moods[0] === 'object' ? moods[0].value : moods[0])
+          : "",
+        // Only pre-select first size if sizes are defined
+        size: Array.isArray(sizes) && sizes.length > 0
+          ? (typeof sizes[0] === 'object' ? sizes[0].label : sizes[0])
+          : "",
+        // Never force sugar — let customer choose
+        sugar: "",
+        addons: [],
+        note: ""
+      });
+      setOptionsModalVisible(true);
+      return;
+    }
+
+    // 3. If no options, treat as standard item and increment quantity if already in cart
     setState((prev) => {
       const cart = [...prev.cart_list];
-      const idx = cart.findIndex((c) => c.id === product.id);
+      const standardId = `${product.id}-standard`;
+      const idx = cart.findIndex((c) => c.unique_id === standardId);
+
       if (idx === -1) {
-        if (product.qty <= 0) {
+        if (product.product_type !== 'recipe' && Number(product.qty) <= 0) {
           notification.error({ message: "Out of Stock" });
           return prev;
         }
-
-        const moods = safeParse(product.moods);
-        const sizes = safeParse(product.sizes);
-        const addons = safeParse(product.addons);
-        const isDrink = product.category_name?.toLowerCase().includes("coffee") || product.category_name?.toLowerCase().includes("drink") || product.category_name?.toLowerCase().includes("juice");
-        const isRestaurant = profile?.business_layout === 'restaurant' || product.industry_code === 'restaurant';
-
-        const hasOptions = (Array.isArray(moods) && moods.length > 0) || (Array.isArray(sizes) && sizes.length > 0) || (Array.isArray(addons) && addons.length > 0);
-
-        const uniqueId = `${product.id}-standard`;
-
-        if (hasOptions) {
-          setSelectedProductForOptions(product);
-          // Default options
-          setTempOptions({
-            mood: Array.isArray(moods) && moods.length > 0 ? (typeof moods[0] === 'object' ? moods[0].value : moods[0]) : (isDrink ? "ice" : ""),
-            size: Array.isArray(sizes) && sizes.length > 0 ? (typeof sizes[0] === 'object' ? sizes[0].label : sizes[0]) : "M",
-            sugar: isDrink ? "100%" : "",
-            addons: [],
-            note: ""
-          });
-          setOptionsModalVisible(true);
-          return prev;
-        }
-
-        const newItem = { ...product, cart_qty: 1, unique_id: uniqueId };
+        const newItem = { ...product, cart_qty: 1, unique_id: standardId };
         setTempUnassignedItems(prev => [...prev, newItem]);
         cart.push(newItem);
       } else {
-        if (cart[idx].cart_qty >= product.qty) {
+        if (product.product_type !== 'recipe' && cart[idx].cart_qty >= Number(product.qty)) {
           notification.warning({ message: `Only ${product.qty} available` });
           return prev;
         }
-        const uId = cart[idx].unique_id || `${cart[idx].id}-standard`;
         setTempUnassignedItems(prevTemp => {
-            const tIdx = prevTemp.findIndex(it => it.unique_id === uId);
-            if (tIdx > -1) {
-                const updated = [...prevTemp];
-                updated[tIdx].cart_qty += 1;
-                return updated;
-            }
-            return [...prevTemp, { ...cart[idx], cart_qty: 1, unique_id: uId }];
+          const tIdx = prevTemp.findIndex(it => it.unique_id === standardId);
+          if (tIdx > -1) {
+            const updated = [...prevTemp];
+            updated[tIdx].cart_qty += 1;
+            return updated;
+          }
+          return [...prevTemp, { ...cart[idx], cart_qty: 1, unique_id: standardId }];
         });
         cart[idx] = { ...cart[idx], cart_qty: (cart[idx].cart_qty || 0) + 1 };
       }
       return { ...prev, cart_list: cart };
     });
-  }, [profile, setTempUnassignedItems]);
+  }, [profile, setTempUnassignedItems, setOptionsModalVisible, setSelectedProductForOptions, setTempOptions]);
 
   const handleEditCartItem = useCallback((item) => {
     // Find the original product from the list to get full metadata (sizes, addons)
@@ -1060,11 +1179,11 @@ function PosPage() {
 
     setSelectedProductForOptions(product);
     setTempOptions({
-      mood: item.mood || "hot",
-      size: item.size || "M",
-      sugar: item.sugar || "100%",
+      mood: item.mood || "",
+      size: item.size || "",
+      sugar: item.sugar || "",
       addons: item.addons_selected || [],
-      note: item.note || ""
+      note: item.kitchen_note || ""
     });
     setIsEditingUniqueId(item.unique_id);
     setOptionsModalVisible(true);
@@ -1080,12 +1199,13 @@ function PosPage() {
     }
 
     // Prepare options string for unique identification
+    // Treat size prices as surcharges (base + size price)
     let adjustedPrice = Number(product.price || product.unit_price || 0);
     if (product.sizes) {
       const sizes = safeParse(product.sizes) || [];
       const selectedSizeObj = sizes.find(s => s.label === tempOptions.size);
       if (selectedSizeObj && Number(selectedSizeObj.price) > 0) {
-        adjustedPrice = Number(selectedSizeObj.price);
+        adjustedPrice = Number(selectedSizeObj.price); // 🚀 OVERRIDE: Use size price as the total price
       }
     }
 
@@ -1141,13 +1261,13 @@ function PosPage() {
 
       // Add to temp unassigned so it follows table switches
       setTempUnassignedItems(prevTemp => {
-          const tidx = prevTemp.findIndex(it => it.unique_id === uniqueId);
-          if (tidx > -1) {
-              const updated = [...prevTemp];
-              updated[tidx].cart_qty += currentQty;
-              return updated;
-          }
-          return [...prevTemp, newItem];
+        const tidx = prevTemp.findIndex(it => it.unique_id === uniqueId);
+        if (tidx > -1) {
+          const updated = [...prevTemp];
+          updated[tidx].cart_qty += currentQty;
+          return updated;
+        }
+        return [...prevTemp, newItem];
       });
 
       const idx = cart.findIndex((c) => c.unique_id === uniqueId);
@@ -1167,7 +1287,7 @@ function PosPage() {
   const handleIncrease = useCallback((item) => {
     setState((prev) => {
       const cart = prev.cart_list.map((c) =>
-        (c.id === item.id && c.name === item.name) || (c.unique_id && c.unique_id === item.unique_id)
+        c.unique_id === item.unique_id
           ? { ...c, cart_qty: Math.min((c.cart_qty || 0) + 1, item.qty || 999) }
           : c
       );
@@ -1179,7 +1299,7 @@ function PosPage() {
     setState((prev) => {
       const cart = prev.cart_list
         .map((c) =>
-          (c.id === item.id && c.name === item.name) || (c.unique_id && c.unique_id === item.unique_id)
+          c.unique_id === item.unique_id
             ? { ...c, cart_qty: (c.cart_qty || 1) - 1 }
             : c
         )
@@ -1192,7 +1312,7 @@ function PosPage() {
     setState((prev) => ({
       ...prev,
       cart_list: prev.cart_list.filter(
-        (c) => !((c.id === item.id && c.name === item.name) || (c.unique_id && c.unique_id === item.unique_id))
+        (c) => c.unique_id !== item.unique_id
       ),
     }));
   }, []);
@@ -1213,9 +1333,12 @@ function PosPage() {
       }
     }
 
+    // Mark items as printed and trigger Label printing
+    const labeledCart = cartToSave.map(item => ({ ...item, printed: true }));
+
     holdOrder({
       id: draftIdToUpdate,
-      cart_list: cartToSave,
+      cart_list: labeledCart,
       customerName,
       tableNo,
       guestCount,
@@ -1224,8 +1347,18 @@ function PosPage() {
       currentOrderId,
     });
 
-    // We don't clear here anymore, we let the caller decide if they want handleClearCart()
-    // This allows kitchen print to save then clear manually.
+    // Auto-Print Label even when holding (for Dine-In drinks)
+    const pSettings = getPrinterSettings();
+    if (pSettings.auto_print && pSettings.label_enabled) {
+      setState(prev => ({
+        ...prev,
+        printCart: labeledCart,
+        printSummary: { ...objSummary, order_type: orderType, order_no: "DRAFT" }
+      }));
+      setTimeout(() => {
+        handlePrintLabel();
+      }, 500);
+    }
   };
 
   const handleResumeHeldOrder = (order) => {
@@ -1233,27 +1366,27 @@ function PosPage() {
     if (resumed) {
       setState((prev) => {
         const resumedCart = resumed.cart_list || [];
-        
+
         // Items picked in THIS session that haven't been 'settled' into a table yet
         let mergedCart = [...resumedCart];
-        
+
         // SMART MERGE: Only carry over floating (unassigned) items
         tempUnassignedItems.forEach(floatingItem => {
-            const fUId = floatingItem.unique_id || `${floatingItem.id}-standard`;
+          const fUId = floatingItem.unique_id || `${floatingItem.id}-standard`;
 
-            const existingIdx = mergedCart.findIndex(c => 
-                c.id === floatingItem.id && 
-                (c.unique_id || `${c.id}-standard`) === fUId
-            );
+          const existingIdx = mergedCart.findIndex(c =>
+            c.id === floatingItem.id &&
+            (c.unique_id || `${c.id}-standard`) === fUId
+          );
 
-            if (existingIdx > -1) {
-                mergedCart[existingIdx] = {
-                    ...mergedCart[existingIdx],
-                    cart_qty: (mergedCart[existingIdx].cart_qty || 0) + (floatingItem.cart_qty || 0)
-                };
-            } else {
-                mergedCart.push({ ...floatingItem });
-            }
+          if (existingIdx > -1) {
+            mergedCart[existingIdx] = {
+              ...mergedCart[existingIdx],
+              cart_qty: (mergedCart[existingIdx].cart_qty || 0) + (floatingItem.cart_qty || 0)
+            };
+          } else {
+            mergedCart.push({ ...floatingItem });
+          }
         });
 
         return { ...prev, cart_list: mergedCart };
@@ -1372,6 +1505,23 @@ function PosPage() {
       return;
     }
 
+    // Validation for Dine-In Table Requirement
+    const hasTables = tables && tables.length > 0;
+    if (orderType === "dine_in" && hasTables && !tableNo) {
+      message.warning(t.please_select_table || "Please select a table for Dine-In order!");
+      // Optional: Highlight the table selector
+      const tableSelector = document.getElementById('table-selector-trigger');
+      if (tableSelector) {
+        tableSelector.style.border = '2px solid #ef4444';
+        tableSelector.style.boxShadow = '0 0 10px rgba(239,68,68,0.3)';
+        setTimeout(() => {
+          tableSelector.style.border = '';
+          tableSelector.style.boxShadow = '';
+        }, 3000);
+      }
+      return;
+    }
+
     // New Validation: For Cash, ensure enough money is received
     if (objSummary.payment_method === "Cash") {
       const totalPaidUSD = Number(cashReceivedUSD || 0) + (Number(cashReceivedKHR || 0) / exchangeRate);
@@ -1388,7 +1538,13 @@ function PosPage() {
         product_id: item.id,
         qty: qty,
         price: unitPrice,
-        note: item.note || ""
+        note: item.note || "",
+        options: {
+          size: item.size,
+          sugar: item.sugar,
+          mood: item.mood,
+          addons: item.addons_selected
+        }
       };
     });
     const param = {
@@ -1409,6 +1565,7 @@ function PosPage() {
         ? (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate))
         : +objSummary.total
     };
+
     try {
       let res;
       if (currentOrderId) {
@@ -1423,8 +1580,57 @@ function PosPage() {
       }
 
       if (res && !res.error) {
-        message.success(currentOrderId ? t.order_completed : t.order_placed);
+        const pSettings = getPrinterSettings();
+        const key = `open${Date.now()}`;
+        const btn = (
+          <Space>
+            <Button type="primary" size="small" icon={<PrinterOutlined />} onClick={() => {
+              handlePrintInvoice();
+            }}>
+              Print Invoice
+            </Button>
+            <Button size="small" icon={<TagOutlined />} onClick={() => {
+              handlePrintLabel();
+            }}>
+              Print Label
+            </Button>
+            <Button size="small" onClick={() => {
+              notification.destroy(key);
+              handleClearCart(true);
+            }}>
+              Done
+            </Button>
+          </Space>
+        );
+
+        notification.success({
+          message: currentOrderId ? t.order_completed : t.order_placed,
+          description: `Order ID: #${res.order_no || res.order_id}. Manual print available below if needed.`,
+          action: btn,
+          key,
+          duration: 10,
+          placement: 'top'
+        });
+
         getPendingOrders();
+        getList();
+        getMaterials();
+
+        const currentPrintCart = [...state.cart_list];
+        const currentPrintSummary = {
+          ...objSummary,
+          order_no: res.order_no || res.order_id,
+          order_date: new Date().toISOString(),
+          order_type: orderType,
+          received_usd: cashReceivedUSD,
+          received_khr: cashReceivedKHR
+        };
+
+        setState(prev => ({
+          ...prev,
+          printCart: currentPrintCart,
+          printSummary: currentPrintSummary
+        }));
 
         const isBankPayment = objSummary.payment_method !== "Cash";
 
@@ -1443,14 +1649,16 @@ function PosPage() {
           order_date: new Date().toISOString(),
         }));
 
-        // If cash, print immediately. If bank, don't auto-print so user can see QR.
+        // --- DYNAMIC PRINTING WORKFLOW ---
         if (!isBankPayment) {
-          setTimeout(() => handlePrintInvoice(), 2000);
+          // Trigger print workflow for all order types at checkout 
+          triggerAutoPrintWorkflow(false);
         }
       } else {
         message.error(`Order failed! ${res?.message || res?.error || ""}`);
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       message.error(t.order_failed || "Order failed!");
     }
   };
@@ -1458,7 +1666,12 @@ function PosPage() {
   // ── print ──
   const handlePrintInvoice = useReactToPrint({
     contentRef: refInvoice,
-    onAfterPrint: () => handleClearCart(true), // Explicitly clear and remove draft after payment print
+    pageStyle: `@page { size: 80mm auto; margin: 0; } body { margin: 0; }`,
+  });
+
+  const handlePrintLabel = useReactToPrint({
+    contentRef: refLabel,
+    pageStyle: `@page { size: 40mm 30mm !important; margin: 0 !important; } @media print { body { -webkit-print-color-adjust: exact; margin: 0 !important; } }`,
   });
 
   const handlePrintKitchen = useReactToPrint({
@@ -1485,6 +1698,33 @@ function PosPage() {
       message.success("Order sent to kitchen and saved to table / ផ្ញើទៅចង្ក្រាន និងរក្សាទុកក្នុងតុរួចរាល់");
     }
   });
+
+  const triggerAutoPrintWorkflow = useCallback((skipLabel = false) => {
+    const pSettings = getPrinterSettings();
+    if (!pSettings.auto_print) {
+      handleClearCart(true); // Still clear if not auto printing
+      return;
+    }
+
+    setTimeout(() => {
+      const shouldPrintLabel = pSettings.label_enabled && !skipLabel;
+      const shouldPrintInvoice = pSettings.invoice_enabled;
+
+      if (pSettings.label_first) {
+        if (shouldPrintLabel) handlePrintLabel();
+        if (shouldPrintInvoice) {
+          setTimeout(() => handlePrintInvoice(), shouldPrintLabel ? 800 : 0);
+        }
+      } else {
+        if (shouldPrintInvoice) handlePrintInvoice();
+        if (shouldPrintLabel) {
+          setTimeout(() => handlePrintLabel(), shouldPrintInvoice ? 800 : 0);
+        }
+      }
+      // Final cleanup after all prints have started
+      setTimeout(() => handleClearCart(true), 1500);
+    }, 300);
+  }, [handlePrintLabel, handlePrintInvoice, handleClearCart]);
 
   const kitchenItems = state.cart_list.filter(item => !item.isSentToKitchen);
 
@@ -1529,10 +1769,41 @@ function PosPage() {
         flexDirection: "column",
       }}
     >
-      {/* Hidden print containers - unreachable by user but reachable by browser for printing */}
-      <div style={{ position: "absolute", top: -9999, left: -9999, height: 0, overflow: "hidden" }}>
-        <PrintInvoice ref={refInvoice} cart_list={state.cart_list} objSummary={objSummary} layoutType={layoutType} tableNo={tableNo} cashReceivedUSD={cashReceivedUSD} cashReceivedKHR={cashReceivedKHR} exchangeRate={exchangeRate} branchInfo={branchInfo} />
-        <PrintKitchenTicket ref={refKitchen} cart_list={kitchenItems} objSummary={{ ...objSummary, customerName, tableNo, order_type: orderType, remark: "" }} />
+      <div style={{ 
+        display: "block", 
+        position: "absolute", 
+        left: "-9999px", 
+        top: 0, 
+        width: '80mm',
+        opacity: 1,
+        visibility: "visible",
+        background: "white"
+      }}>
+        <div ref={refInvoice}>
+          <PrintInvoice
+            cart_list={state.printCart.length > 0 ? state.printCart : state.cart_list}
+            objSummary={state.printSummary || { ...objSummary, order_type: orderType }}
+            layoutType={layoutType}
+            branchInfo={branchInfo}
+            exchangeRate={exchangeRate}
+          />
+        </div>
+        <div ref={refLabel}>
+          <PrintLabel
+            cart_list={(state.printCart.length > 0 ? state.printCart : state.cart_list).filter(item => !item.printed)}
+            objSummary={state.printSummary || { ...objSummary, order_type: orderType }}
+            branchInfo={branchInfo}
+          />
+        </div>
+        <div ref={refShiftReport}>
+          {/* Shift report data source needs to be verified before re-enabling */}
+        </div>
+        <div ref={refKitchen}>
+          <PrintKitchenTicket
+            cart_list={state.printCart.length > 0 ? state.printCart : state.cart_list}
+            objSummary={state.printSummary || { ...objSummary, customerName, tableNo, order_type: orderType, remark: "" }}
+          />
+        </div>
       </div>
 
       {/* ══ HEADER ══════════════════════════════════════════════════════════ */}
@@ -1874,7 +2145,9 @@ function PosPage() {
                 boxShadow: isSoundEnabled ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
               }}
             >
-              <BellOutlined style={{ fontSize: 16 }} />
+              <Badge count={state.lowStockItems?.length || 0} size="small" offset={[2, -2]}>
+                <BellOutlined style={{ fontSize: 16 }} />
+              </Badge>
               <span>{isSoundEnabled ? t.sound_on : t.sound_off}</span>
             </button>
 
@@ -2380,11 +2653,11 @@ function PosPage() {
                 okButtonProps={{ danger: true }}
               >
                 <Button
-                    danger
-                    ghost
-                    icon={<DeleteOutlined />}
-                    style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }}
-                    title={t.clear_cart}
+                  danger
+                  ghost
+                  icon={<DeleteOutlined />}
+                  style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }}
+                  title={t.clear_cart}
                 />
               </Popconfirm>
 
@@ -2515,7 +2788,8 @@ function PosPage() {
         onClose={() => {
           setQrModalVisible(false);
           setPaymentData({ paymentLink: "", orderNo: "", total: 0 });
-          handleClearCart(true); // Clear and remove draft after bank payment
+          // Trigger print workflow for all order types after QR payment
+          triggerAutoPrintWorkflow(false);
         }}
         paymentLink={paymentData.paymentLink}
         orderNo={paymentData.orderNo}
@@ -2634,25 +2908,24 @@ function PosPage() {
           )}
 
           {/* 3. Sugar Selector (Only for Drinks) */}
-          {(selectedProductForOptions?.category_name?.toLowerCase().includes("coffee") ||
-            selectedProductForOptions?.category_name?.toLowerCase().includes("drink") ||
-            selectedProductForOptions?.category_name?.toLowerCase().includes("juice")) && (
-              <div>
-                <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 18 }}>🍯</span> {t.sugar_level || "Sugar Level"}
-                </div>
-                <Radio.Group
-                  value={tempOptions.sugar}
-                  onChange={e => setTempOptions(p => ({ ...p, sugar: e.target.value }))}
-                  buttonStyle="solid"
-                >
-                  <Radio.Button value="0%" style={{ borderRadius: '8px 0 0 8px' }}>0%</Radio.Button>
-                  <Radio.Button value="25%">25%</Radio.Button>
-                  <Radio.Button value="50%">50%</Radio.Button>
-                  <Radio.Button value="100%" style={{ borderRadius: '0 8px 8px 0' }}>100%</Radio.Button>
-                </Radio.Group>
+          {/* 3. Sugar Selector (Only if configured) */}
+          {(selectedProductForOptions?.moods && safeParse(selectedProductForOptions.moods)?.length > 0) && (
+            <div>
+              <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>🍯</span> {t.sugar_level || "Sugar Level"}
               </div>
-            )}
+              <Radio.Group
+                value={tempOptions.sugar}
+                onChange={e => setTempOptions(p => ({ ...p, sugar: e.target.value }))}
+                buttonStyle="solid"
+              >
+                <Radio.Button value="0%" style={{ borderRadius: '8px 0 0 8px' }}>0%</Radio.Button>
+                <Radio.Button value="25%">25%</Radio.Button>
+                <Radio.Button value="50%">50%</Radio.Button>
+                <Radio.Button value="100%" style={{ borderRadius: '0 8px 8px 0' }}>100%</Radio.Button>
+              </Radio.Group>
+            </div>
+          )}
 
           {/* 4. Add-ons Selector (Side Dishes) */}
           {(selectedProductForOptions?.addons && Array.isArray(safeParse(selectedProductForOptions.addons)) && safeParse(selectedProductForOptions.addons).length > 0) && (
@@ -2793,80 +3066,155 @@ function PosPage() {
         open={cashPaymentModalVisible}
         onCancel={() => setCashPaymentModalVisible(false)}
         footer={[
-          <Button key="close" onClick={() => setCashPaymentModalVisible(false)} size="large" style={{ borderRadius: 10 }}>
+          <Button
+            key="exact"
+            onClick={() => {
+              setCashReceivedUSD(objSummary.total);
+              setCashReceivedKHR(0);
+            }}
+            size="large"
+            style={{ borderRadius: 10, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}
+          >
+            Exact Amount ($)
+          </Button>,
+          <Button key="close" type="primary" onClick={() => setCashPaymentModalVisible(false)} size="large" style={{ borderRadius: 10, background: COLORS.darkGreen, minWidth: 120 }}>
             Done
           </Button>
         ]}
-        width={400}
+        width={450}
         centered
       >
         <div style={{ padding: '10px 0' }}>
+          {/* Total Summary Header */}
           <div style={{
-            background: '#f8f7f2',
-            padding: 20,
-            borderRadius: 16,
-            marginBottom: 20,
-            border: `1px solid ${COLORS.softBorder}`,
-            textAlign: 'center'
+            background: '#1e4a2d',
+            padding: '24px 20px',
+            borderRadius: 20,
+            marginBottom: 24,
+            textAlign: 'center',
+            boxShadow: '0 10px 30px rgba(30,74,45,0.2)',
+            color: '#fff'
           }}>
-            <div style={{ fontSize: 14, color: COLORS.textSecondary, marginBottom: 4 }}>Total Amount Due</div>
-            <div style={{ fontSize: 32, fontWeight: 900, color: COLORS.darkGreen }}>
+            <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Total Amount Due</div>
+            <div style={{ fontSize: 40, fontWeight: 900 }}>
               ${objSummary.total.toFixed(2)}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: COLORS.textSecondary, marginTop: 4 }}>
-              ≈ {(objSummary.total * exchangeRate).toLocaleString()} ៛
+            <div style={{ fontSize: 20, opacity: 0.9, fontWeight: 600, marginTop: 4 }}>
+              ៛ {(Math.round(objSummary.total * exchangeRate / 100) * 100).toLocaleString()}
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* USD Input Section */}
             <div>
-              <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 15 }}>Amount Received</div>
-              <div style={{ display: 'flex', gap: 15 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 6 }}>US Dollar ($)</div>
-                  <InputNumber
-                    size="large"
-                    style={{ width: '100%', borderRadius: 10 }}
-                    value={cashReceivedUSD}
-                    onChange={v => setCashReceivedUSD(v || 0)}
-                    min={0}
-                    autoFocus
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 6 }}>Khmer Riel (៛)</div>
-                  <InputNumber
-                    size="large"
-                    style={{ width: '100%', borderRadius: 10 }}
-                    value={cashReceivedKHR}
-                    onChange={v => setCashReceivedKHR(v || 0)}
-                    min={0}
-                    step={100}
-                  />
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontWeight: 800, fontSize: 16, color: '#2d3748' }}>Received USD ($)</span>
+                <Button size="small" type="link" onClick={() => setCashReceivedUSD(0)}>Clear</Button>
+              </div>
+              <InputNumber
+                size="large"
+                style={{ width: '100%', borderRadius: 12, height: 50, display: 'flex', alignItems: 'center', fontSize: 20, fontWeight: 700 }}
+                value={cashReceivedUSD}
+                onChange={v => setCashReceivedUSD(v || 0)}
+                min={0}
+                placeholder="0.00"
+                autoFocus
+                onFocus={(e) => e.target.select()}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                {[1, 5, 10, 20, 50].map(val => (
+                  <Button
+                    key={val}
+                    style={{ flex: 1, borderRadius: 8, height: 36, fontWeight: 700 }}
+                    onClick={() => setCashReceivedUSD(prev => (Number(prev) || 0) + val)}
+                  >
+                    +${val}
+                  </Button>
+                ))}
               </div>
             </div>
 
-            <div style={{
-              marginTop: 10,
-              padding: 20,
-              background: COLORS.darkGreen,
-              borderRadius: 16,
-              color: '#fff',
-              textAlign: 'center',
-              boxShadow: '0 8px 24px rgba(30,74,45,0.2)'
-            }}>
-              <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 6 }}>Change to Return</div>
-              <div style={{ fontSize: 36, fontWeight: 900 }}>
-                ${Math.max(0, (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)) - objSummary.total).toFixed(2)}
+            {/* KHR Input Section */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontWeight: 800, fontSize: 16, color: '#2d3748' }}>Received KHR (៛)</span>
+                <Button size="small" type="link" onClick={() => setCashReceivedKHR(0)}>Clear</Button>
               </div>
-              <div style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>
-                ≈ {Math.max(0, Math.round(((Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate)) - objSummary.total) * exchangeRate / 100) * 100).toLocaleString()} ៛
+              <InputNumber
+                size="large"
+                style={{ width: '100%', borderRadius: 12, height: 50, display: 'flex', alignItems: 'center', fontSize: 20, fontWeight: 700 }}
+                value={cashReceivedKHR}
+                onChange={v => setCashReceivedKHR(v || 0)}
+                min={0}
+                step={100}
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                {[5000, 10000, 20000, 50000].map(val => (
+                  <Button
+                    key={val}
+                    style={{ flex: 1, borderRadius: 8, height: 36, fontWeight: 700, fontSize: 11 }}
+                    onClick={() => setCashReceivedKHR(prev => (Number(prev) || 0) + val)}
+                  >
+                    +{(val / 1000)}k៛
+                  </Button>
+                ))}
               </div>
             </div>
 
-            <div style={{ fontSize: 12, color: COLORS.textSecondary, textAlign: 'center' }}>
-              Exchange Rate: 1$ = {exchangeRate.toLocaleString()} ៛
+            {/* Smart Change Result */}
+            {(() => {
+              const totalReceivedUSD = Number(cashReceivedUSD || 0) + (Number(cashReceivedKHR || 0) / exchangeRate);
+              const changeUSD = Math.max(0, totalReceivedUSD - objSummary.total);
+
+              // Smart Split Logic: Full USD + Remaining in KHR
+              const fullUSD = Math.floor(changeUSD);
+              const remainUSD = changeUSD - fullUSD;
+              const remainKHR = Math.round((remainUSD * exchangeRate) / 100) * 100;
+
+              return (
+                <div style={{
+                  marginTop: 8,
+                  padding: '24px 20px',
+                  background: changeUSD > 0 ? '#f0fdf4' : '#f8fafc',
+                  border: `2px dashed ${changeUSD > 0 ? '#22c55e' : '#cbd5e1'}`,
+                  borderRadius: 20,
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase' }}>Change to Return</div>
+
+                  {changeUSD > 0 ? (
+                    <div>
+                      <div style={{ fontSize: 44, fontWeight: 900, color: '#166534', lineHeight: 1 }}>
+                        ${changeUSD.toFixed(2)}
+                      </div>
+                      <Divider style={{ margin: '16px 0', borderColor: 'rgba(22,101,52,0.1)' }}>
+                        <span style={{ fontSize: 11, color: '#166534', fontWeight: 700 }}>OR SMART SPLIT</span>
+                      </Divider>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 20, alignItems: 'center' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: '#166534' }}>${fullUSD}</div>
+                          <div style={{ fontSize: 10, color: '#166534', opacity: 0.7 }}>DOLLARS</div>
+                        </div>
+                        <div style={{ fontSize: 24, color: '#166534', opacity: 0.3 }}>+</div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: '#166534' }}>{remainKHR.toLocaleString()}៛</div>
+                          <div style={{ fontSize: 10, color: '#166534', opacity: 0.7 }}>RIELS</div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#94a3b8', padding: '10px 0' }}>
+                      Insufficient Cash
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <div style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', fontStyle: 'italic' }}>
+              Official Exchange: 1$ = {exchangeRate.toLocaleString()}៛
             </div>
           </div>
         </div>

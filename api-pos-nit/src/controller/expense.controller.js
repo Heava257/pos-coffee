@@ -30,7 +30,7 @@ exports.getList = async (req, res) => {
         const { txtSearch, expense_type_id, from_date, to_date } = req.query;
 
         let sql = `
-      SELECT e.*, et.name as expense_type_name, b.name as branch_name
+      SELECT e.*, et.name as type_name, b.name as branch_name
       FROM expense e
       LEFT JOIN expense_type et ON e.expense_type_id = et.id
       LEFT JOIN branches b ON e.branch_id = b.id
@@ -68,11 +68,10 @@ exports.getList = async (req, res) => {
 exports.create = async (req, res) => {
     try {
         const { business_id, branch_id } = req;
-        const { expense_type_id, amount, payment_method, description, expense_date } = req.body;
-
+        const { expense_type_id, amount, payment_method, description, expense_date, category_class } = req.body;
         const [data] = await db.query(
-            "INSERT INTO expense (business_id, branch_id, expense_type_id, amount, payment_method, description, expense_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [business_id, branch_id, expense_type_id, amount, payment_method || 'Cash', description, expense_date]
+            "INSERT INTO expense (business_id, branch_id, expense_type_id, category_class, amount, payment_method, description, expense_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [business_id, branch_id, expense_type_id, category_class || 'Operational', amount, payment_method || 'Cash', description, expense_date]
         );
 
         res.json({ success: true, message: "Expense recorded!", data });
@@ -85,10 +84,10 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         const { business_id } = req;
-        const { id, expense_type_id, amount, payment_method, description, expense_date } = req.body;
+        const { id, expense_type_id, amount, payment_method, description, expense_date, category_class } = req.body;
         await db.query(
-            "UPDATE expense SET expense_type_id=?, amount=?, payment_method=?, description=?, expense_date=? WHERE id=? AND business_id=?",
-            [expense_type_id, amount, payment_method || 'Cash', description, expense_date, id, business_id]
+            "UPDATE expense SET expense_type_id=?, category_class=?, amount=?, payment_method=?, description=?, expense_date=? WHERE id=? AND business_id=?",
+            [expense_type_id, category_class || 'Operational', amount, payment_method || 'Cash', description, expense_date, id, business_id]
         );
         res.json({ success: true, message: "Expense updated!" });
     } catch (error) {

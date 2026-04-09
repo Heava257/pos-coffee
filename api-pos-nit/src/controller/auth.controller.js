@@ -164,13 +164,27 @@ exports.login = async (req, res) => {
 
     // Fetch Permissions for Backend/Frontend checks
     // We filter permissions based on the business's current plan level (min_plan_id)
+    // 🚀 MODULE-DRIVEN PERMISSIONS: Only grant permissions if they are not bound to a module
+    // OR if they belong to an active module for this business.
+    const activeModules = (user.active_modules || "POS").split(",").map(m => m.trim());
+    
     const [rolePerms] = await db.query(`
-      SELECT p.route_key, p.name
+      SELECT DISTINCT p.route_key, p.name 
       FROM permissions p
       INNER JOIN role_permissions rp ON p.id = rp.permission_id
+      LEFT JOIN module_permissions mp ON p.id = mp.permission_id
+      LEFT JOIN system_modules sm ON mp.module_id = sm.id
       WHERE rp.role_id = ?
       ${user.business_id === 1 ? '' : 'AND p.min_plan_id <= (SELECT plan_id FROM businesses WHERE id = ?)'}
-    `, user.business_id === 1 ? [user.role_id] : [user.role_id, user.business_id]);
+      AND (
+        ? = 1 -- 👑 Super Admin Bypass
+        OR mp.module_id IS NULL -- Core Permission
+        OR sm.code IN (?) -- Belongs to active module
+      )
+    `, user.business_id === 1 
+        ? [user.role_id, user.business_id, activeModules] 
+        : [user.role_id, user.business_id, user.business_id, activeModules]
+    );
 
     const permissions = rolePerms;
     payload.permissions = permissions.map(p => p.route_key.replace('/', '')); 

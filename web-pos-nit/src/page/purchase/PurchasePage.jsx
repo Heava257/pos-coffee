@@ -12,10 +12,11 @@ import {
     Space,
     Table,
     Tag,
-    DatePicker
+    DatePicker,
+    Divider
 } from "antd";
 import { request } from "../../util/helper";
-import { MdAdd, MdDelete, MdRemoveRedEye, MdInventory } from "react-icons/md";
+import { MdAdd, MdDelete, MdRemoveRedEye, MdInventory, MdQrCodeScanner } from "react-icons/md";
 import MainPage from "../../component/layout/MainPage";
 import dayjs from "dayjs";
 import { useLanguage, translations } from "../../store/language.store";
@@ -115,14 +116,16 @@ function PurchasePage() {
 
             // 2. Fetch Finished Products
             const resPD = await request("product", "get", { is_list_all: 1 });
-            const pds = (resPD && !resPD.error) ? resPD.list.map(p => ({
-                label: `🥤 ${p.name} [Product]`,
-                value: `pd-${p.id}`,
-                item_id: p.id,
-                item_type: 'product',
-                price: p.cost_price || 0,
-                name: p.name
-            })) : [];
+            const pds = (resPD && !resPD.error) ? resPD.list
+                .filter(p => p.product_type !== 'recipe')
+                .map(p => ({
+                    label: `🥤 ${p.name} [Ready Item]`,
+                    value: `pd-${p.id}`,
+                    item_id: p.id,
+                    item_type: 'product',
+                    price: p.cost_price || 0,
+                    name: p.name
+                })) : [];
 
             setState(pre => ({
                 ...pre,
@@ -150,23 +153,24 @@ function PurchasePage() {
     };
 
     const onFinish = async (values) => {
-        // Calculate total amount from items and map correctly for backend
-        let totalAmount = 0;
         const rawItems = values.items || [];
         const formattedItems = rawItems.map(item => {
             const qty = Number(item.qty) || 0;
             const cost = Number(item.cost) || 0;
-            totalAmount += qty * cost;
-
-            // Extract real ID and Type from the composite value if needed
-            // or just use the extra properties we'll inject via Select onChange
             return {
                 product_id: item.real_id, // Backend uses product_id key for both
                 item_type: item.item_type,
                 qty: qty,
-                cost: cost
+                cost: cost,
+                batch_no: item.batch_no,
+                expiry_date: item.expiry_date ? item.expiry_date.format("YYYY-MM-DD") : null,
+                unit: item.unit,
+                remark: item.remark
             };
         });
+
+        const subtotal = formattedItems.reduce((sum, i) => sum + (i.qty * i.cost), 0);
+        const totalAmount = subtotal + (Number(values.tax_amount) || 0) - (Number(values.discount_amount) || 0);
 
         const body = {
             ...values,
@@ -205,6 +209,26 @@ function PurchasePage() {
         }
     };
 
+
+    const onScanBarcodeReceive = (barcode) => {
+        if (!barcode) return;
+        const details = [...state.purchaseDetails];
+        const index = details.findIndex(d => d.barcode === barcode);
+        if (index > -1) {
+            const item = details[index];
+            const max = Number(item.qty) - Number(item.received_qty);
+            if (item.receive_now < max) {
+                details[index].receive_now += 1;
+                setState(p => ({ ...p, purchaseDetails: details }));
+                message.success(`Received 1 unit of ${item.name}`);
+            } else {
+                message.warning(`Item ${item.name} is already fully received (Max: ${item.qty})`);
+            }
+        } else {
+            message.error(`Barcode [${barcode}] not found in this purchase order!`);
+        }
+    };
+
     const onFinishReceive = async () => {
         setState(p => ({ ...p, isSavingReceive: true }));
         const body = {
@@ -213,7 +237,10 @@ function PurchasePage() {
                 id: d.id,
                 real_id: d.product_id || d.raw_material_id,
                 item_type: d.item_type,
-                receive_now: d.receive_now
+                receive_now: d.receive_now,
+                batch_no: d.batch_no,
+                expiry_date: d.expiry_date ? d.expiry_date.format("YYYY-MM-DD") : null,
+                cost: d.cost
             }))
         };
 
@@ -321,18 +348,18 @@ function PurchasePage() {
             render: (item) => (
                 <Space>
                     {item.status === 'Request' && canApprove && (
-                        <Button 
-                           type="primary" 
-                           size="small" 
-                           onClick={async () => {
-                               const res = await request("purchase-approve", "post", { id: item.id });
-                               if (res && !res.error) {
-                                   message.success("Purchase request approved!");
-                                   getList();
-                               }
-                           }}
+                        <Button
+                            type="primary"
+                            size="small"
+                            onClick={async () => {
+                                const res = await request("purchase-approve", "post", { id: item.id });
+                                if (res && !res.error) {
+                                    message.success("Purchase request approved!");
+                                    getList();
+                                }
+                            }}
                         >
-                           Approve
+                            Approve
                         </Button>
                     )}
                     {(item.status === 'Pending' || item.status === 'Partial' || item.status === 'Approved') && (
@@ -424,29 +451,30 @@ function PurchasePage() {
                 title={<b>➕ {t.new_purchase}</b>}
                 open={state.visibleModal}
                 onCancel={onCloseModal}
-                width={850}
+                width={1400}
+                style={{ top: 20 }}
                 footer={null}
                 centered
                 destroyOnClose
             >
                 <Form layout="vertical" form={form} onFinish={onFinish}>
                     <Row gutter={16}>
-                        <Col span={5}>
+                        <Col span={4}>
                             <Form.Item name="supplier_id" label={t.supplier} rules={[{ required: true }]}>
                                 <Select options={state.suppliers} placeholder={t.supplier} showSearch filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())} />
                             </Form.Item>
                         </Col>
-                        <Col span={5}>
+                        <Col span={4}>
                             <Form.Item name="ref" label={t.ref_no + " (Invoice #)"}>
                                 <Input placeholder="e.g. INV-001" />
                             </Form.Item>
                         </Col>
-                        <Col span={5}>
+                        <Col span={4}>
                             <Form.Item name="purchase_date" label={t.receive_date} rules={[{ required: true }]}>
                                 <DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
                             </Form.Item>
                         </Col>
-                        <Col span={5}>
+                        <Col span={4}>
                             <Form.Item name="status" label={t.status} rules={[{ required: true }]} initialValue={canApprove ? "Received" : "Request"}>
                                 <Select options={[
                                     { label: "📥 " + (t.request || "Request (PO)"), value: "Request" },
@@ -457,20 +485,38 @@ function PurchasePage() {
                             </Form.Item>
                         </Col>
                         <Col span={4}>
+                            <Form.Item name="payment_method" label={t.payment_method} initialValue="Cash">
+                                <Select options={[
+                                    { label: "💵 " + t.cash, value: "Cash" },
+                                    { label: "💳 " + t.bank, value: "Bank" }
+                                ]} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={4}>
                             <Form.Item name="note" label={t.note}>
                                 <Input placeholder={t.note} />
                             </Form.Item>
                         </Col>
                     </Row>
+                    <Divider style={{ margin: '15px 0' }} />
 
-                    <div style={{ background: "#fcfcfc", border: "1px solid #eee", padding: "16px", borderRadius: "8px", marginBottom: "20px" }}>
-                        <div style={{ marginBottom: "12px", fontWeight: 600, color: "#555" }}>{t.product}</div>
+                    <div style={{ padding: '0 10px' }}>
+                        <Row gutter={8} style={{ fontWeight: 'bold', marginBottom: 12, color: '#555', borderBottom: '2px solid #ddd', paddingBottom: 8, fontSize: 16 }}>
+                            <Col span={7}>{t.product}</Col>
+                            <Col span={3}>{t.quantity}</Col>
+                            <Col span={3}>{t.unit}</Col>
+                            <Col span={3}>{t.price}</Col>
+                            <Col span={5}>{t.note || "Remark"}</Col>
+                            <Col span={2} style={{ textAlign: 'right' }}>{t.total}</Col>
+                            <Col span={1}></Col>
+                        </Row>
+
                         <Form.List name="items">
                             {(fields, { add, remove }) => (
                                 <>
                                     {fields.map(({ key, name, ...restField }) => (
-                                        <Row key={key} gutter={12} align="middle" style={{ marginBottom: 12 }}>
-                                            <Col span={9}>
+                                        <Row key={key} gutter={8} align="middle" style={{ marginBottom: 15, borderBottom: '1px solid #f0f0f0', paddingBottom: 10 }}>
+                                            <Col span={7}>
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, 'item_composite_id']}
@@ -478,6 +524,7 @@ function PurchasePage() {
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <Select
+                                                        size="large"
                                                         placeholder={t.product}
                                                         options={state.allItems}
                                                         loading={state.isFetchingItems}
@@ -503,33 +550,57 @@ function PurchasePage() {
                                                 <Form.Item name={[name, 'item_type']} noStyle><Input type="hidden" /></Form.Item>
                                                 <Form.Item name={[name, 'real_id']} noStyle><Input type="hidden" /></Form.Item>
                                             </Col>
-                                            <Col span={5}>
+                                            <Col span={3}>
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, 'qty']}
                                                     rules={[{ required: true, message: t.quantity }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
-                                                    <InputNumber placeholder={t.quantity} min={0.01} style={{ width: '100%' }} onChange={() => setState({ ...state })} />
+                                                    <InputNumber size="large" placeholder="0.00" min={0.01} style={{ width: '100%' }} onChange={() => setState({ ...state })} />
                                                 </Form.Item>
                                             </Col>
-                                            <Col span={5}>
+                                            <Col span={3}>
+                                                <Form.Item name={[name, 'unit']} style={{ marginBottom: 0 }}>
+                                                    <Select
+                                                        size="large"
+                                                        placeholder={t.unit}
+                                                        options={[
+                                                            { label: "📦 " + (t.case || "កេស"), value: "Case" },
+                                                            { label: "💰 " + (t.bag || "បាវ"), value: "Bag" },
+                                                            { label: "⚖️ " + (t.kg || "គីឡូ"), value: "Kg" },
+                                                            { label: "🧴 " + (t.bottle || "ដប"), value: "Bottle" },
+                                                            { label: "🎁 " + (t.pack || "យួរ"), value: "Pack" },
+                                                            { label: "🍱 " + (t.box || "ប្រអប់"), value: "Box" },
+                                                            { label: "🔘 " + (t.pcs || "គ្រាប់/កែវ"), value: "Pcs" },
+                                                            { label: "🛢️ " + (t.liter || "លីត្រ"), value: "L" },
+                                                        ]}
+                                                        showSearch
+                                                    />
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={3}>
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, 'cost']}
                                                     rules={[{ required: true, message: t.price }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
-                                                    <InputNumber placeholder={t.price} min={0} prefix="$" style={{ width: '100%' }} onChange={() => setState({ ...state })} />
+                                                    <InputNumber size="large" placeholder="0.00" min={0} prefix="$" style={{ width: '100%' }} onChange={() => setState({ ...state })} />
                                                 </Form.Item>
                                             </Col>
-                                            <Col span={3}>
-                                                <div style={{ textAlign: "right", fontWeight: 600 }}>
+                                            <Col span={5}>
+                                                <Form.Item name={[name, 'remark']} style={{ marginBottom: 0 }}>
+                                                    <Input size="large" placeholder={t.note || "Remark"} style={{ width: '100%' }} />
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={2}>
+                                                <div style={{ textAlign: "right", fontWeight: 600, fontSize: 16 }}>
                                                     ${((Number(form.getFieldValue(['items', name, 'qty'])) || 0) * (Number(form.getFieldValue(['items', name, 'cost'])) || 0)).toFixed(2)}
                                                 </div>
                                             </Col>
-                                            <Col span={2}>
-                                                <Button danger type="text" icon={<MdDelete />} onClick={() => { remove(name); setState({ ...state }); }} />
+                                            <Col span={1}>
+                                                <Button danger type="text" size="large" icon={<MdDelete style={{ fontSize: 20 }} />} onClick={() => { remove(name); setState({ ...state }); }} />
                                             </Col>
                                         </Row>
                                     ))}
@@ -541,19 +612,45 @@ function PurchasePage() {
                         </Form.List>
                     </div>
 
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", paddingTop: 20 }}>
-                        <div style={{ fontSize: 18 }}>
-                            {t.total_amount}: <b style={{ color: "#2ecc71" }}>$
-                                {(form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0).toFixed(2)}
-                            </b>
-                        </div>
-                        <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-                            <Form.Item name="paid_amount" label={t.paid_amount} style={{ marginBottom: 0 }}>
-                                <InputNumber style={{ width: 150 }} min={0} prefix="$" placeholder="0.00" />
+                    <div style={{ borderTop: "2px solid #eee", marginTop: 25, paddingTop: 20, background: '#fafafa', padding: 20, borderRadius: 8 }}>
+                        <Row gutter={24} align="middle">
+                            <Col span={6}>
+                                <div style={{ fontSize: 14, color: '#666' }}>{t.subtotal}</div>
+                                <div style={{ fontSize: 22, fontWeight: 'bold' }}>
+                                    ${(form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0).toFixed(2)}
+                                </div>
+                            </Col>
+                            <Col span={5}>
+                                <Form.Item name="tax_amount" label={<b>{t.tax}</b>} style={{ marginBottom: 0 }}>
+                                    <InputNumber prefix="$" style={{ width: '100%' }} placeholder="0.00" onChange={() => setState({ ...state })} />
+                                </Form.Item>
+                            </Col>
+                            <Col span={5}>
+                                <Form.Item name="discount_amount" label={<b>{t.discount_full}</b>} style={{ marginBottom: 0 }}>
+                                    <InputNumber prefix="$" style={{ width: '100%' }} placeholder="0.00" onChange={() => setState({ ...state })} />
+                                </Form.Item>
+                            </Col>
+                            <Col span={8}>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: 16, color: '#666' }}>{t.grand_total}</div>
+                                    <div style={{ fontSize: 32, fontWeight: 'bold', color: "#2ecc71" }}>$
+                                        {((form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0)
+                                            + (Number(form.getFieldValue("tax_amount")) || 0)
+                                            - (Number(form.getFieldValue("discount_amount")) || 0)).toFixed(2)}
+                                    </div>
+                                </div>
+                            </Col>
+                        </Row>
+
+                        <Divider />
+
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <Form.Item name="paid_amount" label={<b>{t.paid_amount}</b>} style={{ marginBottom: 0 }}>
+                                <InputNumber style={{ width: 180 }} min={0} prefix="$" placeholder="0.00" size="large" />
                             </Form.Item>
-                            <Space style={{ marginTop: 24 }}>
-                                <Button onClick={onCloseModal}>{t.cancel}</Button>
-                                <Button type="primary" size="large" htmlType="submit" style={{ paddingLeft: 30, paddingRight: 30 }}>
+                            <Space>
+                                <Button onClick={onCloseModal} size="large" style={{ width: 120 }}>{t.cancel}</Button>
+                                <Button type="primary" size="large" htmlType="submit" style={{ width: 180, fontWeight: 'bold' }}>
                                     {t.save}
                                 </Button>
                             </Space>
@@ -563,17 +660,35 @@ function PurchasePage() {
             </Modal>
             {/* Receive Goods Modal */}
             <Modal
-                title={<b>📥 {t.receiving_now} - {state.selectedPurchase?.ref}</b>}
+                title={<b>📥 {t.receiving_now || "Receive Goods"} - {state.selectedPurchase?.ref}</b>}
                 open={state.visibleReceiveModal}
                 onCancel={() => setState(p => ({ ...p, visibleReceiveModal: false }))}
-                width={800}
+                width={1250}
                 onOk={onFinishReceive}
                 confirmLoading={state.isSavingReceive}
                 okText={t.save}
                 centered
             >
-                <div style={{ marginBottom: 16 }}>
-                    <b>{t.supplier}:</b> {state.selectedPurchase?.supplier_name} <br />
+                <div style={{ marginBottom: 20, padding: '15px', background: '#f6f9fc', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '15px', border: '1px solid #e1e8ed' }}>
+                    <div style={{ background: '#2ecc71', padding: '10px', borderRadius: '8px', color: '#fff' }}>
+                        <MdQrCodeScanner size={24} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Focus to Scan Crate / Item Barcode</div>
+                        <Input
+                            placeholder="Scan Product Barcode..."
+                            autoFocus
+                            style={{ height: '40px', borderRadius: '6px' }}
+                            onPressEnter={(e) => {
+                                onScanBarcodeReceive(e.target.value);
+                                e.target.value = '';
+                            }}
+                        />
+                    </div>
+                </div>
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                    <span><b>{t.supplier || "Supplier"}:</b> {state.selectedPurchase?.supplier_name}</span>
+                    <Tag color="blue">{t.ref_no || "Ref"}: {state.selectedPurchase?.ref}</Tag>
                 </div>
                 <Table
                     dataSource={state.purchaseDetails}
@@ -583,20 +698,101 @@ function PurchasePage() {
                     columns={[
                         { title: t.product_name, dataIndex: "name" },
                         { title: t.category_name, dataIndex: "item_type", render: (t) => <Tag>{t.replace('_', ' ')}</Tag> },
-                        { title: t.quantity, dataIndex: "qty", align: 'center' },
-                        { title: t.paid, dataIndex: "received_qty", align: 'center', render: (v) => <Tag color="green">{v}</Tag> },
+                        { title: t.unit, dataIndex: "unit", width: 80, align: 'center', render: (v) => <Tag color="blue">{v || "-"}</Tag> },
+                        { title: t.paid, dataIndex: "received_qty", width: 80, align: 'center', render: (v) => <Tag color="green">{v}</Tag> },
+                        {
+                            title: t.price,
+                            dataIndex: "cost",
+                            width: 120,
+                            render: (_, record, index) => (
+                                <InputNumber
+                                    min={0}
+                                    size="small"
+                                    prefix="$"
+                                    value={record.cost}
+                                    style={{ width: '100%', fontWeight: 'bold', color: '#2c3e50' }}
+                                    onChange={(val) => {
+                                        const details = [...state.purchaseDetails];
+                                        details[index].cost = val;
+                                        setState(p => ({ ...p, purchaseDetails: details }));
+                                    }}
+                                />
+                            )
+                        },
+                        {
+                            title: t.batch_no,
+                            dataIndex: "batch_no",
+                            width: 110,
+                            render: (_, record, index) => (
+                                <Input
+                                    placeholder={t.batch_no}
+                                    size="small"
+                                    value={record.batch_no}
+                                    onChange={(e) => {
+                                        const details = [...state.purchaseDetails];
+                                        details[index].batch_no = e.target.value;
+                                        setState(p => ({ ...p, purchaseDetails: details }));
+                                    }}
+                                />
+                            )
+                        },
+                        {
+                            title: t.expiry_date,
+                            dataIndex: "expiry_date",
+                            width: 130,
+                            render: (_, record, index) => (
+                                <DatePicker
+                                    placeholder={t.expiry_date}
+                                    size="small"
+                                    style={{ width: '100%' }}
+                                    value={record.expiry_date}
+                                    onChange={(date) => {
+                                        const details = [...state.purchaseDetails];
+                                        details[index].expiry_date = date;
+                                        setState(p => ({ ...p, purchaseDetails: details }));
+                                    }}
+                                />
+                            )
+                        },
                         {
                             title: t.receiving_now,
-                            width: 150,
+                            width: 110,
                             render: (_, record, index) => (
                                 <InputNumber
                                     min={0}
                                     max={Number(record.qty) - Number(record.received_qty)}
                                     value={record.receive_now}
-                                    style={{ width: '100%' }}
+                                    style={{ width: '100%', borderColor: '#2ecc71' }}
+                                    size="small"
                                     onChange={(val) => {
                                         const details = [...state.purchaseDetails];
                                         details[index].receive_now = val;
+                                        setState(p => ({ ...p, purchaseDetails: details }));
+                                    }}
+                                />
+                            )
+                        },
+                        {
+                            title: t.total,
+                            width: 100,
+                            align: 'right',
+                            render: (_, record) => (
+                                <div style={{ fontWeight: 'bold', color: '#16a085' }}>
+                                    ${(Number(record.receive_now || 0) * Number(record.cost || 0)).toFixed(2)}
+                                </div>
+                            )
+                        },
+                        {
+                            title: t.note,
+                            width: 150,
+                            render: (_, record, index) => (
+                                <Input
+                                    placeholder={t.note}
+                                    size="small"
+                                    value={record.remark}
+                                    onChange={(e) => {
+                                        const details = [...state.purchaseDetails];
+                                        details[index].remark = e.target.value;
                                         setState(p => ({ ...p, purchaseDetails: details }));
                                     }}
                                 />

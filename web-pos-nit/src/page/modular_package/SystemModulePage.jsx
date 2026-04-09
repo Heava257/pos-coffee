@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space,
@@ -8,8 +8,10 @@ import {
     PlusOutlined,
     EditOutlined,
     AppstoreOutlined,
-    DeleteOutlined
+    DeleteOutlined,
+    SafetyCertificateOutlined
 } from "@ant-design/icons";
+import { Checkbox, Divider, Tooltip } from "antd";
 import { request } from "../../util/helper";
 
 const { Title, Text } = Typography;
@@ -20,6 +22,11 @@ const SystemModulePage = () => {
     const [visible, setVisible] = useState(false);
     const [form] = Form.useForm();
     const [editId, setEditId] = useState(null);
+    const [permissionVisible, setPermissionVisible] = useState(false);
+    const [selectedModule, setSelectedModule] = useState(null);
+    const [allPermissions, setAllPermissions] = useState([]);
+    const [selectedPermissions, setSelectedPermissions] = useState([]);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         getList();
@@ -130,21 +137,78 @@ const SystemModulePage = () => {
             align: 'right',
             render: (record) => (
                 <Space>
-                    <Button 
-                        icon={<EditOutlined />} 
-                        onClick={() => handleEdit(record)}
-                        shape="circle"
-                    />
-                    <Button 
-                        icon={<DeleteOutlined />} 
-                        danger
-                        onClick={() => handleDelete(record.id)}
-                        shape="circle"
-                    />
+                    <Tooltip title="Manage Permissions">
+                        <Button 
+                            icon={<SafetyCertificateOutlined />} 
+                            onClick={() => handleManagePermissions(record)}
+                            shape="circle"
+                            style={{ color: '#faad14', borderColor: '#faad14' }}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Edit Details">
+                        <Button 
+                            icon={<EditOutlined />} 
+                            onClick={() => handleEdit(record)}
+                            shape="circle"
+                        />
+                    </Tooltip>
+                    <Tooltip title="Delete Module">
+                        <Button 
+                            icon={<DeleteOutlined />} 
+                            danger
+                            onClick={() => handleDelete(record.id)}
+                            shape="circle"
+                        />
+                    </Tooltip>
                 </Space>
             )
         }
     ];
+
+    const handleManagePermissions = async (record) => {
+        setSelectedModule(record);
+        setLoading(true);
+        try {
+            // 1. Fetch all system permissions if not already fetched
+            if (allPermissions.length === 0) {
+                const resAll = await request("permission", "get");
+                if (resAll && resAll.list) {
+                    setAllPermissions(resAll.list);
+                }
+            }
+            
+            // 2. Fetch current module permissions
+            const resModule = await request(`system_module/${record.id}/permissions`, "get");
+            if (resModule && resModule.list) {
+                setSelectedPermissions(resModule.list);
+            } else {
+                setSelectedPermissions([]);
+            }
+            
+            setPermissionVisible(true);
+        } catch (error) {
+            message.error("Failed to load permissions");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSavePermissions = async () => {
+        setSaving(true);
+        try {
+            const res = await request(`system_module/${selectedModule.id}/permissions`, "post", {
+                permissions: selectedPermissions
+            });
+            if (res) {
+                message.success("Module permissions updated successfully");
+                setPermissionVisible(false);
+            }
+        } catch (error) {
+            message.error("Failed to save permissions");
+        } finally {
+            setSaving(false);
+        }
+    };
 
     return (
         <div style={{ padding: '24px', background: '#f8f9fa', minHeight: '100vh' }}>
@@ -236,6 +300,40 @@ const SystemModulePage = () => {
                             </Space>
                         </div>
                     </Form>
+                </Modal>
+
+                <Modal
+                    title={<Space><SafetyCertificateOutlined /> <Text strong>Link Permissions: {selectedModule?.name}</Text></Space>}
+                    open={permissionVisible}
+                    onCancel={() => setPermissionVisible(false)}
+                    width={800}
+                    centered
+                    onOk={handleSavePermissions}
+                    confirmLoading={saving}
+                    okText="Apply Changes"
+                    bodyStyle={{ padding: '24px', maxHeight: '60vh', overflowY: 'auto' }}
+                >
+                    <div style={{ marginBottom: 16 }}>
+                        <Text type="secondary">Select which features should be unlocked when this module is active.</Text>
+                    </div>
+                    <Divider />
+                    <Checkbox.Group 
+                        style={{ width: '100%' }} 
+                        value={selectedPermissions}
+                        onChange={(checkedValues) => setSelectedPermissions(checkedValues)}
+                    >
+                        <Row gutter={[16, 16]}>
+                            {allPermissions.map(p => (
+                                <Col span={8} key={p.id}>
+                                    <Checkbox value={p.id}>
+                                        <Text style={{ fontSize: '13px' }}>{p.name}</Text>
+                                        <br />
+                                        <Text type="secondary" style={{ fontSize: '10px' }}>{p.route_key}</Text>
+                                    </Checkbox>
+                                </Col>
+                            ))}
+                        </Row>
+                    </Checkbox.Group>
                 </Modal>
             </div>
         </div>

@@ -53,6 +53,9 @@ const GlobalCategoryPage = () => {
         setEditId(record.id);
         form.setFieldsValue({
             ...record,
+            default_moods: record.default_moods ? record.default_moods.split(',').map(s => s.trim()) : [],
+            default_sizes: record.default_sizes ? record.default_sizes.split(',').map(s => s.trim()) : [],
+            default_addons: record.default_addons ? record.default_addons.split(',').map(s => s.trim()) : [],
         });
         
         if (record.image) {
@@ -95,9 +98,9 @@ const GlobalCategoryPage = () => {
         try {
             const formData = new FormData();
             formData.append("name", values.name);
-            formData.append("default_moods", values.default_moods || "");
-            formData.append("default_sizes", values.default_sizes || "");
-            formData.append("default_addons", values.default_addons || "");
+            formData.append("default_moods", Array.isArray(values.default_moods) ? values.default_moods.join(',') : (values.default_moods || ""));
+            formData.append("default_sizes", Array.isArray(values.default_sizes) ? values.default_sizes.join(',') : (values.default_sizes || ""));
+            formData.append("default_addons", Array.isArray(values.default_addons) ? values.default_addons.join(',') : (values.default_addons || ""));
             
             if (editId) formData.append("id", editId);
             
@@ -329,7 +332,7 @@ const GlobalCategoryPage = () => {
                                                 </Space>
                                             }
                                         >
-                                            <Input placeholder="Separate with commas..." size="large" />
+                                            <Select mode="tags" placeholder="Type and press Enter (e.g. Hot, Iced)" size="large" style={{ width: '100%' }} />
                                         </Form.Item>
                                     </Tooltip>
                                 </Col>
@@ -351,7 +354,7 @@ const GlobalCategoryPage = () => {
                                                 </Space>
                                             }
                                         >
-                                            <Input placeholder="Separate with commas..." size="large" />
+                                            <Select mode="tags" placeholder="Type and press Enter (e.g. S, M, L)" size="large" style={{ width: '100%' }} />
                                         </Form.Item>
                                     </Tooltip>
                                 </Col>
@@ -373,7 +376,7 @@ const GlobalCategoryPage = () => {
                                                 </Space>
                                             }
                                         >
-                                            <Input.TextArea rows={3} placeholder="Separate with commas..." />
+                                            <Select mode="tags" placeholder="Type and press Enter (e.g. Extra Shot, Cream)" size="large" style={{ width: '100%' }} />
                                         </Form.Item>
                                     </Tooltip>
                                 </Col>

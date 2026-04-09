@@ -130,38 +130,87 @@ exports.generatePaymentLink = async ({ orderNo, total, customerEmail, customerNa
 };
 
 
-exports.sendTelegramMessagenewcustomerOrder = async (messageText, imageUrls = []) => {
-  const TELEGRAM_TOKEN = "7883883844:AAG_DsodDa-Y-zlgMmowlCxNwiQIVJO2kQI";
-  const CHAT_ID = "-1002785760693";
-
-  const apiBase = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
-
+exports.setTelegramWebhook = async (token, business_id, mode = 'polling', url = null) => {
   try {
-    // 1. Send the text message
-    await axios.post(`${apiBase}/sendMessage`, {
-      chat_id: CHAT_ID,
-      text: messageText,
-      parse_mode: "HTML",
-    });
-
-    // 2. Send each image (if any)
-    for (const imageUrl of imageUrls) {
-      await axios.post(`${apiBase}/sendPhoto`, {
-        chat_id: CHAT_ID,
-        photo: imageUrl,
-      });
-    }
-
+     const apiBase = `https://api.telegram.org/bot${token}`;
+     
+     if (mode === 'webhook' && url) {
+       // Ensure URL includes the endpoint
+       const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+       const webhookUrl = `${cleanUrl}/api/telegram/webhook/${business_id}`;
+       await axios.post(`${apiBase}/setWebhook`, { url: webhookUrl });
+       console.log(`Webhook set for business #${business_id}: ${webhookUrl}`);
+     } else {
+       // Clear webhook so Polling can work
+       await axios.post(`${apiBase}/deleteWebhook`);
+       console.log(`Webhook cleared for business #${business_id} (Polling Enabled)`);
+     }
+     return true;
   } catch (err) {
-    console.error("Telegram Error:", err.response?.data || err.message);
+    console.error("Set/Clear Webhook Error:", err.response?.data || err.message);
+    return false;
   }
 };
 
+exports.sendTelegramMessage = async (business_id, messageText, imageUrls = [], keyboard = null, overrideConfig = null) => {
+  try {
+    let token, chatId;
 
+    if (overrideConfig && overrideConfig.token && overrideConfig.chatId) {
+      token = overrideConfig.token;
+      chatId = overrideConfig.chatId;
+    } else {
+      // 1. Fetch Telegram Config for this business
+      const [biz] = await connection.query(
+        "SELECT telegram_token, telegram_chat_id FROM businesses WHERE id = ?",
+        [business_id]
+      );
+
+      if (!biz || biz.length === 0) return;
+      token = biz[0].telegram_token;
+      chatId = biz[0].telegram_chat_id;
+    }
+
+    if (!token || !chatId) {
+      console.log(`Telegram not configured for Business #${business_id}`);
+      return;
+    }
+
+    const apiBase = `https://api.telegram.org/bot${token}`;
+
+    // 2. Prepare payload
+    const payload = {
+      chat_id: chatId,
+      text: messageText,
+      parse_mode: "HTML",
+    };
+
+    if (keyboard) {
+      payload.reply_markup = keyboard;
+    }
+
+    // 3. Send the text message
+    await axios.post(`${apiBase}/sendMessage`, payload);
+
+    // 4. Send images if any
+    if (imageUrls && imageUrls.length > 0) {
+      for (const imageUrl of imageUrls) {
+        await axios.post(`${apiBase}/sendPhoto`, {
+          chat_id: chatId,
+          photo: imageUrl,
+        });
+      }
+    }
+
+  } catch (err) {
+    console.error("Telegram Error (Business Notification):", err.response?.data || err.message);
+  }
+};
 
 exports.sendTelegramMessagenewLogin = async (messageText) => {
+  // Login notifications usually go to the platform owner/admin
   const TELEGRAM_TOKEN = "8046971725:AAFt4UJ-2D9pRdwb-BOUj3we96pwL4vo3vU";
-  const CHAT_ID = "-1002862378477"; // Your chat ID
+  const CHAT_ID = "-1002862378477";
 
   const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
 
@@ -172,7 +221,7 @@ exports.sendTelegramMessagenewLogin = async (messageText) => {
       parse_mode: "HTML",
     });
   } catch (err) {
-    console.error("Telegram Error:", err.message);
+    console.error("Telegram Error (Login):", err.message);
   }
 };
 exports.checkPlanLimit = async (business_id, resourceType) => {

@@ -5,6 +5,7 @@ const { uploadFile } = require("../util/helper");
 module.exports = (app) => {
     app.get("/api/settings", authMiddleware(), getSettings);
     app.put("/api/settings", authMiddleware(), uploadFile.single("upload_logo"), updateSettings);
+    app.post("/api/settings/test-telegram", authMiddleware(), require("../controller/settings.controller").testTelegramNotification);
 
     // System Master Settings (for platform owner)
     const sysCtrl = require("../controller/system_settings.controller");
