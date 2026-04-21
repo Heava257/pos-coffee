@@ -3,8 +3,8 @@ module.exports = {
     // Switch between local and production easily
     // In .env, set APP_ENV=local or APP_ENV=production
     HOST: process.env.APP_ENV === 'production' ? process.env.DB_PROD_HOST : (process.env.DB_HOST || "localhost"),
-    USER: process.env.APP_ENV === 'production' ? process.env.DB_PROD_USER : (process.env.DB_USER || "root"),
-    PASSWORD: process.env.APP_ENV === 'production' ? process.env.DB_PROD_PASSWORD : (process.env.DB_PASSWORD || ""),
+    USER: process.env.APP_ENV === 'production' ? process.env.DB_PROD_USER : (process.env.DB_USER || "dev_user"),
+    PASSWORD: process.env.APP_ENV === 'production' ? process.env.DB_PROD_PASSWORD : (process.env.DB_PASSWORD || "88889999"),
     DATABASE: process.env.APP_ENV === 'production' ? process.env.DB_PROD_DATABASE : (process.env.DB_DATABASE || "coffee_saas"),
     PORT: process.env.APP_ENV === 'production' ? process.env.DB_PROD_PORT : (process.env.DB_PORT || 3306),
   },
