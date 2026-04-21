@@ -34,7 +34,9 @@ import {
     RocketOutlined,
     OrderedListOutlined,
     CheckCircleOutlined,
-    InfoCircleOutlined
+    InfoCircleOutlined,
+    MobileOutlined,
+    NotificationOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
@@ -456,6 +458,114 @@ const SettingsPage = () => {
                             label: <span><PrinterOutlined /> ម៉ាស៊ីនព្រីន / Printer</span>,
                             children: (
                                 <PrinterSettingsTab />
+                            )
+                        },
+                        {
+                            key: "promo",
+                            label: <span><MobileOutlined /> Mobile App & Promo</span>,
+                            children: (
+                                <div style={{ paddingTop: 24, paddingBottom: 24 }}>
+                                    <Form
+                                        form={form}
+                                        layout="vertical"
+                                        onFinish={onFinish}
+                                        requiredMark={false}
+                                    >
+                                        <Row gutter={24}>
+                                            <Col xs={24} md={16}>
+                                                <Card 
+                                                    title={<Space><NotificationOutlined /> Home Banner Promotion</Space>}
+                                                    style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                                                    extra={
+                                                        <Form.Item name="promo_is_active" valuePropName="checked" noStyle>
+                                                            <Switch checkedChildren="Active" unCheckedChildren="Disabled" />
+                                                        </Form.Item>
+                                                    }
+                                                >
+                                                    <Row gutter={16}>
+                                                        <Col xs={24} md={12}>
+                                                            <Form.Item label="Promotion Title (Khmer/English)" name="promo_title" tooltip="e.g. ឆុងថ្មីៗក្តៅៗ or Fresh Brewed">
+                                                                <Input placeholder="Enter primary title" size="large" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24} md={12}>
+                                                            <Form.Item label="Subtitle/Discount Text" name="promo_subtitle" tooltip="e.g. ក្តីសុខ or Happiness">
+                                                                <Input placeholder="Enter subtitle" size="large" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24} md={12}>
+                                                            <Form.Item label="Discount Amount" name="promo_discount" tooltip="e.g. 50% or Buy 1 Get 1">
+                                                                <Input prefix={<PercentageOutlined />} placeholder="50%" size="large" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24} md={24}>
+                                                            <Form.Item label="Banner Image URL" name="promo_image" tooltip="Provide a high-quality image URL for the banner">
+                                                                <Input prefix={<GlobalOutlined />} placeholder="https://images.unsplash.com..." size="large" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24}>
+                                                            <Divider orientation="left" style={{ borderTopColor: '#f0ede6', color: '#c0a060' }}>
+                                                                <PercentageOutlined /> Store-wide Global Discount
+                                                            </Divider>
+                                                            <div style={{ background: '#fffbe6', padding: '16px', borderRadius: 12, border: '1px solid #ffe58f' }}>
+                                                                <Row gutter={16} align="middle">
+                                                                    <Col xs={24} md={16}>
+                                                                        <Text strong>Apply Discount to ALL Products</Text>
+                                                                        <br />
+                                                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                                                            This will automatically discount every item in your shop by the specified percentage. 
+                                                                            Individual product discounts will be overridden.
+                                                                        </Text>
+                                                                    </Col>
+                                                                    <Col xs={24} md={8}>
+                                                                        <Form.Item name="global_discount" noStyle>
+                                                                            <InputNumber 
+                                                                                min={0} max={100} 
+                                                                                formatter={value => `${value}%`}
+                                                                                parser={value => value.replace('%', '')}
+                                                                                style={{ width: '100%' }} size="large" 
+                                                                            />
+                                                                        </Form.Item>
+                                                                    </Col>
+                                                                </Row>
+                                                            </div>
+                                                        </Col>
+                                                    </Row>
+                                                    
+                                                    <div style={{ marginTop: 16, padding: '16px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 12 }}>
+                                                        <Title level={5} style={{ color: '#52c41a' }}><RocketOutlined /> Preview Guide</Title>
+                                                        <Text size="small" type="secondary">
+                                                            This promotion will appear on the guest app home screen. Ensure the image is horizontal for best results.
+                                                        </Text>
+                                                    </div>
+                                                </Card>
+                                            </Col>
+                                            <Col xs={24} md={8}>
+                                                <Card 
+                                                    title="Quick Actions" 
+                                                    style={{ borderRadius: "16px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                                                >
+                                                    <Button
+                                                        type="primary"
+                                                        htmlType="submit"
+                                                        loading={loading}
+                                                        icon={<SaveOutlined />}
+                                                        size="large"
+                                                        style={{
+                                                            width: "100%",
+                                                            height: "56px",
+                                                            borderRadius: "12px",
+                                                            background: "#1e4a2d",
+                                                            borderColor: "#1e4a2d"
+                                                        }}
+                                                    >
+                                                        Save Promotion
+                                                    </Button>
+                                                </Card>
+                                            </Col>
+                                        </Row>
+                                    </Form>
+                                </div>
                             )
                         },
                         isAdmin && {

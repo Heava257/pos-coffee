@@ -46,15 +46,26 @@ const TablePage = () => {
 
     const getBranches = async () => {
         try {
+            console.log("Fetching branches...");
             const res = await request("branch", "get");
             if (res && res.list) {
                 setBranches(res.list);
                 if (res.list.length > 0) {
-                    const current = res.list.find(b => b.id === profile.branch_id);
-                    setSelectedBranch(current ? current.id : res.list[0].id);
+                    const profile = getProfile();
+                    // Priority: 1. Current profile branch, 2. First branch in list
+                    const current = res.list.find(b => b.id === profile?.branch_id);
+                    const defaultBranch = current ? current.id : res.list[0].id;
+                    setSelectedBranch(defaultBranch);
+                    console.log("Branches loaded:", res.list.length, "Selected:", defaultBranch);
+                } else {
+                    console.warn("No branches returned from API");
+                    message.warning("No branches found. Please create a branch in Shop Management first.");
                 }
+            } else {
+                console.error("Invalid response from branch API:", res);
             }
         } catch (error) {
+            console.error("Fetch branches error:", error);
             message.error(t.fetch_branch_failed);
         }
     };
@@ -74,6 +85,11 @@ const TablePage = () => {
     };
 
     const onFinish = async (values) => {
+        if (!selectedBranch) {
+            message.warning("Please select a branch first!");
+            return;
+        }
+        setLoading(true);
         try {
             const res = await request("table", "post", { ...values, branch_id: selectedBranch });
             if (res && res.success) {
@@ -81,9 +97,14 @@ const TablePage = () => {
                 setVisible(false);
                 form.resetFields();
                 getList();
+            } else {
+                message.error(res?.message || t.operation_failed);
             }
         } catch (error) {
+            console.error("Create table error:", error);
             message.error(error.message || t.operation_failed);
+        } finally {
+            setLoading(false);
         }
     };
 

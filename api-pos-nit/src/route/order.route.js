@@ -12,6 +12,7 @@ const {
 
 module.exports = (app) => {
     app.post("/api/order-web", createWebOrder); // Public route for QR ordering
+    app.get("/api/order-web/:order_id", getOrderDetail); // Status tracking for guests
     app.get("/api/order", authMiddleware("order"), getList);
     app.get("/api/order-kds", authMiddleware("order"), getKDSOrders);
     app.get("/api/order-pending", authMiddleware("order"), getPendingOrders);

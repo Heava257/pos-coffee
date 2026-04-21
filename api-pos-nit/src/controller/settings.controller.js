@@ -4,7 +4,7 @@ exports.getSettings = async (req, res) => {
     try {
         const { business_id } = req;
         const [data] = await db.query(
-            "SELECT name, owner_name, email, phone, logo, address, website, tax_percent, service_charge, kh_exchange_rate, currency_symbol, telegram_link, facebook_link, telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url FROM businesses WHERE id = ?",
+            "SELECT name, owner_name, email, phone, logo, address, website, tax_percent, service_charge, kh_exchange_rate, currency_symbol, telegram_link, facebook_link, telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active, global_discount FROM businesses WHERE id = ?",
             [business_id]
         );
 
@@ -25,7 +25,9 @@ exports.updateSettings = async (req, res) => {
             name, owner_name, email, phone, address, website,
             tax_percent, service_charge, kh_exchange_rate,
             currency_symbol, telegram_link, facebook_link,
-            telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url
+            telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url,
+            promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active,
+            global_discount
         } = req.body;
 
         const logo = req.file?.path || req.file?.filename;
@@ -35,13 +37,17 @@ exports.updateSettings = async (req, res) => {
         name = ?, owner_name = ?, email = ?, phone = ?, address = ?, website = ?,
         tax_percent = ?, service_charge = ?, kh_exchange_rate = ?,
         currency_symbol = ?, telegram_link = ?, facebook_link = ?,
-        telegram_token = ?, telegram_chat_id = ?, telegram_mode = ?, telegram_webhook_url = ?
+        telegram_token = ?, telegram_chat_id = ?, telegram_mode = ?, telegram_webhook_url = ?,
+        promo_title = ?, promo_subtitle = ?, promo_image = ?, promo_discount = ?, promo_is_active = ?,
+        global_discount = ?
     `;
         let params = [
             name, owner_name, email, phone, address, website,
             tax_percent, service_charge, kh_exchange_rate,
             currency_symbol, telegram_link, facebook_link,
-            telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url
+            telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url,
+            promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active || 0,
+            global_discount || 0
         ];
 
         if (logo) {

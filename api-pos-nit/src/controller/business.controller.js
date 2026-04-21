@@ -170,7 +170,7 @@ exports.updateStatus = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
-        const { id, name, phone, owner_name, package_id, active_modules } = req.body;
+        const { id, name, phone, owner_name, package_id, active_modules, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active } = req.body;
         
         // Detailed logging to identify why package_id is null
         console.log("DEBUG_UPDATE_BIZ:", { id, name, package_id, active_modules_raw: active_modules });
@@ -188,8 +188,8 @@ exports.update = async (req, res) => {
             
             // 1. Update business details
             const [updateResult] = await conn.query(
-                "UPDATE businesses SET name = ?, phone = ?, owner_name = ?, package_id = ?, active_modules = ? WHERE id = ?",
-                [name, phone, owner_name, pkgId, modulesStr, id]
+                "UPDATE businesses SET name = ?, phone = ?, owner_name = ?, package_id = ?, active_modules = ?, promo_title = ?, promo_subtitle = ?, promo_image = ?, promo_discount = ?, promo_is_active = ? WHERE id = ?",
+                [name, phone, owner_name, pkgId, modulesStr, promo_title || null, promo_subtitle || null, promo_image || null, promo_discount || null, promo_is_active || 0, id]
             );
             
             console.log("UPDATE_SQL_RESULT:", updateResult.info);
@@ -336,3 +336,21 @@ exports.getInsights = async (req, res) => {
         logError("business.getInsights", error, res);
     }
 }
+
+exports.getPublicConfig = async (req, res) => {
+    try {
+        const { business_id } = req.query;
+        if (!business_id) return res.status(400).json({ message: "Business ID is required" });
+
+        const [list] = await db.query(`
+            SELECT name, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active 
+            FROM businesses 
+            WHERE id = ?
+        `, [business_id]);
+
+        if (list.length === 0) return res.status(404).json({ message: "Business not found" });
+        res.json({ config: list[0] });
+    } catch (error) {
+        logError("business.getPublicConfig", error, res);
+    }
+};

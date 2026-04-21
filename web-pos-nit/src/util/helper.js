@@ -13,7 +13,9 @@ export const request = (url = "", method = "get", data = {}) => {
     url.includes("auth/login") ||
     url.includes("auth/register") ||
     url.includes("auth/register-owner") ||
-    url.includes("auth/guest-access");
+    url.includes("auth/guest-access") ||
+    url.includes("order-web") ||
+    url.includes("business/public-config");
   if (!isAuthRoute && (!access_token || access_token === "null" || access_token === "undefined")) {
     return Promise.resolve(false);
   }

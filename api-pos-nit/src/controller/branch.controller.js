@@ -10,6 +10,7 @@ exports.getList = async (req, res) => {
         
         const sql = "SELECT * FROM branches WHERE business_id = ? ORDER BY id DESC";
         const [list] = await db.query(sql, [bizId]);
+        console.log(`[Branch.getList] Business ID: ${bizId}, Result count: ${list.length}`);
         res.json({ list });
     } catch (error) {
         logError("branch.getList", error, res);

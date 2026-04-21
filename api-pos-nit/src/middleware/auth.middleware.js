@@ -33,30 +33,34 @@ const authMiddleware = (permission_name) => {
             req.role_id = Number(decoded.role_id);
             req.auth = decoded;
 
-            // 🚀 PERFORMANCE OPTIMIZATION: Use Cache for Permissions
-            const cacheKey = `${req.business_id}:${req.role_id}`;
-            const cached = permCache.get(cacheKey);
-            let rows;
-
-            if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
-                rows = cached.data;
+            // 🚀 GUEST ACCESS BYPASS: If no role_id but has guest permissions in token
+            if (!req.role_id && decoded.role_code === 'guest') {
+                rows = (decoded.permissions || []).map(p => ({ route_key: p, can_view: 1, can_create: 1, can_edit: 0, can_delete: 0 }));
             } else {
-                [rows] = await db.query(
-                    `SELECT DISTINCT p.route_key, rp.can_view, rp.can_create, rp.can_edit, rp.can_delete 
-                     FROM permissions p 
-                     INNER JOIN role_permissions rp ON p.id = rp.permission_id 
-                     LEFT JOIN module_permissions mp ON p.id = mp.permission_id
-                     LEFT JOIN system_modules sm ON mp.module_id = sm.id
-                     INNER JOIN businesses b ON b.id = ?
-                     WHERE rp.role_id = ?
-                     AND (
-                        ? = 1 -- 👑 Super Admin/Business 1 Bypass
-                        OR mp.module_id IS NULL -- Core Permission
-                        OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', '')) -- Belongs to active module
-                     )`,
-                    [req.business_id, req.role_id, req.business_id]
-                );
-                permCache.set(cacheKey, { data: rows, ts: Date.now() });
+                // 🚀 PERFORMANCE OPTIMIZATION: Use Cache for Permissions
+                const cacheKey = `${req.business_id}:${req.role_id}`;
+                const cached = permCache.get(cacheKey);
+
+                if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
+                    rows = cached.data;
+                } else {
+                    [rows] = await db.query(
+                        `SELECT DISTINCT p.route_key, rp.can_view, rp.can_create, rp.can_edit, rp.can_delete 
+                         FROM permissions p 
+                         INNER JOIN role_permissions rp ON p.id = rp.permission_id 
+                         LEFT JOIN module_permissions mp ON p.id = mp.permission_id
+                         LEFT JOIN system_modules sm ON mp.module_id = sm.id
+                         INNER JOIN businesses b ON b.id = ?
+                         WHERE rp.role_id = ?
+                         AND (
+                            ? = 1 -- 👑 Super Admin/Business 1 Bypass
+                            OR mp.module_id IS NULL -- Core Permission
+                            OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', '')) -- Belongs to active module
+                         )`,
+                        [req.business_id, req.role_id, req.business_id]
+                    );
+                    permCache.set(cacheKey, { data: rows, ts: Date.now() });
+                }
             }
             const livePerms = rows.map(r => r.route_key.toLowerCase().replace(/^\/+|\/+$/g, ''));
 

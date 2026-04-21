@@ -151,6 +151,30 @@ app.listen(PORT, async () => {
     if (!err.message.includes("Duplicate")) console.log("Migration (products.discount) skipped:", err.message);
   }
 
+  // ✅ Migration: Add promotion fields to businesses table
+  const promoCols = [
+    { name: 'promo_title', type: 'VARCHAR(255) NULL' },
+    { name: 'promo_subtitle', type: 'VARCHAR(255) NULL' },
+    { name: 'promo_image', type: 'VARCHAR(500) NULL' },
+    { name: 'promo_discount', type: 'VARCHAR(50) NULL' },
+    { name: 'promo_is_active', type: 'TINYINT DEFAULT 0' }
+  ];
+  for (const col of promoCols) {
+    try {
+      await db.query(`ALTER TABLE businesses ADD COLUMN ${col.name} ${col.type}`);
+      console.log(`Migration: Added 'businesses.${col.name}'`);
+    } catch (err) {
+      if (!err.message.includes("Duplicate column")) console.log(`Migration (businesses.${col.name}) skipped:`, err.message);
+    }
+  }
+
+  try {
+    await db.query("ALTER TABLE businesses ADD COLUMN global_discount DOUBLE DEFAULT 0");
+    console.log("Migration: Added 'global_discount' to businesses");
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) console.log("Migration (businesses.global_discount) skipped:", err.message);
+  }
+
   try {
     await db.query("ALTER TABLE products ADD COLUMN sizes TEXT NULL AFTER image");
     await db.query("ALTER TABLE products ADD COLUMN addons TEXT NULL AFTER sizes");

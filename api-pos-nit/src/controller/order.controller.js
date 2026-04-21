@@ -314,13 +314,17 @@ exports.getOrderDetail = async (req, res) => {
         console.log("Fetching order details for ID:", order_id, "User Business ID:", business_id);
 
         const [order_check] = await db.query("SELECT id, business_id FROM orders WHERE id = ?", [order_id]);
-        if (order_check.length > 0) {
-            console.log("Order found in DB:", order_check[0]);
+        
+        let order = [];
+        if (business_id) {
+            // Internal staff request (secure)
+            const [rows] = await db.query("SELECT * FROM orders WHERE id = ? AND business_id = ?", [order_id, business_id]);
+            order = rows;
         } else {
-            console.log("Order NOT found in DB with ID:", order_id);
+            // Public guest request
+            const [rows] = await db.query("SELECT * FROM orders WHERE id = ?", [order_id]);
+            order = rows;
         }
-
-        const [order] = await db.query("SELECT * FROM orders WHERE id = ? AND business_id = ?", [order_id, business_id]);
 
         if (order.length === 0) {
             console.log("Order access denied or not found:", { order_id, business_id });
