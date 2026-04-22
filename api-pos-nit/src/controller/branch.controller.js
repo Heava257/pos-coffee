@@ -42,7 +42,6 @@ exports.create = async (req, res) => {
         }
 
         const khqr_image = req.file?.filename || null;
-        const { payment_provider, payment_api_url } = req.body;
         const sql = "INSERT INTO branches (business_id, name, location, phone, khqr_image, payment_merchant_id, payment_api_key, payment_receiver_name, payment_provider, payment_api_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         const [data] = await db.query(sql, [business_id, name, location, phone, khqr_image, payment_merchant_id || null, payment_api_key || null, payment_receiver_name || null, payment_provider || 'KHQR', payment_api_url || null]);
 
