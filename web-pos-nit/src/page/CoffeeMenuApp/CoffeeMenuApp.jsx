@@ -162,33 +162,37 @@ const HomeView = ({ selectedShop, categories, currentCategory, setCurrentCategor
   const profile = getProfile();
   
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col px-6 pb-40 pt-8 bg-[#FAFAFA]">
-      {/* Header Section - Premium Redesign */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center gap-4">
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-tr from-[#00B761] to-[#00D16B] rounded-[20px] blur opacity-25 group-hover:opacity-50 transition-all duration-500"></div>
-            <div className="relative w-12 h-12 rounded-[18px] bg-white flex items-center justify-center shadow-sm overflow-hidden border border-gray-50">
-              {selectedShop?.image ? (
-                <img src={Config.optimizeCloudinary(Config.getFullImagePath(selectedShop.image), "w_100,c_fill,f_auto,q_auto")} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00B761] to-[#009650] text-white font-black text-xl">C</div>
-              )}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col pb-40 bg-[#FAFAFA]">
+      {/* Sticky Premium Header */}
+      <div className="sticky top-0 z-[60] glass-effect px-6 py-4 mb-4 border-b border-gray-100/50">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-tr from-[#00B761] to-[#00D16B] rounded-[16px] blur opacity-25"></div>
+              <div className="relative w-10 h-10 rounded-[14px] bg-white flex items-center justify-center shadow-sm overflow-hidden border border-gray-50">
+                {selectedShop?.image ? (
+                  <img src={Config.optimizeCloudinary(Config.getFullImagePath(selectedShop.image), "w_100,c_fill,f_auto,q_auto")} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00B761] to-[#009650] text-white font-black text-lg">C</div>
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-[8px] font-black text-[#00B761]/60 uppercase tracking-[0.15em] mb-0">{t.premium_experience || "Premium Experience"}</p>
+              <h1 className="text-sm font-outfit font-black text-gray-800 leading-tight">{t.hi || "Hi"}, {profile?.firstname || t.guest || "Guest"}!</h1>
             </div>
           </div>
-          <div>
-            <p className="text-[9px] font-black text-[#00B761]/60 uppercase tracking-[0.2em] mb-0.5">{t.premium_experience}</p>
-            <h1 className="text-lg font-outfit font-black text-gray-800 leading-tight">{t.hi}, {profile?.firstname || t.guest}!</h1>
-          </div>
+          <motion.button 
+            whileTap={{ scale: 0.9 }} 
+            className="relative w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm border border-gray-100 text-[#00B761]"
+          >
+            <Bell size={18} strokeWidth={2.5} />
+            <span className="absolute top-3 right-3 w-1.5 h-1.5 bg-red-500 rounded-full border-2 border-white"></span>
+          </motion.button>
         </div>
-        <motion.button 
-          whileTap={{ scale: 0.9 }} 
-          className="relative w-11 h-11 flex items-center justify-center bg-white rounded-2xl shadow-soft border border-gray-50 text-[#00B761]"
-        >
-          <Bell size={20} strokeWidth={2.5} />
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-        </motion.button>
       </div>
+
+      <div className="px-6">
 
       {/* Search Bar - Modern Design */}
       <div className="relative mb-8">
@@ -203,50 +207,41 @@ const HomeView = ({ selectedShop, categories, currentCategory, setCurrentCategor
       </div>
 
       {/* Banner Section - Artistic Design */}
-      <div className="relative h-48 rounded-[36px] overflow-hidden mb-10 group cursor-pointer shadow-2xl shadow-[#00B761]/10">
+      <div className="relative h-44 rounded-[28px] overflow-hidden mb-8 group cursor-pointer shadow-xl shadow-[#00B761]/5">
         <div className="absolute inset-0 bg-[#1A1A1A]">
           <img 
             src={businessConfig.promo_image || "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1000&auto=format&fit=crop"}
-            className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-1000" 
+            className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-1000" 
             alt="Promotion" 
           />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-tr from-black via-black/40 to-transparent"></div>
-        
-        {/* Decorative elements */}
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#00B761]/20 rounded-full blur-3xl group-hover:bg-[#00B761]/30 transition-all duration-700"></div>
-        
-        <div className="relative z-10 h-full flex flex-col justify-center px-8">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="px-2.5 py-1 bg-[#00B761] text-white text-[8px] font-black uppercase tracking-[0.2em] rounded-lg shadow-lg shadow-[#00B761]/30">
+        <div className="absolute inset-0 bg-gradient-to-tr from-black via-black/30 to-transparent"></div>
+        <div className="relative z-10 h-full flex flex-col justify-center px-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-2 py-0.5 bg-[#00B761] text-white text-[7px] font-black uppercase tracking-[0.2em] rounded-md shadow-md">
               {businessConfig.promo_is_active ? t.special_offer : t.established}
             </span>
-            <div className="h-px w-8 bg-white/20"></div>
           </div>
-          <h2 className="text-3xl font-outfit font-black text-white leading-tight mb-2">
+          <h2 className="text-2xl font-outfit font-black text-white leading-tight mb-2">
             {businessConfig.promo_title || t.fresh_brewed} <br/>
             <span className="text-[#00B761]">{businessConfig.promo_subtitle || t.happiness} {businessConfig.promo_discount || "50%"}</span>
           </h2>
-          <div className="flex items-center gap-2 text-white/50">
-            <Clock size={12} />
-            <span className="text-[9px] font-bold uppercase tracking-widest">{t.hurry_up}</span>
-          </div>
         </div>
       </div>
 
       {/* Categories Section */}
       <div className="mb-8">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-6 px-6">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-6 px-6 snap-x">
           {[{ id: null, name: t.all || 'All' }, ...categories].map((cat) => (
             <motion.button
               key={cat.id} 
               whileTap={{ scale: 0.95 }}
               onClick={() => setCurrentCategory(cat)}
               className={cn(
-                "px-5 py-2 rounded-full font-black text-[11px] transition-all border whitespace-nowrap",
+                "px-5 py-2.5 rounded-2xl font-black text-[11px] transition-all border whitespace-nowrap snap-start",
                 currentCategory?.id === cat.id 
-                  ? "bg-white text-black border-black shadow-sm" 
-                  : "bg-white text-gray-400 border-gray-100"
+                  ? "bg-[#1A1A1A] text-white border-[#1A1A1A] shadow-md" 
+                  : "bg-white text-gray-400 border-gray-100 shadow-sm"
               )}
             >
               {cat.name}
@@ -257,23 +252,25 @@ const HomeView = ({ selectedShop, categories, currentCategory, setCurrentCategor
 
       {/* Top Sellers Section */}
       <div className="mb-10">
-        <div className="flex justify-between items-center mb-6 px-1">
-          <h3 className="text-xl font-outfit font-black text-gray-800 tracking-tight">{t.top_sellers || "Top Sellers"}</h3>
-          <span className="text-[10px] font-black text-[#00B761] uppercase tracking-widest bg-[#00B761]/5 px-3 py-1.5 rounded-full">{t.view_all || "View All"}</span>
+        <div className="flex justify-between items-center mb-5 px-1">
+          <h3 className="text-lg font-outfit font-black text-gray-800 tracking-tight">{t.top_sellers || "Top Sellers"}</h3>
+          <span className="text-[9px] font-black text-[#00B761] uppercase tracking-widest">{t.view_all || "View All"}</span>
         </div>
-        <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6">
+        <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6 snap-x">
           {menuItems.slice(0, 5).map((item) => (
-            <TopSellerCard key={item.id} item={item} onClick={() => setOptionsModalItem(item)} businessConfig={businessConfig} />
+            <div key={item.id} className="snap-start">
+               <TopSellerCard item={item} onClick={() => setOptionsModalItem(item)} businessConfig={businessConfig} />
+            </div>
           ))}
         </div>
       </div>
 
       {/* Product Lists */}
-      <div className="bg-white rounded-[32px] px-6 py-2 shadow-sm border border-gray-50">
-        <div className="flex flex-col mb-2 pt-4">
-          <h3 className="text-lg font-outfit font-black text-gray-800 tracking-tight">{searchText ? (t.search_results || "Results") : (currentCategory?.name || "Appetizer")}</h3>
+      <div className="bg-white rounded-t-[32px] px-6 py-4 shadow-2xl shadow-black/5 border-t border-gray-100 flex-1">
+        <div className="flex flex-col mb-4">
+          <h3 className="text-base font-outfit font-black text-gray-800 tracking-tight">{searchText ? (t.search_results || "Results") : (currentCategory?.name || t.all || "Menu")}</h3>
         </div>
-        <div className="flex flex-col">
+        <div className="flex flex-col divide-y divide-gray-50">
           {menuItems
             .filter(i => (!currentCategory?.id || i.category_id === currentCategory.id) && (!searchText || i.name.toLowerCase().includes(searchText.toLowerCase())))
             .map((item) => (
@@ -287,6 +284,7 @@ const HomeView = ({ selectedShop, categories, currentCategory, setCurrentCategor
               />
             ))}
         </div>
+      </div>
       </div>
     </motion.div>
   );
@@ -312,8 +310,8 @@ const NavBar = ({ activeTab, setActiveTab, cartCount, setIsCartOpen, isMobile })
 
   if (isMobile) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 p-6 z-[100] pointer-events-none">
-        <div className="w-full max-w-[400px] mx-auto glass-effect rounded-[32px] p-2 flex justify-between items-center pointer-events-auto shadow-2xl border border-white/50">
+      <div className="fixed bottom-0 left-0 right-0 px-4 pb-8 pt-4 z-[100] pointer-events-none">
+        <div className="w-full max-w-[450px] mx-auto glass-effect rounded-[28px] p-2 flex justify-between items-center pointer-events-auto shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/60">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -321,24 +319,30 @@ const NavBar = ({ activeTab, setActiveTab, cartCount, setIsCartOpen, isMobile })
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "relative flex-1 py-4 flex flex-col items-center gap-1 transition-all duration-500",
-                  isActive ? "text-[#00B761]" : "text-gray-300 hover:text-gray-500"
+                  "relative flex-1 py-3.5 flex flex-col items-center gap-1 transition-all duration-300",
+                  isActive ? "text-[#00B761]" : "text-gray-300"
                 )}
               >
-                <tab.icon size={24} strokeWidth={isActive ? 3 : 2} />
+                <tab.icon size={22} strokeWidth={isActive ? 3 : 2} />
+                {isActive && (
+                  <motion.div 
+                    layoutId="navIndicator"
+                    className="absolute -bottom-1 w-1 h-1 bg-[#00B761] rounded-full"
+                  />
+                )}
               </button>
             );
           })}
-          <div className="w-px h-8 bg-gray-100 mx-2" />
+          <div className="w-px h-6 bg-gray-100/50 mx-1" />
           <button
             onClick={() => setIsCartOpen(true)}
-            className="relative w-14 h-14 bg-[#00B761] text-white rounded-[24px] flex items-center justify-center shadow-xl shadow-[#00B761]/30 active:scale-95 transition-all"
+            className="relative w-12 h-12 bg-[#1A1A1A] text-white rounded-[20px] flex items-center justify-center shadow-lg active:scale-95 transition-all"
           >
-            <ShoppingCart size={24} strokeWidth={2.5} />
+            <ShoppingCart size={20} strokeWidth={2.5} />
             {cartCount > 0 && (
               <motion.span 
                 initial={{ scale: 0 }} animate={{ scale: 1 }}
-                className="absolute -top-1 -right-1 bg-white text-[#00B761] text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#00B761] shadow-sm"
+                className="absolute -top-1.5 -right-1.5 bg-[#00B761] text-white text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
               >
                 {cartCount}
               </motion.span>

@@ -9,6 +9,22 @@
 body {
     background-color: #f4f6f8;
     font-family: 'Battambang', system-ui, sans-serif !important;
+    
+    /* App-like settings */
+    overscroll-behavior-y: contain; /* Prevents pull-to-refresh in some browsers */
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; /* Prevents text selection globally (can override for inputs) */
+    
+    /* Padding for iOS notch / Home indicator */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+/* Re-enable selection for inputs and textareas */
+input, textarea {
+    user-select: text !important;
 }
 
 .summary-card {

@@ -636,7 +636,7 @@ function ProductPage() {
                 </Form.Item>
 
                 <Form.Item name={"barcode"} label={t.barcode}>
-                  <Input size="large" disabled placeholder={t.barcode} />
+                  <Input size="large" placeholder={t.barcode} />
                 </Form.Item>
 
                 <Form.Item

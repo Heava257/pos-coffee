@@ -16,7 +16,8 @@ import {
     Divider
 } from "antd";
 import { request } from "../../util/helper";
-import { MdAdd, MdDelete, MdRemoveRedEye, MdInventory, MdQrCodeScanner } from "react-icons/md";
+import { MdAdd, MdDelete, MdRemoveRedEye, MdInventory, MdQrCodeScanner, MdOutlineCameraAlt } from "react-icons/md";
+import { Html5QrcodeScanner } from "html5-qrcode";
 import MainPage from "../../component/layout/MainPage";
 import dayjs from "dayjs";
 import { useLanguage, translations } from "../../store/language.store";
@@ -43,7 +44,20 @@ function PurchasePage() {
         selectedPurchase: null,
         purchaseDetails: [],
         isSavingReceive: false,
+        batch_receive: "",
+        expiry_receive: null,
+        txt_barcode: "", // 🚀 New state for controlled input
+        scanFilterId: null, // 🚀 Changed: Use Item ID for more reliable filtering
+        showCamera: false, // 🚀 To toggle camera scanner
     });
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const [totals, setTotals] = useState({
         totalAmount: 0,
         totalPaid: 0,
@@ -54,6 +68,27 @@ function PurchasePage() {
         pageSize: 10,
         txt: "",
     });
+
+    useEffect(() => {
+        let scanner = null;
+        if (state.showCamera && state.visibleReceiveModal) {
+            scanner = new Html5QrcodeScanner("reader", { 
+                fps: 10, 
+                qrbox: { width: 300, height: 200 },
+                aspectRatio: 1.0
+            });
+            scanner.render((result) => {
+                onScanBarcodeReceive(result);
+            }, (error) => {
+                // Ignore errors during scanning
+            });
+        }
+        return () => {
+            if (scanner) {
+                scanner.clear().catch(e => console.log("Scanner cleanup"));
+            }
+        };
+    }, [state.showCamera, state.visibleReceiveModal]);
 
     useEffect(() => {
         getList();
@@ -199,10 +234,16 @@ function PurchasePage() {
                 selectedPurchase: item,
                 purchaseDetails: res.list.map(i => ({
                     ...i,
-                    receive_now: Number(i.qty) - Number(i.received_qty) // Default to remaining
+                    receive_now: Number(i.qty) - Number(i.received_qty), // Default to remaining
+                    expiry_date: i.expiry_date ? dayjs(i.expiry_date) : null
                 })),
                 visibleReceiveModal: true,
-                loading: false
+                loading: false,
+                batch_receive: "", // 🚀 Clear on open
+                expiry_receive: null, // 🚀 Clear on open
+                txt_barcode: "", // 🚀 Clear barcode input on open
+                scanFilterId: null, // 🚀 Clear filter on open
+                showCamera: false // 🚀 Ensure camera is closed
             }));
         } else {
             setState(p => ({ ...p, loading: false }));
@@ -212,20 +253,52 @@ function PurchasePage() {
 
     const onScanBarcodeReceive = (barcode) => {
         if (!barcode) return;
+        const clean = (s) => String(s || "").replace(/\D/g, ""); // 🚀 Keep only numbers
+        const scanned = clean(barcode);
         const details = [...state.purchaseDetails];
-        const index = details.findIndex(d => d.barcode === barcode);
-        if (index > -1) {
-            const item = details[index];
+        
+        // 🚀 Debug: Show cleaned barcodes
+        console.log("Scanned (Clean):", scanned);
+        console.log("Available (Clean):", details.map(d => clean(d.barcode)));
+
+        let finalIndex = details.findIndex(d => {
+            const itemBarcode = clean(d.barcode);
+            if (!itemBarcode) return false;
+            return itemBarcode === scanned; // 🚀 Exact numeric match
+        });
+
+        if (finalIndex === -1) {
+            // Try partial numeric match if exact fails
+            finalIndex = details.findIndex(d => {
+                const itemBarcode = clean(d.barcode);
+                if (!itemBarcode) return false;
+                return itemBarcode.includes(scanned) || scanned.includes(itemBarcode);
+            });
+        }
+
+        if (finalIndex > -1) {
+            const item = details[finalIndex];
             const max = Number(item.qty) - Number(item.received_qty);
-            if (item.receive_now < max) {
-                details[index].receive_now += 1;
-                setState(p => ({ ...p, purchaseDetails: details }));
-                message.success(`Received 1 unit of ${item.name}`);
-            } else {
-                message.warning(`Item ${item.name} is already fully received (Max: ${item.qty})`);
+            
+            details[finalIndex].receive_now += 1;
+            if (details[finalIndex].receive_now > max) {
+                message.info(`Note: ${item.name} is exceeding order quantity.`);
             }
+            
+            if (state.batch_receive) details[finalIndex].batch_no = state.batch_receive;
+            if (state.expiry_receive) details[finalIndex].expiry_date = state.expiry_receive;
+
+                setState(p => ({ 
+                    ...p, 
+                    purchaseDetails: details, 
+                    txt_barcode: "",
+                    scanFilterId: item.id, // 🚀 Filter by Item ID
+                    showCamera: false // 🚀 Auto-close camera on success
+                }));
+            message.success(`Received 1 unit of ${item.name}`);
         } else {
-            message.error(`Barcode [${barcode}] not found in this purchase order!`);
+            message.error(`Barcode [${scanned}] not found in this purchase order!`);
+            setState(p => ({ ...p, txt_barcode: "" }));
         }
     };
 
@@ -389,64 +462,101 @@ function PurchasePage() {
 
     return (
         <MainPage loading={state.loading}>
-            <div style={{ marginBottom: 24 }}>
-                <Row gutter={16}>
-                    <Col span={6}>
-                        <div className="statCard" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.total_purchase}</div>
-                            <div style={{ fontSize: "24px", fontWeight: "bold" }}>${totals.totalAmount.toFixed(2)}</div>
+            {/* 🚀 Dashboard Stats */}
+            <div style={{ marginBottom: 20 }}>
+                <Row gutter={[16, 16]}>
+                    <Col xs={12} sm={12} md={6}>
+                        <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "#fff", padding: isMobile ? "15px" : "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                            <div style={{ opacity: 0.8, fontSize: "10px", textTransform: "uppercase" }}>{t.total_purchase}</div>
+                            <div style={{ fontSize: isMobile ? "18px" : "24px", fontWeight: "bold" }}>${totals.totalAmount.toFixed(2)}</div>
                         </div>
                     </Col>
-                    <Col span={6}>
-                        <div className="statCard" style={{ background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.total_paid}</div>
-                            <div style={{ fontSize: "24px", fontWeight: "bold" }}>${totals.totalPaid.toFixed(2)}</div>
+                    <Col xs={12} sm={12} md={6}>
+                        <div style={{ background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)", color: "#fff", padding: isMobile ? "15px" : "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                            <div style={{ opacity: 0.8, fontSize: "10px", textTransform: "uppercase" }}>{t.total_paid}</div>
+                            <div style={{ fontSize: isMobile ? "18px" : "24px", fontWeight: "bold" }}>${totals.totalPaid.toFixed(2)}</div>
                         </div>
                     </Col>
-                    <Col span={6}>
-                        <div className="statCard" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.outstanding_balance}</div>
-                            <div style={{ fontSize: "24px", fontWeight: "bold" }}>${totals.totalBalance.toFixed(2)}</div>
+                    <Col xs={12} sm={12} md={6}>
+                        <div style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", color: "#fff", padding: isMobile ? "15px" : "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                            <div style={{ opacity: 0.8, fontSize: "10px", textTransform: "uppercase" }}>{t.outstanding}</div>
+                            <div style={{ fontSize: isMobile ? "18px" : "24px", fontWeight: "bold" }}>${totals.totalBalance.toFixed(2)}</div>
                         </div>
                     </Col>
-                    <Col span={6}>
-                        <div className="statCard" style={{ background: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)", color: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "12px", textTransform: "uppercase" }}>{t.total_orders}</div>
-                            <div style={{ fontSize: "24px", fontWeight: "bold" }}>{state.total}</div>
+                    <Col xs={12} sm={12} md={6}>
+                        <div style={{ background: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)", color: "#fff", padding: isMobile ? "15px" : "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
+                            <div style={{ opacity: 0.8, fontSize: "10px", textTransform: "uppercase" }}>{t.total_orders}</div>
+                            <div style={{ fontSize: isMobile ? "18px" : "24px", fontWeight: "bold" }}>{state.total}</div>
                         </div>
                     </Col>
                 </Row>
             </div>
 
-            <div className="pageHeader" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <h2>{t.purchase_history}</h2>
+            {/* 🚀 Header & Search */}
+            <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 15, alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <Space>
+                    <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: "bold", color: '#1e293b' }}>{t.purchase}</div>
                     <Input.Search
                         placeholder={t.search}
-                        style={{ width: 250 }}
-                        onSearch={(txt) => setFilter({ ...filter, txt, page: 1 })}
+                        onSearch={(txt) => setFilter(pre => ({ ...pre, txt, page: 1 }))}
                         allowClear
+                        style={{ width: isMobile ? '160px' : '300px' }}
                     />
-                    <Button type="primary" icon={<MdAdd />} onClick={onOpenModal}>
-                        {t.new_purchase}
-                    </Button>
                 </Space>
+                <Button type="primary" icon={<MdAdd />} onClick={onOpenModal} size={isMobile ? "middle" : "large"} style={{ borderRadius: '8px', fontWeight: 'bold' }}>
+                    {isMobile ? t.add : t.new_purchase}
+                </Button>
             </div>
 
-            <Table
-                rowKey="id"
-                dataSource={state.list}
-                columns={columns}
-                size="middle"
-                pagination={{
-                    current: filter.page,
-                    pageSize: filter.pageSize,
-                    total: state.total,
-                    showSizeChanger: true,
-                    onChange: (page, pageSize) => setFilter({ ...filter, page, pageSize })
-                }}
-            />
+            {/* 🚀 Main Purchase List (Mobile Cards / Desktop Table) */}
+            {isMobile ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    {state.list.map((item) => (
+                        <div key={item.id} style={{ background: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                <Tag color="blue" style={{ fontSize: '13px', padding: '2px 10px', borderRadius: '6px' }}>{item.ref}</Tag>
+                                <span style={{ fontSize: '12px', color: '#94a3b8' }}>{dayjs(item.purchase_date).format("DD/MM/YYYY")}</span>
+                            </div>
+                            <div style={{ marginBottom: '12px' }}>
+                                <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Supplier</div>
+                                <div style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b' }}>{item.supplier_name}</div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px', background: '#f8fafc', padding: '12px', borderRadius: '12px' }}>
+                                <div>
+                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>TOTAL</div>
+                                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#10b981' }}>${Number(item.total_amount).toFixed(2)}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>STATUS</div>
+                                    <Tag color={item.status === 'RECEIVED' ? 'green' : item.status === 'PARTIAL' ? 'orange' : 'blue'}>{item.status}</Tag>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <Button icon={<MdRemoveRedEye />} style={{ flex: 1, height: '42px', borderRadius: '10px' }} onClick={() => { setState(p => ({ ...p, selectedPurchase: item, visibleModal: true })); }} />
+                                <Button type="primary" icon={<MdInventory />} style={{ flex: 3, height: '42px', borderRadius: '10px', background: '#3b82f6', fontWeight: 600 }} onClick={() => onClickReceive(item)}>RECEIVE NOW</Button>
+                                {canApprove && item.status === 'PENDING' && (
+                                    <Button danger icon={<MdDelete />} style={{ width: '42px', height: '42px', borderRadius: '10px' }} onClick={() => onClickDelete(item)} />
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <Table
+                    dataSource={state.list}
+                    loading={state.loading}
+                    rowKey="id"
+                    columns={columns}
+                    pagination={{
+                        total: state.total,
+                        current: filter.page,
+                        pageSize: filter.pageSize,
+                        onChange: (page, pageSize) => setFilter(pre => ({ ...pre, page, pageSize }))
+                    }}
+                />
+            )}
 
+            {/* 🚀 CREATE PURCHASE MODAL */}
             <Modal
                 title={<b>➕ {t.new_purchase}</b>}
                 open={state.visibleModal}
@@ -459,347 +569,131 @@ function PurchasePage() {
             >
                 <Form layout="vertical" form={form} onFinish={onFinish}>
                     <Row gutter={16}>
-                        <Col span={4}>
-                            <Form.Item name="supplier_id" label={t.supplier} rules={[{ required: true }]}>
-                                <Select options={state.suppliers} placeholder={t.supplier} showSearch filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={4}>
-                            <Form.Item name="ref" label={t.ref_no + " (Invoice #)"}>
-                                <Input placeholder="e.g. INV-001" />
-                            </Form.Item>
-                        </Col>
-                        <Col span={4}>
-                            <Form.Item name="purchase_date" label={t.receive_date} rules={[{ required: true }]}>
-                                <DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={4}>
-                            <Form.Item name="status" label={t.status} rules={[{ required: true }]} initialValue={canApprove ? "Received" : "Request"}>
-                                <Select options={[
-                                    { label: "📥 " + (t.request || "Request (PO)"), value: "Request" },
-                                    { label: "⌛ " + t.pending, value: "Pending" },
-                                    { label: "✅ " + (t.received || "Received"), value: "Received" },
-                                    { label: "❌ " + t.cancelled, value: "Cancelled" }
-                                ]} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={4}>
-                            <Form.Item name="payment_method" label={t.payment_method} initialValue="Cash">
-                                <Select options={[
-                                    { label: "💵 " + t.cash, value: "Cash" },
-                                    { label: "💳 " + t.bank, value: "Bank" }
-                                ]} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={4}>
-                            <Form.Item name="note" label={t.note}>
-                                <Input placeholder={t.note} />
-                            </Form.Item>
-                        </Col>
+                        <Col span={4}><Form.Item name="supplier_id" label={t.supplier} rules={[{ required: true }]}><Select options={state.suppliers} placeholder={t.supplier} showSearch /></Form.Item></Col>
+                        <Col span={4}><Form.Item name="ref" label={t.ref_no}><Input placeholder="Invoice #" /></Form.Item></Col>
+                        <Col span={4}><Form.Item name="purchase_date" label={t.receive_date} rules={[{ required: true }]}><DatePicker showTime style={{ width: '100%' }} /></Form.Item></Col>
+                        <Col span={4}><Form.Item name="status" label={t.status} rules={[{ required: true }]} initialValue="Received"><Select options={[{ label: "📥 Request", value: "Request" }, { label: "⌛ Pending", value: "Pending" }, { label: "✅ Received", value: "Received" }]} /></Form.Item></Col>
+                        <Col span={4}><Form.Item name="payment_method" label={t.payment_method} initialValue="Cash"><Select options={[{ label: "💵 Cash", value: "Cash" }, { label: "💳 Bank", value: "Bank" }]} /></Form.Item></Col>
+                        <Col span={4}><Form.Item name="note" label={t.note}><Input placeholder={t.note} /></Form.Item></Col>
                     </Row>
                     <Divider style={{ margin: '15px 0' }} />
-
-                    <div style={{ padding: '0 10px' }}>
-                        <Row gutter={8} style={{ fontWeight: 'bold', marginBottom: 12, color: '#555', borderBottom: '2px solid #ddd', paddingBottom: 8, fontSize: 16 }}>
-                            <Col span={7}>{t.product}</Col>
-                            <Col span={3}>{t.quantity}</Col>
-                            <Col span={3}>{t.unit}</Col>
-                            <Col span={3}>{t.price}</Col>
-                            <Col span={5}>{t.note || "Remark"}</Col>
-                            <Col span={2} style={{ textAlign: 'right' }}>{t.total}</Col>
-                            <Col span={1}></Col>
-                        </Row>
-
-                        <Form.List name="items">
-                            {(fields, { add, remove }) => (
-                                <>
-                                    {fields.map(({ key, name, ...restField }) => (
-                                        <Row key={key} gutter={8} align="middle" style={{ marginBottom: 15, borderBottom: '1px solid #f0f0f0', paddingBottom: 10 }}>
-                                            <Col span={7}>
-                                                <Form.Item
-                                                    {...restField}
-                                                    name={[name, 'item_composite_id']}
-                                                    rules={[{ required: true, message: t.search }]}
-                                                    style={{ marginBottom: 0 }}
-                                                >
-                                                    <Select
-                                                        size="large"
-                                                        placeholder={t.product}
-                                                        options={state.allItems}
-                                                        loading={state.isFetchingItems}
-                                                        showSearch
-                                                        filterOption={(input, option) =>
-                                                            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                                                        }
-                                                        onChange={(val) => {
-                                                            const item = state.allItems.find(i => i.value === val);
-                                                            if (item) {
-                                                                const fValues = form.getFieldsValue();
-                                                                const items = [...fValues.items];
-                                                                items[name].cost = item.price;
-                                                                items[name].qty = items[name].qty || 1; // Default 1
-                                                                items[name].item_type = item.item_type;
-                                                                items[name].real_id = item.item_id;
-                                                                form.setFieldsValue({ items });
-                                                                setState(p => ({ ...p })); // Refresh total display
-                                                            }
-                                                        }}
-                                                    />
-                                                </Form.Item>
-                                                <Form.Item name={[name, 'item_type']} noStyle><Input type="hidden" /></Form.Item>
-                                                <Form.Item name={[name, 'real_id']} noStyle><Input type="hidden" /></Form.Item>
-                                            </Col>
-                                            <Col span={3}>
-                                                <Form.Item
-                                                    {...restField}
-                                                    name={[name, 'qty']}
-                                                    rules={[{ required: true, message: t.quantity }]}
-                                                    style={{ marginBottom: 0 }}
-                                                >
-                                                    <InputNumber size="large" placeholder="0.00" min={0.01} style={{ width: '100%' }} onChange={() => setState({ ...state })} />
-                                                </Form.Item>
-                                            </Col>
-                                            <Col span={3}>
-                                                <Form.Item name={[name, 'unit']} style={{ marginBottom: 0 }}>
-                                                    <Select
-                                                        size="large"
-                                                        placeholder={t.unit}
-                                                        options={[
-                                                            { label: "📦 " + (t.case || "កេស"), value: "Case" },
-                                                            { label: "💰 " + (t.bag || "បាវ"), value: "Bag" },
-                                                            { label: "⚖️ " + (t.kg || "គីឡូ"), value: "Kg" },
-                                                            { label: "🧴 " + (t.bottle || "ដប"), value: "Bottle" },
-                                                            { label: "🎁 " + (t.pack || "យួរ"), value: "Pack" },
-                                                            { label: "🍱 " + (t.box || "ប្រអប់"), value: "Box" },
-                                                            { label: "🔘 " + (t.pcs || "គ្រាប់/កែវ"), value: "Pcs" },
-                                                            { label: "🛢️ " + (t.liter || "លីត្រ"), value: "L" },
-                                                        ]}
-                                                        showSearch
-                                                    />
-                                                </Form.Item>
-                                            </Col>
-                                            <Col span={3}>
-                                                <Form.Item
-                                                    {...restField}
-                                                    name={[name, 'cost']}
-                                                    rules={[{ required: true, message: t.price }]}
-                                                    style={{ marginBottom: 0 }}
-                                                >
-                                                    <InputNumber size="large" placeholder="0.00" min={0} prefix="$" style={{ width: '100%' }} onChange={() => setState({ ...state })} />
-                                                </Form.Item>
-                                            </Col>
-                                            <Col span={5}>
-                                                <Form.Item name={[name, 'remark']} style={{ marginBottom: 0 }}>
-                                                    <Input size="large" placeholder={t.note || "Remark"} style={{ width: '100%' }} />
-                                                </Form.Item>
-                                            </Col>
-                                            <Col span={2}>
-                                                <div style={{ textAlign: "right", fontWeight: 600, fontSize: 16 }}>
-                                                    ${((Number(form.getFieldValue(['items', name, 'qty'])) || 0) * (Number(form.getFieldValue(['items', name, 'cost'])) || 0)).toFixed(2)}
-                                                </div>
-                                            </Col>
-                                            <Col span={1}>
-                                                <Button danger type="text" size="large" icon={<MdDelete style={{ fontSize: 20 }} />} onClick={() => { remove(name); setState({ ...state }); }} />
-                                            </Col>
-                                        </Row>
-                                    ))}
-                                    <Button type="dashed" onClick={() => add()} block icon={<MdAdd />} style={{ marginTop: 8 }}>
-                                        {t.add_new}
-                                    </Button>
-                                </>
-                            )}
-                        </Form.List>
-                    </div>
-
-                    <div style={{ borderTop: "2px solid #eee", marginTop: 25, paddingTop: 20, background: '#fafafa', padding: 20, borderRadius: 8 }}>
-                        <Row gutter={24} align="middle">
-                            <Col span={6}>
-                                <div style={{ fontSize: 14, color: '#666' }}>{t.subtotal}</div>
-                                <div style={{ fontSize: 22, fontWeight: 'bold' }}>
-                                    ${(form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0).toFixed(2)}
-                                </div>
-                            </Col>
-                            <Col span={5}>
-                                <Form.Item name="tax_amount" label={<b>{t.tax}</b>} style={{ marginBottom: 0 }}>
-                                    <InputNumber prefix="$" style={{ width: '100%' }} placeholder="0.00" onChange={() => setState({ ...state })} />
-                                </Form.Item>
-                            </Col>
-                            <Col span={5}>
-                                <Form.Item name="discount_amount" label={<b>{t.discount_full}</b>} style={{ marginBottom: 0 }}>
-                                    <InputNumber prefix="$" style={{ width: '100%' }} placeholder="0.00" onChange={() => setState({ ...state })} />
-                                </Form.Item>
-                            </Col>
-                            <Col span={8}>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: 16, color: '#666' }}>{t.grand_total}</div>
-                                    <div style={{ fontSize: 32, fontWeight: 'bold', color: "#2ecc71" }}>$
-                                        {((form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0)
-                                            + (Number(form.getFieldValue("tax_amount")) || 0)
-                                            - (Number(form.getFieldValue("discount_amount")) || 0)).toFixed(2)}
-                                    </div>
-                                </div>
-                            </Col>
-                        </Row>
-
-                        <Divider />
-
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <Form.Item name="paid_amount" label={<b>{t.paid_amount}</b>} style={{ marginBottom: 0 }}>
-                                <InputNumber style={{ width: 180 }} min={0} prefix="$" placeholder="0.00" size="large" />
-                            </Form.Item>
-                            <Space>
-                                <Button onClick={onCloseModal} size="large" style={{ width: 120 }}>{t.cancel}</Button>
-                                <Button type="primary" size="large" htmlType="submit" style={{ width: 180, fontWeight: 'bold' }}>
-                                    {t.save}
-                                </Button>
+                    <Form.List name="items">
+                        {(fields, { add, remove }) => (
+                            <>
+                                {fields.map(({ key, name, ...restField }) => (
+                                    <Row key={key} gutter={8} align="middle" style={{ marginBottom: 15 }}>
+                                        <Col span={7}>
+                                            <Form.Item {...restField} name={[name, 'item_composite_id']} rules={[{ required: true }]}>
+                                                <Select placeholder={t.product} options={state.allItems} showSearch onChange={(val) => {
+                                                    const item = state.allItems.find(i => i.value === val);
+                                                    if (item) {
+                                                        const items = [...form.getFieldValue('items')];
+                                                        items[name].cost = item.price;
+                                                        items[name].qty = items[name].qty || 1;
+                                                        items[name].item_type = item.item_type;
+                                                        items[name].real_id = item.item_id;
+                                                        form.setFieldsValue({ items });
+                                                        setState(p => ({ ...p }));
+                                                    }
+                                                }} />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={3}><Form.Item {...restField} name={[name, 'qty']} rules={[{ required: true }]}><InputNumber placeholder="Qty" style={{ width: '100%' }} onChange={() => setState({ ...state })} /></Form.Item></Col>
+                                        <Col span={3}><Form.Item name={[name, 'unit']}><Select placeholder={t.unit} options={[{ label: "Pcs", value: "Pcs" }, { label: "Box", value: "Box" }, { label: "Case", value: "Case" }]} /></Form.Item></Col>
+                                        <Col span={3}><Form.Item {...restField} name={[name, 'cost']} rules={[{ required: true }]}><InputNumber prefix="$" style={{ width: '100%' }} onChange={() => setState({ ...state })} /></Form.Item></Col>
+                                        <Col span={5}><Form.Item name={[name, 'remark']}><Input placeholder={t.note} /></Form.Item></Col>
+                                        <Col span={2} style={{ textAlign: "right", fontWeight: 'bold' }}>${((form.getFieldValue(['items', name, 'qty']) || 0) * (form.getFieldValue(['items', name, 'cost']) || 0)).toFixed(2)}</Col>
+                                        <Col span={1}><Button danger type="text" icon={<MdDelete />} onClick={() => remove(name)} /></Col>
+                                    </Row>
+                                ))}
+                                <Button type="dashed" onClick={() => add()} block icon={<MdAdd />}>{t.add_new}</Button>
+                            </>
+                        )}
+                    </Form.List>
+                    <Divider />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        <div>
+                            <Form.Item name="paid_amount" label={<b>{t.paid_amount}</b>}><InputNumber prefix="$" style={{ width: 180 }} /></Form.Item>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 16, color: '#666' }}>{t.grand_total}</div>
+                            <div style={{ fontSize: 32, fontWeight: 'bold', color: "#2ecc71" }}>
+                                ${(form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0).toFixed(2)}
+                            </div>
+                            <Space style={{ marginTop: 20 }}>
+                                <Button onClick={onCloseModal}>{t.cancel}</Button>
+                                <Button type="primary" htmlType="submit" style={{ fontWeight: 'bold' }}>{t.save}</Button>
                             </Space>
                         </div>
                     </div>
                 </Form>
             </Modal>
-            {/* Receive Goods Modal */}
+
+            {/* 🚀 RECEIVE GOODS MODAL */}
             <Modal
                 title={<b>📥 {t.receiving_now || "Receive Goods"} - {state.selectedPurchase?.ref}</b>}
                 open={state.visibleReceiveModal}
-                onCancel={() => setState(p => ({ ...p, visibleReceiveModal: false }))}
-                width={1250}
-                onOk={onFinishReceive}
-                confirmLoading={state.isSavingReceive}
-                okText={t.save}
-                centered
+                onCancel={() => setState(p => ({ ...p, visibleReceiveModal: false, showCamera: false, scanFilterId: null }))}
+                width={isMobile ? "100%" : 1250}
+                style={isMobile ? { top: 0, margin: 0, maxWidth: '100vw' } : {}}
+                styles={{ body: { padding: isMobile ? '10px' : '20px', height: isMobile ? 'calc(100vh - 110px)' : 'auto', overflowY: 'auto' } }}
+                footer={null}
+                centered={!isMobile}
             >
-                <div style={{ marginBottom: 20, padding: '15px', background: '#f6f9fc', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '15px', border: '1px solid #e1e8ed' }}>
-                    <div style={{ background: '#2ecc71', padding: '10px', borderRadius: '8px', color: '#fff' }}>
-                        <MdQrCodeScanner size={24} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Focus to Scan Crate / Item Barcode</div>
-                        <Input
-                            placeholder="Scan Product Barcode..."
-                            autoFocus
-                            style={{ height: '40px', borderRadius: '6px' }}
-                            onPressEnter={(e) => {
-                                onScanBarcodeReceive(e.target.value);
-                                e.target.value = '';
-                            }}
-                        />
+                <div style={{ position: isMobile ? 'sticky' : 'relative', top: isMobile ? '-10px' : 0, zIndex: 100, background: '#fff', paddingBottom: '10px', marginBottom: '15px' }}>
+                    <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '12px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '10px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
+                            <div style={{ background: '#2ecc71', padding: '10px', borderRadius: '8px', color: '#fff', display: 'flex', alignItems: 'center' }}><MdQrCodeScanner size={20} /></div>
+                            <Input placeholder="Scan Barcode..." autoFocus value={state.txt_barcode} style={{ height: '45px', borderRadius: '8px', border: '2px solid #2ecc71', fontSize: '16px' }} onChange={(e) => setState(p => ({ ...p, txt_barcode: e.target.value }))} onPressEnter={(e) => onScanBarcodeReceive(e.target.value)} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <Button icon={<MdOutlineCameraAlt size={22} />} style={{ height: '45px', flex: 1, background: state.showCamera ? '#ff4d4f' : '#3498db', color: '#fff', borderRadius: '8px' }} onClick={() => setState(p => ({ ...p, showCamera: !p.showCamera }))}>{state.showCamera ? "Close" : "Camera"}</Button>
+                            {state.scanFilterId && <Button danger onClick={() => setState(p => ({ ...p, scanFilterId: null }))} style={{ height: '45px' }}>ALL</Button>}
+                        </div>
                     </div>
                 </div>
-                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-                    <span><b>{t.supplier || "Supplier"}:</b> {state.selectedPurchase?.supplier_name}</span>
-                    <Tag color="blue">{t.ref_no || "Ref"}: {state.selectedPurchase?.ref}</Tag>
-                </div>
-                <Table
-                    dataSource={state.purchaseDetails}
-                    rowKey="id"
-                    pagination={false}
-                    size="small"
-                    columns={[
-                        { title: t.product_name, dataIndex: "name" },
-                        { title: t.category_name, dataIndex: "item_type", render: (t) => <Tag>{t.replace('_', ' ')}</Tag> },
-                        { title: t.unit, dataIndex: "unit", width: 80, align: 'center', render: (v) => <Tag color="blue">{v || "-"}</Tag> },
-                        { title: t.paid, dataIndex: "received_qty", width: 80, align: 'center', render: (v) => <Tag color="green">{v}</Tag> },
-                        {
-                            title: t.price,
-                            dataIndex: "cost",
-                            width: 120,
-                            render: (_, record, index) => (
-                                <InputNumber
-                                    min={0}
-                                    size="small"
-                                    prefix="$"
-                                    value={record.cost}
-                                    style={{ width: '100%', fontWeight: 'bold', color: '#2c3e50' }}
-                                    onChange={(val) => {
-                                        const details = [...state.purchaseDetails];
-                                        details[index].cost = val;
-                                        setState(p => ({ ...p, purchaseDetails: details }));
-                                    }}
-                                />
-                            )
-                        },
-                        {
-                            title: t.batch_no,
-                            dataIndex: "batch_no",
-                            width: 110,
-                            render: (_, record, index) => (
-                                <Input
-                                    placeholder={t.batch_no}
-                                    size="small"
-                                    value={record.batch_no}
-                                    onChange={(e) => {
-                                        const details = [...state.purchaseDetails];
-                                        details[index].batch_no = e.target.value;
-                                        setState(p => ({ ...p, purchaseDetails: details }));
-                                    }}
-                                />
-                            )
-                        },
-                        {
-                            title: t.expiry_date,
-                            dataIndex: "expiry_date",
-                            width: 130,
-                            render: (_, record, index) => (
-                                <DatePicker
-                                    placeholder={t.expiry_date}
-                                    size="small"
-                                    style={{ width: '100%' }}
-                                    value={record.expiry_date}
-                                    onChange={(date) => {
-                                        const details = [...state.purchaseDetails];
-                                        details[index].expiry_date = date;
-                                        setState(p => ({ ...p, purchaseDetails: details }));
-                                    }}
-                                />
-                            )
-                        },
-                        {
-                            title: t.receiving_now,
-                            width: 110,
-                            render: (_, record, index) => (
-                                <InputNumber
-                                    min={0}
-                                    max={Number(record.qty) - Number(record.received_qty)}
-                                    value={record.receive_now}
-                                    style={{ width: '100%', borderColor: '#2ecc71' }}
-                                    size="small"
-                                    onChange={(val) => {
-                                        const details = [...state.purchaseDetails];
-                                        details[index].receive_now = val;
-                                        setState(p => ({ ...p, purchaseDetails: details }));
-                                    }}
-                                />
-                            )
-                        },
-                        {
-                            title: t.total,
-                            width: 100,
-                            align: 'right',
-                            render: (_, record) => (
-                                <div style={{ fontWeight: 'bold', color: '#16a085' }}>
-                                    ${(Number(record.receive_now || 0) * Number(record.cost || 0)).toFixed(2)}
+
+                {state.showCamera && <div style={{ marginBottom: '15px', background: '#000', borderRadius: '12px', overflow: 'hidden' }}><div id="reader" style={{ width: '100%' }}></div></div>}
+
+                {isMobile ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '80px' }}>
+                        {(state.scanFilterId ? state.purchaseDetails.filter(d => d.id === state.scanFilterId) : state.purchaseDetails).map((item, index) => {
+                            const isOver = item.receive_now > (Number(item.qty) - Number(item.received_qty));
+                            return (
+                                <div key={item.id} style={{ background: '#fff', borderRadius: '12px', padding: '12px', border: isOver ? '2px solid #ff4d4f' : '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}><b style={{ fontSize: '15px' }}>{item.name}</b><Tag color="cyan">{item.unit}</Tag></div>
+                                    <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', fontSize: '12px', color: '#64748b' }}><span>Order: <b>{item.qty}</b></span><span>Rec: <b>{item.received_qty}</b></span></div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                        <Input size="small" placeholder="Batch" value={item.batch_no} onChange={(e) => { const details = [...state.purchaseDetails]; details[index].batch_no = e.target.value; setState(p => ({ ...p, purchaseDetails: details })); }} />
+                                        <DatePicker size="small" placeholder="Expiry" style={{ width: '100%' }} value={item.expiry_date} onChange={(date) => { const details = [...state.purchaseDetails]; details[index].expiry_date = date; setState(p => ({ ...p, purchaseDetails: details })); }} />
+                                    </div>
+                                    <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', padding: '8px', borderRadius: '8px' }}>
+                                        <span style={{ fontWeight: 600 }}>RECEIVE:</span>
+                                        <InputNumber style={{ width: '100px' }} status={isOver ? 'error' : ''} value={item.receive_now} onChange={(val) => { const details = [...state.purchaseDetails]; details[index].receive_now = val; setState(p => ({ ...p, purchaseDetails: details })); }} />
+                                    </div>
                                 </div>
                             )
-                        },
-                        {
-                            title: t.note,
-                            width: 150,
-                            render: (_, record, index) => (
-                                <Input
-                                    placeholder={t.note}
-                                    size="small"
-                                    value={record.remark}
-                                    onChange={(e) => {
-                                        const details = [...state.purchaseDetails];
-                                        details[index].remark = e.target.value;
-                                        setState(p => ({ ...p, purchaseDetails: details }));
-                                    }}
-                                />
-                            )
-                        }
-                    ]}
-                />
+                        })}
+                        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '15px', background: '#fff', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '10px', zIndex: 1000 }}>
+                            <Button onClick={() => setState(p => ({ ...p, visibleReceiveModal: false }))} style={{ flex: 1, height: '45px' }}>Cancel</Button>
+                            <Button type="primary" onClick={onFinishReceive} loading={state.isSavingReceive} style={{ flex: 2, height: '45px', fontWeight: 'bold' }}>SAVE</Button>
+                        </div>
+                    </div>
+                ) : (
+                    <Table
+                        dataSource={state.scanFilterId ? state.purchaseDetails.filter(d => d.id === state.scanFilterId) : state.purchaseDetails}
+                        rowKey="id" pagination={false} size="small"
+                        columns={[
+                            { title: "Product", dataIndex: "name" },
+                            { title: "Order", dataIndex: "qty", width: 80 },
+                            { title: "Rec", dataIndex: "received_qty", width: 80 },
+                            { title: "Batch", dataIndex: "batch_no", width: 120, render: (_, record, index) => <Input size="small" value={record.batch_no} onChange={(e) => { const d = [...state.purchaseDetails]; d[index].batch_no = e.target.value; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
+                            { title: "Expiry", dataIndex: "expiry_date", width: 140, render: (_, record, index) => <DatePicker size="small" value={record.expiry_date} onChange={(date) => { const d = [...state.purchaseDetails]; d[index].expiry_date = date; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
+                            { title: "Receive Now", width: 120, render: (_, record, index) => <InputNumber size="small" value={record.receive_now} onChange={(val) => { const d = [...state.purchaseDetails]; d[index].receive_now = val; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
+                            { title: "Total", render: (_, record) => <b>${(Number(record.receive_now || 0) * Number(record.cost || 0)).toFixed(2)}</b> }
+                        ]}
+                    />
+                )}
             </Modal>
         </MainPage>
     );
