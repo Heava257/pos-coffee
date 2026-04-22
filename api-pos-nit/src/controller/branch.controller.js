@@ -19,7 +19,16 @@ exports.getList = async (req, res) => {
 
 exports.create = async (req, res) => {
     try {
-        const { name, location, phone } = req.body;
+        const { 
+            name, 
+            location, 
+            phone,
+            payment_merchant_id,
+            payment_api_key,
+            payment_receiver_name,
+            payment_provider,
+            payment_api_url
+        } = req.body;
         const { business_id } = req;
 
         // Optimized Subscription Limit Check

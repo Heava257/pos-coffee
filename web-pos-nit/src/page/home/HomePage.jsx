@@ -27,6 +27,8 @@ import { useLanguage, translations } from "../../store/language.store";
 import { useProfileStore } from "../../store/profileStore";
 import { DollarSign, ShoppingBag, TrendingUp, Wallet, Package, AlertCircle } from "lucide-react";
 
+import SuperAdminDashboard from "./SuperAdminDashboard";
+
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
@@ -53,7 +55,6 @@ function HomePage() {
   }, [dates, isPlatformAdmin]);
 
   if (isPlatformAdmin) {
-    const SuperAdminDashboard = require("./SuperAdminDashboard").default;
     return <SuperAdminDashboard />;
   }
 
