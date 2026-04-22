@@ -16,8 +16,8 @@ import {
     Divider
 } from "antd";
 import { request } from "../../util/helper";
-import { MdAdd, MdDelete, MdRemoveRedEye, MdInventory, MdQrCodeScanner, MdOutlineCameraAlt } from "react-icons/md";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { MdAdd, MdDelete, MdEdit, MdInventory, MdOutlineCameraAlt, MdQrCodeScanner, MdRemoveRedEye, MdSearch } from "react-icons/md";
+import { Html5Qrcode } from "html5-qrcode";
 import MainPage from "../../component/layout/MainPage";
 import dayjs from "dayjs";
 import { useLanguage, translations } from "../../store/language.store";
@@ -70,32 +70,7 @@ function PurchasePage() {
     });
 
     useEffect(() => {
-        let scanner = null;
-        if (state.showCamera && state.visibleReceiveModal) {
-            scanner = new Html5QrcodeScanner("reader", { 
-                fps: 10, 
-                qrbox: { width: 300, height: 200 },
-                aspectRatio: 1.0
-            });
-            scanner.render((result) => {
-                onScanBarcodeReceive(result);
-            }, (error) => {
-                // Ignore errors during scanning
-            });
-        }
-        return () => {
-            if (scanner) {
-                scanner.clear().catch(e => console.log("Scanner cleanup"));
-            }
-        };
-    }, [state.showCamera, state.visibleReceiveModal]);
-
-    useEffect(() => {
         getList();
-        // The provided server-side code snippet was incorrect for this client-side React component.
-        // The instructions imply changing API endpoints within the component.
-        // The existing `request` calls for "purchase-details" and "purchase-receive" already use hyphens.
-        // No change is needed here based on the provided instructions and code.
     }, [filter]);
 
     const getList = async () => {
@@ -225,6 +200,43 @@ function PurchasePage() {
         }
     };
 
+    const onClickEdit = async (item) => {
+        setState(p => ({ ...p, loading: true }));
+        try {
+            const res = await request("purchase-details", "get", { id: item.id });
+            if (res && !res.error) {
+                const items = res.list.map(i => ({
+                    ...i,
+                    item_composite_id: i.item_type === 'raw_material' ? `rm-${i.item_id}` : `pd-${i.item_id}`,
+                    qty: Number(i.qty),
+                    cost: Number(i.cost)
+                }));
+
+                form.setFieldsValue({
+                    ...item,
+                    purchase_date: dayjs(item.purchase_date),
+                    items: items
+                });
+
+                setState(p => ({
+                    ...p,
+                    visibleModal: true,
+                    isEdit: true,
+                    loading: false,
+                    selectedPurchase: item
+                }));
+                fetchSuppliers();
+                fetchAllPurchaseItems();
+            } else {
+                message.error("Failed to fetch details");
+                setState(p => ({ ...p, loading: false }));
+            }
+        } catch (error) {
+            console.error(error);
+            setState(p => ({ ...p, loading: false }));
+        }
+    };
+
     const onClickReceive = async (item) => {
         setState(p => ({ ...p, loading: true }));
         const res = await request("purchase-details", "get", { id: item.id });
@@ -250,6 +262,39 @@ function PurchasePage() {
         }
     };
 
+
+    useEffect(() => {
+        let html5QrCode;
+        const startScanner = async () => {
+            try {
+                html5QrCode = new Html5Qrcode("reader");
+                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText) => {
+                        onScanBarcodeReceive(decodedText);
+                    },
+                    (errorMessage) => {
+                        // ignore errors
+                    }
+                );
+            } catch (err) {
+                console.error("Camera Error:", err);
+            }
+        };
+
+        if (state.showCamera && state.visibleReceiveModal) {
+            // Delay slightly to ensure "reader" div is in DOM
+            const timer = setTimeout(startScanner, 500);
+            return () => {
+                clearTimeout(timer);
+                if (html5QrCode && html5QrCode.isScanning) {
+                    html5QrCode.stop().catch(err => console.error("Stop Error:", err));
+                }
+            };
+        }
+    }, [state.showCamera, state.visibleReceiveModal]);
 
     const onScanBarcodeReceive = (barcode) => {
         if (!barcode) return;
@@ -530,7 +575,7 @@ function PurchasePage() {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <Button icon={<MdRemoveRedEye />} style={{ flex: 1, height: '42px', borderRadius: '10px' }} onClick={() => { setState(p => ({ ...p, selectedPurchase: item, visibleModal: true })); }} />
+                                <Button icon={<MdRemoveRedEye />} style={{ flex: 1, height: '42px', borderRadius: '10px' }} onClick={() => onClickEdit(item)} />
                                 <Button type="primary" icon={<MdInventory />} style={{ flex: 3, height: '42px', borderRadius: '10px', background: '#3b82f6', fontWeight: 600 }} onClick={() => onClickReceive(item)}>RECEIVE NOW</Button>
                                 {canApprove && item.status === 'PENDING' && (
                                     <Button danger icon={<MdDelete />} style={{ width: '42px', height: '42px', borderRadius: '10px' }} onClick={() => onClickDelete(item)} />
@@ -554,35 +599,76 @@ function PurchasePage() {
                 />
             )}
 
-            {/* 🚀 CREATE PURCHASE MODAL */}
+            {/* 🚀 CREATE PURCHASE MODAL (MOBILE-OPTIMIZED) */}
             <Modal
-                title={<b>➕ {t.new_purchase}</b>}
+                title={<div style={{ fontSize: isMobile ? '16px' : '20px' }}><b>➕ {t.new_purchase}</b></div>}
                 open={state.visibleModal}
                 onCancel={onCloseModal}
-                width={1400}
-                style={{ top: 20 }}
+                width={isMobile ? "100%" : 1400}
+                style={isMobile ? { top: 0, margin: 0, maxWidth: '100vw', paddingBottom: 0 } : { top: 20 }}
+                styles={{ 
+                    body: { 
+                        padding: isMobile ? '16px' : '20px', 
+                        height: isMobile ? 'calc(100vh - 110px)' : 'auto', 
+                        overflowY: 'auto',
+                        background: isMobile ? '#f8fafc' : '#fff'
+                    }
+                }}
                 footer={null}
-                centered
+                centered={!isMobile}
                 destroyOnClose
             >
                 <Form layout="vertical" form={form} onFinish={onFinish}>
-                    <Row gutter={16}>
-                        <Col span={4}><Form.Item name="supplier_id" label={t.supplier} rules={[{ required: true }]}><Select options={state.suppliers} placeholder={t.supplier} showSearch /></Form.Item></Col>
-                        <Col span={4}><Form.Item name="ref" label={t.ref_no}><Input placeholder="Invoice #" /></Form.Item></Col>
-                        <Col span={4}><Form.Item name="purchase_date" label={t.receive_date} rules={[{ required: true }]}><DatePicker showTime style={{ width: '100%' }} /></Form.Item></Col>
-                        <Col span={4}><Form.Item name="status" label={t.status} rules={[{ required: true }]} initialValue="Received"><Select options={[{ label: "📥 Request", value: "Request" }, { label: "⌛ Pending", value: "Pending" }, { label: "✅ Received", value: "Received" }]} /></Form.Item></Col>
-                        <Col span={4}><Form.Item name="payment_method" label={t.payment_method} initialValue="Cash"><Select options={[{ label: "💵 Cash", value: "Cash" }, { label: "💳 Bank", value: "Bank" }]} /></Form.Item></Col>
-                        <Col span={4}><Form.Item name="note" label={t.note}><Input placeholder={t.note} /></Form.Item></Col>
-                    </Row>
-                    <Divider style={{ margin: '15px 0' }} />
+                    <div style={{ background: '#fff', padding: isMobile ? '16px' : '0', borderRadius: '12px', marginBottom: '20px', border: isMobile ? '1px solid #e2e8f0' : 'none' }}>
+                        <Row gutter={[16, 16]}>
+                            <Col xs={24} sm={12} md={4}><Form.Item name="supplier_id" label={t.supplier} rules={[{ required: true }]}><Select size="large" options={state.suppliers} placeholder={t.supplier} showSearch /></Form.Item></Col>
+                            <Col xs={24} sm={12} md={4}><Form.Item name="ref" label={t.ref_no}><Input size="large" placeholder="Invoice #" /></Form.Item></Col>
+                            <Col xs={24} sm={12} md={4}><Form.Item name="purchase_date" label={t.receive_date} rules={[{ required: true }]}><DatePicker size="large" showTime style={{ width: '100%' }} /></Form.Item></Col>
+                            {!isMobile && (
+                                <>
+                                    <Col span={4}><Form.Item name="status" label={t.status} rules={[{ required: true }]} initialValue="Received"><Select size="large" options={[{ label: "📥 Request", value: "Request" }, { label: "⌛ Pending", value: "Pending" }, { label: "✅ Received", value: "Received" }]} /></Form.Item></Col>
+                                    <Col span={4}><Form.Item name="payment_method" label={t.payment_method} initialValue="Cash"><Select size="large" options={[{ label: "💵 Cash", value: "Cash" }, { label: "💳 Bank", value: "Bank" }]} /></Form.Item></Col>
+                                    <Col span={4}><Form.Item name="note" label={t.note}><Input size="large" placeholder={t.note} /></Form.Item></Col>
+                                </>
+                            )}
+                        </Row>
+                        {isMobile && (
+                             <Row gutter={[12, 12]}>
+                                <Col span={12}><Form.Item name="status" label={t.status} initialValue="Received"><Select size="large" options={[{ label: "Request", value: "Request" }, { label: "Pending", value: "Pending" }, { label: "Received", value: "Received" }]} /></Form.Item></Col>
+                                <Col span={12}><Form.Item name="payment_method" label={t.payment_method} initialValue="Cash"><Select size="large" options={[{ label: "Cash", value: "Cash" }, { label: "Bank", value: "Bank" }]} /></Form.Item></Col>
+                             </Row>
+                        )}
+                    </div>
+
+                    <Divider orientation="left" style={{ margin: '10px 0 20px 0' }}><span style={{ color: '#64748b', fontSize: '14px' }}>PRODUCT LIST</span></Divider>
+
                     <Form.List name="items">
                         {(fields, { add, remove }) => (
-                            <>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '100px' }}>
                                 {fields.map(({ key, name, ...restField }) => (
-                                    <Row key={key} gutter={8} align="middle" style={{ marginBottom: 15 }}>
-                                        <Col span={7}>
-                                            <Form.Item {...restField} name={[name, 'item_composite_id']} rules={[{ required: true }]}>
-                                                <Select placeholder={t.product} options={state.allItems} showSearch onChange={(val) => {
+                                    <div key={key} style={{ 
+                                        background: '#fff', 
+                                        borderRadius: '16px', 
+                                        padding: '16px', 
+                                        border: '1px solid #e2e8f0',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                        position: 'relative'
+                                    }}>
+                                        <Button 
+                                            danger 
+                                            type="text" 
+                                            icon={<MdDelete size={20} />} 
+                                            style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 1 }}
+                                            onClick={() => { remove(name); setState(p => ({ ...p })); }}
+                                        />
+
+                                        <Form.Item {...restField} name={[name, 'item_composite_id']} label={<b>Product</b>} rules={[{ required: true }]}>
+                                            <Select 
+                                                size="large" 
+                                                placeholder="Select Product" 
+                                                options={state.allItems} 
+                                                showSearch 
+                                                onChange={(val) => {
                                                     const item = state.allItems.find(i => i.value === val);
                                                     if (item) {
                                                         const items = [...form.getFieldValue('items')];
@@ -593,104 +679,371 @@ function PurchasePage() {
                                                         form.setFieldsValue({ items });
                                                         setState(p => ({ ...p }));
                                                     }
-                                                }} />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={3}><Form.Item {...restField} name={[name, 'qty']} rules={[{ required: true }]}><InputNumber placeholder="Qty" style={{ width: '100%' }} onChange={() => setState({ ...state })} /></Form.Item></Col>
-                                        <Col span={3}><Form.Item name={[name, 'unit']}><Select placeholder={t.unit} options={[{ label: "Pcs", value: "Pcs" }, { label: "Box", value: "Box" }, { label: "Case", value: "Case" }]} /></Form.Item></Col>
-                                        <Col span={3}><Form.Item {...restField} name={[name, 'cost']} rules={[{ required: true }]}><InputNumber prefix="$" style={{ width: '100%' }} onChange={() => setState({ ...state })} /></Form.Item></Col>
-                                        <Col span={5}><Form.Item name={[name, 'remark']}><Input placeholder={t.note} /></Form.Item></Col>
-                                        <Col span={2} style={{ textAlign: "right", fontWeight: 'bold' }}>${((form.getFieldValue(['items', name, 'qty']) || 0) * (form.getFieldValue(['items', name, 'cost']) || 0)).toFixed(2)}</Col>
-                                        <Col span={1}><Button danger type="text" icon={<MdDelete />} onClick={() => remove(name)} /></Col>
-                                    </Row>
+                                                }} 
+                                            />
+                                        </Form.Item>
+
+                                        <Row gutter={12}>
+                                            <Col span={12}>
+                                                <Form.Item {...restField} name={[name, 'qty']} label="Quantity" rules={[{ required: true }]}>
+                                                    <InputNumber size="large" placeholder="0" style={{ width: '100%', borderRadius: '10px' }} onChange={() => setState({ ...state })} />
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={12}>
+                                                <Form.Item name={[name, 'unit']} label="Unit">
+                                                    <Select size="large" style={{ borderRadius: '10px' }} options={[{ label: "Pcs", value: "Pcs" }, { label: "Box", value: "Box" }, { label: "Case", value: "Case" }]} />
+                                                </Form.Item>
+                                            </Col>
+                                        </Row>
+
+                                        <Row gutter={12}>
+                                            <Col span={12}>
+                                                <Form.Item {...restField} name={[name, 'cost']} label="Cost Price" rules={[{ required: true }]}>
+                                                    <InputNumber size="large" prefix="$" style={{ width: '100%', borderRadius: '10px' }} onChange={() => setState({ ...state })} />
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={12}>
+                                                <div style={{ paddingTop: '32px', textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '12px', color: '#64748b' }}>SUBTOTAL</div>
+                                                    <b style={{ fontSize: '18px', color: '#10b981' }}>
+                                                        ${((form.getFieldValue(['items', name, 'qty']) || 0) * (form.getFieldValue(['items', name, 'cost']) || 0)).toFixed(2)}
+                                                    </b>
+                                                </div>
+                                            </Col>
+                                        </Row>
+                                    </div>
                                 ))}
-                                <Button type="dashed" onClick={() => add()} block icon={<MdAdd />}>{t.add_new}</Button>
-                            </>
+                                <Button 
+                                    type="dashed" 
+                                    onClick={() => add()} 
+                                    block 
+                                    icon={<MdAdd />} 
+                                    size="large"
+                                    style={{ height: '50px', borderRadius: '12px', background: '#f1f5f9', border: '2px dashed #cbd5e1' }}
+                                >
+                                    {t.add_new}
+                                </Button>
+                            </div>
                         )}
                     </Form.List>
-                    <Divider />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                        <div>
-                            <Form.Item name="paid_amount" label={<b>{t.paid_amount}</b>}><InputNumber prefix="$" style={{ width: 180 }} /></Form.Item>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 16, color: '#666' }}>{t.grand_total}</div>
-                            <div style={{ fontSize: 32, fontWeight: 'bold', color: "#2ecc71" }}>
-                                ${(form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0).toFixed(2)}
+
+                    {/* 💾 STICKY BOTTOM SUMMARY BAR */}
+                    <div style={{ 
+                        position: isMobile ? 'fixed' : 'relative', 
+                        bottom: 0, 
+                        left: 0, 
+                        right: 0, 
+                        padding: isMobile ? '16px 20px 24px 20px' : '20px 0 0 0', 
+                        background: '#fff', 
+                        borderTop: '1px solid #e2e8f0', 
+                        display: 'flex', 
+                        flexDirection: isMobile ? 'column' : 'row',
+                        justifyContent: 'space-between',
+                        alignItems: isMobile ? 'stretch' : 'flex-end',
+                        gap: '15px', 
+                        zIndex: 1000,
+                        boxShadow: isMobile ? '0 -4px 10px rgba(0,0,0,0.05)' : 'none'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ textAlign: 'left' }}>
+                                <div style={{ fontSize: '13px', color: '#64748b' }}>{t.grand_total}</div>
+                                <div style={{ fontSize: '24px', fontWeight: 800, color: "#10b981" }}>
+                                    ${(form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0).toFixed(2)}
+                                </div>
                             </div>
-                            <Space style={{ marginTop: 20 }}>
-                                <Button onClick={onCloseModal}>{t.cancel}</Button>
-                                <Button type="primary" htmlType="submit" style={{ fontWeight: 'bold' }}>{t.save}</Button>
-                            </Space>
+                            {isMobile && (
+                                <Form.Item name="paid_amount" label="Paid" style={{ marginBottom: 0 }}>
+                                    <InputNumber prefix="$" size="large" style={{ width: 120, borderRadius: '10px' }} />
+                                </Form.Item>
+                            )}
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <Button 
+                                size="large" 
+                                onClick={onCloseModal} 
+                                style={{ flex: 1, height: '50px', borderRadius: '12px', fontWeight: 600 }}
+                            >
+                                {t.cancel}
+                            </Button>
+                            <Button 
+                                type="primary" 
+                                size="large" 
+                                htmlType="submit" 
+                                style={{ flex: 2, height: '50px', borderRadius: '12px', fontWeight: 700, background: '#3b82f6' }}
+                            >
+                                {t.save}
+                            </Button>
                         </div>
                     </div>
                 </Form>
             </Modal>
 
-            {/* 🚀 RECEIVE GOODS MODAL */}
+            {/* 🚀 RECEIVE GOODS MODAL (POLISHED MOBILE-FIRST) */}
             <Modal
-                title={<b>📥 {t.receiving_now || "Receive Goods"} - {state.selectedPurchase?.ref}</b>}
+                title={<div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: isMobile ? '16px' : '18px' }}>
+                    <span style={{ fontSize: '20px' }}>📥</span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <b>{t.receiving_now || "Receive Goods"}</b>
+                        <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>Order: {state.selectedPurchase?.ref}</span>
+                    </div>
+                </div>}
                 open={state.visibleReceiveModal}
                 onCancel={() => setState(p => ({ ...p, visibleReceiveModal: false, showCamera: false, scanFilterId: null }))}
                 width={isMobile ? "100%" : 1250}
-                style={isMobile ? { top: 0, margin: 0, maxWidth: '100vw' } : {}}
-                styles={{ body: { padding: isMobile ? '10px' : '20px', height: isMobile ? 'calc(100vh - 110px)' : 'auto', overflowY: 'auto' } }}
+                style={isMobile ? { top: 0, margin: 0, maxWidth: '100vw', paddingBottom: 0 } : {}}
+                styles={{ 
+                    body: { 
+                        padding: isMobile ? '0' : '20px', 
+                        height: isMobile ? 'calc(100vh - 110px)' : 'auto', 
+                        overflowY: 'auto',
+                        background: isMobile ? '#f8fafc' : '#fff'
+                    },
+                    header: {
+                        padding: isMobile ? '12px 16px' : '16px 24px',
+                        borderBottom: '1px solid #e2e8f0'
+                    }
+                }}
                 footer={null}
                 centered={!isMobile}
+                closeIcon={<div style={{ background: '#f1f5f9', padding: '8px', borderRadius: '50%', display: 'flex' }}><MdAdd style={{ transform: 'rotate(45deg)' }} /></div>}
             >
-                <div style={{ position: isMobile ? 'sticky' : 'relative', top: isMobile ? '-10px' : 0, zIndex: 100, background: '#fff', paddingBottom: '10px', marginBottom: '15px' }}>
-                    <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '12px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '10px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
-                            <div style={{ background: '#2ecc71', padding: '10px', borderRadius: '8px', color: '#fff', display: 'flex', alignItems: 'center' }}><MdQrCodeScanner size={20} /></div>
-                            <Input placeholder="Scan Barcode..." autoFocus value={state.txt_barcode} style={{ height: '45px', borderRadius: '8px', border: '2px solid #2ecc71', fontSize: '16px' }} onChange={(e) => setState(p => ({ ...p, txt_barcode: e.target.value }))} onPressEnter={(e) => onScanBarcodeReceive(e.target.value)} />
+                {/* 🛰️ STICKY SCANNER SECTION */}
+                <div style={{ 
+                    position: isMobile ? 'sticky' : 'relative', 
+                    top: 0, 
+                    zIndex: 100, 
+                    background: '#fff', 
+                    padding: isMobile ? '12px 16px' : '0 0 20px 0',
+                    borderBottom: isMobile ? '1px solid #e2e8f0' : 'none',
+                    boxShadow: isMobile ? '0 4px 6px -1px rgba(0,0,0,0.05)' : 'none'
+                }}>
+                    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '12px' }}>
+                        <div style={{ flex: 1, position: 'relative' }}>
+                            <div style={{ 
+                                position: 'absolute', 
+                                left: '12px', 
+                                top: '50%', 
+                                transform: 'translateY(-50%)', 
+                                zIndex: 1,
+                                color: '#2ecc71'
+                            }}>
+                                <MdQrCodeScanner size={22} />
+                            </div>
+                            <Input 
+                                placeholder="Scan Barcode or Type..." 
+                                autoFocus 
+                                value={state.txt_barcode} 
+                                style={{ 
+                                    height: '48px', 
+                                    borderRadius: '12px', 
+                                    paddingLeft: '45px',
+                                    border: '2px solid #e2e8f0',
+                                    fontSize: '16px',
+                                    boxShadow: 'none'
+                                }} 
+                                onChange={(e) => setState(p => ({ ...p, txt_barcode: e.target.value }))} 
+                                onPressEnter={(e) => onScanBarcodeReceive(e.target.value)} 
+                            />
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                            <Button icon={<MdOutlineCameraAlt size={22} />} style={{ height: '45px', flex: 1, background: state.showCamera ? '#ff4d4f' : '#3498db', color: '#fff', borderRadius: '8px' }} onClick={() => setState(p => ({ ...p, showCamera: !p.showCamera }))}>{state.showCamera ? "Close" : "Camera"}</Button>
-                            {state.scanFilterId && <Button danger onClick={() => setState(p => ({ ...p, scanFilterId: null }))} style={{ height: '45px' }}>ALL</Button>}
+                            <Button 
+                                icon={<MdOutlineCameraAlt size={20} />} 
+                                style={{ 
+                                    height: '48px', 
+                                    flex: 1, 
+                                    background: state.showCamera ? '#ef4444' : '#3b82f6', 
+                                    color: '#fff', 
+                                    borderRadius: '12px',
+                                    border: 'none',
+                                    fontWeight: 600,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px'
+                                }} 
+                                onClick={() => setState(p => ({ ...p, showCamera: !p.showCamera }))}
+                            >
+                                {state.showCamera ? "Close" : "Camera"}
+                            </Button>
+                            {state.scanFilterId && (
+                                <Button 
+                                    danger 
+                                    style={{ height: '48px', borderRadius: '12px', fontWeight: 600 }}
+                                    onClick={() => setState(p => ({ ...p, scanFilterId: null }))}
+                                >
+                                    SHOW ALL
+                                </Button>
+                            )}
                         </div>
                     </div>
+
+                    {/* 📷 CAMERA VIEWPORT */}
+                    {state.showCamera && (
+                        <div style={{ 
+                            marginTop: '12px', 
+                            background: '#000', 
+                            borderRadius: '16px', 
+                            overflow: 'hidden', 
+                            border: '3px solid #3b82f6',
+                            position: 'relative',
+                            aspectRatio: '4/3'
+                        }}>
+                            <div id="reader" style={{ width: '100%' }}></div>
+                            <div style={{ 
+                                position: 'absolute', 
+                                top: '50%', 
+                                left: '50%', 
+                                transform: 'translateY(-50%) translateX(-50%)',
+                                width: '70%',
+                                height: '50%',
+                                border: '2px dashed rgba(255,255,255,0.5)',
+                                borderRadius: '12px',
+                                pointerEvents: 'none'
+                            }}></div>
+                        </div>
+                    )}
                 </div>
 
-                {state.showCamera && <div style={{ marginBottom: '15px', background: '#000', borderRadius: '12px', overflow: 'hidden' }}><div id="reader" style={{ width: '100%' }}></div></div>}
+                {/* 📦 ITEMS LIST */}
+                <div style={{ padding: isMobile ? '16px' : '0' }}>
+                    {isMobile ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '100px' }}>
+                            {(state.scanFilterId ? state.purchaseDetails.filter(d => d.id === state.scanFilterId) : state.purchaseDetails).map((item, index) => {
+                                const remaining = Number(item.qty) - Number(item.received_qty);
+                                const isOver = item.receive_now > remaining;
+                                return (
+                                    <div key={item.id} style={{ 
+                                        background: '#fff', 
+                                        borderRadius: '16px', 
+                                        padding: '16px', 
+                                        border: isOver ? '2px solid #ef4444' : '1px solid #e2e8f0',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}>
+                                        {isOver && <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#ef4444' }}></div>}
+                                        
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{item.category_name}</div>
+                                                <b style={{ fontSize: '16px', color: '#1e293b', display: 'block', marginTop: '2px' }}>{item.name}</b>
+                                            </div>
+                                            <Tag color="blue" style={{ borderRadius: '6px', margin: 0, padding: '2px 8px' }}>{item.unit}</Tag>
+                                        </div>
 
-                {isMobile ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '80px' }}>
-                        {(state.scanFilterId ? state.purchaseDetails.filter(d => d.id === state.scanFilterId) : state.purchaseDetails).map((item, index) => {
-                            const isOver = item.receive_now > (Number(item.qty) - Number(item.received_qty));
-                            return (
-                                <div key={item.id} style={{ background: '#fff', borderRadius: '12px', padding: '12px', border: isOver ? '2px solid #ff4d4f' : '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}><b style={{ fontSize: '15px' }}>{item.name}</b><Tag color="cyan">{item.unit}</Tag></div>
-                                    <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', fontSize: '12px', color: '#64748b' }}><span>Order: <b>{item.qty}</b></span><span>Rec: <b>{item.received_qty}</b></span></div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                        <Input size="small" placeholder="Batch" value={item.batch_no} onChange={(e) => { const details = [...state.purchaseDetails]; details[index].batch_no = e.target.value; setState(p => ({ ...p, purchaseDetails: details })); }} />
-                                        <DatePicker size="small" placeholder="Expiry" style={{ width: '100%' }} value={item.expiry_date} onChange={(date) => { const details = [...state.purchaseDetails]; details[index].expiry_date = date; setState(p => ({ ...p, purchaseDetails: details })); }} />
+                                        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', background: '#f1f5f9', padding: '10px', borderRadius: '12px' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: '10px', color: '#64748b' }}>ORDER</div>
+                                                <div style={{ fontSize: '14px', fontWeight: 700 }}>{item.qty}</div>
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: '10px', color: '#64748b' }}>RECEIVED</div>
+                                                <div style={{ fontSize: '14px', fontWeight: 700, color: '#10b981' }}>{item.received_qty}</div>
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: '10px', color: '#64748b' }}>REMAINING</div>
+                                                <div style={{ fontSize: '14px', fontWeight: 700, color: '#f59e0b' }}>{remaining}</div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>BATCH #</div>
+                                                <Input size="large" placeholder="Lot Num" style={{ borderRadius: '10px' }} value={item.batch_no} onChange={(e) => { const d = [...state.purchaseDetails]; d[index].batch_no = e.target.value; setState(p => ({ ...p, purchaseDetails: d })); }} />
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>EXPIRY</div>
+                                                <DatePicker size="large" placeholder="Date" style={{ width: '100%', borderRadius: '10px' }} value={item.expiry_date} onChange={(date) => { const d = [...state.purchaseDetails]; d[index].expiry_date = date; setState(p => ({ ...p, purchaseDetails: d })); }} />
+                                            </div>
+                                        </div>
+
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'space-between', 
+                                            background: isOver ? '#fee2e2' : '#ecfdf5', 
+                                            padding: '12px', 
+                                            borderRadius: '12px',
+                                            border: isOver ? '1px solid #fecaca' : '1px solid #d1fae5'
+                                        }}>
+                                            <span style={{ fontWeight: 700, color: isOver ? '#991b1b' : '#065f46', fontSize: '14px' }}>RECEIVE NOW:</span>
+                                            <InputNumber 
+                                                style={{ width: '120px', fontWeight: 'bold' }} 
+                                                size="large"
+                                                status={isOver ? 'error' : ''} 
+                                                value={item.receive_now} 
+                                                onChange={(val) => { const d = [...state.purchaseDetails]; d[index].receive_now = val; setState(p => ({ ...p, purchaseDetails: d })); }} 
+                                            />
+                                        </div>
                                     </div>
-                                    <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', padding: '8px', borderRadius: '8px' }}>
-                                        <span style={{ fontWeight: 600 }}>RECEIVE:</span>
-                                        <InputNumber style={{ width: '100px' }} status={isOver ? 'error' : ''} value={item.receive_now} onChange={(val) => { const details = [...state.purchaseDetails]; details[index].receive_now = val; setState(p => ({ ...p, purchaseDetails: details })); }} />
-                                    </div>
-                                </div>
-                            )
-                        })}
-                        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '15px', background: '#fff', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '10px', zIndex: 1000 }}>
-                            <Button onClick={() => setState(p => ({ ...p, visibleReceiveModal: false }))} style={{ flex: 1, height: '45px' }}>Cancel</Button>
-                            <Button type="primary" onClick={onFinishReceive} loading={state.isSavingReceive} style={{ flex: 2, height: '45px', fontWeight: 'bold' }}>SAVE</Button>
+                                )
+                            })}
                         </div>
+                    ) : (
+                        <Table
+                            dataSource={state.scanFilterId ? state.purchaseDetails.filter(d => d.id === state.scanFilterId) : state.purchaseDetails}
+                            rowKey="id" pagination={false} size="small"
+                            columns={[
+                                { title: "Product", dataIndex: "name", render: (t, r) => <div><b>{t}</b><br/><small>{r.category_name}</small></div> },
+                                { title: "Unit", dataIndex: "unit", render: v => <Tag>{v}</Tag> },
+                                { title: "Order", dataIndex: "qty", width: 80, align: 'center' },
+                                { title: "Rec", dataIndex: "received_qty", width: 80, align: 'center' },
+                                { title: "Batch", dataIndex: "batch_no", width: 140, render: (_, r, index) => <Input value={r.batch_no} onChange={(e) => { const d = [...state.purchaseDetails]; d[index].batch_no = e.target.value; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
+                                { title: "Expiry", dataIndex: "expiry_date", width: 160, render: (_, r, index) => <DatePicker style={{ width: '100%' }} value={r.expiry_date} onChange={(date) => { const d = [...state.purchaseDetails]; d[index].expiry_date = date; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
+                                { title: "Receive Now", width: 130, render: (_, r, index) => <InputNumber min={0} value={r.receive_now} style={{ width: '100%' }} onChange={(val) => { const d = [...state.purchaseDetails]; d[index].receive_now = val; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
+                                { title: "Total", width: 100, align: 'right', render: (_, r) => <b>${(Number(r.receive_now || 0) * Number(r.cost || 0)).toFixed(2)}</b> }
+                            ]}
+                        />
+                    )}
+                </div>
+
+                {/* 💾 FLOATING MOBILE FOOTER */}
+                {isMobile && (
+                    <div style={{ 
+                        position: 'fixed', 
+                        bottom: 0, 
+                        left: 0, 
+                        right: 0, 
+                        padding: '16px 20px 24px 20px', 
+                        background: '#fff', 
+                        borderTop: '1px solid #e2e8f0', 
+                        display: 'flex', 
+                        gap: '12px', 
+                        zIndex: 1000,
+                        boxShadow: '0 -4px 10px rgba(0,0,0,0.05)'
+                    }}>
+                        <Button 
+                            onClick={() => setState(p => ({ ...p, visibleReceiveModal: false }))} 
+                            style={{ flex: 1, height: '50px', borderRadius: '14px', fontWeight: 600, fontSize: '15px' }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            type="primary" 
+                            onClick={onFinishReceive} 
+                            loading={state.isSavingReceive} 
+                            style={{ 
+                                flex: 2, 
+                                height: '50px', 
+                                borderRadius: '14px', 
+                                fontWeight: 700, 
+                                fontSize: '16px',
+                                background: '#3b82f6',
+                                boxShadow: '0 4px 6px rgba(59, 130, 246, 0.2)'
+                            }}
+                        >
+                            SAVE RECEIVING
+                        </Button>
                     </div>
-                ) : (
-                    <Table
-                        dataSource={state.scanFilterId ? state.purchaseDetails.filter(d => d.id === state.scanFilterId) : state.purchaseDetails}
-                        rowKey="id" pagination={false} size="small"
-                        columns={[
-                            { title: "Product", dataIndex: "name" },
-                            { title: "Order", dataIndex: "qty", width: 80 },
-                            { title: "Rec", dataIndex: "received_qty", width: 80 },
-                            { title: "Batch", dataIndex: "batch_no", width: 120, render: (_, record, index) => <Input size="small" value={record.batch_no} onChange={(e) => { const d = [...state.purchaseDetails]; d[index].batch_no = e.target.value; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
-                            { title: "Expiry", dataIndex: "expiry_date", width: 140, render: (_, record, index) => <DatePicker size="small" value={record.expiry_date} onChange={(date) => { const d = [...state.purchaseDetails]; d[index].expiry_date = date; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
-                            { title: "Receive Now", width: 120, render: (_, record, index) => <InputNumber size="small" value={record.receive_now} onChange={(val) => { const d = [...state.purchaseDetails]; d[index].receive_now = val; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
-                            { title: "Total", render: (_, record) => <b>${(Number(record.receive_now || 0) * Number(record.cost || 0)).toFixed(2)}</b> }
-                        ]}
-                    />
+                )}
+
+                {/* 💾 DESKTOP FOOTER */}
+                {!isMobile && (
+                    <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <Button onClick={() => setState(p => ({ ...p, visibleReceiveModal: false }))}>Cancel</Button>
+                        <Button type="primary" onClick={onFinishReceive} loading={state.isSavingReceive}>Confirm Receiving</Button>
+                    </div>
                 )}
             </Modal>
         </MainPage>
