@@ -253,38 +253,36 @@ function PurchasePage() {
 
     const onScanBarcodeReceive = (barcode) => {
         if (!barcode) return;
-        const clean = (s) => String(s || "").replace(/\D/g, ""); // 🚀 Keep only numbers
+        
+        // 🚀 Helper to clean non-digits
+        const clean = (s) => String(s || "").replace(/\D/g, "");
         const scanned = clean(barcode);
         const details = [...state.purchaseDetails];
-        
-        // 🚀 Debug: Show cleaned barcodes
-        console.log("Scanned (Clean):", scanned);
-        console.log("Available (Clean):", details.map(d => clean(d.barcode)));
 
+        // 🚀 Search for the item
         let finalIndex = details.findIndex(d => {
             const itemBarcode = clean(d.barcode);
-            if (!itemBarcode) return false;
-            return itemBarcode === scanned; // 🚀 Exact numeric match
+            return itemBarcode && (itemBarcode === scanned);
         });
 
         if (finalIndex === -1) {
-            // Try partial numeric match if exact fails
+            // Partial match fallback
             finalIndex = details.findIndex(d => {
                 const itemBarcode = clean(d.barcode);
-                if (!itemBarcode) return false;
-                return itemBarcode.includes(scanned) || scanned.includes(itemBarcode);
+                return itemBarcode && (itemBarcode.includes(scanned) || scanned.includes(itemBarcode));
             });
         }
 
         if (finalIndex > -1) {
             const item = details[finalIndex];
-            const max = Number(item.qty) - Number(item.received_qty);
-            
-            details[finalIndex].receive_now += 1;
-            if (details[finalIndex].receive_now > max) {
-                message.info(`Note: ${item.name} is exceeding order quantity.`);
+            const remaining = Number(item.qty) - Number(item.received_qty);
+
+            // 🚀 Auto-fill remaining balance
+            if (remaining > 0) {
+                details[finalIndex].receive_now = remaining;
             }
-            
+
+            // Apply global batch/expiry
             if (state.batch_receive) details[finalIndex].batch_no = state.batch_receive;
             if (state.expiry_receive) details[finalIndex].expiry_date = state.expiry_receive;
 
