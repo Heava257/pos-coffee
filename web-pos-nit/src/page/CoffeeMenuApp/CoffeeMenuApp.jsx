@@ -401,10 +401,48 @@ const CoffeeMenuApp = () => {
     const s = localStorage.getItem('coffee_pos_starred_ids');
     return s ? new Set(JSON.parse(s)) : new Set();
   });
+
+  const [orderId, setOrderId] = useState(() => localStorage.getItem('last_order_id'));
+  const [orderStatus, setOrderStatus] = useState(null);
+  const [orderHistory, setOrderHistory] = useState([]);
+
+  useEffect(() => {
+    let interval;
+    if (orderId) {
+      const fetchStatus = async () => {
+        try {
+          const res = await request(`order-web/${orderId}`, "get");
+          if (res && res.order) {
+            setOrderStatus(res.order.kitchen_status?.toLowerCase());
+          }
+        } catch (e) { }
+      };
+      fetchStatus();
+      interval = setInterval(fetchStatus, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [orderId]);
+
+  const fetchHistory = async () => {
+    const profile = getProfile() || getGuestProfile();
+    if (profile?.id) {
+      try {
+        const res = await request("order", "get", { user_id: profile.id });
+        if (res?.list) setOrderHistory(res.list);
+      } catch (e) { }
+    }
+  };
+
+
   const [modalProd, setModalProd] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [view, setView] = useState("home");
   const [tab, setTab] = useState("home");
+
+  useEffect(() => {
+    if (tab === 'profile') fetchHistory();
+  }, [tab]);
+
 
   useEffect(() => {
     if (selectedShop?.id) {
@@ -454,6 +492,7 @@ const CoffeeMenuApp = () => {
       const res = await request("order-web", "post", data);
       if (res?.success) {
         localStorage.setItem('last_order_id', res.order_id);
+        setOrderId(res.order_id);
         setCart([]); setCartOpen(false); setTab("status"); message.success(t.order_success_msg);
       }
     } catch { message.error("GPS Verification Required"); } finally { setLoading(false); }
@@ -463,7 +502,34 @@ const CoffeeMenuApp = () => {
 
   return (
     <div className="app-container">
-      <style>{CSS}</style>
+      <style>{`${CSS}
+        @keyframes pulse-gold {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(200, 149, 42, 0.4); }
+          70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(200, 149, 42, 0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(200, 149, 42, 0); }
+        }
+        @keyframes steam {
+          0% { transform: translateY(0) scale(1); opacity: 0.5; }
+          50% { transform: translateY(-4px) scale(1.1); opacity: 1; }
+          100% { transform: translateY(0) scale(1); opacity: 0.5; }
+        }
+        @keyframes cook {
+          0% { transform: rotate(-5deg) translateX(-2px); }
+          50% { transform: rotate(5deg) translateX(2px); }
+          100% { transform: rotate(-5deg) translateX(-2px); }
+        }
+        @keyframes celebrate {
+          0% { transform: scale(1); }
+          20% { transform: scale(1.2) rotate(5deg); }
+          40% { transform: scale(1) rotate(-5deg); }
+          60% { transform: scale(1.1) rotate(5deg); }
+          100% { transform: scale(1); }
+        }
+        .pulse-gold { animation: pulse-gold 2s infinite; }
+        .ani-steam { animation: steam 2s infinite ease-in-out; }
+        .ani-cook { animation: cook 0.5s infinite ease-in-out; }
+        .ani-celebrate { animation: celebrate 1s infinite ease-in-out; }
+      `}</style>
       <div className="app-root">
         <div className="main-col">
           {/* Header & Navigation */}
@@ -525,26 +591,108 @@ const CoffeeMenuApp = () => {
             </div>
           ) : tab === 'status' ? (
             <div className="fade-in">
-              {/* Simple Status View */}
-              <div style={{ padding: "60px 20px", textAlign: "center" }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>☕</div>
-                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#1C1C1C" }}>Order Tracking</h2>
-                <p style={{ fontSize: 13, color: "#9A9083", marginTop: 8 }}>Coming soon: Real-time status of your espresso!</p>
-                <button onClick={() => setTab('home')} style={{ marginTop: 24, padding: "12px 24px", borderRadius: 100, background: "#4A6741", color: "#fff", border: "none", fontWeight: 700 }}>Back to Menu</button>
+              <div style={{ padding: "40px 20px" }}>
+                {orderStatus === 'served' ? (
+                  <div className="fade-in" style={{ textAlign: "center", padding: "40px 0" }}>
+                    <div style={{ fontSize: 80, marginBottom: 20 }}>✨</div>
+                    <h2 className="brand" style={{ fontSize: 32, color: "#1C1C1C" }}>Enjoy your brew!</h2>
+                    <p style={{ fontSize: 15, color: "#9A9083", marginTop: 12, lineHeight: 1.5 }}>
+                      Thank you for choosing Aurora Brew Co. <br/>
+                      Your order has been served. Have a wonderful day!
+                    </p>
+                    <div style={{ marginTop: 40, display:"flex", flexDirection:"column", gap:12 }}>
+                      <button onClick={() => setTab('home')} style={{ width: "100%", height: 54, borderRadius: 100, background: "#4A6741", color: "#fff", border: "none", fontWeight: 700 }}>Order Again</button>
+                      <button onClick={() => setTab('profile')} style={{ width: "100%", height: 54, borderRadius: 100, background: "#fff", color: "#4A6741", border: "1.5px solid #EDE8DF", fontWeight: 700 }}>View History</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ textAlign: "center", marginBottom: 40 }}>
+                       <div style={{ display:"inline-flex", background:"#FEF3C7", color:"#92400E", padding:"6px 20px", borderRadius:100, fontSize:12, fontWeight:800, marginBottom:10 }}>
+                          {orderStatus === 'cooking' ? 'PREPARING' : 'ORDER RECEIVED'}
+                       </div>
+                       <h2 className="brand" style={{ fontSize: 28, color: "#1C1C1C" }}>Order Tracking</h2>
+                       <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Order #{orderId || 'N/A'}</p>
+                    </div>
+
+                    <div style={{ padding: "0 20px" }}>
+                      {[
+                        { label: "Order Received", icon: "☕", key: 'pending', desc: "We've got your order.", ani: "ani-steam" },
+                        { label: "Preparing", icon: "👨‍🍳", key: 'cooking', desc: "Crafting your espresso.", ani: "ani-cook" },
+                        { label: "Ready to Serve", icon: "🛍️", key: 'served', desc: "Enjoy your drink!", ani: "ani-celebrate" }
+                      ].map((step, i, arr) => {
+                        const statusOrder = ['pending', 'preparing', 'cooking', 'ready', 'served'];
+                        let s = orderStatus || 'pending';
+                        if (s === 'received') s = 'pending';
+                        const currentIdxRaw = statusOrder.indexOf(s);
+                        let currentStepIdx = 0;
+                        if (currentIdxRaw >= 3) currentStepIdx = 2;
+                        else if (currentIdxRaw >= 1) currentStepIdx = 1;
+                        
+                        const isDone = i < currentStepIdx;
+                        const isCurrent = i === currentStepIdx;
+                        
+                        return (
+                          <div key={step.key} style={{ display: "flex", gap: 20, marginBottom: 40, position: "relative" }}>
+                            {i < arr.length - 1 && (
+                              <div style={{ position: "absolute", left: 24, top: 50, width: 2, height: 40, background: isDone || isCurrent ? "#C8952A" : "#EDE8DF" }} />
+                            )}
+                            <div className={`step-circle ${isCurrent ? "pulse-gold" : ""}`} style={{ 
+                              width: 50, height: 50, 
+                              borderColor: isCurrent || isDone ? "#C8952A" : "#DDD8CF", 
+                              background: isCurrent || isDone ? "#FEF3C7" : "#FAFAF8",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              borderRadius: "50%", border: "2px solid", transition: "all 0.5s ease",
+                              zIndex: 2
+                            }}>
+                              {isDone ? <Ico.Check s={18} /> : <span className={isCurrent ? step.ani : ""} style={{ fontSize: 20 }}>{step.icon}</span>}
+                            </div>
+                            <div>
+                              <h4 style={{ fontSize: 14, fontWeight: 700, color: isCurrent || isDone ? "#1C1C1C" : "#B0A496" }}>{step.label}</h4>
+                              <p style={{ fontSize: 11, color: "#9A9083" }}>{step.desc}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button onClick={() => setTab('home')} style={{ width: "100%", height: 54, borderRadius: 100, background: "#4A6741", color: "#fff", border: "none", fontWeight: 700, marginTop: 20 }}>Back to Menu</button>
+                  </>
+                )}
               </div>
             </div>
           ) : tab === 'profile' ? (
             <div className="fade-in">
-              {/* Simple Profile View */}
               <div style={{ padding: "60px 20px" }}>
                 <div style={{ background: "#fff", borderRadius: 24, padding: 24, textAlign: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-                  <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#F5F0E8", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyCenter: "center", fontSize: 32 }}>👤</div>
-                  <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1C1C1C" }}>Guest Customer</h2>
+                  <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#F5F0E8", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
+                    {(getProfile()?.firstname || getGuestProfile()?.firstname || "G").charAt(0).toUpperCase()}
+                  </div>
+                  <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1C1C1C" }}>{getProfile()?.firstname || getGuestProfile()?.firstname || "Guest Customer"}</h2>
                   <p style={{ fontSize: 12, color: "#9A9083", fontWeight: 700, textTransform: "uppercase", marginTop: 4 }}>Table {selectedTable}</p>
                 </div>
-                <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-                  {["Order History", "Language", "Settings", "Help Center"].map(item => (
-                    <button key={item} style={{ background: "#fff", padding: 18, borderRadius: 18, textAlign: "left", fontSize: 14, fontWeight: 600, color: "#4B5563", border: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between" }}>
+
+                <div style={{ marginTop: 32 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1C1C1C", marginBottom: 16 }}>Order History</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {orderHistory.length === 0 ? (
+                      <div style={{ padding: 40, textAlign: "center", color: "#B0A496", background: "#fff", borderRadius: 18, border: "1px dashed #EDE8DF" }}>No history found</div>
+                    ) : (
+                      orderHistory.map(o => (
+                        <div key={o.id} style={{ background: "#fff", padding: 18, borderRadius: 18, border: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>Order #{o.order_no || o.id}</div>
+                            <div style={{ fontSize: 11, color: "#9A9083" }}>{new Date(o.created_at).toLocaleDateString()}</div>
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: "#4A6741" }}>{fmt(o.total_amount)}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 12 }}>
+                  {["Language", "Settings", "Help Center"].map(item => (
+                    <button key={item} style={{ background: "#fff", padding: 18, borderRadius: 18, textAlign: "left", fontSize: 14, fontWeight: 600, color: "#4B5563", border: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between", cursor:"pointer" }}>
                       {item} <span style={{ color: "#D1D5DB" }}>→</span>
                     </button>
                   ))}
