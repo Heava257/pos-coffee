@@ -39,17 +39,19 @@ const MainWrapper = ({ children, bgClass = "bg-[#FDFBF7]", isMobile }) => (
         --accent: #E8F5E9;
         --cream: #FDFBF7;
         --sage: #F1F8F1;
+        --bg: #F9FAFB;
       }
       .font-outfit { font-family: 'Outfit', sans-serif; }
       .font-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       .premium-modal .ant-modal-content { border-radius: 40px !important; padding: 0 !important; overflow: hidden; background: #FFFEFD; border: 1px solid rgba(0,0,0,0.03); }
-      .glass-effect { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.5); }
+      .glass-effect { background: rgba(26, 26, 26, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
       .green-gradient { background: linear-gradient(135deg, #00B761 0%, #009650 100%); }
-      .shadow-soft { box-shadow: 0 20px 40px -15px rgba(0, 183, 97, 0.15); }
+      .shadow-soft { box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.08); }
+      .shadow-premium { box-shadow: 0 20px 40px -15px rgba(0, 183, 97, 0.2); }
       .active-green { background: #00B761 !important; color: white !important; border-color: #00B761 !important; }
-      .card-glow:hover { box-shadow: 0 15px 30px -10px rgba(0, 183, 97, 0.12); }
+      .card-glow:hover { box-shadow: 0 20px 40px -12px rgba(0, 183, 97, 0.15); }
       .gold-glow { box-shadow: 0 10px 20px -5px rgba(212, 175, 55, 0.2); }
     `}</style>
   </div>
@@ -231,24 +233,24 @@ const HomeView = ({ selectedShop, categories, currentCategory, setCurrentCategor
         </div>
 
         {/* Categories Horizontal Scroll */}
-        <div className="mb-10">
+        <div className="mb-8">
           <div className="flex items-center justify-between mb-4 px-1">
-             <h3 className="text-lg font-black text-gray-800 font-outfit tracking-tight">Categories</h3>
-             <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Swipe for more</span>
+             <h3 className="text-base font-black text-gray-800 font-outfit tracking-tight">Categories</h3>
+             <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">See all</span>
           </div>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-2 px-2">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setCurrentCategory(null)}
               className={cn(
-                "flex flex-col items-center gap-3 p-4 rounded-[32px] min-w-[85px] transition-all duration-500",
-                !currentCategory ? "bg-[#00B761] text-white shadow-lg shadow-[#00B761]/20" : "bg-white border border-gray-50 text-gray-400 hover:border-[#00B761]/20"
+                "flex flex-col items-center gap-2 p-3 rounded-[28px] min-w-[72px] transition-all duration-500 border",
+                !currentCategory ? "bg-[#00B761] text-white border-[#00B761] shadow-lg shadow-[#00B761]/20" : "bg-white border-gray-100 text-gray-400"
               )}
             >
-              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-colors", !currentCategory ? "bg-white/20" : "bg-[#F5F7F5]")}>
-                <Menu size={20} strokeWidth={2.5} />
+              <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-colors", !currentCategory ? "bg-white/20" : "bg-gray-50")}>
+                <Menu size={18} strokeWidth={2.5} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-wider">All</span>
+              <span className="text-[9px] font-black uppercase tracking-wider">All</span>
             </motion.button>
 
             {categories.map((cat) => (
@@ -257,14 +259,14 @@ const HomeView = ({ selectedShop, categories, currentCategory, setCurrentCategor
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setCurrentCategory(cat)}
                 className={cn(
-                  "flex flex-col items-center gap-3 p-4 rounded-[32px] min-w-[85px] transition-all duration-500",
-                  currentCategory?.id === cat.id ? "bg-[#00B761] text-white shadow-lg shadow-[#00B761]/20" : "bg-white border border-gray-50 text-gray-400 hover:border-[#00B761]/20"
+                  "flex flex-col items-center gap-2 p-3 rounded-[28px] min-w-[72px] transition-all duration-500 border",
+                  currentCategory?.id === cat.id ? "bg-[#00B761] text-white border-[#00B761] shadow-lg shadow-[#00B761]/20" : "bg-white border-gray-100 text-gray-400"
                 )}
               >
-                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-colors", currentCategory?.id === cat.id ? "bg-white/20" : "bg-[#F5F7F5]")}>
+                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center text-lg transition-colors", currentCategory?.id === cat.id ? "bg-white/20" : "bg-gray-50")}>
                   {getIconForCategory(cat.name)}
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-wider line-clamp-1">{cat.name}</span>
+                <span className="text-[9px] font-black uppercase tracking-wider line-clamp-1">{cat.name}</span>
               </motion.button>
             ))}
           </div>
@@ -1204,30 +1206,30 @@ const CoffeeMenuApp = () => {
   return (
     <MainWrapper isMobile={isMobile}>
       <div className={cn("flex flex-col h-full", !isMobile && "flex-row")}>
-        <div className="flex-1 flex flex-col h-full overflow-y-auto no-scrollbar relative min-h-screen bg-[#FDFBF7]">
+        <div className="flex-1 flex flex-col h-full overflow-y-auto no-scrollbar relative min-h-screen bg-[#F9FAFB]">
           
           {/* Premium Sticky Header */}
           {activeTab !== 'status' && (
-            <div className="sticky top-0 z-40 px-6 pt-8 pb-4 bg-[#FDFBF7]/80 backdrop-blur-xl">
-              <div className="flex justify-between items-center">
+            <div className="sticky top-0 z-40 px-6 pt-10 pb-6 bg-[#F9FAFB]/80 backdrop-blur-xl">
+              <div className="flex justify-between items-end">
                 <div className="flex flex-col">
-                   <div className="flex items-center gap-2 mb-1">
-                      <div className="w-2 h-2 bg-[#00B761] rounded-full animate-pulse" />
-                      <span className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Table {selectedTable || "Web"}</span>
+                   <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1.5 h-1.5 bg-[#00B761] rounded-full animate-pulse" />
+                      <span className="text-[9px] font-black text-[#00B761] uppercase tracking-[0.3em]">Table {selectedTable || "Web"}</span>
                    </div>
-                   <h1 className="text-2xl font-black text-gray-800 font-outfit tracking-tighter leading-tight">
+                   <h1 className="text-3xl font-black text-gray-800 font-outfit tracking-tighter leading-none">
                       Welcome to <span className="text-[#00B761]">Coffee</span>
                    </h1>
                 </div>
-                <button className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 border border-gray-50 shadow-sm">
-                   <Bell size={20} strokeWidth={2.5} />
+                <button className="w-11 h-11 bg-white rounded-2xl flex items-center justify-center text-gray-400 border border-gray-100 shadow-soft active:scale-90 transition-all">
+                   <Bell size={18} strokeWidth={2.5} />
                 </button>
               </div>
             </div>
           )}
 
           {/* Main Content Area */}
-          <div className="flex-1 px-6 pb-32">
+          <div className="flex-1 px-6 pb-40">
             {loading ? (
               <div className="flex-1 flex items-center justify-center min-h-[60vh]">
                 <div className="w-12 h-12 border-4 border-[#00B761]/10 border-t-[#00B761] rounded-full animate-spin"></div>
@@ -1274,51 +1276,53 @@ const CoffeeMenuApp = () => {
           {/* Floating Premium Bottom Navigation */}
           {activeTab !== 'status' && (
             <div className="fixed bottom-8 left-6 right-6 z-50">
-              <div className="bg-[#1A1A1A] text-white rounded-[32px] h-20 px-8 flex items-center justify-between shadow-2xl shadow-black/40 border border-white/5 relative overflow-hidden">
+              <div className="glass-effect rounded-[32px] h-20 px-8 flex items-center justify-between shadow-2xl relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-10" />
                 
                 <button 
                   onClick={() => setActiveTab('home')}
                   className={cn("relative flex flex-col items-center gap-1 transition-all", activeTab === 'home' ? "text-[#00B761]" : "text-gray-500 hover:text-white")}
                 >
-                   {activeTab === 'home' && <div className="w-1.5 h-1.5 bg-[#00B761] rounded-full absolute -top-4" />}
-                   <Menu size={22} strokeWidth={activeTab === 'home' ? 3 : 2} />
+                   {activeTab === 'home' && <div className="w-1 h-1 bg-[#00B761] rounded-full absolute -top-4" />}
+                   <Menu size={20} strokeWidth={activeTab === 'home' ? 3 : 2} />
                 </button>
 
                 <button 
                   onClick={() => setActiveTab('starred')}
                   className={cn("relative flex flex-col items-center gap-1 transition-all", activeTab === 'starred' ? "text-[#00B761]" : "text-gray-500 hover:text-white")}
                 >
-                   {activeTab === 'starred' && <div className="w-1.5 h-1.5 bg-[#00B761] rounded-full absolute -top-4" />}
-                   <Star size={22} strokeWidth={activeTab === 'starred' ? 3 : 2} />
+                   {activeTab === 'starred' && <div className="w-1 h-1 bg-[#00B761] rounded-full absolute -top-4" />}
+                   <Star size={20} strokeWidth={activeTab === 'starred' ? 3 : 2} />
                 </button>
 
-                <button 
-                  className="relative w-14 h-14 bg-[#00B761] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[#00B761]/30 active:scale-90 transition-all gold-glow -mt-4 border-4 border-[#1A1A1A]"
-                  onClick={() => setIsCartOpen(true)}
-                >
-                   <ShoppingCart size={22} strokeWidth={3} />
-                   {cart.length > 0 && (
-                     <span className="absolute -top-1 -right-1 w-6 h-6 bg-white text-[#00B761] rounded-full text-[10px] font-black flex items-center justify-center shadow-md">
-                       {cart.length}
-                     </span>
-                   )}
-                </button>
+                <div className="relative -mt-12">
+                  <button 
+                    className="w-16 h-16 bg-[#00B761] text-white rounded-[24px] flex items-center justify-center shadow-premium active:scale-90 transition-all border-4 border-[#1A1A1A] gold-glow"
+                    onClick={() => setIsCartOpen(true)}
+                  >
+                     <ShoppingCart size={22} strokeWidth={3} />
+                     {cart.length > 0 && (
+                       <span className="absolute -top-1 -right-1 w-6 h-6 bg-white text-[#00B761] rounded-full text-[10px] font-black flex items-center justify-center shadow-md border border-gray-100">
+                         {cart.length}
+                       </span>
+                     )}
+                  </button>
+                </div>
 
                 <button 
                   onClick={() => setActiveTab('status')}
                   className={cn("relative flex flex-col items-center gap-1 transition-all", activeTab === 'status' ? "text-[#00B761]" : "text-gray-500 hover:text-white")}
                 >
-                   {activeTab === 'status' && <div className="w-1.5 h-1.5 bg-[#00B761] rounded-full absolute -top-4" />}
-                   <Clock size={22} strokeWidth={activeTab === 'status' ? 3 : 2} />
+                   {activeTab === 'status' && <div className="w-1 h-1 bg-[#00B761] rounded-full absolute -top-4" />}
+                   <Clock size={20} strokeWidth={activeTab === 'status' ? 3 : 2} />
                 </button>
 
                 <button 
                   onClick={() => setActiveTab('profile')}
                   className={cn("relative flex flex-col items-center gap-1 transition-all", activeTab === 'profile' ? "text-[#00B761]" : "text-gray-500 hover:text-white")}
                 >
-                   {activeTab === 'profile' && <div className="w-1.5 h-1.5 bg-[#00B761] rounded-full absolute -top-4" />}
-                   <User size={22} strokeWidth={activeTab === 'profile' ? 3 : 2} />
+                   {activeTab === 'profile' && <div className="w-1 h-1 bg-[#00B761] rounded-full absolute -top-4" />}
+                   <User size={20} strokeWidth={activeTab === 'profile' ? 3 : 2} />
                 </button>
               </div>
             </div>
