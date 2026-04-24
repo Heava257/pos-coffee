@@ -33,15 +33,24 @@ const MainWrapper = ({ children, bgClass = "bg-[#FDFBF7]", isMobile }) => (
     </div>
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+      :root {
+        --primary: #00B761;
+        --secondary: #2D3436;
+        --accent: #E8F5E9;
+        --cream: #FDFBF7;
+        --sage: #F1F8F1;
+      }
       .font-outfit { font-family: 'Outfit', sans-serif; }
       .font-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      .premium-modal .ant-modal-content { border-radius: 32px !important; padding: 0 !important; overflow: hidden; background: #FFFEFD; }
-      .glass-effect { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.4); }
+      .premium-modal .ant-modal-content { border-radius: 40px !important; padding: 0 !important; overflow: hidden; background: #FFFEFD; border: 1px solid rgba(0,0,0,0.03); }
+      .glass-effect { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.5); }
       .green-gradient { background: linear-gradient(135deg, #00B761 0%, #009650 100%); }
-      .shadow-soft { box-shadow: 0 10px 30px -10px rgba(0, 183, 97, 0.2); }
+      .shadow-soft { box-shadow: 0 20px 40px -15px rgba(0, 183, 97, 0.15); }
       .active-green { background: #00B761 !important; color: white !important; border-color: #00B761 !important; }
+      .card-glow:hover { box-shadow: 0 15px 30px -10px rgba(0, 183, 97, 0.12); }
+      .gold-glow { box-shadow: 0 10px 20px -5px rgba(212, 175, 55, 0.2); }
     `}</style>
   </div>
 );
@@ -83,51 +92,66 @@ const ProductCard = ({ item, isStarred, onToggleStar, onClick, isMobile, busines
 
   return (
     <motion.div
-      whileTap={{ scale: 0.98 }}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white flex gap-4 py-4 border-b border-gray-100 last:border-b-0 cursor-pointer group"
+      whileTap={{ scale: 0.95 }}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="bg-white group relative flex flex-col p-3 rounded-[32px] border border-gray-100/60 hover:border-[#00B761]/20 transition-all duration-500 card-glow shadow-sm"
       onClick={onClick}
     >
-      <div className="w-20 h-20 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 shadow-sm">
+      {/* Favorite Button */}
+      <button 
+        onClick={(e) => { e.stopPropagation(); onToggleStar(item); }}
+        className={cn(
+          "absolute top-5 right-5 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300",
+          isStarred ? "bg-[#00B761] text-white" : "bg-white/80 backdrop-blur-md text-gray-400 hover:text-red-500 shadow-sm"
+        )}
+      >
+        <Star size={14} fill={isStarred ? "currentColor" : "none"} strokeWidth={3} />
+      </button>
+
+      {/* Product Image */}
+      <div className="aspect-[4/5] rounded-[24px] bg-[#FAFAFA] overflow-hidden mb-4 relative">
         {item.image ? (
-          <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_200,c_fill,f_auto,q_auto")} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <img 
+            src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_400,c_fill,f_auto,q_auto")} 
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+          />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl bg-gray-100">☕</div>
+          <div className="w-full h-full flex items-center justify-center text-4xl bg-[#F5F7F5]">☕</div>
+        )}
+        {discountPercent > 0 && (
+          <div className="absolute bottom-3 left-3 bg-[#00B761] text-white text-[9px] font-black px-3 py-1.5 rounded-full shadow-lg">
+            -{discountPercent}% OFF
+          </div>
         )}
       </div>
-      <div className="flex-1 flex flex-col justify-center min-w-0 relative">
-        <div className="pr-10">
-          <h4 className="font-outfit font-black text-[14px] text-gray-800 mb-0.5 group-hover:text-[#00B761] transition-colors">{item.name}</h4>
-          <p className="text-[10px] font-medium text-gray-400 line-clamp-2 leading-tight mb-2">
-            {item.description || "A delicately balanced creation made with premium ingredients."}
-          </p>
-          <div className="flex items-center gap-2">
-            <span className="font-outfit font-black text-[#00B761] text-base">${finalPrice.toFixed(2)}</span>
+
+      {/* Product Info */}
+      <div className="px-2 pb-2">
+        <h4 className="text-[14px] font-bold text-gray-800 line-clamp-1 mb-1 font-outfit tracking-tight group-hover:text-[#00B761] transition-colors">{item.name}</h4>
+        <div className="flex items-center justify-between mt-auto">
+          <div className="flex flex-col">
+            <span className="text-[15px] font-black text-[#00B761]">${finalPrice.toFixed(2)}</span>
             {discountPercent > 0 && (
-              <span className="text-[11px] text-gray-300 line-through font-bold">${originalPrice.toFixed(2)}</span>
+              <span className="text-[10px] text-gray-300 line-through font-bold">${originalPrice.toFixed(2)}</span>
             )}
           </div>
-        </div>
-
-        <button className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-[#00B761] text-white flex items-center justify-center shadow-lg shadow-[#00B761]/20 active:scale-90 transition-all">
-          <Plus size={18} strokeWidth={3} />
-        </button>
-
-        <div className="absolute top-0 right-0">
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleStar(item); }}
-            className={cn(
-              "w-7 h-7 rounded-full flex items-center justify-center transition-all",
-              isStarred ? "text-[#00B761]" : "text-gray-200 hover:text-gray-400"
-            )}
-          >
-            <Star size={14} fill={isStarred ? "currentColor" : "none"} strokeWidth={2.5} />
-          </button>
+          <div className="w-8 h-8 bg-[#00B761]/5 text-[#00B761] rounded-xl flex items-center justify-center group-hover:bg-[#00B761] group-hover:text-white transition-all duration-500 shadow-sm">
+             <Plus size={16} strokeWidth={3} />
+          </div>
         </div>
       </div>
     </motion.div>
   );
+};
+
+const getIconForCategory = (name) => {
+  const n = name.toLowerCase();
+  if (n.includes('coffee')) return '☕';
+  if (n.includes('tea')) return '🍵';
+  if (n.includes('food') || n.includes('bakery')) return '🥐';
+  return '🍽️';
 };
 
 const TopSellerCard = ({ item, onClick, businessConfig }) => {
@@ -206,84 +230,66 @@ const HomeView = ({ selectedShop, categories, currentCategory, setCurrentCategor
           </div>
         </div>
 
-        {/* Banner Section - Artistic Design */}
-        <div className="relative h-44 rounded-[28px] overflow-hidden mb-8 group cursor-pointer shadow-xl shadow-[#00B761]/5">
-          <div className="absolute inset-0 bg-[#1A1A1A]">
-            <img
-              src={businessConfig.promo_image || "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1000&auto=format&fit=crop"}
-              className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-1000"
-              alt="Promotion"
-            />
+        {/* Categories Horizontal Scroll */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-4 px-1">
+             <h3 className="text-lg font-black text-gray-800 font-outfit tracking-tight">Categories</h3>
+             <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Swipe for more</span>
           </div>
-          <div className="absolute inset-0 bg-gradient-to-tr from-black via-black/30 to-transparent"></div>
-          <div className="relative z-10 h-full flex flex-col justify-center px-6">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 bg-[#00B761] text-white text-[7px] font-black uppercase tracking-[0.2em] rounded-md shadow-md">
-                {businessConfig.promo_is_active ? t.special_offer : t.established}
-              </span>
-            </div>
-            <h2 className="text-2xl font-outfit font-black text-white leading-tight mb-2">
-              {businessConfig.promo_title || t.fresh_brewed} <br />
-              <span className="text-[#00B761]">{businessConfig.promo_subtitle || t.happiness} {businessConfig.promo_discount || "50%"}</span>
-            </h2>
-          </div>
-        </div>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-2 px-2">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setCurrentCategory(null)}
+              className={cn(
+                "flex flex-col items-center gap-3 p-4 rounded-[32px] min-w-[85px] transition-all duration-500",
+                !currentCategory ? "bg-[#00B761] text-white shadow-lg shadow-[#00B761]/20" : "bg-white border border-gray-50 text-gray-400 hover:border-[#00B761]/20"
+              )}
+            >
+              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-colors", !currentCategory ? "bg-white/20" : "bg-[#F5F7F5]")}>
+                <Menu size={20} strokeWidth={2.5} />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider">All</span>
+            </motion.button>
 
-        {/* Categories Section */}
-        <div className="mb-8">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-6 px-6 snap-x">
-            {[{ id: null, name: t.all || 'All' }, ...categories].map((cat) => (
+            {categories.map((cat) => (
               <motion.button
                 key={cat.id}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setCurrentCategory(cat)}
                 className={cn(
-                  "px-5 py-2.5 rounded-2xl font-black text-[11px] transition-all border whitespace-nowrap snap-start",
-                  currentCategory?.id === cat.id
-                    ? "bg-[#1A1A1A] text-white border-[#1A1A1A] shadow-md"
-                    : "bg-white text-gray-400 border-gray-100 shadow-sm"
+                  "flex flex-col items-center gap-3 p-4 rounded-[32px] min-w-[85px] transition-all duration-500",
+                  currentCategory?.id === cat.id ? "bg-[#00B761] text-white shadow-lg shadow-[#00B761]/20" : "bg-white border border-gray-50 text-gray-400 hover:border-[#00B761]/20"
                 )}
               >
-                {cat.name}
+                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-colors", currentCategory?.id === cat.id ? "bg-white/20" : "bg-[#F5F7F5]")}>
+                  {getIconForCategory(cat.name)}
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider line-clamp-1">{cat.name}</span>
               </motion.button>
             ))}
           </div>
         </div>
 
-        {/* Top Sellers Section */}
+        {/* Featured Items / Recommendations */}
         <div className="mb-10">
-          <div className="flex justify-between items-center mb-5 px-1">
-            <h3 className="text-lg font-outfit font-black text-gray-800 tracking-tight">{t.top_sellers || "Top Sellers"}</h3>
-            <span className="text-[9px] font-black text-[#00B761] uppercase tracking-widest">{t.view_all || "View All"}</span>
-          </div>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6 snap-x">
-            {menuItems.slice(0, 5).map((item) => (
-              <div key={item.id} className="snap-start">
-                <TopSellerCard item={item} onClick={() => setOptionsModalItem(item)} businessConfig={businessConfig} />
+           <div className="flex items-center justify-between mb-6 px-1">
+              <h3 className="text-xl font-black text-gray-800 font-outfit tracking-tight">Our Favorites</h3>
+              <div className="flex items-center gap-2 text-[10px] font-black text-[#00B761] uppercase tracking-widest bg-[#00B761]/5 px-4 py-2 rounded-full">
+                 <Flame size={12} strokeWidth={3} />
+                 Trending
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Product Lists */}
-        <div className="bg-white rounded-t-[32px] px-6 py-4 shadow-2xl shadow-black/5 border-t border-gray-100 flex-1">
-          <div className="flex flex-col mb-4">
-            <h3 className="text-base font-outfit font-black text-gray-800 tracking-tight">{searchText ? (t.search_results || "Results") : (currentCategory?.name || t.all || "Menu")}</h3>
-          </div>
-          <div className="flex flex-col divide-y divide-gray-50">
-            {menuItems
-              .filter(i => (!currentCategory?.id || i.category_id === currentCategory.id) && (!searchText || i.name.toLowerCase().includes(searchText.toLowerCase())))
-              .map((item) => (
+           </div>
+           <div className="grid grid-cols-2 gap-4">
+              {(menuItems || []).slice(0, 4).map((item) => (
                 <ProductCard
-                  key={item.id} item={item}
+                  key={item.id} item={item} onToggleStar={onToggleStar}
                   isStarred={starredItems.some(s => s.id === item.id)}
-                  onToggleStar={onToggleStar}
                   onClick={() => setOptionsModalItem(item)}
                   isMobile={isMobile}
                   businessConfig={businessConfig}
                 />
               ))}
-          </div>
+           </div>
         </div>
       </div>
     </motion.div>
@@ -594,43 +600,47 @@ const CategoryView = ({ currentCategory, setCurrentCategory, menuItems, searchTe
           <h1 className="text-xl font-outfit font-black text-[#00B761] leading-tight">{currentCategory.name}</h1>
         </div>
       </div>
+      
+      {/* Section Title */}
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-black text-gray-800 font-outfit tracking-tight">{currentCategory.name}</h3>
+        <span className="text-[10px] font-black text-[#00B761] bg-[#00B761]/5 px-3 py-1.5 rounded-full uppercase tracking-widest">{filtered.length} Items</span>
+      </div>
 
-      {/* Category Search */}
-      <div className="relative mb-10">
-        <div className="relative flex items-center bg-white border border-gray-100 rounded-2xl h-12 px-4 focus-within:border-[#00B761]/30 transition-all">
-          <Search className="text-gray-300" size={16} strokeWidth={3} />
+      {/* Search - Floating Style */}
+      <div className="mb-8">
+        <div className="relative flex items-center bg-white border border-gray-100 rounded-[24px] h-14 px-5 focus-within:border-[#00B761]/30 transition-all shadow-sm">
+          <Search className="text-[#00B761]" size={18} strokeWidth={3} />
           <input
             type="text"
             placeholder={`${t.search_in_category} ${currentCategory.name}...`}
-            className="flex-1 h-full bg-transparent border-none px-3 text-[13px] font-bold text-gray-800 placeholder:text-gray-300 focus:ring-0"
+            className="flex-1 h-full bg-transparent border-none px-4 text-[13px] font-bold text-gray-800 placeholder:text-gray-300 focus:ring-0"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Product List - Single Column for Premium Feel */}
-      <div className="bg-white rounded-[32px] px-6 py-2 shadow-sm border border-gray-50 flex-1">
-        <div className="flex flex-col">
-          {filtered.length === 0 ? (
-            <div className="py-20 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                <Search size={24} className="text-gray-200" />
-              </div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No results found</p>
+      {/* Product List - Modern Two-Column Grid */}
+      <div className="grid grid-cols-2 gap-4 pb-10">
+        {filtered.length === 0 ? (
+          <div className="col-span-2 py-20 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+              <Search size={24} className="text-gray-200" />
             </div>
-          ) : (
-            filtered.map((item) => (
-              <ProductCard
-                key={item.id} item={item} onToggleStar={onToggleStar}
-                isStarred={starredItems.some(s => s.id === item.id)}
-                onClick={() => setOptionsModalItem(item)}
-                isMobile={isMobile}
-                businessConfig={businessConfig}
-              />
-            ))
-          )}
-        </div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No results found</p>
+          </div>
+        ) : (
+          filtered.map((item) => (
+            <ProductCard
+              key={item.id} item={item} onToggleStar={onToggleStar}
+              isStarred={starredItems.some(s => s.id === item.id)}
+              onClick={() => setOptionsModalItem(item)}
+              isMobile={isMobile}
+              businessConfig={businessConfig}
+            />
+          ))
+        )}
       </div>
     </motion.div>
   );
@@ -1194,53 +1204,123 @@ const CoffeeMenuApp = () => {
   return (
     <MainWrapper isMobile={isMobile}>
       <div className={cn("flex flex-col h-full", !isMobile && "flex-row")}>
-        <div className="flex-1 flex flex-col h-full overflow-y-auto no-scrollbar relative min-h-screen">
-          <NavBar activeTab={activeTab} setActiveTab={setActiveTab} cartCount={cart.length} setIsCartOpen={setIsCartOpen} isMobile={isMobile} />
+        <div className="flex-1 flex flex-col h-full overflow-y-auto no-scrollbar relative min-h-screen bg-[#FDFBF7]">
           
-          {/* Show banner if browsing without a real table */}
-          {(!selectedTable || selectedTable === "Web") && activeTab === 'home' && (
-            <BrowsingModeBanner t={t} />
+          {/* Premium Sticky Header */}
+          {activeTab !== 'status' && (
+            <div className="sticky top-0 z-40 px-6 pt-8 pb-4 bg-[#FDFBF7]/80 backdrop-blur-xl">
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                   <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2 h-2 bg-[#00B761] rounded-full animate-pulse" />
+                      <span className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Table {selectedTable || "Web"}</span>
+                   </div>
+                   <h1 className="text-2xl font-black text-gray-800 font-outfit tracking-tighter leading-tight">
+                      Welcome to <span className="text-[#00B761]">Coffee</span>
+                   </h1>
+                </div>
+                <button className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 border border-gray-50 shadow-sm">
+                   <Bell size={20} strokeWidth={2.5} />
+                </button>
+              </div>
+            </div>
           )}
 
-          {loading ? (
-            <div key="loading" className="flex-1 flex items-center justify-center min-h-[60vh]">
-              <div className="w-10 h-10 border-4 border-gray-100 border-t-[#00B761] rounded-full animate-spin"></div>
-            </div>
-          ) : activeTab === 'profile' ? (
-            <div key="profile" className="flex-1 flex flex-col">
-              {profileSubView === 'history' ? (
-                <HistoryView history={orderHistory} onBack={() => setProfileSubView(null)} />
-              ) : profileSubView === 'settings' ? (
-                <SettingsView onBack={() => setProfileSubView(null)} />
-              ) : (
-                <ProfileView selectedShop={selectedShop} selectedTable={selectedTable} setActiveTab={setActiveTab} setSubView={setProfileSubView} onFetchHistory={fetchOrderHistory} />
-              )}
-            </div>
-          ) : activeTab === 'status' ? (
-            <div key="status" className="flex-1 flex flex-col">
-              <OrderTracker status={orderStatus} onBack={() => setActiveTab('home')} />
-            </div>
-          ) : activeTab === 'starred' ? (
-            <div key="starred" className="flex-1 flex flex-col">
-              <StarredView starredItems={starredItems} onToggleStar={onToggleStar} setOptionsModalItem={setOptionsModalItem} businessConfig={businessConfig} />
-            </div>
-          ) : currentCategory ? (
-            <div key={`cat-${currentCategory.id}`} className="flex-1 flex flex-col">
-              <CategoryView
-                currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
-                menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
-                searchText={searchText} setSearchText={setSearchText} setOptionsModalItem={setOptionsModalItem}
-                businessConfig={businessConfig}
-              />
-            </div>
-          ) : (
-            <div key="home" className="flex-1 flex flex-col">
-              <HomeView
-                selectedShop={selectedShop} categories={categories} currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
-                menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
-                cart={cart} setIsCartOpen={setIsCartOpen} searchText={searchText} setSearchText={setSearchText}
-                setOptionsModalItem={setOptionsModalItem} isMobile={isMobile} businessConfig={businessConfig}
-              />
+          {/* Main Content Area */}
+          <div className="flex-1 px-6 pb-32">
+            {loading ? (
+              <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+                <div className="w-12 h-12 border-4 border-[#00B761]/10 border-t-[#00B761] rounded-full animate-spin"></div>
+              </div>
+            ) : activeTab === 'profile' ? (
+              <div key="profile" className="flex-1 flex flex-col pt-4">
+                {profileSubView === 'history' ? (
+                  <HistoryView history={orderHistory} onBack={() => setProfileSubView(null)} />
+                ) : profileSubView === 'settings' ? (
+                  <SettingsView onBack={() => setProfileSubView(null)} />
+                ) : (
+                  <ProfileView selectedShop={selectedShop} selectedTable={selectedTable} setActiveTab={setActiveTab} setSubView={setProfileSubView} onFetchHistory={fetchOrderHistory} />
+                )}
+              </div>
+            ) : activeTab === 'status' ? (
+              <div key="status" className="flex-1 flex flex-col -mx-6 -mt-8">
+                <OrderTracker status={orderStatus} onBack={() => setActiveTab('home')} />
+              </div>
+            ) : activeTab === 'starred' ? (
+              <div key="starred" className="flex-1 flex flex-col pt-4">
+                <StarredView starredItems={starredItems} onToggleStar={onToggleStar} setOptionsModalItem={setOptionsModalItem} businessConfig={businessConfig} />
+              </div>
+            ) : currentCategory ? (
+              <div key={`cat-${currentCategory.id}`} className="flex-1 flex flex-col pt-4">
+                <CategoryView
+                  currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
+                  menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
+                  searchText={searchText} setSearchText={setSearchText} setOptionsModalItem={setOptionsModalItem}
+                  businessConfig={businessConfig}
+                />
+              </div>
+            ) : (
+              <div key="home" className="flex-1 flex flex-col pt-4">
+                <HomeView
+                  selectedShop={selectedShop} categories={categories} currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
+                  menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
+                  cart={cart} setIsCartOpen={setIsCartOpen} searchText={searchText} setSearchText={setSearchText}
+                  setOptionsModalItem={setOptionsModalItem} isMobile={isMobile} businessConfig={businessConfig}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Floating Premium Bottom Navigation */}
+          {activeTab !== 'status' && (
+            <div className="fixed bottom-8 left-6 right-6 z-50">
+              <div className="bg-[#1A1A1A] text-white rounded-[32px] h-20 px-8 flex items-center justify-between shadow-2xl shadow-black/40 border border-white/5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-10" />
+                
+                <button 
+                  onClick={() => setActiveTab('home')}
+                  className={cn("relative flex flex-col items-center gap-1 transition-all", activeTab === 'home' ? "text-[#00B761]" : "text-gray-500 hover:text-white")}
+                >
+                   {activeTab === 'home' && <div className="w-1.5 h-1.5 bg-[#00B761] rounded-full absolute -top-4" />}
+                   <Menu size={22} strokeWidth={activeTab === 'home' ? 3 : 2} />
+                </button>
+
+                <button 
+                  onClick={() => setActiveTab('starred')}
+                  className={cn("relative flex flex-col items-center gap-1 transition-all", activeTab === 'starred' ? "text-[#00B761]" : "text-gray-500 hover:text-white")}
+                >
+                   {activeTab === 'starred' && <div className="w-1.5 h-1.5 bg-[#00B761] rounded-full absolute -top-4" />}
+                   <Star size={22} strokeWidth={activeTab === 'starred' ? 3 : 2} />
+                </button>
+
+                <button 
+                  className="relative w-14 h-14 bg-[#00B761] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-[#00B761]/30 active:scale-90 transition-all gold-glow -mt-4 border-4 border-[#1A1A1A]"
+                  onClick={() => setIsCartOpen(true)}
+                >
+                   <ShoppingCart size={22} strokeWidth={3} />
+                   {cart.length > 0 && (
+                     <span className="absolute -top-1 -right-1 w-6 h-6 bg-white text-[#00B761] rounded-full text-[10px] font-black flex items-center justify-center shadow-md">
+                       {cart.length}
+                     </span>
+                   )}
+                </button>
+
+                <button 
+                  onClick={() => setActiveTab('status')}
+                  className={cn("relative flex flex-col items-center gap-1 transition-all", activeTab === 'status' ? "text-[#00B761]" : "text-gray-500 hover:text-white")}
+                >
+                   {activeTab === 'status' && <div className="w-1.5 h-1.5 bg-[#00B761] rounded-full absolute -top-4" />}
+                   <Clock size={22} strokeWidth={activeTab === 'status' ? 3 : 2} />
+                </button>
+
+                <button 
+                  onClick={() => setActiveTab('profile')}
+                  className={cn("relative flex flex-col items-center gap-1 transition-all", activeTab === 'profile' ? "text-[#00B761]" : "text-gray-500 hover:text-white")}
+                >
+                   {activeTab === 'profile' && <div className="w-1.5 h-1.5 bg-[#00B761] rounded-full absolute -top-4" />}
+                   <User size={22} strokeWidth={activeTab === 'profile' ? 3 : 2} />
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1320,42 +1400,52 @@ const CoffeeMenuApp = () => {
         destroyOnClose
       >
         <div className="font-sans">
-          <div className="relative h-64 bg-gray-50 overflow-hidden">
+          <div className="relative h-72 bg-gray-50 overflow-hidden">
             {optionsModalItem?.image ? (
-              <img src={Config.optimizeCloudinary(Config.getFullImagePath(optionsModalItem.image), "w_600,c_fill,f_auto,q_auto")} className="w-full h-full object-cover" />
+              <img src={Config.optimizeCloudinary(Config.getFullImagePath(optionsModalItem.image), "w_800,c_fill,f_auto,q_auto")} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-7xl bg-gray-100">☕</div>
             )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
             <button
               onClick={() => setOptionsModalItem(null)}
-              className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors"
+              className="absolute top-6 right-6 w-11 h-11 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-white border border-white/30 hover:bg-white/40 transition-all duration-300"
             >
-              <X size={20} />
+              <X size={22} strokeWidth={3} />
             </button>
           </div>
 
-          <div className="p-8">
-            <div className="flex justify-between items-start mb-2">
-              <h2 className="text-2xl font-extrabold text-[#00B761]">{optionsModalItem?.name}</h2>
-              <span className="bg-amber-50 text-amber-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Most Loved</span>
+          <div className="p-10 relative">
+            {/* Top Info Float */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-3xl font-black text-gray-800 font-outfit tracking-tighter mb-2">{optionsModalItem?.name}</h2>
+                <div className="flex items-center gap-2">
+                   <span className="bg-[#00B761]/5 text-[#00B761] px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-[#00B761]/10">Signature Drink</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest block mb-1">Base Price</span>
+                <span className="text-2xl font-black text-[#00B761] font-outfit">${parseFloat(optionsModalItem?.price || 0).toFixed(2)}</span>
+              </div>
             </div>
-            <p className="text-sm text-gray-400 mb-6 leading-relaxed">Customize your drink to perfection. Select your preferred options below.</p>
 
-            <div className="space-y-6 mb-8 overflow-y-auto max-h-[40vh] pr-2 no-scrollbar">
-              {/* Temperature / Primary Moods */}
+            <div className="space-y-8 mb-10 overflow-y-auto max-h-[45vh] pr-2 no-scrollbar">
+              {/* Temperature Selector */}
               {moodsConfig.temp.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Temperature</h4>
-                  <div className="flex flex-wrap gap-2">
+                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Temperature</h4>
+                  <div className="grid grid-cols-3 gap-3">
                     {moodsConfig.temp.map(m => {
                       const label = typeof m === 'object' ? m.label : m;
+                      const isActive = selectedTemp === label;
                       return (
                         <button
                           key={label}
                           onClick={() => setSelectedTemp(label)}
                           className={cn(
-                            "px-4 py-2 rounded-xl text-xs font-bold transition-all border",
-                            selectedTemp === label ? "bg-[#00B761] text-white border-[#00B761]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
+                            "py-4 rounded-[24px] text-[11px] font-black uppercase tracking-widest transition-all duration-500 border",
+                            isActive ? "bg-[#00B761] text-white border-[#00B761] shadow-lg shadow-[#00B761]/20" : "bg-[#F9FAFB] text-gray-400 border-transparent hover:border-gray-200"
                           )}
                         >
                           {label}
@@ -1366,20 +1456,21 @@ const CoffeeMenuApp = () => {
                 </div>
               )}
 
-              {/* Sugar Levels */}
+              {/* Sugar Level */}
               {moodsConfig.sugar.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Sugar Level</h4>
-                  <div className="flex flex-wrap gap-2">
+                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Sugar Level</h4>
+                  <div className="flex flex-wrap gap-3">
                     {moodsConfig.sugar.map(m => {
                       const label = typeof m === 'object' ? m.label : m;
+                      const isActive = selectedSugar === label;
                       return (
                         <button
                           key={label}
                           onClick={() => setSelectedSugar(label)}
                           className={cn(
-                            "px-3 py-2 rounded-xl text-xs font-bold transition-all border",
-                            selectedSugar === label ? "bg-[#00B761] text-white border-[#00B761]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
+                            "px-6 py-3 rounded-2xl text-[11px] font-black transition-all duration-500 border",
+                            isActive ? "bg-[#1A1A1A] text-white border-[#1A1A1A] shadow-md" : "bg-white text-gray-400 border-gray-100"
                           )}
                         >
                           {label}
@@ -1390,74 +1481,32 @@ const CoffeeMenuApp = () => {
                 </div>
               )}
 
-              {/* Other Options / Moods */}
-              {moodsConfig.other.length > 0 && (
-                <div>
-                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Options</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {moodsConfig.other.map(m => {
-                      const label = typeof m === 'object' ? m.label : m;
-                      return (
-                        <button
-                          key={label}
-                          onClick={() => setSelectedSugar(label)} // Reuse sugar state or create generic one
-                          className={cn(
-                            "px-3 py-2 rounded-xl text-xs font-bold transition-all border",
-                            selectedSugar === label ? "bg-[#00B761] text-white border-[#00B761]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
-                          )}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Sizes */}
+              {/* Size Selector */}
               {modalSizes.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Size Selection</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {modalSizes.map(s => (
-                      <button
-                        key={s.label}
-                        onClick={() => setSelectedSize(s.label)}
-                        className={cn(
-                          "px-4 py-3 rounded-2xl text-left transition-all border flex justify-between items-center",
-                          selectedSize === s.label ? "bg-[#00B761] text-white border-[#00B761]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
-                        )}
-                      >
-                        <span className="text-xs font-bold">{s.label}</span>
-                        <span className={cn("text-[10px]", selectedSize === s.label ? "text-white/70" : "text-gray-300")}>${parseFloat(s.price).toFixed(2)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Add-ons */}
-              {modalAddons.length > 0 && (
-                <div>
-                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Extras / Add-ons</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {modalAddons.map(a => {
-                      const isSelected = selectedAddons.includes(a.label);
+                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Select Size</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    {modalSizes.map(s => {
+                      const isActive = selectedSize === s.label;
                       return (
                         <button
-                          key={a.label}
-                          onClick={() => {
-                            setSelectedAddons(prev =>
-                              isSelected ? prev.filter(l => l !== a.label) : [...prev, a.label]
-                            );
-                          }}
+                          key={s.label}
+                          onClick={() => setSelectedSize(s.label)}
                           className={cn(
-                            "px-4 py-3 rounded-2xl text-left transition-all border flex justify-between items-center",
-                            isSelected ? "bg-[#00B761] text-white border-[#00B761]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
+                            "p-5 rounded-[24px] text-left transition-all duration-500 border flex justify-between items-center group",
+                            isActive ? "bg-white border-[#00B761] shadow-xl shadow-[#00B761]/5" : "bg-[#F9FAFB] border-transparent"
                           )}
                         >
-                          <span className="text-xs font-bold">{a.label}</span>
-                          <span className={cn("text-[10px]", isSelected ? "text-white/70" : "text-gray-300")}>+${parseFloat(a.price).toFixed(2)}</span>
+                          <div className="flex items-center gap-4">
+                             <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", isActive ? "bg-[#00B761] text-white" : "bg-white text-gray-400")}>
+                                <Coffee size={18} strokeWidth={isActive ? 3 : 2} />
+                             </div>
+                             <div>
+                               <p className={cn("text-xs font-black uppercase tracking-widest", isActive ? "text-[#00B761]" : "text-gray-400")}>{s.label}</p>
+                               <p className="text-[10px] font-bold text-gray-300">Standard Portion</p>
+                             </div>
+                          </div>
+                          <span className={cn("text-sm font-black font-outfit", isActive ? "text-[#00B761]" : "text-gray-400")}>${parseFloat(s.price).toFixed(2)}</span>
                         </button>
                       );
                     })}
@@ -1466,39 +1515,36 @@ const CoffeeMenuApp = () => {
               )}
             </div>
 
-            <div className="flex items-center justify-between mb-8 pb-8 border-b border-gray-50">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">{t.unit_price}</span>
-                <span className="text-2xl font-black text-[#00B761]">${parseFloat(optionsModalItem?.price || 0).toFixed(2)}</span>
-              </div>
-
-              <div className="flex items-center gap-4 bg-gray-50 p-2 rounded-2xl border border-gray-100">
+            {/* Bottom Action Section */}
+            <div className="pt-8 border-t border-gray-50 flex items-center gap-6">
+              <div className="flex items-center gap-4 bg-[#F9FAFB] p-2 rounded-[24px] border border-gray-50">
                 <button
                   onClick={() => setOptionQty(prev => Math.max(1, prev - 1))}
-                  className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-[#00B761] active:scale-90 transition-all"
+                  className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-gray-400 hover:text-red-500 active:scale-90 transition-all"
                 >
                   <Minus size={18} strokeWidth={3} />
                 </button>
-                <span className="text-lg font-bold w-6 text-center">{optionQty}</span>
+                <span className="text-base font-black w-6 text-center text-gray-800">{optionQty}</span>
                 <button
                   onClick={() => setOptionQty(prev => prev + 1)}
-                  className="w-10 h-10 bg-[#00B761] text-white shadow-md shadow-[#00B761]/20 rounded-xl flex items-center justify-center active:scale-90 transition-all"
+                  className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-gray-400 hover:text-[#00B761] active:scale-90 transition-all"
                 >
                   <Plus size={18} strokeWidth={3} />
                 </button>
               </div>
-            </div>
 
-            <button
-              className="w-full h-16 bg-[#00B761] text-white rounded-2xl font-black shadow-xl shadow-[#00B761]/20 hover:shadow-[#00B761]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-              onClick={() => {
-                const customization = [selectedTemp, selectedSugar, selectedSize, ...selectedAddons].filter(Boolean).join(", ");
-                addToCart({ ...optionsModalItem, price: currentPrice }, customization, optionQty);
-              }}
-            >
-              <ShoppingCart size={20} strokeWidth={2.5} />
-              <span>{t.add_to_basket} — ${(currentPrice * optionQty).toFixed(2)}</span>
-            </button>
+              <button
+                className="flex-1 h-16 bg-[#00B761] text-white rounded-[24px] font-black shadow-xl shadow-[#00B761]/20 hover:shadow-[#00B761]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 gold-glow"
+                onClick={() => {
+                  const customization = [selectedTemp, selectedSugar, selectedSize, ...selectedAddons].filter(Boolean).join(", ");
+                  addToCart({ ...optionsModalItem, price: currentPrice }, customization, optionQty);
+                }}
+              >
+                <span className="text-[13px] uppercase tracking-widest">Add to Basket</span>
+                <div className="w-px h-6 bg-white/20 mx-2" />
+                <span className="text-lg font-outfit tracking-tighter">${(currentPrice * optionQty).toFixed(2)}</span>
+              </button>
+            </div>
           </div>
         </div>
       </Modal>
