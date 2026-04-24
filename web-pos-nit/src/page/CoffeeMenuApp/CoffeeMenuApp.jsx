@@ -818,8 +818,17 @@ const CoffeeMenuApp = () => {
       return fallback;
     }
   };
-  const [selectedShop, setSelectedShop] = useState(() => safeParse('coffee_pos_shop'));
-  const [selectedTable, setSelectedTable] = useState(() => localStorage.getItem('coffee_pos_table'));
+  const [selectedShop, setSelectedShop] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const br = params.get('br') || params.get('branch');
+    const biz = params.get('biz');
+    if (br && biz) return { id: parseInt(br), business_id: parseInt(biz) };
+    return safeParse('coffee_pos_shop');
+  });
+  const [selectedTable, setSelectedTable] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tbl') || params.get('table') || localStorage.getItem('coffee_pos_table');
+  });
   const [cart, setCart] = useState(() => safeParse('coffee_pos_cart', []));
   const [starredItems, setStarredItems] = useState(() => safeParse('coffee_pos_starred', []));
 
@@ -1163,7 +1172,12 @@ const CoffeeMenuApp = () => {
       <NoBranchView 
         onSelectBranch={(shop) => {
           setSelectedShop(shop);
-          setSelectedTable("Web");
+          // Only default to "Web" if no table was already detected from URL
+          const params = new URLSearchParams(window.location.search);
+          const tbl = params.get('tbl') || params.get('table');
+          if (!tbl && !selectedTable) {
+            setSelectedTable("Web");
+          }
           navigate("/customer/menu"); 
         }}
       />

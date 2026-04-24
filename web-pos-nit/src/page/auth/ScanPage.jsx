@@ -37,8 +37,8 @@ const ScanPage = () => {
                 }
                 // Ensure customer app sees this as a valid guest entry
                 localStorage.setItem("is_guest", "true");
-                // Redirect to the customer menu app
-                navigate("/customer/menu");
+                // Redirect to the customer menu app with context
+                navigate(`/customer/menu?biz=${biz}&br=${branch}&tbl=${table || ""}`);
             } else {
                 message.error(res?.message || "Failed to access shop menu.");
                 navigate("/");
