@@ -220,6 +220,16 @@ app.listen(PORT, async () => {
     console.error("Migration Error (orders table):", err.message);
   }
 
+  // ✅ Migration: Add GPS verification columns to orders table
+  try {
+    await db.query("ALTER TABLE orders ADD COLUMN lat DOUBLE NULL");
+    await db.query("ALTER TABLE orders ADD COLUMN lng DOUBLE NULL");
+    await db.query("ALTER TABLE orders ADD COLUMN is_verified TINYINT DEFAULT 0");
+    console.log("Migration: Added GPS columns to 'orders' table");
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) console.error("Migration Error (orders GPS):", err.message);
+  }
+
   // Migration Fix: Ensure branch_products has default values for price/cost to prevent crashes
   try {
     await db.query("ALTER TABLE branch_products MODIFY price DOUBLE DEFAULT 0");
@@ -264,7 +274,9 @@ app.listen(PORT, async () => {
       await db.query("ALTER TABLE branches ADD COLUMN payment_merchant_id VARCHAR(255) DEFAULT NULL");
       await db.query("ALTER TABLE branches ADD COLUMN payment_api_key VARCHAR(255) DEFAULT NULL");
       await db.query("ALTER TABLE branches ADD COLUMN payment_receiver_name VARCHAR(255) DEFAULT NULL");
-      console.log("Migration: 'branches' payment fields added");
+      await db.query("ALTER TABLE branches ADD COLUMN lat DOUBLE NULL");
+      await db.query("ALTER TABLE branches ADD COLUMN lng DOUBLE NULL");
+      console.log("Migration: 'branches' payment and GPS fields added");
     }
   } catch (err) {
     console.error("Migration Error (branches table):", err.message);

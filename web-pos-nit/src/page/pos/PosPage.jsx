@@ -37,6 +37,8 @@ import { PriceDisplay, useExchangeRate } from "../../component/pos/ExchangeRateC
 import {
   SearchOutlined,
   BellOutlined,
+  EnvironmentFilled,
+  WarningFilled,
   FileTextOutlined,
   UserOutlined,
   DeleteOutlined,
@@ -2342,7 +2344,6 @@ function PosPage() {
                   onAdd={handleAdd}
                   getCartQty={getCartQty}
                   COLORS={COLORS}
-                  layoutType={layoutType}
                 />
               )}
             </div>
@@ -2908,7 +2909,6 @@ function PosPage() {
           )}
 
           {/* 3. Sugar Selector (Only for Drinks) */}
-          {/* 3. Sugar Selector (Only if configured) */}
           {(selectedProductForOptions?.moods && safeParse(selectedProductForOptions.moods)?.length > 0) && (
             <div>
               <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2963,7 +2963,7 @@ function PosPage() {
           {/* 5. Kitchen Note */}
           <div style={{ marginTop: 4 }}>
             <div style={{ fontWeight: 800, marginBottom: 8, color: COLORS.textPrimary, fontSize: 14 }}>
-              🗒️ {layoutType === 'restaurant' ? "Kitchen Note / ចំណាំទៅចុងភៅ" : "Note / ចំណាំ"}
+              🗒️ {layoutType === 'restaurant' ? "Kitchen Note / ចុងភៅ" : "Note / ចំណាំ"}
             </div>
             <Input.TextArea
               placeholder={layoutType === 'restaurant' ? "e.g. Less Spicy, No Peanuts..." : "Add your note here..."}
@@ -2996,60 +2996,72 @@ function PosPage() {
         <List
           dataSource={pendingOrders}
           locale={{ emptyText: <Empty description={t.no_pending} /> }}
-          renderItem={(order) => (
-            <List.Item
-              onClick={() => handleSelectPendingOrder(order)}
-              style={{
-                cursor: 'pointer',
-                padding: '16px 24px',
-                borderBottom: `1px solid ${COLORS.softBorder}`,
-                transition: 'all 0.2s',
-              }}
-              className="pending-order-item"
-            >
-              <div style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <Text strong style={{ fontSize: 15 }}>
-                    {order.table_no ? `${t.table_label} ${order.table_no}` : t.walk_in}
-                  </Text>
-                  <Tag color={order.status === 'unpaid' ? 'volcano' : 'blue'}>
-                    {order.status.toUpperCase()}
-                  </Tag>
-                  {order.kitchen_status && (
-                    <Tag color={order.kitchen_status === 'preparing' ? 'processing' : order.kitchen_status === 'ready' ? 'success' : 'default'} style={{ marginLeft: 4 }}>
-                      {order.kitchen_status.toUpperCase()}
-                    </Tag>
+          renderItem={(order) => {
+            const isTableOccupied = heldOrders.some(h => String(h.tableNo) === String(order.table_no));
+            return (
+              <List.Item
+                onClick={() => handleSelectPendingOrder(order)}
+                style={{
+                  cursor: 'pointer',
+                  padding: '16px 24px',
+                  borderBottom: `1px solid ${COLORS.softBorder}`,
+                  transition: 'all 0.2s',
+                  background: isTableOccupied ? '#fff1f0' : 'inherit'
+                }}
+                className="pending-order-item"
+              >
+                <div style={{ width: '100%' }}>
+                  {isTableOccupied && (
+                    <div style={{ marginBottom: 8 }}>
+                      <Tag color="error" icon={<WarningFilled />} style={{ width: '100%', textAlign: 'center', fontWeight: 700 }}>
+                        CONFLICT: TABLE ALREADY OCCUPIED
+                      </Tag>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Text strong style={{ fontSize: 15 }}>
+                        {order.table_no ? `${t.table_label} ${order.table_no}` : t.walk_in}
+                      </Text>
+                      {order.is_verified === 1 ? (
+                        <Tag color="success" icon={<EnvironmentFilled />} style={{ fontSize: 9, borderRadius: 10 }}>IN SHOP</Tag>
+                      ) : order.lat ? (
+                        <Tag color="error" icon={<WarningFilled />} style={{ fontSize: 9, borderRadius: 10 }}>REMOTE</Tag>
+                      ) : (
+                        <Tag color="default" style={{ fontSize: 9, borderRadius: 10 }}>NO LOCATION</Tag>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <Tag color={order.status === 'unpaid' ? 'volcano' : 'blue'}>{order.status.toUpperCase()}</Tag>
+                      {order.kitchen_status && (
+                        <Tag color={order.kitchen_status === 'preparing' ? 'processing' : order.kitchen_status === 'ready' ? 'success' : 'default'}>
+                          {order.kitchen_status.toUpperCase()}
+                        </Tag>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>{order.customer_name || t.guest}</Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}>{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                    </div>
+                    <Text strong style={{ color: COLORS.darkGreen, fontSize: 16 }}>${Number(order.total_amount).toFixed(2)}</Text>
+                  </div>
+                  {order.details && (
+                    <div style={{ marginTop: 8, padding: '8px', background: '#f9f9f9', borderRadius: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textSecondary, marginBottom: 4 }}>{t.items.toUpperCase()}:</div>
+                      {order.details.map((d, i) => (
+                        <div key={i} style={{ fontSize: 11, display: 'flex', justifyContent: 'space-between' }}>
+                          <span>• {d.product_name} x {d.qty}</span>
+                          {d.note && <span style={{ color: COLORS.midGreen, fontSize: 10, marginLeft: 10 }}>({d.note})</span>}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {order.customer_name || t.guest}
-                    </Text>
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                      {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                  </div>
-                  <Text strong style={{ color: COLORS.darkGreen, fontSize: 16 }}>
-                    ${Number(order.total_amount).toFixed(2)}
-                  </Text>
-                </div>
-
-                {/* Show Order Items Summary */}
-                {order.details && (
-                  <div style={{ marginTop: 8, padding: '8px', background: '#f9f9f9', borderRadius: 8 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textSecondary, marginBottom: 4 }}>{t.items.toUpperCase()}:</div>
-                    {order.details.map((d, i) => (
-                      <div key={i} style={{ fontSize: 11, display: 'flex', justifyContent: 'space-between' }}>
-                        <span>• {d.product_name} x {d.qty}</span>
-                        {d.note && <span style={{ color: COLORS.midGreen, fontSize: 10, marginLeft: 10 }}>({d.note})</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </List.Item>
-          )}
+              </List.Item>
+            );
+          }}
         />
         <div style={{ padding: 20 }}>
           <Button block onClick={getPendingOrders} icon={<ClockCircleOutlined />}>{t.refresh_list}</Button>

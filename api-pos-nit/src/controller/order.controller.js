@@ -449,6 +449,8 @@ exports.createWebOrder = async (req, res) => {
             payment_method,
             order_type,
             cart_items,
+            lat,
+            lng,
             status // should be 'unpaid'
         } = req.body;
 
@@ -456,11 +458,37 @@ exports.createWebOrder = async (req, res) => {
             return res.status(400).json({ message: "Missing Business or Branch context" });
         }
 
+        // --- GPS VERIFICATION LOGIC ---
+        let is_verified = 0;
+        if (lat && lng) {
+            const [branch] = await connection.query("SELECT lat, lng FROM branches WHERE id = ?", [branch_id]);
+            if (branch.length > 0 && branch[0].lat && branch[0].lng) {
+                // Calculate distance (Haversine formula)
+                const R = 6371e3; // metres
+                const φ1 = lat * Math.PI/180;
+                const φ2 = branch[0].lat * Math.PI/180;
+                const Δφ = (branch[0].lat - lat) * Math.PI/180;
+                const Δλ = (branch[0].lng - lng) * Math.PI/180;
+                const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                          Math.cos(φ1) * Math.cos(φ2) *
+                          Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const distance = R * c; // in metres
+                
+                if (distance <= 100) { // Verified if within 100 meters
+                    is_verified = 1;
+                }
+            } else {
+                // If branch has no lat/lng set, we trust the provided user GPS for now
+                is_verified = 1;
+            }
+        }
+
         const [orderResult] = await connection.query(
             `INSERT INTO orders 
-            (business_id, branch_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, status, kitchen_status, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
-            [business_id, branch_id, customer_name || 'Web Guest', table_no, sub_total, total_amount, payment_method || 'Unpaid', order_type || 'dine_in', status || 'unpaid']
+            (business_id, branch_id, customer_name, table_no, sub_total, total_amount, payment_method, order_type, status, kitchen_status, lat, lng, is_verified, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW())`,
+            [business_id, branch_id, customer_name || 'Web Guest', table_no, sub_total, total_amount, payment_method || 'Unpaid', order_type || 'dine_in', status || 'unpaid', lat, lng, is_verified]
         );
 
         const orderId = orderResult.insertId;

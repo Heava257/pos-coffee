@@ -1070,9 +1070,10 @@ const CoffeeMenuApp = () => {
     }
 
     // 2. GPS Verification (Verify user is physically present)
+    let coords = { lat: null, lng: null };
     setLoading(true);
     try {
-      await new Promise((resolve, reject) => {
+      const position = await new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
           message.error("Location services are not supported by your browser.");
           return reject();
@@ -1086,6 +1087,7 @@ const CoffeeMenuApp = () => {
           { enableHighAccuracy: true, timeout: 5000 }
         );
       });
+      coords = { lat: position.coords.latitude, lng: position.coords.longitude };
     } catch (e) {
       setLoading(false);
       return;
@@ -1101,6 +1103,8 @@ const CoffeeMenuApp = () => {
       total_amount: sub_total,
       payment_method: "Unpaid (Web QR)",
       order_type: "dine_in",
+      lat: coords.lat, // Send Lat
+      lng: coords.lng, // Send Lng
       cart_items: cart.map(item => ({
         product_id: item.id,
         qty: item.quantity,
