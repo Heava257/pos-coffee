@@ -922,24 +922,31 @@ const CoffeeMenuApp = () => {
     return price;
   }, [optionsModalItem, selectedSize, selectedAddons, modalSizes, modalAddons]);
 
-  // NEW: Detect Table/Branch from URL
+  // NEW: Detect Table/Branch from URL and force sync
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const biz = params.get('biz');
-    const br = params.get('br');
-    const tbl = params.get('tbl');
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const biz = params.get('biz');
+      const br = params.get('br') || params.get('branch');
+      const tbl = params.get('tbl') || params.get('table');
 
-    if (biz && br) {
-      // Auto-set shop and table
-      // In a real SaaS, we would fetch branch details here to get the name/logo
-      // For now, if we have the IDs, we can fetch products directly
-      setSelectedShop(prev => ({ ...prev, id: parseInt(br), business_id: parseInt(biz) }));
-      if (tbl) setSelectedTable(tbl);
+      if (biz && br) {
+        const newShop = { id: parseInt(br), business_id: parseInt(biz) };
+        setSelectedShop(newShop);
+        localStorage.setItem('coffee_pos_shop', JSON.stringify(newShop));
+        
+        if (tbl) {
+          setSelectedTable(tbl);
+          localStorage.setItem('coffee_pos_table', tbl);
+        }
+      }
+    };
 
-      // Clear URL params to keep it clean (optional)
-      // window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
+    syncFromUrl();
+    // Also listen for popstate if user navigates back/forward
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, [window.location.search]);
 
 
   const isDrink = useMemo(() => {
