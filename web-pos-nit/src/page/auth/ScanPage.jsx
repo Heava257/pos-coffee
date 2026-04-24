@@ -29,7 +29,7 @@ const ScanPage = () => {
             // Get guest token
             const res = await request(`auth/guest-access?biz=${biz}&branch=${branch}&table=${table || ""}`, "get");
             if (res && res.access_token) {
-                const { setGuestToken, setGuestProfile } = await import("../../store/profile.store");
+                const { setGuestToken, setGuestProfile, setGuestPermission } = await import("../../store/profile.store");
                 setGuestToken(res.access_token);
                 setGuestProfile(res.profile);
                 if (res.permissions) {
