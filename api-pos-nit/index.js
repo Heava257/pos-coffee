@@ -266,20 +266,43 @@ app.listen(PORT, async () => {
     }
   }
 
-  // Migration Fix: Add payment fields to branches table (Safe Check)
-  try {
-    const [cols] = await db.query("SHOW COLUMNS FROM branches LIKE 'khqr_image'");
-    if (cols.length === 0) {
-      await db.query("ALTER TABLE branches ADD COLUMN khqr_image VARCHAR(255) DEFAULT NULL");
-      await db.query("ALTER TABLE branches ADD COLUMN payment_merchant_id VARCHAR(255) DEFAULT NULL");
-      await db.query("ALTER TABLE branches ADD COLUMN payment_api_key VARCHAR(255) DEFAULT NULL");
-      await db.query("ALTER TABLE branches ADD COLUMN payment_receiver_name VARCHAR(255) DEFAULT NULL");
-      await db.query("ALTER TABLE branches ADD COLUMN lat DOUBLE NULL");
-      await db.query("ALTER TABLE branches ADD COLUMN lng DOUBLE NULL");
-      console.log("Migration: 'branches' payment and GPS fields added");
+  // Migration Fix: Ensure GPS fields exist in branches table
+  const branchCols = [
+    { name: "khqr_image", type: "VARCHAR(255) DEFAULT NULL" },
+    { name: "payment_merchant_id", type: "VARCHAR(255) DEFAULT NULL" },
+    { name: "payment_api_key", type: "VARCHAR(255) DEFAULT NULL" },
+    { name: "payment_receiver_name", type: "VARCHAR(255) DEFAULT NULL" },
+    { name: "lat", type: "DECIMAL(10, 8) NULL" },
+    { name: "lng", type: "DECIMAL(11, 8) NULL" }
+  ];
+
+  for (const col of branchCols) {
+    try {
+      await db.query(`ALTER TABLE branches ADD COLUMN ${col.name} ${col.type}`);
+      console.log(`Migration: Added 'branches.${col.name}'`);
+    } catch (err) {
+      if (!err.message.includes("Duplicate")) {
+        console.error(`Migration Error (branches.${col.name}):`, err.message);
+      }
     }
-  } catch (err) {
-    console.error("Migration Error (branches table):", err.message);
+  }
+
+  // Migration Fix: Add GPS and verification fields to orders table
+  const orderCols = [
+    { name: "lat", type: "DECIMAL(10, 8) NULL" },
+    { name: "lng", type: "DECIMAL(11, 8) NULL" },
+    { name: "is_verified", type: "TINYINT(1) DEFAULT 0" }
+  ];
+
+  for (const col of orderCols) {
+    try {
+      await db.query(`ALTER TABLE orders ADD COLUMN ${col.name} ${col.type}`);
+      console.log(`Migration: Added 'orders.${col.name}'`);
+    } catch (err) {
+      if (!err.message.includes("Duplicate")) {
+        console.error(`Migration Error (orders.${col.name}):`, err.message);
+      }
+    }
   }
 
   // ✅ Migration: Force Grant 'table' permission to all roles to fix 403
