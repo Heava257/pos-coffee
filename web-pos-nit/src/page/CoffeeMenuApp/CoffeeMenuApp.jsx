@@ -1,1606 +1,595 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Bell, Menu, Search, ShoppingCart, Plus, Minus, X,
-  Home, FileText, Star, User, ChevronLeft, LogOut, Settings, History, Globe,
-  Clock, DollarSign, Coffee, Flame, CheckCircle2, Smile
-} from 'lucide-react';
 import { request } from '../../util/helper';
 import { Config } from '../../util/config';
-import { getProfile, setLogout, getGuestProfile } from '../../store/profile.store';
-import { message, Modal, Badge, Empty, Button, Spin } from 'antd';
-import { motion, AnimatePresence } from 'framer-motion';
-import { twMerge } from 'tailwind-merge';
-import { clsx } from 'clsx';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { getProfile, getGuestProfile } from '../../store/profile.store';
+import { message, Spin } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage, translations } from '../../store/language.store';
-import logo from '../../assets/logo.png';
 
-function cn(...inputs) {
-  return twMerge(clsx(inputs));
+/* ──────────────────────────────────────────────────────────────
+   CSS INJECTION (Aurora Style)
+────────────────────────────────────────────────────────────── */
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+.app-container { font-family:'DM Sans',sans-serif; background:#F4EFE6; -webkit-font-smoothing:antialiased; min-height: 100vh; }
+.brand{font-family:'Cormorant Garamond',serif}
+.noscroll::-webkit-scrollbar{display:none}
+.noscroll{-ms-overflow-style:none;scrollbar-width:none}
+.fade-in{animation:fadeIn .18s ease}
+.slide-up{animation:slideUp .28s cubic-bezier(.34,1.4,.64,1)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes pulseGold{0%,100%{box-shadow:0 0 0 0 rgba(200,149,42,.45)}50%{box-shadow:0 0 0 8px rgba(200,149,42,0)}}
+.pulse-gold{animation:pulseGold 2s infinite}
+
+/* ── PRODUCT CARD ── */
+.pcard{background:#fff;border-radius:18px;overflow:hidden;cursor:pointer;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);transition:transform .14s,box-shadow .14s}
+.pcard:active{transform:scale(.97);box-shadow:0 1px 6px rgba(0,0,0,.08)}
+.pcard-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#EDE8DF}
+
+/* ── CATEGORY PILL ── */
+.cpill{display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:10px 14px;border-radius:18px;transition:all .18s;white-space:nowrap;flex-shrink:0; border:none; outline:none; cursor:pointer;}
+.cpill.on{background:#4A6741;color:#fff}
+.cpill.off{background:#fff;color:#8A8070}
+.cpill-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.cpill.on  .cpill-icon{background:rgba(255,255,255,.2)}
+.cpill.off .cpill-icon{background:#F5F0E8}
+.cpill span{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+
+/* ── BOTTOM NAV ── */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;
+  display:flex;align-items:center;justify-content:space-around;
+  padding:10px 20px 28px;border-top:1px solid #EDE8DF;z-index:200}
+.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:none;color:#B0A496;padding:6px 10px;transition:color .16s; border:none; outline:none;}
+.bnav-btn.on{color:#4A6741}
+.bnav-cart-wrap{position:relative}
+.bnav-cart{width:52px;height:52px;border-radius:15px;background:#1C1C1C;
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(0,0,0,.22);transition:transform .14s; border:none;}
+.bnav-cart:active{transform:scale(.93)}
+.cart-badge{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;
+  background:#E8534A;color:#fff;font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;margin:16px 16px 0}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#B0A496;pointer-events:none}
+.search-inp{width:100%;height:46px;padding:0 16px 0 42px;border-radius:14px;
+  border:1.5px solid #EDE8DF;background:#fff;font-size:14px;color:#1C1C1C;
+  transition:border-color .18s; outline:none;}
+.search-inp:focus{border-color:#4A6741}
+.search-inp::placeholder{color:#C0B8AE}
+
+/* ── MODAL OVERLAY ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.46);z-index:300;
+  display:flex;align-items:flex-end;justify-content:center}
+.modal-sheet{background:#fff;width:100%;border-radius:26px 26px 0 0;
+  max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-sheet.center-modal{border-radius:22px;max-width:480px;margin:16px;max-height:90vh; align-self: center;}
+.modal-inner{overflow-y:auto;flex:1}
+.modal-inner::-webkit-scrollbar{display:none}
+.drag-handle{width:38px;height:4px;border-radius:2px;background:#DDD8CF;margin:10px auto 0;flex-shrink:0}
+
+.opill{padding:10px 18px;border-radius:100px;border:1.5px solid;
+  font-size:13px;font-weight:600;transition:all .16s;white-space:nowrap; background:none; cursor:pointer;}
+
+.tgl{width:48px;height:26px;border-radius:13px;position:relative;cursor:pointer;transition:background .28s;flex-shrink:0}
+.tgl-dot{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+  background:#fff;transition:transform .28s;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.tgl-dot.on{transform:translateX(22px)}
+
+.qty-ctrl{display:flex;align-items:center;gap:12px;background:#F5F0E8;padding:6px 10px;border-radius:100px}
+.qty-btn{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .13s; border:none; cursor:pointer;}
+.qty-btn:active{transform:scale(.9)}
+
+.cart-item{display:flex;gap:12px;padding:12px;background:#FAFAF8;
+  border-radius:14px;border:1px solid #EDE8DF}
+
+.step-circle{width:58px;height:58px;border-radius:50%;border:3px solid;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  position:relative;z-index:1;flex-shrink:0}
+
+@media(min-width:768px){
+  .app-root{display:flex;min-height:100vh;max-width:1160px;margin:0 auto;position:relative}
+  .main-col{flex:1;min-width:0;background:#F4EFE6}
+  .sidebar{width:380px;flex-shrink:0;background:#fff;border-left:1px solid #EDE8DF;
+    position:sticky;top:0;height:100vh;overflow-y:auto;padding:0}
+  .bnav{display:none}
+  .overlay{align-items:center}
+}
+`;
+
+/* ──────────────────────────────────────────────────────────────
+   SVG ICONS
+────────────────────────────────────────────────────────────── */
+const Ico = {
+  Home: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  Search: ({s=20})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  Bag: ({s=22})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+  User: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  Clock: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  Star: ({f})=><svg width="15" height="15" viewBox="0 0 24 24" fill={f?"currentColor":"none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  Plus: ({s=16})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  Minus: ({s=15})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  X: ({s=18})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  Arrow: ()=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+  Leaf: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-8 2"/></svg>,
+  Pin: ()=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+  Check: ()=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>,
+};
+
+/* ──────────────────────────────────────────────────────────────
+   HELPERS
+────────────────────────────────────────────────────────────── */
+const fmt = (n) => `$${parseFloat(n || 0).toFixed(2)}`;
+const uid = () => Math.random().toString(36).slice(2);
+const CAT_ICONS = { all:"⊞", coffee:"☕", tea:"🍵", pastry:"🥐", cold:"🧋" };
+const TEMP_ICON  = { Hot:"☕", Iced:"🧊", Frappe:"🥤" };
+const TEMP_COLOR = { Hot:"#C9463D", Iced:"#3B78C9", Frappe:"#7B5EA7" };
+
+const Section = ({ title, sub, children }) => (
+  <div style={{ marginBottom:18 }}>
+    <div style={{ display:"flex", alignItems:"baseline", gap:6, marginBottom:10 }}>
+      <h4 style={{ fontSize:13, fontWeight:700, color:"#1C1C1C" }}>{title}</h4>
+      {sub && <span style={{ fontSize:12, color:"#9A9083", fontWeight:500 }}>({sub})</span>}
+    </div>
+    {children}
+  </div>
+);
+
+const Row = ({ label, val, valColor }) => (
+  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:7 }}>
+    <span style={{ fontSize:12, color:"#9A9083", fontWeight:600 }}>{label}</span>
+    <span style={{ fontSize:13, fontWeight:700, color: valColor||"#1C1C1C" }}>{val}</span>
+  </div>
+);
+
+/* ──────────────────────────────────────────────────────────────
+   COMPONENTS
+────────────────────────────────────────────────────────────── */
+
+function ProductCard({ p, onOpen, starred, onStar }) {
+  return (
+    <div className="pcard" onClick={() => onOpen(p)}>
+      <div style={{ position:"relative", padding:"8px 8px 0" }}>
+        <img className="pcard-img" src={Config.getFullImagePath(p.image)} alt={p.name}
+          style={{ borderRadius:14 }}
+          onError={e=>{ e.target.style.background="#EDE8DF"; e.target.src=""; }} />
+        <button
+          onClick={e=>{ e.stopPropagation(); onStar(p); }}
+          style={{ position:"absolute", top:16, right:16, width:30, height:30,
+            borderRadius:"50%", background:"rgba(255,255,255,.9)",
+            backdropFilter:"blur(4px)", display:"flex", alignItems:"center",
+            justifyContent:"center", color: starred ? "#C8952A" : "#B0A496",
+            boxShadow:"0 2px 8px rgba(0,0,0,.1)", transition:"color .16s", border:"none", outline:"none" }}>
+          <Ico.Star f={starred} />
+        </button>
+      </div>
+      <div style={{ padding:"10px 12px 12px", display:"flex", flexDirection:"column", gap:3 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:"#1C1C1C", lineHeight:1.3 }}>{p.name}</div>
+        <div style={{ fontSize:11, color:"#9A9083", fontWeight:500, lineClamp: 1, overflow:"hidden" }}>{p.category_name || "Drink"}</div>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:8 }}>
+          <span style={{ fontSize:16, fontWeight:700, color:"#1C1C1C" }}>{fmt(p.price)}</span>
+          <div style={{ width:30, height:30, borderRadius:"50%", background:"#4A6741",
+              color:"#fff", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <Ico.Plus s={15} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-// --- SHARED COMPONENTS ---
+function ProductModal({ p, onClose, onAdd, isDesktop }) {
+  const parseJson = (val) => { try { return typeof val === 'string' ? JSON.parse(val) : val; } catch { return []; } };
+  const moods = useMemo(() => parseJson(p.moods), [p]);
+  const sizes = useMemo(() => parseJson(p.sizes), [p]);
+  const addons = useMemo(() => parseJson(p.addons), [p]);
 
-const MainWrapper = ({ children, bgClass = "bg-[#FDFBF7]", isMobile }) => (
-  <div className={cn("min-h-screen font-sans antialiased text-[#2D3436] transition-all duration-500", bgClass)}>
-    <div className={cn(
-      "relative flex flex-col bg-white overflow-hidden transition-all duration-700 w-full min-h-screen",
-      !isMobile && "border-none shadow-none"
-    )}>
-      <div className="w-full h-full relative flex flex-col overflow-y-auto no-scrollbar scroll-smooth">
-        {children}
-      </div>
-    </div>
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
-      .font-outfit { font-family: 'Outfit', sans-serif; }
-      .font-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      .premium-modal .ant-modal-content { border-radius: 32px !important; padding: 0 !important; overflow: hidden; background: #FFFEFD; }
-      .glass-effect { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.4); }
-      .green-gradient { background: linear-gradient(135deg, #00B761 0%, #009650 100%); }
-      .shadow-soft { box-shadow: 0 10px 30px -10px rgba(0, 183, 97, 0.2); }
-      .active-green { background: #00B761 !important; color: white !important; border-color: #00B761 !important; }
-    `}</style>
-  </div>
-);
+  const moodConfig = useMemo(() => {
+    const temp = []; const sugar = [];
+    moods.forEach(m => {
+      const label = (typeof m === 'object' ? m.label : m) || "";
+      const lower = label.toLowerCase();
+      if (lower.includes('hot') || lower.includes('iced') || lower.includes('frappe')) temp.push(label);
+      else if (lower.includes('sugar') || lower.includes('%')) sugar.push(label);
+    });
+    return { temp, sugar };
+  }, [moods]);
 
-const SplashView = ({ businessName }) => (
-  <div className="min-h-screen bg-white flex flex-col items-center justify-center">
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center"
-    >
-      <div className="w-20 h-20 bg-[#00B761] rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-[#00B761]/20">
-        <ShoppingCart size={36} color="white" />
-      </div>
-      <h1 className="text-2xl font-extrabold tracking-tight text-[#00B761]">
-        {businessName || "MINGLY COFFEE"}
-      </h1>
-      <div className="mt-4 flex gap-1">
-        {[0, 1, 2].map(i => (
-          <motion.div
-            key={i}
-            animate={{ scale: [1, 1.5, 1] }}
-            transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
-            className="w-1.5 h-1.5 bg-[#00B761]/20 rounded-full"
-          />
-        ))}
-      </div>
-    </motion.div>
-  </div>
-);
+  const [temp, setTemp] = useState(moodConfig.temp[0] || "");
+  const [sugar, setSugar] = useState(moodConfig.sugar[0] || "");
+  const [size, setSize] = useState(sizes[0]?.label || "");
+  const [selAddons, setSelAddons] = useState({});
+  const [qty, setQty] = useState(1);
 
+  const price = useMemo(() => {
+    let base = parseFloat(p.price);
+    const s = sizes.find(x => x.label === size);
+    if (s) base = parseFloat(s.price);
+    addons.forEach(a => { if (selAddons[a.label]) base += parseFloat(a.price); });
+    return base;
+  }, [size, selAddons, p, sizes, addons]);
 
-// --- VIEW COMPONENTS ---
+  const toggleAddon = (l) => setSelAddons(prev => ({ ...prev, [l]: !prev[l] }));
 
-const ProductCard = ({ item, isStarred, onToggleStar, onClick, isMobile, businessConfig }) => {
-  const discountPercent = businessConfig?.global_discount || 0;
-  const originalPrice = parseFloat(item.price);
-  const finalPrice = discountPercent > 0 ? originalPrice * (1 - discountPercent / 100) : originalPrice;
-
-  return (
-    <motion.div
-      whileTap={{ scale: 0.98 }}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white flex gap-4 py-4 border-b border-gray-100 last:border-b-0 cursor-pointer group"
-      onClick={onClick}
-    >
-      <div className="w-20 h-20 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 shadow-sm">
-        {item.image ? (
-          <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_200,c_fill,f_auto,q_auto")} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl bg-gray-100">☕</div>
-        )}
-      </div>
-      <div className="flex-1 flex flex-col justify-center min-w-0 relative">
-        <div className="pr-10">
-          <h4 className="font-outfit font-black text-[14px] text-gray-800 mb-0.5 group-hover:text-[#00B761] transition-colors">{item.name}</h4>
-          <p className="text-[10px] font-medium text-gray-400 line-clamp-2 leading-tight mb-2">
-            {item.description || "A delicately balanced creation made with premium ingredients."}
-          </p>
-          <div className="flex items-center gap-2">
-            <span className="font-outfit font-black text-[#00B761] text-base">${finalPrice.toFixed(2)}</span>
-            {discountPercent > 0 && (
-              <span className="text-[11px] text-gray-300 line-through font-bold">${originalPrice.toFixed(2)}</span>
-            )}
-          </div>
-        </div>
-
-        <button className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-[#00B761] text-white flex items-center justify-center shadow-lg shadow-[#00B761]/20 active:scale-90 transition-all">
-          <Plus size={18} strokeWidth={3} />
-        </button>
-
-        <div className="absolute top-0 right-0">
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleStar(item); }}
-            className={cn(
-              "w-7 h-7 rounded-full flex items-center justify-center transition-all",
-              isStarred ? "text-[#00B761]" : "text-gray-200 hover:text-gray-400"
-            )}
-          >
-            <Star size={14} fill={isStarred ? "currentColor" : "none"} strokeWidth={2.5} />
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-const TopSellerCard = ({ item, onClick, businessConfig }) => {
-  const discountPercent = businessConfig?.global_discount || 0;
-  const originalPrice = parseFloat(item.price);
-  const finalPrice = discountPercent > 0 ? originalPrice * (1 - discountPercent / 100) : originalPrice;
-
-  return (
-    <motion.div
-      whileTap={{ scale: 0.95 }}
-      className="relative w-64 h-44 rounded-[32px] overflow-hidden flex-shrink-0 cursor-pointer shadow-lg group"
-      onClick={onClick}
-    >
-      <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_500,c_fill,f_auto,q_auto")} className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-      <div className="absolute bottom-5 left-5 right-5">
-        <h4 className="text-white font-outfit font-black text-lg mb-0.5 truncate">{item.name}</h4>
-        <div className="flex items-center gap-2">
-          <span className="text-[#00B761] font-black text-base">${finalPrice.toFixed(2)}</span>
-          {discountPercent > 0 && (
-            <span className="text-white/40 font-bold text-xs line-through">${originalPrice.toFixed(2)}</span>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-const HomeView = ({ selectedShop, categories, currentCategory, setCurrentCategory, menuItems, starredItems, onToggleStar, searchText, setSearchText, setOptionsModalItem, isMobile, businessConfig }) => {
-  const { lang } = useLanguage();
-  const t = translations[lang] || translations.en;
-  const profile = getProfile();
-
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col pb-40 bg-[#FAFAFA]">
-      {/* Sticky Premium Header */}
-      <div className="sticky top-0 z-[60] glass-effect px-6 py-4 mb-4 border-b border-gray-100/50">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-tr from-[#00B761] to-[#00D16B] rounded-[16px] blur opacity-25"></div>
-              <div className="relative w-10 h-10 rounded-[14px] bg-white flex items-center justify-center shadow-sm overflow-hidden border border-gray-50">
-                {selectedShop?.image ? (
-                  <img src={Config.optimizeCloudinary(Config.getFullImagePath(selectedShop.image), "w_100,c_fill,f_auto,q_auto")} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00B761] to-[#009650] text-white font-black text-lg">C</div>
-                )}
-              </div>
-            </div>
-            <div>
-              <p className="text-[8px] font-black text-[#00B761]/60 uppercase tracking-[0.15em] mb-0">{t.premium_experience || "Premium Experience"}</p>
-              <h1 className="text-sm font-outfit font-black text-gray-800 leading-tight">{t.hi || "Hi"}, {profile?.firstname || t.guest || "Guest"}!</h1>
-            </div>
-          </div>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            className="relative w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm border border-gray-100 text-[#00B761]"
-          >
-            <Bell size={18} strokeWidth={2.5} />
-            <span className="absolute top-3 right-3 w-1.5 h-1.5 bg-red-500 rounded-full border-2 border-white"></span>
-          </motion.button>
-        </div>
-      </div>
-
-      <div className="px-6">
-
-        {/* Search Bar - Modern Design */}
-        <div className="relative mb-8">
-          <div className="relative flex items-center bg-gray-50/50 border border-gray-100/50 rounded-2xl h-12 px-4 focus-within:bg-white focus-within:border-[#00B761]/30 transition-all duration-300">
-            <Search className="text-gray-300" size={16} strokeWidth={3} />
-            <input
-              type="text" placeholder={t.search_product || "Search your favorite..."}
-              className="flex-1 h-full bg-transparent border-none px-3 text-[13px] font-bold text-gray-800 placeholder:text-gray-300 focus:ring-0"
-              value={searchText} onChange={(e) => setSearchText(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Banner Section - Artistic Design */}
-        <div className="relative h-44 rounded-[28px] overflow-hidden mb-8 group cursor-pointer shadow-xl shadow-[#00B761]/5">
-          <div className="absolute inset-0 bg-[#1A1A1A]">
-            <img
-              src={businessConfig.promo_image || "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1000&auto=format&fit=crop"}
-              className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-1000"
-              alt="Promotion"
-            />
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-tr from-black via-black/30 to-transparent"></div>
-          <div className="relative z-10 h-full flex flex-col justify-center px-6">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 bg-[#00B761] text-white text-[7px] font-black uppercase tracking-[0.2em] rounded-md shadow-md">
-                {businessConfig.promo_is_active ? t.special_offer : t.established}
-              </span>
-            </div>
-            <h2 className="text-2xl font-outfit font-black text-white leading-tight mb-2">
-              {businessConfig.promo_title || t.fresh_brewed} <br />
-              <span className="text-[#00B761]">{businessConfig.promo_subtitle || t.happiness} {businessConfig.promo_discount || "50%"}</span>
-            </h2>
-          </div>
-        </div>
-
-        {/* Categories Section */}
-        <div className="mb-8">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-6 px-6 snap-x">
-            {[{ id: null, name: t.all || 'All' }, ...categories].map((cat) => (
-              <motion.button
-                key={cat.id}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setCurrentCategory(cat)}
-                className={cn(
-                  "px-5 py-2.5 rounded-2xl font-black text-[11px] transition-all border whitespace-nowrap snap-start",
-                  currentCategory?.id === cat.id
-                    ? "bg-[#1A1A1A] text-white border-[#1A1A1A] shadow-md"
-                    : "bg-white text-gray-400 border-gray-100 shadow-sm"
-                )}
-              >
-                {cat.name}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-
-        {/* Top Sellers Section */}
-        <div className="mb-10">
-          <div className="flex justify-between items-center mb-5 px-1">
-            <h3 className="text-lg font-outfit font-black text-gray-800 tracking-tight">{t.top_sellers || "Top Sellers"}</h3>
-            <span className="text-[9px] font-black text-[#00B761] uppercase tracking-widest">{t.view_all || "View All"}</span>
-          </div>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6 snap-x">
-            {menuItems.slice(0, 5).map((item) => (
-              <div key={item.id} className="snap-start">
-                <TopSellerCard item={item} onClick={() => setOptionsModalItem(item)} businessConfig={businessConfig} />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Product Lists */}
-        <div className="bg-white rounded-t-[32px] px-6 py-4 shadow-2xl shadow-black/5 border-t border-gray-100 flex-1">
-          <div className="flex flex-col mb-4">
-            <h3 className="text-base font-outfit font-black text-gray-800 tracking-tight">{searchText ? (t.search_results || "Results") : (currentCategory?.name || t.all || "Menu")}</h3>
-          </div>
-          <div className="flex flex-col divide-y divide-gray-50">
-            {menuItems
-              .filter(i => (!currentCategory?.id || i.category_id === currentCategory.id) && (!searchText || i.name.toLowerCase().includes(searchText.toLowerCase())))
-              .map((item) => (
-                <ProductCard
-                  key={item.id} item={item}
-                  isStarred={starredItems.some(s => s.id === item.id)}
-                  onToggleStar={onToggleStar}
-                  onClick={() => setOptionsModalItem(item)}
-                  isMobile={isMobile}
-                  businessConfig={businessConfig}
-                />
-              ))}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-
-
-
-const NavBar = ({ activeTab, setActiveTab, cartCount, setIsCartOpen, isMobile }) => {
-  const { lang, setLang } = useLanguage();
-  const t = translations[lang] || translations.en;
-
-  const tabs = [
-    { id: 'home', icon: Home, label: 'Menu' },
-    { id: 'search', icon: Search, label: 'Search' },
-    { id: 'status', icon: Clock, label: 'Status' },
-    { id: 'profile', icon: User, label: 'Account' },
-  ];
-
-  const toggleLang = () => {
-    setLang(lang === 'en' ? 'kh' : 'en');
+  const handleAdd = () => {
+    const parts = [temp, sugar, size].filter(Boolean);
+    const extras = addons.filter(a => selAddons[a.label]).map(a => a.label);
+    onAdd(p, [...parts, ...extras].join(", "), qty, price);
+    onClose();
   };
 
-  if (isMobile) {
-    return (
-      <div className="fixed bottom-0 left-0 right-0 px-4 pb-8 pt-4 z-[100] pointer-events-none">
-        <div className="w-full max-w-[450px] mx-auto glass-effect rounded-[28px] p-2 flex justify-between items-center pointer-events-auto shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/60">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "relative flex-1 py-3.5 flex flex-col items-center gap-1 transition-all duration-300",
-                  isActive ? "text-[#00B761]" : "text-gray-300"
-                )}
-              >
-                <tab.icon size={22} strokeWidth={isActive ? 3 : 2} />
-                {isActive && (
-                  <motion.div
-                    layoutId="navIndicator"
-                    className="absolute -bottom-1 w-1 h-1 bg-[#00B761] rounded-full"
-                  />
-                )}
-              </button>
-            );
-          })}
-          <div className="w-px h-6 bg-gray-100/50 mx-1" />
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="relative w-12 h-12 bg-[#1A1A1A] text-white rounded-[20px] flex items-center justify-center shadow-lg active:scale-95 transition-all"
-          >
-            <ShoppingCart size={20} strokeWidth={2.5} />
-            {cartCount > 0 && (
-              <motion.span
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                className="absolute -top-1.5 -right-1.5 bg-[#00B761] text-white text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
-              >
-                {cartCount}
-              </motion.span>
-            )}
+  return (
+    <div className="overlay fade-in" onClick={onClose}>
+      <div className={`modal-sheet slide-up ${isDesktop ? "center-modal" : ""}`} onClick={e => e.stopPropagation()}>
+        <div className="drag-handle" />
+        <div style={{ position:"relative", height:220, margin:"10px 14px 0", borderRadius:18, overflow:"hidden", flexShrink:0 }}>
+          <img src={Config.getFullImagePath(p.image)} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={e => { e.target.style.background="#EDE8DF"; }} />
+          <button onClick={onClose} style={{ position:"absolute", top:12, right:12, width:34, height:34, borderRadius:"50%", background:"rgba(0,0,0,.38)", color:"#fff", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", border:"none" }}>
+            <Ico.X s={16} />
           </button>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="sticky top-0 w-full bg-white/80 backdrop-blur-xl z-[100] border-b border-[#F1F2F6] px-10 py-5 flex justify-between items-center">
-      <div className="flex items-center gap-10">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 green-gradient rounded-2xl flex items-center justify-center text-white p-2 shadow-lg"><Star fill="white" size={24} /></div>
-          <span className="font-serif text-2xl font-black text-[#00B761]">Atelier Coffee</span>
-        </div>
-        <div className="flex gap-8">
-          {tabs.map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all", activeTab === tab.id ? "bg-[#00B761] text-white shadow-lg" : "text-gray-400 hover:text-[#00B761] hover:bg-gray-50")}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        {/* Language Switcher */}
-        <button
-          onClick={toggleLang}
-          className="flex items-center gap-2 bg-white border border-[#F1F2F6] px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#FDFBF7] transition-all"
-        >
-          <Globe size={16} />
-          <span>{lang === 'en' ? 'ភាសាខ្មែរ' : 'English'}</span>
-        </button>
-
-        <button onClick={() => setIsCartOpen(true)} className="flex items-center gap-3 bg-[#FAF9F6] text-[#00B761] px-6 py-3 rounded-2xl font-black text-[11px] uppercase border border-[#F1F2F6] hover:border-[#00B761]/30 transition-all">
-          <ShoppingCart size={18} />
-          <span>{t.order || 'Cart'} • {cartCount} {t.items || 'Items'}</span>
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const StarredView = ({ starredItems, onToggleStar, setOptionsModalItem, businessConfig }) => (
-  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col px-6 pb-24 pt-8">
-    <h1 className="text-2xl font-extrabold text-[#00B761] mb-2">My Starred</h1>
-    <p className="text-xs text-gray-400 font-bold mb-8 uppercase tracking-widest">Your favorite collections ({starredItems.length})</p>
-
-    {starredItems.length === 0 ? (
-      <div className="flex-1 flex flex-col items-center justify-center text-center px-10">
-        <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
-          <Star size={32} className="text-gray-200" />
-        </div>
-        <h3 className="text-lg font-bold text-gray-700 mb-2">No Starred Items Yet</h3>
-        <p className="text-sm text-gray-400">Items you mark as favorite will appear here for quick access next time!</p>
-      </div>
-    ) : (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {starredItems.map((item) => (
-          <ProductCard
-            key={item.id} item={item} isStarred={true}
-            onToggleStar={onToggleStar} onClick={() => setOptionsModalItem(item)}
-            businessConfig={businessConfig}
-          />
-        ))}
-      </div>
-    )}
-  </motion.div>
-);
-
-// --- SUB-VIEWS ---
-
-const HistoryView = ({ history, onBack }) => (
-  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex-1 flex flex-col px-6 pb-32 pt-12 max-w-[800px] mx-auto w-full">
-    <div className="flex items-center gap-4 mb-8">
-      <button onClick={onBack} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full"><ChevronLeft size={20} /></button>
-      <h1 className="text-2xl font-extrabold text-[#00B761]">Order History</h1>
-    </div>
-
-    {history.length === 0 ? (
-      <Empty description="No orders found" className="mt-20" />
-    ) : (
-      <div className="space-y-4">
-        {history.map((order) => (
-          <div key={order.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-            <div className="flex justify-between items-start mb-3">
+        <div className="modal-inner">
+          <div style={{ padding:"18px 18px 4px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
               <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Order #{order.order_no || order.id}</p>
-                <p className="text-xs font-bold text-gray-500">{new Date(order.created_at).toLocaleDateString()}</p>
+                <h2 style={{ fontSize:22, fontWeight:700, color:"#1C1C1C", lineHeight:1.2 }}>{p.name}</h2>
+                <p style={{ fontSize:13, color:"#9A9083", marginTop:3 }}>Signature Selection</p>
               </div>
-              <Badge status={order.status === 'completed' ? 'success' : 'processing'} text={<span className="text-[10px] font-black uppercase ml-1">{order.status}</span>} />
+              <span style={{ fontSize:22, fontWeight:700, color:"#1C1C1C", marginLeft:12, flexShrink:0 }}>{fmt(price)}</span>
             </div>
-            <div className="py-3 border-y border-dashed border-gray-100 mb-3">
-              <p className="text-sm font-bold text-gray-700">{order.product_names || 'Items'}</p>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-gray-400">{order.total_quantity || 0} items</span>
-              <span className="text-lg font-black text-[#00B761]">${parseFloat(order.total_amount).toFixed(2)}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-  </motion.div>
-);
 
-const SettingsView = ({ onBack }) => {
-  const [notif, setNotif] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-
-  return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex-1 flex flex-col px-6 pb-32 pt-12 max-w-[800px] mx-auto w-full">
-      <div className="flex items-center gap-4 mb-10">
-        <button onClick={onBack} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full"><ChevronLeft size={20} /></button>
-        <h1 className="text-2xl font-extrabold text-[#00B761]">App Settings</h1>
-      </div>
-
-      <div className="space-y-4">
-        {[
-          { label: 'Push Notifications', desc: 'Get updates on your order status', value: notif, set: setNotif },
-          { label: 'Dark Mode', desc: 'Reduce eye strain in low light', value: darkMode, set: setDarkMode },
-        ].map((item, i) => (
-          <div key={i} className="flex justify-between items-center p-6 bg-white border border-gray-100 rounded-2xl">
-            <div>
-              <p className="text-sm font-bold text-gray-800">{item.label}</p>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">{item.desc}</p>
-            </div>
-            <div
-              onClick={() => item.set(!item.value)}
-              className={cn("w-12 h-6 rounded-full transition-all cursor-pointer relative p-1", item.value ? "bg-[#00B761]" : "bg-gray-200")}
-            >
-              <div className={cn("w-4 h-4 bg-white rounded-full transition-all", item.value ? "translate-x-6" : "translate-x-0")}></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-  );
-};
-
-const OrderTracker = ({ status, onBack }) => {
-  const t = translations[useLanguage().lang] || translations.en;
-
-  const statusConfig = {
-    'unpaid': { icon: DollarSign, label: t.waiting_for_cashier, color: 'text-amber-500', desc: t.pending_status_desc },
-    'pending': { icon: Coffee, label: t.order_received || 'Order Received', color: 'text-blue-500', desc: t.pending_status_desc },
-    'cooking': { icon: Flame, label: t.brewing_cooking, color: 'text-orange-500', desc: t.cooking_status_desc },
-    'served': { icon: CheckCircle2, label: t.ready_pickup, color: 'text-green-500', desc: t.ready_status_desc },
-    'received': { icon: Smile, label: t.served_enjoy, color: 'text-green-600', desc: t.served_status_desc }
-  };
-
-  const current = statusConfig[status] || statusConfig['unpaid'];
-
-  return (
-    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-center px-8 text-center bg-white min-h-screen">
-      <div className="mb-10 relative">
-        <div className="absolute inset-0 bg-[#00B761]/10 rounded-full blur-3xl" />
-        <div className="relative w-48 h-48 rounded-full bg-gray-50 flex items-center justify-center">
-          <img src="https://img.freepik.com/free-vector/hand-drawn-delivery-concept-illustration_23-2149156093.jpg" className="w-32 h-32 object-contain" />
-        </div>
-      </div>
-
-      <h2 className="text-2xl font-outfit font-black text-gray-800 mb-2">{current.label}</h2>
-      <p className="text-gray-400 text-sm mb-12 max-w-[250px] leading-relaxed">
-        {current.desc}
-      </p>
-
-      <button
-        onClick={onBack}
-        className="w-full h-16 bg-[#00B761] text-white rounded-2xl font-black shadow-xl shadow-[#00B761]/20 active:scale-[0.98] transition-all"
-      >
-        {t.back_to_home || 'Back To Home'}
-      </button>
-    </motion.div>
-  );
-};
-
-const ProfileView = ({ selectedShop, selectedTable, setActiveTab, setSubView, onFetchHistory }) => {
-  const { lang, setLang } = useLanguage();
-  const t = translations[lang] || translations.en;
-  const profile = getProfile();
-  const navigate = useNavigate();
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="flex-1 flex flex-col items-center px-6 pb-32 pt-12 max-w-[800px] mx-auto w-full"
-    >
-      <div className="w-full mb-10 text-center md:text-left">
-        <h1 className="text-3xl font-outfit font-black text-gray-800 tracking-tight">{t.profile}</h1>
-      </div>
-
-      <div className="w-full bg-white rounded-[32px] p-8 flex flex-col items-center mb-10 border border-gray-50 shadow-sm relative overflow-hidden group">
-        <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-[#00B761] text-3xl font-black mb-6 border-4 border-white shadow-lg">
-          {profile?.firstname?.charAt(0) || "G"}
-        </div>
-        <h3 className="text-xl font-outfit font-black text-gray-800 mb-1">{profile?.firstname ? `${profile.firstname} ${profile.lastname || ''}` : t.guest || "Guest Customer"}</h3>
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">{selectedShop?.name || 'Main Branch'} — {t.table_label} {selectedTable || 'N/A'}</p>
-
-        {!profile && (
-          <button onClick={() => navigate("/login")} className="px-8 py-3 bg-[#00B761] text-white rounded-2xl text-xs font-black shadow-lg shadow-[#00B761]/20 transition-all">{t.sign_in}</button>
-        )}
-      </div>
-
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[
-          { icon: History, label: t.history, action: () => { onFetchHistory(); setSubView('history'); } },
-          { icon: Star, label: t.favorites, action: () => setActiveTab('starred') },
-          { icon: Globe, label: t.language, action: () => { setLang(lang === 'en' ? 'kh' : 'en'); message.success(lang === 'en' ? "ប្តូរទៅភាសាខ្មែរជោគជ័យ" : "Switched to English"); } },
-          { icon: Settings, label: t.settings, action: () => setSubView('settings') },
-        ].map((item, i) => (
-          <button key={i} onClick={item.action} className="flex justify-between items-center p-6 bg-white border border-gray-50 rounded-3xl hover:shadow-lg transition-all">
-            <div className="flex items-center gap-5">
-              <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center">
-                <item.icon size={22} className="text-gray-400" />
-              </div>
-              <span className="text-sm font-bold text-gray-700">{item.label}</span>
-            </div>
-            <ChevronLeft size={16} className="rotate-180 text-gray-300" />
-          </button>
-        ))}
-      </div>
-    </motion.div>
-  );
-};
-
-const CategoryView = ({ currentCategory, setCurrentCategory, menuItems, searchText, setSearchText, setOptionsModalItem, starredItems, onToggleStar, isMobile, businessConfig }) => {
-  const { lang } = useLanguage();
-  const t = translations[lang] || translations.en;
-  const filtered = menuItems.filter(i => (currentCategory.id === null || i.category_id === currentCategory.id) && (!searchText || i.name.toLowerCase().includes(searchText.toLowerCase())));
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex-1 flex flex-col px-6 pb-40 pt-8 bg-[#FAFAFA]"
-    >
-      {/* Category Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <button
-          onClick={() => { setCurrentCategory(null); setSearchText(""); }}
-          className="w-10 h-10 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-gray-50 text-gray-400 hover:text-[#00B761] transition-all"
-        >
-          <ChevronLeft size={20} strokeWidth={2.5} />
-        </button>
-        <div>
-          <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-0.5">{t.category_label}</p>
-          <h1 className="text-xl font-outfit font-black text-[#00B761] leading-tight">{currentCategory.name}</h1>
-        </div>
-      </div>
-
-      {/* Category Search */}
-      <div className="relative mb-10">
-        <div className="relative flex items-center bg-white border border-gray-100 rounded-2xl h-12 px-4 focus-within:border-[#00B761]/30 transition-all">
-          <Search className="text-gray-300" size={16} strokeWidth={3} />
-          <input
-            type="text"
-            placeholder={`${t.search_in_category} ${currentCategory.name}...`}
-            className="flex-1 h-full bg-transparent border-none px-3 text-[13px] font-bold text-gray-800 placeholder:text-gray-300 focus:ring-0"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Product List - Single Column for Premium Feel */}
-      <div className="bg-white rounded-[32px] px-6 py-2 shadow-sm border border-gray-50 flex-1">
-        <div className="flex flex-col">
-          {filtered.length === 0 ? (
-            <div className="py-20 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                <Search size={24} className="text-gray-200" />
-              </div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No results found</p>
-            </div>
-          ) : (
-            filtered.map((item) => (
-              <ProductCard
-                key={item.id} item={item} onToggleStar={onToggleStar}
-                isStarred={starredItems.some(s => s.id === item.id)}
-                onClick={() => setOptionsModalItem(item)}
-                isMobile={isMobile}
-                businessConfig={businessConfig}
-              />
-            ))
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-// --- MAIN APPLICATION ---
-const NoBranchView = ({ onSelectBranch }) => {
-  const navigate = useNavigate();
-  const { lang } = useLanguage();
-  const t = translations[lang] || translations.en;
-  const [branches, setBranches] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchBranches = async () => {
-      setLoading(true);
-      try {
-        const res = await request("branch", "get");
-        if (res && res.list) setBranches(res.list);
-      } catch (e) { console.error("Failed to fetch branches"); }
-      finally { setLoading(false); }
-    };
-    fetchBranches();
-  }, []);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="min-h-screen bg-white flex flex-col items-center px-8 pt-16 pb-10"
-    >
-      {/* Header Icon */}
-      <div className="w-20 h-20 bg-[#00B761]/10 rounded-3xl flex items-center justify-center mb-10 shadow-xl shadow-[#00B761]/5">
-        <Coffee size={40} className="text-[#00B761]" />
-      </div>
-
-      <h1 className="text-3xl font-outfit font-black text-gray-800 text-center mb-4 leading-tight">
-        {t.scan_to_order}
-      </h1>
-      <p className="text-gray-400 text-center text-sm mb-12 max-w-[280px] leading-relaxed">
-        {t.please_scan_msg}
-      </p>
-
-      {/* Instructional Scan Graphic */}
-      <motion.div
-        whileHover={{ scale: 1.02 }}
-        className="w-full max-w-sm bg-[#FAFAFA] border-2 border-dashed border-[#00B761]/20 rounded-[40px] p-8 flex flex-col items-center mb-12"
-      >
-        <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md mb-6">
-          <ShoppingCart size={24} className="text-[#00B761]" />
-        </div>
-        <div className="w-44 h-44 bg-white p-4 rounded-3xl shadow-inner mb-4 flex items-center justify-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-tr from-[#00B761]/5 to-transparent animate-pulse" />
-          <div className="w-full h-full border-2 border-[#00B761]/10 rounded-2xl flex items-center justify-center bg-gray-50/50">
-            <span className="text-3xl font-black text-[#00B761]/20 tracking-widest">QR</span>
-          </div>
-        </div>
-        <p className="text-[10px] font-black text-[#00B761] uppercase tracking-[0.2em]">{t.ready_to_serve}</p>
-      </motion.div>
-
-      {/* Branch Selector */}
-      <div className="w-full max-w-sm">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex-1 h-px bg-gray-100" />
-          <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-2">{t.select_branch_to_browse}</span>
-          <div className="flex-1 h-px bg-gray-100" />
-        </div>
-
-        <div className="space-y-3 w-full">
-          {loading ? (
-            <div className="py-10 flex justify-center"><Spin /></div>
-          ) : (
-            branches.map((b) => (
-              <motion.button
-                key={b.id}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => onSelectBranch({ id: b.id, business_id: b.business_id, name: b.name, business_name: b.business_name || "Atelier Coffee", image: b.image })}
-                className="w-full flex items-center justify-between p-4 bg-white border border-gray-100 rounded-3xl hover:border-[#00B761]/30 hover:shadow-lg transition-all text-left"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center overflow-hidden border border-gray-50">
-                    {b.image ? (
-                      <img src={Config.getFullImagePath(b.image)} className="w-full h-full object-cover" />
-                    ) : (
-                      <Globe size={18} className="text-gray-300" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black text-gray-800">{b.name}</h4>
-                    <p className="text-[9px] font-bold text-gray-400 truncate max-w-[150px]">{b.address || "Main Street Branch"}</p>
-                  </div>
+            {moodConfig.sugar.length > 0 && (
+              <Section title="Sugar Level">
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {moodConfig.sugar.map(s => (
+                    <button key={s} className="opill" onClick={() => setSugar(s)} style={{ background: sugar === s ? "#9B6F2A" : "#fff", color: sugar === s ? "#fff" : "#6B6058", borderColor: sugar === s ? "#9B6F2A" : "#DDD8CF" }}>{s}</button>
+                  ))}
                 </div>
-                <ChevronLeft size={16} className="rotate-180 text-gray-300" />
-              </motion.button>
-            ))
-          )}
+              </Section>
+            )}
+
+            {moodConfig.temp.length > 0 && (
+              <Section title="Temperature">
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {moodConfig.temp.map(t => (
+                    <button key={t} className="opill" onClick={() => setTemp(t)} style={{ background: temp === t ? (TEMP_COLOR[t] || "#4A6741") : "#fff", color: temp === t ? "#fff" : "#6B6058", borderColor: temp === t ? (TEMP_COLOR[t] || "#4A6741") : "#DDD8CF", display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ fontSize:15 }}>{TEMP_ICON[t] || "☕"}</span>{t}
+                    </button>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {sizes.length > 0 && (
+              <Section title="Size">
+                <div style={{ display:"flex", gap:8 }}>
+                  {sizes.map(s => (
+                    <button key={s.label} onClick={() => setSize(s.label)} style={{ flex:1, padding:"12px 8px", borderRadius:14, border: `1.5px solid ${size === s.label ? "#3B78C9" : "#DDD8CF"}`, background: size === s.label ? "#3B78C9" : "#fff", color: size === s.label ? "#fff" : "#6B6058", fontSize:13, fontWeight:600, display:"flex", flexDirection:"column", alignItems:"center", gap:4, outline:"none", cursor:"pointer" }}>
+                      <span>{s.label}</span>
+                      <span style={{ fontSize:11, opacity:.8 }}>{fmt(s.price)}</span>
+                    </button>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {addons.length > 0 && (
+              <Section title="Add-Ons" sub="Optional">
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {addons.map(a => (
+                    <div key={a.label} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 14px", background:"#FAFAF8", borderRadius:13, border:"1px solid #EDE8DF" }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:600, color:"#1C1C1C" }}>{a.label}</div>
+                        <div style={{ fontSize:11, color:"#4A6741", fontWeight:600 }}>+{fmt(a.price)}</div>
+                      </div>
+                      <div className="tgl" onClick={() => toggleAddon(a.label)} style={{ background: selAddons[a.label] ? "#4A6741" : "#D0CBC2" }}>
+                        <div className={`tgl-dot${selAddons[a.label] ? " on" : ""}`} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+          </div>
+        </div>
+        <div style={{ padding:"14px 18px 28px", borderTop:"1px solid #EDE8DF", background:"#fff", display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
+          <div className="qty-ctrl">
+            <button className="qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}><Ico.Minus /></button>
+            <span style={{ fontSize:16, fontWeight:700, minWidth:22, textAlign:"center" }}>{qty}</span>
+            <button className="qty-btn" onClick={() => setQty(q => q + 1)}><Ico.Plus /></button>
+          </div>
+          <button onClick={handleAdd} style={{ flex:1, height:52, borderRadius:100, background:"#4A6741", color:"#fff", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:10, border:"none" }}>
+            <span>Add to Cart — {fmt(price * qty)}</span>
+            <Ico.Arrow />
+          </button>
         </div>
       </div>
-
-      {/* Footer / Staff Portal */}
-      <div className="mt-auto pt-16 flex flex-col items-center gap-6">
-        <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.4em]">Powered by Nit POS</p>
-        <button
-          onClick={() => navigate("/login")}
-          className="flex items-center gap-2 text-[10px] font-black text-gray-400 hover:text-[#00B761] transition-colors border-t border-gray-50 pt-6 px-10"
-        >
-          <User size={12} strokeWidth={3} />
-          {t.staff_portal}
-        </button>
-      </div>
-    </motion.div>
+    </div>
   );
-};
-const BrowsingModeBanner = ({ t }) => (
-  <motion.div
-    initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-    className="bg-amber-50 border-b border-amber-100 px-6 py-3 flex items-center gap-3 sticky top-[72px] z-40 backdrop-blur-md"
-  >
-    <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center">
-      <Star size={14} className="text-amber-600" />
+}
+
+function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar }) {
+  const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
+      <div style={{ padding:"20px 20px 14px", borderBottom:"1px solid #EDE8DF", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <h2 style={{ fontSize:19, fontWeight:700, color:"#1C1C1C" }}>Your Order</h2>
+        {!asSidebar && <button onClick={onClose} style={{ width:32, height:32, borderRadius:"50%", background:"#F5F0E8", border:"none", display:"flex", alignItems:"center", justifyContent:"center" }}><Ico.X s={16}/></button>}
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"16px" }} className="noscroll">
+        {cart.length === 0 ? <div style={{ textAlign:"center", padding:"52px 0", color:"#B0A496" }}><div style={{ fontSize:46, marginBottom:12 }}>🛒</div><p style={{ fontSize:15, fontWeight:600 }}>Your basket is empty</p></div>
+        : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>{cart.map(item => (
+          <div key={item.cid} className="cart-item">
+            <img src={Config.getFullImagePath(item.image)} alt={item.name} style={{ width:54, height:54, borderRadius:12, objectFit:"cover" }} />
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:"#1C1C1C" }}>{item.name}</div>
+              <div style={{ fontSize:11, color:"#9A9083", marginBottom:4 }}>{item.custom}</div>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <span style={{ fontSize:14, fontWeight:700, color:"#4A6741" }}>{fmt(item.price * item.qty)}</span>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <button className="qty-btn" style={{ width:26, height:26, background:"#EDE8DF" }} onClick={() => onQty(item.cid, -1)}><Ico.Minus s={12}/></button>
+                  <span style={{ fontSize:13, fontWeight:700 }}>{item.qty}</span>
+                  <button className="qty-btn" style={{ width:26, height:26, background:"#4A6741", color:"#fff" }} onClick={() => onQty(item.cid, 1)}><Ico.Plus s={12}/></button>
+                </div>
+              </div>
+            </div>
+            <button onClick={() => onRemove(item.cid)} style={{ background:"none", border:"none", color:"#C0B8AE" }}><Ico.X s={15}/></button>
+          </div>
+        ))}</div>}
+      </div>
+      {cart.length > 0 && (
+        <div style={{ padding:"16px 18px 28px", borderTop:"1px solid #EDE8DF", background:"#fff" }}>
+          <div style={{ background:"#FAFAF8", borderRadius:14, padding:"12px 14px", marginBottom:14 }}>
+            <Row label="Subtotal" val={fmt(total)} />
+            <Row label="Service" val="Free" valColor="#4A6741" />
+            <div style={{ height:1, background:"#EDE8DF", margin:"10px 0" }}/>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
+              <span style={{ fontSize:14, fontWeight:700, color:"#4A6741" }}>Total</span>
+              <span style={{ fontSize:24, fontWeight:800, color:"#4A6741" }}>{fmt(total)}</span>
+            </div>
+          </div>
+          <button onClick={onCheckout} style={{ width:"100%", height:54, borderRadius:100, background:"#4A6741", color:"#fff", fontSize:15, fontWeight:700, border:"none" }}>Place Order ☕</button>
+        </div>
+      )}
     </div>
-    <div className="flex-1">
-      <h5 className="text-[10px] font-black text-amber-800 uppercase tracking-tight">{t.browse_mode}</h5>
-      <p className="text-[9px] font-bold text-amber-600/70">{t.browse_mode_msg}</p>
-    </div>
-  </motion.div>
-);
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
+   MAIN APPLICATION
+────────────────────────────────────────────────────────────── */
 
 const CoffeeMenuApp = () => {
-  const { lang, setLang } = useLanguage();
-  const t = translations[lang] || translations.en;
   const navigate = useNavigate();
-  const profile = getGuestProfile();
-
-  const [orderId, setOrderId] = useState(() => localStorage.getItem('last_order_id'));
-  const [orderStatus, setOrderStatus] = useState(null);
-  const [lastOrderTime, setLastOrderTime] = useState(0); // For Rate Limiting
-
-  // Poll for order status
-  useEffect(() => {
-    let interval;
-    if (orderId) {
-      interval = setInterval(async () => {
-        try {
-          const res = await request(`order-web/${orderId}`, "get");
-          if (res && res.order) {
-            const kStatus = res.order.kitchen_status?.toLowerCase();
-            const pStatus = res.order.status?.toLowerCase();
-
-            // Prioritize kitchen progress: If kitchen is cooking or ready, show that!
-            if (kStatus === 'preparing' || kStatus === 'cooking') {
-              setOrderStatus('cooking');
-            } else if (kStatus === 'served' || kStatus === 'ready') {
-              setOrderStatus('served');
-            } else if (kStatus === 'received') {
-              setOrderStatus('received');
-            } else if (pStatus === 'unpaid') {
-              setOrderStatus('unpaid');
-            } else {
-              setOrderStatus('pending');
-            }
-
-            if (kStatus === 'received') {
-              clearInterval(interval);
-            }
-          }
-        } catch (e) { console.error("Status check failed"); }
-      }, 5000);
-    }
-    return () => clearInterval(interval);
-  }, [orderId]);
+  const { lang } = useLanguage();
+  const t = translations[lang] || translations.en;
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => { const r = () => setIsMobile(window.innerWidth < 768); window.addEventListener("resize", r); return () => window.removeEventListener("resize", r); }, []);
 
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const safeParse = (key, fallback = null) => {
-    try {
-      const val = localStorage.getItem(key);
-      return val ? JSON.parse(val) : fallback;
-    } catch {
-      return fallback;
-    }
-  };
   const [selectedShop, setSelectedShop] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const br = params.get('br') || params.get('branch');
     const biz = params.get('biz');
     if (br && biz) return { id: parseInt(br), business_id: parseInt(biz) };
-    return safeParse('coffee_pos_shop');
+    const saved = localStorage.getItem('coffee_pos_shop');
+    return saved ? JSON.parse(saved) : null;
   });
+
   const [selectedTable, setSelectedTable] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('tbl') || params.get('table') || localStorage.getItem('coffee_pos_table');
+    return params.get('tbl') || params.get('table') || localStorage.getItem('coffee_pos_table') || "Web";
   });
-  const [cart, setCart] = useState(() => safeParse('coffee_pos_cart', []));
-  const [starredItems, setStarredItems] = useState(() => safeParse('coffee_pos_starred', []));
 
-  const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [productSizes, setProductSizes] = useState({});
-  const [businessConfig, setBusinessConfig] = useState({
-    promo_title: "",
-    promo_subtitle: "",
-    promo_image: "",
-    promo_discount: "",
-    promo_is_active: 0,
-    global_discount: 0
-  });
-  const [splash, setSplash] = useState(true);
-  const [activeTab, setActiveTab] = useState('home');
-  const [currentCategory, setCurrentCategory] = useState(null);
-  const [optionsModalItem, setOptionsModalItem] = useState(null);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [searchText, setSearchText] = useState("");
+  const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [profileSubView, setProfileSubView] = useState(null);
-  const [orderHistory, setOrderHistory] = useState([]);
-  const [selectedTemp, setSelectedTemp] = useState("");
-  const [selectedSugar, setSelectedSugar] = useState("");
-  const [selectedSize, setSelectedSize] = useState("");
-  const [selectedAddons, setSelectedAddons] = useState([]);
-  const [optionQty, setOptionQty] = useState(1);
-
-  const parseJson = (val) => {
-    if (!val) return [];
-    if (Array.isArray(val)) return val;
-    try { return JSON.parse(val); } catch { return []; }
-  };
-
-  const modalMoods = useMemo(() => parseJson(optionsModalItem?.moods), [optionsModalItem]);
-  const modalSizes = useMemo(() => parseJson(optionsModalItem?.sizes), [optionsModalItem]);
-  const modalAddons = useMemo(() => parseJson(optionsModalItem?.addons), [optionsModalItem]);
-
-  // Split moods into Temperature and Sugar based on common keywords
-  const moodsConfig = useMemo(() => {
-    const temp = [];
-    const sugar = [];
-    const other = [];
-    modalMoods.forEach(m => {
-      const label = (typeof m === 'object' ? m.label : m) || "";
-      const lower = label.toLowerCase();
-      if (lower.includes('hot') || lower.includes('iced') || lower.includes('frappe') || lower.includes('warm') || lower.includes('cold')) {
-        temp.push(m);
-      } else if (lower.includes('sugar') || lower.includes('%')) {
-        sugar.push(m);
-      } else {
-        other.push(m);
-      }
-    });
-    return { temp, sugar, other };
-  }, [modalMoods]);
-
-  // When opening the modal, set default selections from product data
-  useEffect(() => {
-    if (optionsModalItem) {
-      const firstTemp = moodsConfig.temp[0];
-      setSelectedTemp(firstTemp ? (typeof firstTemp === 'object' ? firstTemp.label : firstTemp) : "");
-
-      const firstSugar = moodsConfig.sugar[0];
-      setSelectedSugar(firstSugar ? (typeof firstSugar === 'object' ? firstSugar.label : firstSugar) : "");
-
-      const firstSize = modalSizes[0];
-      setSelectedSize(firstSize ? firstSize.label : "");
-
-      setSelectedAddons([]);
-      setOptionQty(1);
-    }
-  }, [optionsModalItem, moodsConfig, modalSizes]);
-
-  // Dynamic price calculation based on size and selected addons
-  const currentPrice = useMemo(() => {
-    if (!optionsModalItem) return 0;
-    let price = parseFloat(optionsModalItem.price || 0);
-
-    if (selectedSize) {
-      const sizeObj = modalSizes.find(s => s.label === selectedSize);
-      if (sizeObj && sizeObj.price) price = parseFloat(sizeObj.price);
-    }
-
-    selectedAddons.forEach(label => {
-      const addon = modalAddons.find(a => a.label === label);
-      if (addon && addon.price) price += parseFloat(addon.price);
-    });
-
-    return price;
-  }, [optionsModalItem, selectedSize, selectedAddons, modalSizes, modalAddons]);
-
-  // NEW: Detect Table/Branch from URL and force sync
-  useEffect(() => {
-    const syncFromUrl = () => {
-      const params = new URLSearchParams(window.location.search);
-      const biz = params.get('biz');
-      const br = params.get('br') || params.get('branch');
-      const tbl = params.get('tbl') || params.get('table');
-
-      if (biz && br) {
-        const newShop = { id: parseInt(br), business_id: parseInt(biz) };
-        setSelectedShop(newShop);
-        localStorage.setItem('coffee_pos_shop', JSON.stringify(newShop));
-
-        if (tbl) {
-          setSelectedTable(tbl);
-          localStorage.setItem('coffee_pos_table', tbl);
-        }
-      }
-    };
-
-    syncFromUrl();
-    // Also listen for popstate if user navigates back/forward
-    window.addEventListener('popstate', syncFromUrl);
-    return () => window.removeEventListener('popstate', syncFromUrl);
-  }, [window.location.search]);
-
-
-  const isDrink = useMemo(() => {
-    if (!optionsModalItem) return false;
-    const cat = categories.find(c => c.id === optionsModalItem.category_id);
-    if (!cat) return false;
-    const name = cat.name.toLowerCase();
-    return name.includes('coffee') || name.includes('juice') || name.includes('milk') || name.includes('drink') || name.includes('tea');
-  }, [optionsModalItem, categories]);
-
-
-  useEffect(() => {
-    localStorage.setItem('coffee_pos_table', selectedTable || "");
-    localStorage.setItem('coffee_pos_shop', JSON.stringify(selectedShop || {}));
-    localStorage.setItem('coffee_pos_cart', JSON.stringify(cart || []));
-    localStorage.setItem('coffee_pos_starred', JSON.stringify(starredItems || []));
-  }, [selectedTable, selectedShop, cart, starredItems]);
-
-  useEffect(() => {
-    const profile = getProfile();
-    const isGuest = localStorage.getItem("is_guest") === "true";
-    if (isGuest && profile?.branch_id) {
-      setSelectedShop({ id: profile.branch_id, business_id: profile.business_id, name: profile.branch_name, business_name: profile.business_name });
-      setSelectedTable(profile.table_no);
-      localStorage.removeItem("is_guest");
-    }
-    setTimeout(() => setSplash(false), 1500);
-  }, []);
+  const [cat, setCat] = useState("all");
+  const [q, setQ] = useState("");
+  const searchInputRef = React.useRef(null);
+  const [cart, setCart] = useState(() => {
+    const s = localStorage.getItem('coffee_pos_cart');
+    return s ? JSON.parse(s) : [];
+  });
+  const [starred, setStarred] = useState(() => {
+    const s = localStorage.getItem('coffee_pos_starred_ids');
+    return s ? new Set(JSON.parse(s)) : new Set();
+  });
+  const [modalProd, setModalProd] = useState(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [view, setView] = useState("home");
+  const [tab, setTab] = useState("home");
 
   useEffect(() => {
     if (selectedShop?.id) {
-      fetchShopProducts();
+      const fetchData = async () => {
+        setLoading(true);
+        try {
+          const [cRes, pRes] = await Promise.all([request("category", "get"), request("product", "get", { branch_id: selectedShop.id })]);
+          if (cRes?.list) setCategories([{ id: "all", name: "All" }, ...cRes.list]);
+          if (pRes?.list) setMenuItems(pRes.list);
+        } catch { } finally { setLoading(false); }
+      };
+      fetchData();
     }
-  }, [selectedShop?.id, currentCategory?.id]);
-
-  const fetchShopProducts = async () => {
-    try {
-      setLoading(true);
-      if (categories.length === 0) {
-        const catRes = await request("category", "get");
-        if (catRes?.list) setCategories(catRes.list);
-      }
-      const productRes = await request("product", "get", { branch_id: selectedShop?.id });
-      if (productRes?.list) {
-        setMenuItems(productRes.list);
-        let sizesMap = {};
-        productRes.list.forEach(p => { if (p.sizes) { try { sizesMap[p.id] = typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes; } catch (e) { } } });
-        setProductSizes(sizesMap);
-      }
-    } catch { } finally { setLoading(false); }
-  };
-
-  const fetchBusinessConfig = async () => {
-    try {
-      const bizId = selectedShop?.business_id || getProfile()?.business_id;
-      if (!bizId) return;
-      const res = await request("business/public-config", "get", { business_id: bizId });
-      if (res?.config) setBusinessConfig(res.config);
-    } catch (e) { console.error("Failed to fetch business config"); }
-  };
+  }, [selectedShop?.id]);
 
   useEffect(() => {
-    if (selectedShop?.business_id) fetchBusinessConfig();
-  }, [selectedShop?.business_id]);
+    localStorage.setItem('coffee_pos_cart', JSON.stringify(cart));
+    localStorage.setItem('coffee_pos_table', selectedTable);
+    if (selectedShop) localStorage.setItem('coffee_pos_shop', JSON.stringify(selectedShop));
+  }, [cart, selectedTable, selectedShop]);
 
-  const fetchOrderHistory = async () => {
-    try {
-      const res = await request("order", "get", { user_id: getProfile()?.id });
-      if (res?.list) setOrderHistory(res.list);
-    } catch (e) { message.error("Failed to fetch history"); }
-  };
+  const products = useMemo(() => menuItems.filter(p => {
+    const productName = p.name || "";
+    const qOk = !q || productName.toLowerCase().includes(q.toLowerCase());
+    if (tab === 'search' || q) return qOk;
+    const catOk = cat === "all" || p.category_id == cat;
+    return catOk;
+  }), [cat, q, menuItems, tab]);
 
-  const fetchStarredItems = async () => {
-    const profile = getProfile();
-    if (!profile || (!(profile.id || profile.user_id)) || profile.role_code === "guest") return;
-    try {
-      const res = await request("favorite", "get");
-      if (res?.list) setStarredItems(res.list);
-    } catch (e) { console.error("Failed to sync favorites"); }
-  };
+  const addToCart = (prod, custom, qty, price) => setCart(prev => [...prev, { ...prod, cid: uid(), custom, qty, price }]);
+  const updateQty = (cid, delta) => setCart(prev => prev.map(i => i.cid === cid ? { ...i, qty: Math.max(1, i.qty + delta) } : i));
+  const removeItem = (cid) => setCart(prev => prev.filter(i => i.cid !== cid));
+  const toggleStar = (p) => setStarred(prev => { const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; });
 
-  useEffect(() => {
-    fetchStarredItems();
-  }, []);
-
-
-  const onToggleStar = async (item) => {
-    const profile = getProfile();
-    const isStarred = starredItems.some(s => s.id === item.id);
-
-    // Optimistic UI update
-    if (isStarred) {
-      setStarredItems(starredItems.filter(s => s.id !== item.id));
-    } else {
-      setStarredItems([...starredItems, item]);
-    }
-
-    const isAuthenticated = profile && (profile.id || profile.user_id) && profile.role_code !== "guest";
-
-    if (isAuthenticated) {
-      try {
-        await request("favorite", "post", { product_id: item.id });
-        message.success(isStarred ? "Removed from Starred" : "Added to Starred!");
-        fetchStarredItems(); // Final sync
-      } catch (e) { message.error("Failed to sync Starred"); }
-    } else {
-      message.info(isStarred ? "Removed from local Starred" : "Added to local Starred!");
-    }
-  };
-
-  const addToCart = (item, customization, qty) => {
-    const cartId = `${item.id}-${customization}-${Date.now()}`;
-    setCart(prevCart => [...prevCart, {
-      ...item,
-      cartId,
-      quantity: qty,
-      totalPrice: item.price * qty,
-      basePrice: item.price,
-      customization: customization
-    }]);
-    message.success("Added to cart!");
-    setOptionsModalItem(null);
-  };
-
-  const handlePlaceOrder = async () => {
-    if (cart.length === 0) {
-      message.warning("Your basket is empty!");
-      return;
-    }
-
-    // 1. Rate Limiting Check (2 minutes cooldown to prevent spam)
-    const now = Date.now();
-    if (now - lastOrderTime < 120000) {
-      const remaining = Math.ceil((120000 - (now - lastOrderTime)) / 1000);
-      message.warning(`Please wait ${remaining} seconds before placing another order.`);
-      return;
-    }
-
-    // 2. GPS Verification (Verify user is physically present)
-    let coords = { lat: null, lng: null };
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
     setLoading(true);
     try {
-      const position = await new Promise((resolve, reject) => {
-        if (!navigator.geolocation) {
-          message.error("Location services are not supported by your browser.");
-          return reject();
-        }
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve(pos),
-          (err) => {
-            message.error("Please enable Location Services to verify your presence at the shop.");
-            reject(err);
-          },
-          { enableHighAccuracy: true, timeout: 5000 }
-        );
-      });
-      coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-    } catch (e) {
-      setLoading(false);
-      return;
-    }
-
-    const sub_total = cart.reduce((s, i) => s + (i.totalPrice || 0), 0);
-    const orderData = {
-      business_id: selectedShop?.business_id,
-      branch_id: selectedShop?.id,
-      customer_name: getGuestProfile()?.firstname || "Web Guest",
-      table_no: selectedTable || "Web",
-      sub_total: sub_total,
-      total_amount: sub_total,
-      payment_method: "Unpaid (Web QR)",
-      order_type: "dine_in",
-      lat: coords.lat, // Send Lat
-      lng: coords.lng, // Send Lng
-      cart_items: cart.map(item => ({
-        product_id: item.id,
-        qty: item.quantity,
-        price: item.basePrice,
-        note: item.customization || item.note || ""
-      })),
-      status: "unpaid" // Default status, staff must approve/bill
-    };
-
-    try {
-      const res = await request("order-web", "post", orderData);
-      if (res && res.success) {
-        const orderId = res.order_id;
-        setOrderId(orderId);
-        setLastOrderTime(Date.now()); // Update rate limit timer
-        localStorage.setItem('last_order_id', orderId);
-        message.success(t.order_success_msg);
-        setCart([]);
-        localStorage.setItem('coffee_pos_cart', JSON.stringify([]));
-        setIsCartOpen(false);
-      } else {
-        message.error(res?.message || t.order_failed_msg);
+      const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+      const sub = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+      const data = {
+        business_id: selectedShop.business_id, branch_id: selectedShop.id, table_no: selectedTable,
+        sub_total: sub, total_amount: sub, payment_method: "Unpaid (Web QR)", order_type: "dine_in",
+        lat: pos.coords.latitude, lng: pos.coords.longitude,
+        cart_items: cart.map(i => ({ product_id: i.id, qty: i.qty, price: i.price, note: i.custom }))
+      };
+      const res = await request("order-web", "post", data);
+      if (res?.success) {
+        localStorage.setItem('last_order_id', res.order_id);
+        setCart([]); setCartOpen(false); setTab("status"); message.success(t.order_success_msg);
       }
-    } catch (error) {
-      console.error("Order Error:", error);
-      message.error(`${t.order_status_update_failed || "Order failed"}. Please try again or contact our staff.`);
-    } finally {
-      setLoading(false);
-    }
+    } catch { message.error("GPS Verification Required"); } finally { setLoading(false); }
   };
 
-  const updateCartQty = (cartId, delta) => {
-    setCart(prevCart => prevCart.map(item => {
-      if (item.cartId === cartId) {
-        const newQty = Math.max(1, item.quantity + delta);
-        return { ...item, quantity: newQty, totalPrice: newQty * item.basePrice };
-      }
-      return item;
-    }));
-  };
-
-  const removeFromCart = (cartId) => {
-    setCart(prevCart => prevCart.filter(item => item.cartId !== cartId));
-    message.info("Item removed");
-  };
-
-  const params = new URLSearchParams(window.location.search);
-  const brInUrl = params.get('br') || params.get('branch');
-  const isMenuPath = window.location.pathname.includes("/menu");
-
-  if (splash) return <SplashView businessName={selectedShop?.business_name} />;
-
-  // Case 1: On landing page (/customer) or missing session on menu page
-  if (!isMenuPath || (!brInUrl && !selectedShop?.id)) {
-    return (
-      <NoBranchView
-        onSelectBranch={(shop) => {
-          setSelectedShop(shop);
-          // Only default to "Web" if no table was already detected from URL
-          const params = new URLSearchParams(window.location.search);
-          const tbl = params.get('tbl') || params.get('table');
-          if (!tbl && !selectedTable) {
-            setSelectedTable("Web");
-          }
-          navigate("/customer/menu");
-        }}
-      />
-    );
-  }
+  if (!selectedShop?.id) return <div className="app-container" style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:40, textAlign:"center" }}><div><h2 className="brand" style={{ fontSize:32, marginBottom:16 }}>Please Scan QR</h2><p>Please scan the QR code on your table to browse the menu.</p></div></div>;
 
   return (
-    <MainWrapper isMobile={isMobile}>
-      <div className={cn("flex flex-col h-full", !isMobile && "flex-row")}>
-        <div className="flex-1 flex flex-col h-full overflow-y-auto no-scrollbar relative min-h-screen">
-          <NavBar activeTab={activeTab} setActiveTab={setActiveTab} cartCount={cart.length} setIsCartOpen={setIsCartOpen} isMobile={isMobile} />
-
-          {/* Show banner if browsing without a real table */}
-          {(!selectedTable || selectedTable === "Web") && activeTab === 'home' && (
-            <BrowsingModeBanner t={t} />
-          )}
-
-          {loading ? (
-            <div key="loading" className="flex-1 flex items-center justify-center min-h-[60vh]">
-              <div className="w-10 h-10 border-4 border-gray-100 border-t-[#00B761] rounded-full animate-spin"></div>
-            </div>
-          ) : activeTab === 'profile' ? (
-            <div key="profile" className="flex-1 flex flex-col">
-              {profileSubView === 'history' ? (
-                <HistoryView history={orderHistory} onBack={() => setProfileSubView(null)} />
-              ) : profileSubView === 'settings' ? (
-                <SettingsView onBack={() => setProfileSubView(null)} />
-              ) : (
-                <ProfileView selectedShop={selectedShop} selectedTable={selectedTable} setActiveTab={setActiveTab} setSubView={setProfileSubView} onFetchHistory={fetchOrderHistory} />
-              )}
-            </div>
-          ) : activeTab === 'status' ? (
-            <div key="status" className="flex-1 flex flex-col">
-              <OrderTracker status={orderStatus} onBack={() => setActiveTab('home')} />
-            </div>
-          ) : activeTab === 'starred' ? (
-            <div key="starred" className="flex-1 flex flex-col">
-              <StarredView starredItems={starredItems} onToggleStar={onToggleStar} setOptionsModalItem={setOptionsModalItem} businessConfig={businessConfig} />
-            </div>
-          ) : currentCategory ? (
-            <div key={`cat-${currentCategory.id}`} className="flex-1 flex flex-col">
-              <CategoryView
-                currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
-                menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
-                searchText={searchText} setSearchText={setSearchText} setOptionsModalItem={setOptionsModalItem}
-                businessConfig={businessConfig}
-              />
-            </div>
-          ) : (
-            <div key="home" className="flex-1 flex flex-col">
-              <HomeView
-                selectedShop={selectedShop} categories={categories} currentCategory={currentCategory} setCurrentCategory={setCurrentCategory}
-                menuItems={menuItems} starredItems={starredItems} onToggleStar={onToggleStar}
-                cart={cart} setIsCartOpen={setIsCartOpen} searchText={searchText} setSearchText={setSearchText}
-                setOptionsModalItem={setOptionsModalItem} isMobile={isMobile} businessConfig={businessConfig}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Desktop Sidebar Cart */}
-        {!isMobile && activeTab === 'home' && (
-          <div className="w-[420px] border-l border-[#F1F2F6] bg-[#FDFBF7]/50 p-8 flex flex-col h-full sticky top-0 overflow-y-auto no-scrollbar">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="font-serif text-2xl font-black text-[#00B761]">Your Basket</h2>
-              <div className="bg-[#00B761] text-white text-[10px] font-black px-3 py-1.5 rounded-xl">{cart.length} ITEMS</div>
-            </div>
-
-            {cart.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-30">
-                <ShoppingCart size={48} strokeWidth={1} />
-                <p className="mt-4 font-black text-[10px] uppercase tracking-[0.2em]">Basket is currently empty</p>
-              </div>
-            ) : (
-              <div className="flex flex-col h-full">
-                <div className="space-y-4 mb-8">
-                  {cart.map((item) => (
-                    <div key={item.cartId} className="group bg-white p-5 rounded-[32px] border border-[#F1F2F6] flex gap-4 items-center hover:border-[#00B761]/30 transition-all shadow-sm">
-                      <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_150,c_fill,f_auto,q_auto")} className="w-16 h-16 rounded-2xl object-cover shadow-sm" />
-                      <div className="flex-1">
-                        <h4 className="font-bold text-sm text-[#00B761] line-clamp-1">{item.name}</h4>
-                        <p className="text-[9px] font-black text-amber-600 uppercase mb-3 tracking-tighter">{item.customization || "Standard Creation"}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-black text-[#00B761]">${item.totalPrice.toFixed(2)}</span>
-                          <div className="flex items-center gap-3 bg-[#FAF9F6] px-2.5 py-1.5 rounded-xl border border-[#F1F2F6]">
-                            <button onClick={() => updateCartQty(item.cartId, -1)} className="text-gray-400 hover:text-red-500 transition-colors"><Minus size={12} strokeWidth={3} /></button>
-                            <span className="text-xs font-black min-w-4 text-center">{item.quantity}</span>
-                            <button onClick={() => updateCartQty(item.cartId, 1)} className="text-gray-400 hover:text-[#00B761] transition-colors"><Plus size={12} strokeWidth={3} /></button>
-                          </div>
-                        </div>
-                      </div>
-                      <button onClick={() => removeFromCart(item.cartId)} className="p-2 text-gray-200 hover:text-red-500 transition-colors"><X size={14} strokeWidth={3} /></button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-auto pt-8 border-t border-dashed border-gray-200">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Subtotal</span>
-                    <span className="text-sm font-black text-gray-800">${(cart.reduce((s, i) => s + (i.totalPrice || 0), 0)).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-8">
-                    <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Service Fee</span>
-                    <span className="text-sm font-black text-green-600 uppercase">Complimentary</span>
-                  </div>
-                  <div className="flex justify-between items-end mb-8">
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-black text-[#00B761] uppercase tracking-widest">Grand Total</span>
-                      <span className="text-4xl font-black text-[#00B761] tracking-tighter">${(cart.reduce((s, i) => s + (i.totalPrice || 0), 0)).toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handlePlaceOrder}
-                    disabled={loading}
-                    className="w-full h-16 bg-[#00B761] text-white rounded-2xl font-black shadow-xl shadow-[#00B761]/20 hover:gold-gradient hover:shadow-[#00B761]/30 transition-all duration-500 active:scale-[0.98] gold-glow"
-                  >
-                    {loading ? 'PROCESSING...' : 'PLACE ORDER NOW'}
-                  </button>
+    <div className="app-container">
+      <style>{CSS}</style>
+      <div className="app-root">
+        <div className="main-col">
+          {/* Header & Navigation */}
+          {!isMobile && (
+            <div style={{ background:"#fff", borderBottom:"1px solid #EDE8DF", padding:"0 28px", display:"flex", alignItems:"center", justifyContent:"space-between", height:64, position:"sticky", top:0, zIndex:100 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:32 }}>
+                <span className="brand" style={{ fontSize:20, fontWeight:700, color:"#1C1C1C", textTransform:"uppercase" }}>{selectedShop.business_name || "AURORA"}</span>
+                <div style={{ display:"flex", gap:4 }}>
+                  {["home", "search", "status", "profile"].map(id => <button key={id} onClick={() => setTab(id)} style={{ padding:"6px 14px", borderRadius:10, fontSize:12, fontWeight:700, background: tab === id ? "#4A6741" : "transparent", color: tab === id ? "#fff" : "#8A8070", textTransform:"uppercase", border:"none", cursor:"pointer" }}>{id}</button>)}
                 </div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <Modal
-        open={!!optionsModalItem}
-        onCancel={() => setOptionsModalItem(null)}
-        footer={null}
-        centered
-        width={450}
-        className="premium-modal"
-        destroyOnClose
-      >
-        <div className="font-sans">
-          <div className="relative h-64 bg-gray-50 overflow-hidden">
-            {optionsModalItem?.image ? (
-              <img src={Config.optimizeCloudinary(Config.getFullImagePath(optionsModalItem.image), "w_600,c_fill,f_auto,q_auto")} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-7xl bg-gray-100">☕</div>
-            )}
-            <button
-              onClick={() => setOptionsModalItem(null)}
-              className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="p-8">
-            <div className="flex justify-between items-start mb-2">
-              <h2 className="text-2xl font-extrabold text-[#00B761]">{optionsModalItem?.name}</h2>
-              <span className="bg-amber-50 text-amber-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Most Loved</span>
+              <button onClick={() => setCartOpen(true)} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 18px", borderRadius:10, border:"1.5px solid #EDE8DF", background:"#FAFAF8", color:"#4A6741", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                <Ico.Bag s={18}/> Cart {cart.length > 0 && <span style={{ background:"#4A6741", color:"#fff", borderRadius:"50%", width:18, height:18, display:"flex", alignItems:"center", justifyContent:"center" }}>{cart.length}</span>}
+              </button>
             </div>
-            <p className="text-sm text-gray-400 mb-6 leading-relaxed">Customize your drink to perfection. Select your preferred options below.</p>
+          )}
 
-            <div className="space-y-6 mb-8 overflow-y-auto max-h-[40vh] pr-2 no-scrollbar">
-              {/* Temperature / Primary Moods */}
-              {moodsConfig.temp.length > 0 && (
-                <div>
-                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Temperature</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {moodsConfig.temp.map(m => {
-                      const label = typeof m === 'object' ? m.label : m;
-                      return (
-                        <button
-                          key={label}
-                          onClick={() => setSelectedTemp(label)}
-                          className={cn(
-                            "px-4 py-2 rounded-xl text-xs font-bold transition-all border",
-                            selectedTemp === label ? "bg-[#00B761] text-white border-[#00B761]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
-                          )}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
+          {/* VIEWS RENDERING */}
+          {tab === 'home' || tab === 'search' ? (
+            <div className="fade-in">
+              {/* Header Mobile (Only on Home) */}
+              {(isMobile && tab === 'home' && !q) && (
+                <div style={{ padding:"52px 16px 16px", textAlign:"center" }}>
+                  <h1 className="brand" style={{ fontSize:21, fontWeight:700, letterSpacing:".1em", color:"#1C1C1C", textTransform:"uppercase" }}>{selectedShop.business_name || "AURORA BREW CO."}</h1>
+                  <div style={{ fontSize:10, fontWeight:700, color:"#4A6741", marginTop:4 }}>TABLE {selectedTable}</div>
                 </div>
               )}
 
-              {/* Sugar Levels */}
-              {moodsConfig.sugar.length > 0 && (
-                <div>
-                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Sugar Level</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {moodsConfig.sugar.map(m => {
-                      const label = typeof m === 'object' ? m.label : m;
-                      return (
-                        <button
-                          key={label}
-                          onClick={() => setSelectedSugar(label)}
-                          className={cn(
-                            "px-3 py-2 rounded-xl text-xs font-bold transition-all border",
-                            selectedSugar === label ? "bg-[#00B761] text-white border-[#00B761]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
-                          )}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              {/* Search Bar */}
+              <div className="search-wrap" style={!isMobile ? { padding:"16px 20px", margin:0 } : (tab === 'search' ? { marginTop: 60 } : {})}>
+                <div className="search-icon"><Ico.Search s={18}/></div>
+                <input ref={searchInputRef} className="search-inp" type="text" placeholder="Search menu items..." value={q} onChange={e => setQ(e.target.value)} />
+                {q && <button onClick={() => setQ("")} style={{ position:"absolute", right:14, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#B0A496" }}><Ico.X s={14} /></button>}
+              </div>
 
-              {/* Other Options / Moods */}
-              {moodsConfig.other.length > 0 && (
-                <div>
-                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Options</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {moodsConfig.other.map(m => {
-                      const label = typeof m === 'object' ? m.label : m;
-                      return (
-                        <button
-                          key={label}
-                          onClick={() => setSelectedSugar(label)} // Reuse sugar state or create generic one
-                          className={cn(
-                            "px-3 py-2 rounded-xl text-xs font-bold transition-all border",
-                            selectedSugar === label ? "bg-[#00B761] text-white border-[#00B761]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
-                          )}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Sizes */}
-              {modalSizes.length > 0 && (
-                <div>
-                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Size Selection</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {modalSizes.map(s => (
-                      <button
-                        key={s.label}
-                        onClick={() => setSelectedSize(s.label)}
-                        className={cn(
-                          "px-4 py-3 rounded-2xl text-left transition-all border flex justify-between items-center",
-                          selectedSize === s.label ? "bg-[#00B761] text-white border-[#00B761]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
-                        )}
-                      >
-                        <span className="text-xs font-bold">{s.label}</span>
-                        <span className={cn("text-[10px]", selectedSize === s.label ? "text-white/70" : "text-gray-300")}>${parseFloat(s.price).toFixed(2)}</span>
+              {/* Categories (Only Home) */}
+              {(tab === 'home' && !q) && (
+                <div style={{ padding:"14px 0 6px", overflowX:"auto" }} className="noscroll">
+                  <div style={{ display:"flex", gap:10, paddingLeft:16, paddingRight:16 }}>
+                    {categories.map(c => (
+                      <button key={c.id} className={`cpill ${cat == c.id ? "on" : "off"}`} onClick={() => setCat(c.id)}>
+                        <div className="cpill-icon">{CAT_ICONS[c.name.toLowerCase()] || CAT_ICONS.all}</div>
+                        <span>{c.name}</span>
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Add-ons */}
-              {modalAddons.length > 0 && (
-                <div>
-                  <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-3">Extras / Add-ons</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {modalAddons.map(a => {
-                      const isSelected = selectedAddons.includes(a.label);
-                      return (
-                        <button
-                          key={a.label}
-                          onClick={() => {
-                            setSelectedAddons(prev =>
-                              isSelected ? prev.filter(l => l !== a.label) : [...prev, a.label]
-                            );
-                          }}
-                          className={cn(
-                            "px-4 py-3 rounded-2xl text-left transition-all border flex justify-between items-center",
-                            isSelected ? "bg-[#00B761] text-white border-[#00B761]" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
-                          )}
-                        >
-                          <span className="text-xs font-bold">{a.label}</span>
-                          <span className={cn("text-[10px]", isSelected ? "text-white/70" : "text-gray-300")}>+${parseFloat(a.price).toFixed(2)}</span>
-                        </button>
-                      );
-                    })}
+              {/* Product Grid */}
+              <div style={{ padding:"10px 14px", paddingBottom: isMobile ? 110 : 30 }}>
+                {q && <div style={{ padding: "0 4px 10px", fontSize: 11, fontWeight: 700, color: "#8A8070" }}>Found {products.length} results</div>}
+                {loading ? <div style={{ textAlign:"center", padding:40 }}><Spin /></div> : (
+                  <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fill, minmax(180px, 1fr))", gap:12 }}>
+                    {products.map(p => <ProductCard key={p.id} p={p} onOpen={setModalProd} starred={starred.has(p.id)} onStar={toggleStar} />)}
                   </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between mb-8 pb-8 border-b border-gray-50">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">{t.unit_price}</span>
-                <span className="text-2xl font-black text-[#00B761]">${parseFloat(optionsModalItem?.price || 0).toFixed(2)}</span>
-              </div>
-
-              <div className="flex items-center gap-4 bg-gray-50 p-2 rounded-2xl border border-gray-100">
-                <button
-                  onClick={() => setOptionQty(prev => Math.max(1, prev - 1))}
-                  className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-[#00B761] active:scale-90 transition-all"
-                >
-                  <Minus size={18} strokeWidth={3} />
-                </button>
-                <span className="text-lg font-bold w-6 text-center">{optionQty}</span>
-                <button
-                  onClick={() => setOptionQty(prev => prev + 1)}
-                  className="w-10 h-10 bg-[#00B761] text-white shadow-md shadow-[#00B761]/20 rounded-xl flex items-center justify-center active:scale-90 transition-all"
-                >
-                  <Plus size={18} strokeWidth={3} />
-                </button>
-              </div>
-            </div>
-
-            <button
-              className="w-full h-16 bg-[#00B761] text-white rounded-2xl font-black shadow-xl shadow-[#00B761]/20 hover:shadow-[#00B761]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-              onClick={() => {
-                const customization = [selectedTemp, selectedSugar, selectedSize, ...selectedAddons].filter(Boolean).join(", ");
-                addToCart({ ...optionsModalItem, price: currentPrice }, customization, optionQty);
-              }}
-            >
-              <ShoppingCart size={20} strokeWidth={2.5} />
-              <span>{t.add_to_basket} — ${(currentPrice * optionQty).toFixed(2)}</span>
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={isCartOpen}
-        onCancel={() => setIsCartOpen(false)}
-        afterClose={() => {
-          // If we just placed an order (cart is empty and we have a last_order_id), go to status
-          if (cart.length === 0 && localStorage.getItem('last_order_id')) {
-            setActiveTab('status');
-          }
-        }}
-        footer={null}
-        centered
-        width={500}
-        className="premium-modal"
-        destroyOnHidden={true}
-        title={
-          <div className="flex items-center gap-3">
-            <span className="w-2 h-2 bg-[#00B761] rounded-full"></span>
-            <span className="text-base font-black text-gray-800 uppercase tracking-tight">{t.order_checkout}</span>
-          </div>
-        }
-      >
-        <div className="p-6 font-sans">
-          {cart.length === 0 ? (
-            <div className="py-12 flex flex-col items-center">
-              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
-                <ShoppingCart size={32} className="text-gray-200" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-400">{t.basket_empty}</h3>
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 no-scrollbar mb-8">
-                {cart.map((item, idx) => (
-                  <div key={item.cartId} className="group flex justify-between items-center bg-white p-4 rounded-3xl border border-gray-100 hover:border-gray-200 transition-all">
-                    <div className="flex gap-4 items-center">
-                      <div className="relative">
-                        <img src={Config.optimizeCloudinary(Config.getFullImagePath(item.image), "w_150,c_fill,f_auto,q_auto")} className="w-14 h-14 rounded-2xl object-cover shadow-sm" />
-                        <span className="absolute -top-1 -right-1 bg-[#00B761] text-white text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
-                          {item.quantity}
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-sm text-gray-800">{item.name}</h4>
-                        {item.customization && <p className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">{item.customization}</p>}
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs font-black text-[#00B761]">${(item.basePrice || 0).toFixed(2)}</span>
-                          <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-lg">
-                            <button onClick={() => updateCartQty(item.cartId, -1)} className="text-gray-400 hover:text-red-500 transition-colors"><Minus size={12} strokeWidth={3} /></button>
-                            <span className="text-[10px] font-black w-4 text-center">{item.quantity}</span>
-                            <button onClick={() => updateCartQty(item.cartId, 1)} className="text-gray-400 hover:text-[#00B761] transition-colors"><Plus size={12} strokeWidth={3} /></button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                      <span className="font-black text-gray-800 text-sm">${(item.totalPrice || 0).toFixed(2)}</span>
-                      <button
-                        onClick={() => removeFromCart(item.cartId)}
-                        className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all"
-                      >
-                        <X size={14} strokeWidth={3} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-[#00B761]/[0.02] p-6 rounded-3xl border border-dashed border-gray-100">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.subtotal}</span>
-                  <span className="text-sm font-bold text-gray-600">${(cart.reduce((s, i) => s + (i.totalPrice || 0), 0)).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center mb-6">
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.service_fee}</span>
-                  <span className="text-sm font-bold text-green-600 uppercase">{t.free}</span>
-                </div>
-                <div className="flex justify-between items-end border-t border-gray-100 pt-4">
-                  <span className="text-sm font-black text-[#00B761]">{t.grand_total}</span>
-                  <span className="text-3xl font-black text-[#00B761]">${(cart.reduce((s, i) => s + (i.totalPrice || 0), 0)).toFixed(2)}</span>
-                </div>
-              </div>
-
-              <button
-                className={cn(
-                  "w-full mt-8 h-14 bg-[#00B761] text-white rounded-2xl font-black shadow-xl shadow-[#00B761]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3",
-                  loading && "opacity-70 cursor-not-allowed"
                 )}
-                onClick={handlePlaceOrder}
-                disabled={loading}
-              >
-                {loading ? t.placing_order : `${t.place_order_now} ☕`}
-              </button>
+              </div>
             </div>
-          )}
+          ) : tab === 'status' ? (
+            <div className="fade-in">
+              {/* Simple Status View */}
+              <div style={{ padding: "60px 20px", textAlign: "center" }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>☕</div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#1C1C1C" }}>Order Tracking</h2>
+                <p style={{ fontSize: 13, color: "#9A9083", marginTop: 8 }}>Coming soon: Real-time status of your espresso!</p>
+                <button onClick={() => setTab('home')} style={{ marginTop: 24, padding: "12px 24px", borderRadius: 100, background: "#4A6741", color: "#fff", border: "none", fontWeight: 700 }}>Back to Menu</button>
+              </div>
+            </div>
+          ) : tab === 'profile' ? (
+            <div className="fade-in">
+              {/* Simple Profile View */}
+              <div style={{ padding: "60px 20px" }}>
+                <div style={{ background: "#fff", borderRadius: 24, padding: 24, textAlign: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+                  <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#F5F0E8", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyCenter: "center", fontSize: 32 }}>👤</div>
+                  <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1C1C1C" }}>Guest Customer</h2>
+                  <p style={{ fontSize: 12, color: "#9A9083", fontWeight: 700, textTransform: "uppercase", marginTop: 4 }}>Table {selectedTable}</p>
+                </div>
+                <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+                  {["Order History", "Language", "Settings", "Help Center"].map(item => (
+                    <button key={item} style={{ background: "#fff", padding: 18, borderRadius: 18, textAlign: "left", fontSize: 14, fontWeight: 600, color: "#4B5563", border: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between" }}>
+                      {item} <span style={{ color: "#D1D5DB" }}>→</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
-      </Modal>
-    </MainWrapper>
+
+        {/* Sidebar Desktop */}
+        {!isMobile && (
+          <div className="sidebar">
+            <CartPanel cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeItem} onCheckout={handleCheckout} asSidebar />
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Nav Mobile */}
+      {isMobile && (
+        <div className="bnav">
+          <button className={`bnav-btn ${tab === 'home' ? "on" : ""}`} onClick={() => setTab('home')}><Ico.Home /></button>
+          <button className={`bnav-btn ${tab === 'search' ? "on" : ""}`} onClick={() => {
+            setTab('search');
+            setTimeout(() => searchInputRef.current?.focus(), 100);
+          }}><Ico.Search /></button>
+          <div className="bnav-cart-wrap">
+            <button className="bnav-cart" onClick={() => setCartOpen(true)}><Ico.Bag /></button>
+            {cart.length > 0 && <div className="cart-badge">{cart.length}</div>}
+          </div>
+          <button className={`bnav-btn ${tab === 'status' ? "on" : ""}`} onClick={() => setTab('status')}><Ico.Clock /></button>
+          <button className={`bnav-btn ${tab === 'profile' ? "on" : ""}`} onClick={() => setTab('profile')}><Ico.User /></button>
+        </div>
+      )}
+
+      {/* Modal & Overlays */}
+      {modalProd && <ProductModal p={modalProd} onClose={() => setModalProd(null)} onAdd={addToCart} isDesktop={!isMobile} />}
+      {cartOpen && isMobile && (
+        <div className="overlay fade-in" onClick={() => setCartOpen(false)}>
+          <div className="modal-sheet slide-up" onClick={e => e.stopPropagation()}>
+            <div className="drag-handle" />
+            <CartPanel cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeItem} onCheckout={handleCheckout} />
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
