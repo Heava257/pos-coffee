@@ -299,7 +299,12 @@ function PurchasePage() {
     const onScanBarcodeReceive = (barcode) => {
         if (!barcode) return;
         
-        // 🚀 Helper to clean non-digits
+        // 🚀 Prevent double scanning within 1.5 seconds
+        const now = Date.now();
+        if (state.lastScannedBarcode === barcode && (now - (state.lastScanTime || 0) < 1500)) {
+            return;
+        }
+
         const clean = (s) => String(s || "").replace(/\D/g, "");
         const scanned = clean(barcode);
         const details = [...state.purchaseDetails];
@@ -331,14 +336,17 @@ function PurchasePage() {
             if (state.batch_receive) details[finalIndex].batch_no = state.batch_receive;
             if (state.expiry_receive) details[finalIndex].expiry_date = state.expiry_receive;
 
-                setState(p => ({ 
-                    ...p, 
-                    purchaseDetails: details, 
-                    txt_barcode: "",
-                    scanFilterId: item.id, // 🚀 Filter by Item ID
-                    showCamera: false // 🚀 Auto-close camera on success
-                }));
-            message.success(`Received 1 unit of ${item.name}`);
+            setState(p => ({ 
+                ...p, 
+                purchaseDetails: details, 
+                txt_barcode: "",
+                scanFilterId: item.id, // 🚀 Filter by Item ID
+                showCamera: true, // 🚀 Keep camera OPEN for continuous scanning
+                lastScanTime: now,
+                lastScannedBarcode: barcode
+            }));
+            if (navigator.vibrate) navigator.vibrate(100);
+            message.success(`Found: ${item.name}`);
         } else {
             message.error(`Barcode [${scanned}] not found in this purchase order!`);
             setState(p => ({ ...p, txt_barcode: "" }));

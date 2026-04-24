@@ -4,6 +4,36 @@ export const setAcccessToken = (value) => {
 export const getAcccessToken = () => {
   return localStorage.getItem("access_token");
 };
+
+// --- GUEST SESSION (To avoid conflict with Staff) ---
+export const setGuestToken = (value) => {
+  localStorage.setItem("guest_access_token", value);
+};
+export const getGuestToken = () => {
+  return localStorage.getItem("guest_access_token");
+};
+export const setGuestProfile = (value) => {
+  localStorage.setItem("guest_profile", JSON.stringify(value));
+};
+export const getGuestProfile = () => {
+  try {
+    var profile = localStorage.getItem("guest_profile");
+    if (profile && profile !== "undefined") return JSON.parse(profile);
+    return null;
+  } catch (err) { return null; }
+};
+
+export const setGuestPermission = (array) => {
+  localStorage.setItem("guest_permission", JSON.stringify(array));
+};
+export const getGuestPermission = () => {
+  try {
+    var permission = localStorage.getItem("guest_permission");
+    if (permission) return JSON.parse(permission);
+    return null;
+  } catch (err) { return null; }
+};
+
 export const setProfile = (value) => {
   localStorage.setItem("profile", JSON.stringify(value));
 };

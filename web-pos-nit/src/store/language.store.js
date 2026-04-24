@@ -564,7 +564,15 @@ export const translations = {
         special_offer: "Special Offer",
         fresh_brewed: "Fresh Brewed",
         happiness: "Happiness",
-        hurry_up: "Hurry! Offer ends in 2 hours"
+        hurry_up: "Hurry! Offer ends in 2 hours",
+        browse_mode: "Browsing Mode",
+        browse_mode_msg: "You are currently viewing the menu. Please scan the QR code on your table to place an order.",
+        scan_to_order: "Scan QR to Order",
+        please_scan_msg: "Please scan the QR code at your table to start your coffee journey.",
+        select_branch_to_browse: "Or select a branch to browse",
+        staff_portal: "Staff Portal",
+        ready_to_serve: "Ready to Serve",
+        no_branch_selected: "No Branch Selected"
     },
     kh: {
         menu_group_main: "ប្រតិបត្តិការចម្បង",
@@ -1120,6 +1128,14 @@ export const translations = {
         special_offer: "ការផ្តល់ជូនពិសេស",
         fresh_brewed: "ឆុងថ្មីៗក្តៅៗ",
         happiness: "ក្តីសុខ",
-        hurry_up: "ប្រញាប់ឡើង! ការផ្តល់ជូនជិតផុតកំណត់ហើយ"
+        hurry_up: "ប្រញាប់ឡើង! ការផ្តល់ជូនជិតផុតកំណត់ហើយ",
+        browse_mode: "របៀបមើលមុខម្ហូប",
+        browse_mode_msg: "លោកអ្នកកំពុងស្ថិតក្នុងរបៀបមើលមុខម្ហូប។ សូមស្កែនកូដ QR នៅលើតុដើម្បីធ្វើការកុម្ម៉ង់។",
+        scan_to_order: "ស្កែន QR ដើម្បីកុម្ម៉ង់",
+        please_scan_msg: "សូមស្កែនកូដ QR នៅលើតុរបស់អ្នក ដើម្បីចាប់ផ្តើមជ្រើសរើសភេសជ្ជៈដែលអ្នកចូលចិត្ត។",
+        select_branch_to_browse: "ឬជ្រើសរើសសាខាដើម្បីមើលមុខទំនិញ",
+        staff_portal: "ច្រកចូលបុគ្គលិក",
+        ready_to_serve: "ត្រៀមខ្លួនបម្រើលោកអ្នក",
+        no_branch_selected: "មិនទាន់បានជ្រើសរើសសាខា"
     },
 };

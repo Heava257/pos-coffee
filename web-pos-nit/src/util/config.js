@@ -26,7 +26,7 @@ const getDynamicBaseUrl = () => {
       return `http://${host}:8080/api/`;
     }
   }
-  return "http://localhost:8080/api/";
+  return "http://127.0.0.1:8080/api/";
 };
 
 const formattedBaseUrl = getDynamicBaseUrl();

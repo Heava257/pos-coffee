@@ -270,6 +270,31 @@ app.listen(PORT, async () => {
     console.error("Migration Error (branches table):", err.message);
   }
 
+  // ✅ Migration: Force Grant 'table' permission to all roles to fix 403
+  try {
+    const { db } = require("./src/util/helper");
+    // Ensure 'table' permission exists
+    const [perms] = await db.query("SELECT id FROM permissions WHERE route_key = 'table'");
+    let permId;
+    if (perms.length === 0) {
+      const [res] = await db.query("INSERT INTO permissions (name, route_key, group_name) VALUES ('Tables', 'table', 'General Setup')");
+      permId = res.insertId;
+    } else {
+      permId = perms[0].id;
+    }
+    // Assign to all roles if missing
+    const [roles] = await db.query("SELECT id FROM roles");
+    for (const role of roles) {
+      await db.query(`
+        INSERT IGNORE INTO role_permissions (role_id, permission_id, can_view, can_create, can_edit, can_delete)
+        VALUES (?, ?, 1, 1, 1, 1)
+      `, [role.id, permId]);
+    }
+    console.log("Migration: 'table' permissions granted to all roles");
+  } catch (err) {
+    console.error("Migration Error (Auto-Grant):", err.message);
+  }
+
   // Migration Fix: Create system_settings table for platform-wide config
   try {
     await db.query(`

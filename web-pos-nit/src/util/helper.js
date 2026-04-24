@@ -1,12 +1,16 @@
 import axios from "axios";
 import { Config } from "./config";
 import { setServerSatus } from "../store/server.store";
-import { getAcccessToken, getPermission } from "../store/profile.store";
+import { getAcccessToken, getPermission, getGuestToken } from "../store/profile.store";
 import dayjs from "dayjs";
 import { message } from "antd";
 
 export const request = (url = "", method = "get", data = {}) => {
-  var access_token = getAcccessToken();
+  // 🧠 SMART TOKEN SELECTION: 
+  // If we are on a customer-facing route, use the guest token. 
+  // Otherwise, use the staff token.
+  const isCustomerPath = window.location.pathname.includes("/customer");
+  const access_token = isCustomerPath ? getGuestToken() : getAcccessToken();
 
   // Skip requests that require auth if token is missing (except login/register)
   const isAuthRoute =
@@ -16,6 +20,7 @@ export const request = (url = "", method = "get", data = {}) => {
     url.includes("auth/guest-access") ||
     url.includes("order-web") ||
     url.includes("business/public-config");
+    
   if (!isAuthRoute && (!access_token || access_token === "null" || access_token === "undefined")) {
     return Promise.resolve(false);
   }

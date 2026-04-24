@@ -11,8 +11,8 @@ import MainLayoutAuth from "./component/layout/MainLayoutAuth";
 import EmployeePage from "./page/employee/EmployeePage";
 import CoffeeMenuApp from "./page/CoffeeMenuApp/CoffeeMenuApp";
 import UserPage from "./page/user/UserPage";
- import CategoryPage from "./page/category/CategoryPage";
- import GlobalCategoryPage from "./page/category/GlobalCategoryPage";
+import CategoryPage from "./page/category/CategoryPage";
+import GlobalCategoryPage from "./page/category/GlobalCategoryPage";
 import RolePage from "./page/role/RolePage";
 import PermissionPage from "./page/role/PermissionPage";
 import PlanPage from "./page/plans/PlanPage";
@@ -51,8 +51,8 @@ const RootRedirect = () => {
   const profile = getProfile();
   if (!profile) return <Navigate to="/customer" replace />;
 
-  const isAdmin = profile.is_super_admin === 1 || 
-                ['Owner', 'Executive', 'Admin'].includes(profile.role_name);
+  const isAdmin = profile.is_super_admin === 1 ||
+    ['Owner', 'Executive', 'Admin'].includes(profile.role_name);
 
   if (isAdmin) {
     return <Navigate to="/dashboard" replace />;
@@ -73,6 +73,7 @@ function App() {
       <BrowserRouter basename="/">
         <Routes >
           <Route path="/customer" element={<CoffeeMenuApp />} />
+          <Route path="/customer/menu" element={<CoffeeMenuApp />} />
           <Route path="/scan" element={<ScanPage />} />
 
           <Route element={<MainLayout />}>

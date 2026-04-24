@@ -29,15 +29,16 @@ const ScanPage = () => {
             // Get guest token
             const res = await request(`auth/guest-access?biz=${biz}&branch=${branch}&table=${table || ""}`, "get");
             if (res && res.access_token) {
-                setAcccessToken(res.access_token);
-                setProfile(res.profile);
+                const { setGuestToken, setGuestProfile } = await import("../../store/profile.store");
+                setGuestToken(res.access_token);
+                setGuestProfile(res.profile);
                 if (res.permissions) {
-                    localStorage.setItem("permission", JSON.stringify(res.permissions));
+                    setGuestPermission(res.permissions);
                 }
                 // Ensure customer app sees this as a valid guest entry
                 localStorage.setItem("is_guest", "true");
                 // Redirect to the customer menu app
-                navigate("/customer");
+                navigate("/customer/menu");
             } else {
                 message.error(res?.message || "Failed to access shop menu.");
                 navigate("/");

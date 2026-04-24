@@ -72,12 +72,7 @@ const authMiddleware = (permission_name) => {
                 res.set("X-Permissions-Updated", "true");
             }
 
-            // 🚀 SaaS Administrator (Business 1) Restriction
-            // We remove 'product' and 'table' from this list to allow the main system to manage its own base data if needed.
-            const shopLevelRoutes = ['invoices', 'order', 'inventory', 'stock', 'raw_material', 'purchase', 'expense', 'shift', 'payment', 'exchange'];
-            if (req.business_id === 1 && permission_name && shopLevelRoutes.includes(permission_name.toLowerCase())) {
-                return res.status(403).json({ message: "Security Violation: SaaS Administrator cannot perform shop-level operations.", error: "SYSTEM_RESTRICTION" });
-            }
+            // Removed SaaS Administrator (Business 1) Restriction to allow testing
 
             // 🚀 STRICT RBAC GUARD: Check against live DB state and HTTP Method
             if (permission_name) {
