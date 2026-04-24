@@ -15,18 +15,18 @@
 
 // Helper to get consistent API URL
 const getDynamicBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl && !envUrl.includes("localhost")) return envUrl.endsWith('/') ? envUrl : `${envUrl}/`;
-
-  // Fallback for local/mobile testing
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    // If we're on a real IP or Railway, but backend is localhost, try to point to the same host on port 8080
-    if (host !== 'localhost' && (!envUrl || envUrl.includes('localhost'))) {
+    // Production Railway URL
+    if (host.includes("railway.app")) {
+      return "https://pos-coffee-api-production.up.railway.app/api/";
+    }
+    // Fallback for local testing with other devices on same network
+    if (host !== 'localhost' && host !== '127.0.0.1') {
       return `http://${host}:8080/api/`;
     }
   }
-  return "http://127.0.0.1:8080/api/";
+  return import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8080/api/";
 };
 
 const formattedBaseUrl = getDynamicBaseUrl();
