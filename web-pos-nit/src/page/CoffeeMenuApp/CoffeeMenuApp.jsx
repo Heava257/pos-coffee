@@ -1130,7 +1130,7 @@ const CoffeeMenuApp = () => {
       }
     } catch (error) {
       console.error("Order Error:", error);
-      message.error(t.order_status_update_failed);
+      message.error(`${t.order_status_update_failed || "Order failed"}. Please try again or contact our staff.`);
     } finally {
       setLoading(false);
     }
