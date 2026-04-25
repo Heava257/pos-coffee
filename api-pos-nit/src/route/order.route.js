@@ -21,4 +21,5 @@ module.exports = (app) => {
     app.post("/api/order/create", authMiddleware("order"), create); // Alias for convenience
     app.put("/api/order-status", authMiddleware("order"), updateStatus);
     app.put("/api/order-kitchen-status", authMiddleware("order"), updateKitchenStatus);
+    app.put("/api/order", authMiddleware("order"), require("../controller/order.controller").update);
 };

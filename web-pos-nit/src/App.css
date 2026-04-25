@@ -828,3 +828,26 @@ body {
   text-overflow: ellipsis;
   vertical-align: middle;
 }
+
+/* Print Utilities */
+.print-only {
+  position: absolute !important;
+  left: -10000px !important;
+  top: 0 !important;
+  width: 80mm !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+@media print {
+  .print-only {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 80mm !important;
+  }
+}

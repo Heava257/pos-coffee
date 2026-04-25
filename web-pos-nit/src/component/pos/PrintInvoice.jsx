@@ -1,10 +1,10 @@
 import React from 'react';
 import dayjs from 'dayjs';
 
-const PrintInvoice = ({ 
-  cart_list = [], 
-  objSummary = {}, 
-  branchInfo = {}, 
+const PrintInvoice = ({
+  cart_list = [],
+  objSummary = {},
+  branchInfo = {},
   layoutType = "coffee",
   exchangeRate = 4000
 }) => {
@@ -82,7 +82,14 @@ const PrintInvoice = ({
             <span>SUBTOTAL:</span>
             <span>${formatNum(subTotalUSD)}</span>
           </div>
-          
+
+          {objSummary?.save_discount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#000' }}>
+              <span>PROMOTION / DISCOUNT:</span>
+              <span>-${formatNum(objSummary.save_discount)}</span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '900', marginTop: '1px' }}>
             <span>TOTAL ($):</span>
             <span>${formatNum(totalUSD)}</span>
@@ -121,8 +128,8 @@ const PrintInvoice = ({
         {/* Footer */}
         <div style={{ borderTop: '1px solid #000', margin: '4mm 0 2mm 0' }}></div>
         <div style={{ textAlign: 'center', fontSize: '12px' }}>
-           <div style={{ fontWeight: 'bold' }}>THANK YOU! SEE YOU AGAIN!</div>
-           <div style={{ fontSize: '11px', marginTop: '1px', opacity: 0.8 }}>សូមអរគុណ! សូមអញ្ជើញមកម្តងទៀត!</div>
+          <div style={{ fontWeight: 'bold' }}>THANK YOU! SEE YOU AGAIN!</div>
+          <div style={{ fontSize: '11px', marginTop: '1px', opacity: 0.8 }}>សូមអរគុណ! សូមអញ្ជើញមកម្តងទៀត!</div>
         </div>
       </div>
     </div>

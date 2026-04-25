@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import dayjs from 'dayjs';
 import { request } from '../../util/helper';
 import { Config } from '../../util/config';
 import { getProfile, getGuestProfile } from '../../store/profile.store';
 import { message, Spin } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage, translations } from '../../store/language.store';
 
 /* ──────────────────────────────────────────────────────────────
@@ -40,17 +41,18 @@ const CSS = `
 .cpill span{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 
 /* ── BOTTOM NAV ── */
-.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;
+.bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.01) !important;
+  backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(30px);
   display:flex;align-items:center;justify-content:space-around;
-  padding:10px 20px 28px;border-top:1px solid #EDE8DF;z-index:200}
-.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;
-  background:none;color:#B0A496;padding:6px 10px;transition:color .16s; border:none; outline:none;}
-.bnav-btn.on{color:#4A6741}
+  height:48px; padding:0 20px 2px; border-top:1px solid rgba(237,232,223,0.1);z-index:200}
+.bnav-btn{background:none;color:#B0A496;padding:4px;transition:all .16s; border:none; outline:none; display:flex; align-items:center; justify-content:center;}
+.bnav-btn.on{color:#4A6741; transform:translateY(-2px)}
 .bnav-cart-wrap{position:relative}
-.bnav-cart{width:52px;height:52px;border-radius:15px;background:#1C1C1C;
-  color:#fff;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 14px rgba(0,0,0,.22);transition:transform .14s; border:none;}
-.bnav-cart:active{transform:scale(.93)}
+.bnav-cart{width:48px;height:48px;background:none;
+  color:#B0A496;display:flex;align-items:center;justify-content:center;
+  transition:all .14s; border:none;}
+.bnav-cart.on{color:#4A6741}
+.bnav-cart:active{transform:scale(.9)}
 .cart-badge{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;
   background:#E8534A;color:#fff;font-size:10px;font-weight:700;
   display:flex;align-items:center;justify-content:center;border:2px solid #fff}
@@ -120,12 +122,32 @@ const Ico = {
   Leaf: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-8 2"/></svg>,
   Pin: ()=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
   Check: ()=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  Heart: ({s=20})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+  HeartFilled: ({s=20})=><svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
 };
 
 /* ──────────────────────────────────────────────────────────────
    HELPERS
 ────────────────────────────────────────────────────────────── */
-const fmt = (n) => `$${parseFloat(n || 0).toFixed(2)}`;
+const fmt = (v) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
+
+const getDiscountPercent = (item, selectedShop) => {
+  let dPercent = 0;
+  const dScope = selectedShop?.discount_scope || 'all';
+  const globalD = Number(selectedShop?.global_discount || 0);
+
+  if (globalD > 0) {
+    if (dScope === 'all') dPercent = globalD;
+    else if (dScope === 'category') {
+      const dCats = Array.isArray(selectedShop.discount_applied_categories) ? selectedShop.discount_applied_categories : [];
+      if (dCats.map(String).includes(String(item.category_id))) dPercent = globalD;
+    } else if (dScope === 'product') {
+      const dProds = Array.isArray(selectedShop.discount_applied_products) ? selectedShop.discount_applied_products : [];
+      if (dProds.map(String).includes(String(item.id))) dPercent = globalD;
+    }
+  }
+  return dPercent;
+};
 const uid = () => Math.random().toString(36).slice(2);
 const CAT_ICONS = { all:"⊞", coffee:"☕", tea:"🍵", pastry:"🥐", cold:"🧋" };
 const TEMP_ICON  = { Hot:"☕", Iced:"🧊", Frappe:"🥤" };
@@ -152,33 +174,137 @@ const Row = ({ label, val, valColor }) => (
    COMPONENTS
 ────────────────────────────────────────────────────────────── */
 
-function ProductCard({ p, onOpen, starred, onStar }) {
+function ProductCard({ p, onOpen, starred, onStar, selectedShop }) {
+  const isOnPromo = isProductOnPromo(p, selectedShop);
+
   return (
-    <div className="pcard" onClick={() => onOpen(p)}>
-      <div style={{ position:"relative", padding:"8px 8px 0" }}>
-        <img className="pcard-img" src={Config.getFullImagePath(p.image)} alt={p.name}
-          style={{ borderRadius:14 }}
-          onError={e=>{ e.target.style.background="#EDE8DF"; e.target.src=""; }} />
-        <button
-          onClick={e=>{ e.stopPropagation(); onStar(p); }}
-          style={{ position:"absolute", top:16, right:16, width:30, height:30,
-            borderRadius:"50%", background:"rgba(255,255,255,.9)",
-            backdropFilter:"blur(4px)", display:"flex", alignItems:"center",
-            justifyContent:"center", color: starred ? "#C8952A" : "#B0A496",
-            boxShadow:"0 2px 8px rgba(0,0,0,.1)", transition:"color .16s", border:"none", outline:"none" }}>
-          <Ico.Star f={starred} />
-        </button>
+    <div 
+      onClick={() => onOpen(p)}
+      style={{ 
+        display: "flex", 
+        gap: 16, 
+        padding: 14, 
+        background: "rgba(255, 255, 255, 0.8)", 
+        backdropFilter: "blur(10px)",
+        borderRadius: 24, 
+        marginBottom: 16,
+        boxShadow: "0 8px 20px rgba(0,0,0,0.03)",
+        cursor: "pointer",
+        position: "relative",
+        border: "1px solid rgba(255, 255, 255, 0.5)",
+        transition: "transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+      }}
+      onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.98)"}
+      onMouseUp={(e) => e.currentTarget.style.transform = "scale(1)"}
+    >
+      {/* Percentage Discount Badge (Floating Gradient) */}
+      {(() => {
+        const dP = getDiscountPercent(p, selectedShop);
+        if (dP > 0) {
+          return (
+            <div style={{ 
+              position: "absolute", top: -8, right: 16, 
+              background: "linear-gradient(135deg, #FF6B6B 0%, #E8534A 100%)", 
+              color: "#fff", 
+              padding: "4px 12px", borderRadius: "10px 10px 10px 0", 
+              fontSize: 11, fontWeight: 900, zIndex: 20,
+              boxShadow: "0 4px 12px rgba(232, 83, 74, 0.3)",
+              border: "2px solid #fff"
+            }}>
+              OFF {dP}%
+            </div>
+          );
+        }
+        return null;
+      })()}
+
+      {/* Promo Badge (BOGO) - Sleek Pill style */}
+      {isOnPromo && (
+        <div style={{ 
+          position: "absolute", bottom: -8, left: 16, 
+          background: "linear-gradient(135deg, #C8952A 0%, #A67C21 100%)", 
+          color: "#fff", 
+          padding: "4px 12px", borderRadius: 100, fontSize: 10, fontWeight: 800, zIndex: 20,
+          boxShadow: "0 4px 10px rgba(200, 149, 42, 0.3)", textTransform: "uppercase",
+          border: "2px solid #fff",
+          display: "flex", alignItems: "center", gap: 4
+        }}>
+          <Ico.Check /> {p.promo_text || selectedShop?.global_bogo_text || "Buy 1 Get 1"}
+        </div>
+      )}
+
+      {/* Thumbnail with soft inner shadow */}
+      <div style={{ width: 90, height: 90, borderRadius: 20, overflow: "hidden", flexShrink: 0, background: "#F5F0E8", boxShadow: "inset 0 0 10px rgba(0,0,0,0.05)" }}>
+        <img 
+          src={Config.getFullImagePath(p.image)} 
+          style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.5s" }} 
+          alt={p.name}
+          onMouseOver={(e) => e.target.style.transform = "scale(1.1)"}
+          onMouseOut={(e) => e.target.style.transform = "scale(1)"}
+          onError={e => { e.target.style.opacity = 0.5; }}
+        />
       </div>
-      <div style={{ padding:"10px 12px 12px", display:"flex", flexDirection:"column", gap:3 }}>
-        <div style={{ fontSize:13, fontWeight:700, color:"#1C1C1C", lineHeight:1.3 }}>{p.name}</div>
-        <div style={{ fontSize:11, color:"#9A9083", fontWeight:500, lineClamp: 1, overflow:"hidden" }}>{p.category_name || "Drink"}</div>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:8 }}>
-          <span style={{ fontSize:16, fontWeight:700, color:"#1C1C1C" }}>{fmt(p.price)}</span>
-          <div style={{ width:30, height:30, borderRadius:"50%", background:"#4A6741",
-              color:"#fff", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <Ico.Plus s={15} />
+
+      {/* Info Section */}
+      <div style={{ flex: 1, minWidth: 0, paddingTop: 4 }}>
+        <h3 style={{ fontSize: 17, fontWeight: 800, color: "#1C1C1C", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", letterSpacing: "-0.3px" }}>
+          {p.name}
+        </h3>
+        <p style={{ fontSize: 12, color: "#9A9083", marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.5, opacity: 0.8 }}>
+          {p.description || "Premium quality coffee brewed to perfection."}
+        </p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {getDiscountPercent(p, selectedShop) > 0 && (
+              <span style={{ fontSize: 11, color: "#BBB3A8", textDecoration: "line-through", marginBottom: -2 }}>
+                {fmt(p.price)}
+              </span>
+            )}
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#4A6741" }}>
+              {fmt(p.price * (1 - getDiscountPercent(p, selectedShop) / 100))}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(200, 149, 42, 0.08)", padding: "4px 10px", borderRadius: 100 }}>
+            <Ico.Star f={true} s={11} style={{ color: "#C8952A" }} />
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#C8952A" }}>{p.rating || (4.5 + (p.id % 5) * 0.1).toFixed(1)}</span>
           </div>
         </div>
+      </div>
+
+      {/* Actions (Heart & Add) */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onStar(p); }}
+          style={{ 
+            background: "none", 
+            border: "none", 
+            padding: 4, 
+            cursor: "pointer",
+            color: starred ? "#E8534A" : "#DDD8CF",
+            transition: "transform 0.2s"
+          }}
+        >
+          {starred ? <Ico.HeartFilled s={24} /> : <Ico.Heart s={24} />}
+        </button>
+        
+        <button 
+          onClick={(e) => { e.stopPropagation(); onOpen(p); }}
+          style={{ 
+            width: 32, 
+            height: 32, 
+            borderRadius: "50%", 
+            background: "#4A6741", 
+            color: "#fff", 
+            border: "none", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            boxShadow: "0 2px 6px rgba(74, 103, 65, 0.3)",
+            cursor: "pointer"
+          }}
+        >
+          <Ico.Plus s={18} />
+        </button>
       </div>
     </div>
   );
@@ -314,8 +440,55 @@ function ProductModal({ p, onClose, onAdd, isDesktop }) {
   );
 }
 
-function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar }) {
+const isProductOnPromo = (item, selectedShop) => {
+  if (!selectedShop?.global_bogo_active) return item.is_promo || item.promotion_id;
+
+  // CHECK DATES: Automatically disable if outside of range
+  const today = new Date().toISOString().split('T')[0];
+  const startDate = selectedShop.promo_start_date ? selectedShop.promo_start_date.split('T')[0] : null;
+  const endDate = selectedShop.promo_end_date ? selectedShop.promo_end_date.split('T')[0] : null;
+
+  const isDateValid = (!startDate || today >= startDate) && (!endDate || today <= endDate);
+  if (!isDateValid) return item.is_promo || item.promotion_id;
+
+  const scope = selectedShop.promo_scope || 'all';
+  if (scope === 'all') return true;
+
+  const appliedCats = Array.isArray(selectedShop.promo_applied_categories) ? selectedShop.promo_applied_categories : [];
+  const appliedProds = Array.isArray(selectedShop.promo_applied_products) ? selectedShop.promo_applied_products : [];
+
+  if (scope === 'category') {
+    return appliedCats.map(String).includes(String(item.category_id));
+  }
+  if (scope === 'product') {
+    return appliedProds.map(String).includes(String(item.id));
+  }
+  return item.is_promo || item.promotion_id;
+};
+
+function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar, selectedShop }) {
   const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+  
+  // Calculate Discounts & BOGO Savings
+  const savings = cart.reduce((total_savings, item) => {
+    const dPercent = getDiscountPercent(item, selectedShop);
+    const discAmount = (item.price * item.qty * dPercent) / 100;
+    const discountedPrice = item.price * (1 - dPercent / 100);
+
+    const isBOGO = isProductOnPromo(item, selectedShop);
+    let bogoSavings = 0;
+    if (isBOGO) {
+      const buyQty = Number(selectedShop?.promo_buy_qty || 1);
+      const getQty = Number(selectedShop?.promo_get_qty || 1);
+      const totalPerSet = buyQty + getQty;
+      const numSets = Math.floor(item.qty / totalPerSet);
+      const freeItems = numSets * getQty;
+      bogoSavings = freeItems * discountedPrice;
+    }
+    return total_savings + discAmount + bogoSavings;
+  }, 0);
+
+  const final_total = total - savings;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
       <div style={{ padding:"20px 20px 14px", borderBottom:"1px solid #EDE8DF", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -329,6 +502,11 @@ function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar }) {
             <img src={Config.getFullImagePath(item.image)} alt={item.name} style={{ width:54, height:54, borderRadius:12, objectFit:"cover" }} />
             <div style={{ flex:1 }}>
               <div style={{ fontSize:13, fontWeight:700, color:"#1C1C1C" }}>{item.name}</div>
+              {isProductOnPromo(item, selectedShop) && (
+                <div style={{ display: "inline-flex", color: "#059669", fontSize: 10, fontWeight: 700, marginTop: 1 }}>
+                  • {selectedShop?.global_bogo_text || "Buy 1 Get 1 Applied"}
+                </div>
+              )}
               <div style={{ fontSize:11, color:"#9A9083", marginBottom:4 }}>{item.custom}</div>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                 <span style={{ fontSize:14, fontWeight:700, color:"#4A6741" }}>{fmt(item.price * item.qty)}</span>
@@ -347,11 +525,12 @@ function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar }) {
         <div style={{ padding:"16px 18px 28px", borderTop:"1px solid #EDE8DF", background:"#fff" }}>
           <div style={{ background:"#FAFAF8", borderRadius:14, padding:"12px 14px", marginBottom:14 }}>
             <Row label="Subtotal" val={fmt(total)} />
+            {savings > 0 && <Row label="Promotion" val={`-${fmt(savings)}`} valColor="#e85d5d" />}
             <Row label="Service" val="Free" valColor="#4A6741" />
             <div style={{ height:1, background:"#EDE8DF", margin:"10px 0" }}/>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
               <span style={{ fontSize:14, fontWeight:700, color:"#4A6741" }}>Total</span>
-              <span style={{ fontSize:24, fontWeight:800, color:"#4A6741" }}>{fmt(total)}</span>
+              <span style={{ fontSize:24, fontWeight:800, color:"#4A6741" }}>{fmt(final_total)}</span>
             </div>
           </div>
           <button onClick={onCheckout} style={{ width:"100%", height:54, borderRadius:100, background:"#4A6741", color:"#fff", fontSize:15, fontWeight:700, border:"none" }}>Place Order ☕</button>
@@ -367,6 +546,7 @@ function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar }) {
 
 const CoffeeMenuApp = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { lang } = useLanguage();
   const t = translations[lang] || translations.en;
 
@@ -449,14 +629,37 @@ const CoffeeMenuApp = () => {
       const fetchData = async () => {
         setLoading(true);
         try {
-          const [cRes, pRes] = await Promise.all([request("category", "get"), request("product", "get", { branch_id: selectedShop.id })]);
+          const [cRes, pRes] = await Promise.all([
+            request("category", "get"), 
+            request("product", "get", { branch_id: selectedShop.id })
+          ]);
           if (cRes?.list) setCategories([{ id: "all", name: "All" }, ...cRes.list]);
-          if (pRes?.list) setMenuItems(pRes.list);
+          if (pRes?.list) {
+            // Sort by rating (calculated or actual) descending
+            const withRating = pRes.list.map(p => ({
+              ...p,
+              _rating: p.rating || (4.7 + (p.id % 4) * 0.1)
+            }));
+            const sorted = withRating.sort((a, b) => b._rating - a._rating);
+            setMenuItems(sorted);
+          }
         } catch { } finally { setLoading(false); }
       };
       fetchData();
     }
   }, [selectedShop?.id]);
+
+  useEffect(() => {
+    const bizId = searchParams.get('biz');
+    if (bizId) {
+      request("business/public-config", "get", { business_id: bizId })
+        .then(res => {
+          if (res?.config) {
+            setSelectedShop(prev => ({ ...prev, ...res.config }));
+          }
+        }).catch(() => {});
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     localStorage.setItem('coffee_pos_cart', JSON.stringify(cart));
@@ -530,8 +733,14 @@ const CoffeeMenuApp = () => {
         .ani-cook { animation: cook 0.5s infinite ease-in-out; }
         .ani-celebrate { animation: celebrate 1s infinite ease-in-out; }
       `}</style>
-      <div className="app-root">
-        <div className="main-col">
+      <div className="app-root" style={{ minHeight: "100vh" }}>
+        <div className="main-col" style={{ 
+          minHeight: "100vh", 
+          overflowY: "auto", 
+          WebkitOverflowScrolling: "touch",
+          display: "flex",
+          flexDirection: "column"
+        }}>
           {/* Header & Navigation */}
           {!isMobile && (
             <div style={{ background:"#fff", borderBottom:"1px solid #EDE8DF", padding:"0 28px", display:"flex", alignItems:"center", justifyContent:"space-between", height:64, position:"sticky", top:0, zIndex:100 }}>
@@ -552,27 +761,83 @@ const CoffeeMenuApp = () => {
             <div className="fade-in">
               {/* Header Mobile (Only on Home) */}
               {(isMobile && tab === 'home' && !q) && (
-                <div style={{ padding:"52px 16px 16px", textAlign:"center" }}>
-                  <h1 className="brand" style={{ fontSize:21, fontWeight:700, letterSpacing:".1em", color:"#1C1C1C", textTransform:"uppercase" }}>{selectedShop.business_name || "AURORA BREW CO."}</h1>
-                  <div style={{ fontSize:10, fontWeight:700, color:"#4A6741", marginTop:4 }}>TABLE {selectedTable}</div>
+                <div style={{ padding:"16px 16px 6px", textAlign:"center" }}>
+                  <h1 className="brand" style={{ fontSize:18, fontWeight:700, letterSpacing:".05em", color:"#1C1C1C", textTransform:"uppercase" }}>{selectedShop.name || "AURORA BREW CO."}</h1>
+                  <div style={{ fontSize:9, fontWeight:800, color:"#4A6741", marginTop:1, letterSpacing:1 }}>TABLE {selectedTable}</div>
                 </div>
               )}
 
-              {/* Search Bar */}
-              <div className="search-wrap" style={!isMobile ? { padding:"16px 20px", margin:0 } : (tab === 'search' ? { marginTop: 60 } : {})}>
-                <div className="search-icon"><Ico.Search s={18}/></div>
-                <input ref={searchInputRef} className="search-inp" type="text" placeholder="Search menu items..." value={q} onChange={e => setQ(e.target.value)} />
-                {q && <button onClick={() => setQ("")} style={{ position:"absolute", right:14, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#B0A496" }}><Ico.X s={14} /></button>}
-              </div>
+              {/* Promo Banner */}
+              {tab === 'home' && !q && selectedShop?.promo_is_active && (
+                <div style={{ padding: "0 20px 24px" }}>
+                  <div style={{ 
+                    position: "relative",
+                    height: 200,
+                    borderRadius: 32,
+                    overflow: "hidden",
+                    boxShadow: "0 15px 35px rgba(0,0,0,0.15)",
+                    background: "#1C1C1C"
+                  }}>
+                    <img 
+                      src={selectedShop?.promo_image || "https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=1000&auto=format&fit=crop"} 
+                      style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.6 }} 
+                    />
+                    <div style={{ 
+                      position: "absolute", top: 0, left: 0, right: 0, bottom: 0, 
+                      background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)",
+                      padding: 24, display: "flex", flexDirection: "column", justifyContent: "flex-end"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                        <span style={{ 
+                          background: selectedShop?.promo_tag_color || "#C8952A", 
+                          color: "#fff", padding: "4px 12px", borderRadius: 100, 
+                          fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: 1
+                        }}>
+                          {selectedShop?.promo_tag || "SPECIAL OFFER"}
+                        </span>
+                        {(selectedShop?.promo_start_date || selectedShop?.promo_end_date) && (
+                          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: 600 }}>
+                             {dayjs(selectedShop.promo_start_date).format('DD/MM')} - {dayjs(selectedShop.promo_end_date).format('DD/MM')}
+                          </span>
+                        )}
+                      </div>
+                      <h1 style={{ color: "#fff", fontSize: 24, fontWeight: 900, marginBottom: 4, letterSpacing: "-0.5px", lineHeight: 1.1 }}>
+                        {selectedShop?.promo_title || "Premium Coffee Selection"}
+                      </h1>
+                      <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, lineHeight: 1.4 }}>
+                        {selectedShop?.promo_desc || "Experience the finest brew from our selected beans."}
+                      </p>
+                      {selectedShop.promo_discount && (
+                        <div style={{ marginTop: 12, display: "inline-flex", background: "#FEF3C7", color: "#92400E", padding: "4px 12px", borderRadius: 8, fontSize: 12, fontWeight: 800 }}>
+                          {selectedShop.promo_discount} OFF
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Search Bar (Only on Search Tab) */}
+              {tab === 'search' && (
+                <div className="search-wrap" style={!isMobile ? { padding:"12px 20px", margin:0 } : { marginTop: 60, margin: "0 16px 12px" }}>
+                  <div className="search-icon"><Ico.Search s={18}/></div>
+                  <input ref={searchInputRef} className="search-inp" type="text" placeholder="Search menu items..." value={q} onChange={e => setQ(e.target.value)} />
+                  {q && <button onClick={() => setQ("")} style={{ position:"absolute", right:14, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#B0A496" }}><Ico.X s={14} /></button>}
+                </div>
+              )}
 
               {/* Categories (Only Home) */}
               {(tab === 'home' && !q) && (
-                <div style={{ padding:"14px 0 6px", overflowX:"auto" }} className="noscroll">
+                <div style={{ padding:"4px 0 2px", overflowX:"auto" }} className="noscroll">
                   <div style={{ display:"flex", gap:10, paddingLeft:16, paddingRight:16 }}>
                     {categories.map(c => (
-                      <button key={c.id} className={`cpill ${cat == c.id ? "on" : "off"}`} onClick={() => setCat(c.id)}>
-                        <div className="cpill-icon">{CAT_ICONS[c.name.toLowerCase()] || CAT_ICONS.all}</div>
-                        <span>{c.name}</span>
+                      <button 
+                        key={c.id} 
+                        className={`cpill ${cat == c.id ? "on" : "off"}`} 
+                        onClick={() => setCat(c.id)}
+                        style={{ padding: "10px 20px", height: "auto" }}
+                      >
+                        <span style={{ fontSize: 11 }}>{c.name}</span>
                       </button>
                     ))}
                   </div>
@@ -580,11 +845,16 @@ const CoffeeMenuApp = () => {
               )}
 
               {/* Product Grid */}
-              <div style={{ padding:"10px 14px", paddingBottom: isMobile ? 110 : 30 }}>
+              <div style={{ padding:"4px 14px", paddingBottom: isMobile ? 0 : 30 }}>
                 {q && <div style={{ padding: "0 4px 10px", fontSize: 11, fontWeight: 700, color: "#8A8070" }}>Found {products.length} results</div>}
                 {loading ? <div style={{ textAlign:"center", padding:40 }}><Spin /></div> : (
-                  <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fill, minmax(180px, 1fr))", gap:12 }}>
-                    {products.map(p => <ProductCard key={p.id} p={p} onOpen={setModalProd} starred={starred.has(p.id)} onStar={toggleStar} />)}
+                  <div style={{ display:"flex", flexDirection: "column", gap: 0 }}>
+                    {products.map(p => (
+                      <ProductCard 
+                        key={p.id} p={p} starred={starred.has(p.id)} onStar={toggleStar} onOpen={setModalProd} 
+                        selectedShop={selectedShop}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
@@ -705,7 +975,7 @@ const CoffeeMenuApp = () => {
         {/* Sidebar Desktop */}
         {!isMobile && (
           <div className="sidebar">
-            <CartPanel cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeItem} onCheckout={handleCheckout} asSidebar />
+            <CartPanel cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeItem} onCheckout={handleCheckout} asSidebar selectedShop={selectedShop} />
           </div>
         )}
       </div>
@@ -719,8 +989,10 @@ const CoffeeMenuApp = () => {
             setTimeout(() => searchInputRef.current?.focus(), 100);
           }}><Ico.Search /></button>
           <div className="bnav-cart-wrap">
-            <button className="bnav-cart" onClick={() => setCartOpen(true)}><Ico.Bag /></button>
-            {cart.length > 0 && <div className="cart-badge">{cart.length}</div>}
+            <button className={`bnav-cart ${cart.length > 0 ? "on" : ""}`} onClick={() => setCartOpen(true)}>
+              <Ico.Bag />
+              {cart.length > 0 && <div className="cart-badge">{cart.length}</div>}
+            </button>
           </div>
           <button className={`bnav-btn ${tab === 'status' ? "on" : ""}`} onClick={() => setTab('status')}><Ico.Clock /></button>
           <button className={`bnav-btn ${tab === 'profile' ? "on" : ""}`} onClick={() => setTab('profile')}><Ico.User /></button>
@@ -733,7 +1005,10 @@ const CoffeeMenuApp = () => {
         <div className="overlay fade-in" onClick={() => setCartOpen(false)}>
           <div className="modal-sheet slide-up" onClick={e => e.stopPropagation()}>
             <div className="drag-handle" />
-            <CartPanel cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeItem} onCheckout={handleCheckout} />
+            <CartPanel 
+              cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeItem} onCheckout={handleCheckout} 
+              selectedShop={selectedShop}
+            />
           </div>
         </div>
       )}

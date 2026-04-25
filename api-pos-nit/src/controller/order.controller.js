@@ -510,3 +510,95 @@ exports.createWebOrder = async (req, res) => {
         connection.release();
     }
 };
+// 9. Update Existing Order (Add items / Change totals)
+exports.update = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const { business_id, branch_id } = req;
+        const user_id = req.user_id || null;
+        const {
+            order_id,
+            customer_name,
+            table_no,
+            sub_total,
+            total_amount,
+            total_paid,
+            payment_method,
+            order_type,
+            cart_items,
+            status,
+            shift_id
+        } = req.body;
+
+        if (!order_id) {
+            return res.status(400).json({ message: "Order ID is required" });
+        }
+
+        console.log("Updating order:", { order_id, total_amount, itemsCount: cart_items?.length });
+
+        // A. Update Main Order Record
+        await conn.query(
+            `UPDATE orders SET 
+                customer_name = ?, table_no = ?, sub_total = ?, total_amount = ?, 
+                total_paid = ?, payment_method = ?, order_type = ?, status = ?, 
+                shift_id = COALESCE(?, shift_id)
+             WHERE id = ? AND business_id = ?`,
+            [customer_name, table_no, Number(sub_total), Number(total_amount), Number(total_paid), payment_method, order_type, status || 'completed', shift_id, order_id, business_id]
+        );
+
+        // B. Update Details & Stock
+        // For simplicity and safety in this specific version: 
+        // We fetch existing details, compare, and only insert/deduct for NEW items or increased quantities.
+        // But the most common request is "I added items to a table".
+        
+        // 1. Get existing items for this order
+        const [existingItems] = await conn.query("SELECT product_id, qty FROM order_details WHERE order_id = ?", [order_id]);
+        
+        for (const item of cart_items) {
+            const existing = existingItems.find(ei => ei.product_id === item.product_id);
+            const newQty = Number(item.qty) || 0;
+            const oldQty = existing ? Number(existing.qty) : 0;
+            const diffQty = newQty - oldQty;
+
+            if (diffQty > 0) {
+                // It's a new item or increased quantity -> Deduct Stock and Insert/Update Detail
+                if (existing) {
+                    await conn.query("UPDATE order_details SET qty = ?, price = ?, note = ? WHERE order_id = ? AND product_id = ?", 
+                        [newQty, Number(item.price), item.note || "", order_id, item.product_id]);
+                } else {
+                    await conn.query("INSERT INTO order_details (order_id, product_id, qty, price, note) VALUES (?, ?, ?, ?, ?)",
+                        [order_id, item.product_id, newQty, Number(item.price), item.note || ""]);
+                }
+
+                // 🚀 DEDUCT STOCK for the DIFFERENCE
+                const deductStock = async (productId, qtyMultiplier, itemName, sizeLabel = null) => {
+                    const [recipe] = await conn.query(
+                        "SELECT raw_material_id, qty as quantity, waste_factor FROM recipe_detail WHERE product_id = ? AND business_id = ? AND (size_label = ? OR size_label IS NULL OR size_label = '')",
+                        [productId, business_id, sizeLabel]
+                    );
+
+                    if (recipe.length > 0) {
+                        for (const ingredient of recipe) {
+                            const deductQty = (ingredient.quantity * qtyMultiplier) * (1 + (ingredient.waste_factor || 0) / 100);
+                            await conn.query("UPDATE raw_material SET qty = qty - ? WHERE id = ?", [deductQty, ingredient.raw_material_id]);
+                        }
+                    } else {
+                        await conn.query("UPDATE branch_products SET stock_qty = stock_qty - ? WHERE product_id = ? AND branch_id = ?", [qtyMultiplier, productId, branch_id]);
+                    }
+                };
+
+                const sizeLabel = item.options?.size || null;
+                await deductStock(item.product_id, diffQty, item.name || 'Update', sizeLabel);
+            }
+        }
+
+        await conn.commit();
+        res.json({ success: true, message: "Order Updated Successfully!" });
+    } catch (error) {
+        await conn.rollback();
+        logError("order.update", error, res);
+    } finally {
+        conn.release();
+    }
+};

@@ -12,7 +12,8 @@ export const getPrinterSettings = () => {
         label_first: true,     // Default: Label before Invoice
         auto_print: true,      // Default: Auto print after checkout
         invoice_enabled: true, // Default: Print Invoice
-        label_enabled: true    // Default: Print Label
+        label_enabled: true,   // Default: Print Label
+        kitchen_enabled: true  // Default: Print Kitchen Ticket
     };
 };
 

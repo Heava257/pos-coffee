@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import dayjs from "dayjs";
 import {
     Form,
     Input,
@@ -15,7 +16,8 @@ import {
     Select,
     Avatar,
     Tabs,
-    Switch
+    Switch,
+    DatePicker
 } from "antd";
 import CategoryManageTab from "./CategoryManageTab";
 import {
@@ -36,7 +38,10 @@ import {
     CheckCircleOutlined,
     InfoCircleOutlined,
     MobileOutlined,
-    NotificationOutlined
+    NotificationOutlined,
+    ShoppingOutlined,
+    GiftOutlined,
+    CalendarOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
@@ -56,6 +61,8 @@ const SettingsPage = () => {
     const [imageFile, setImageFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [testLoading, setTestLoading] = useState(false);
+    const [categories, setCategories] = useState([]);
+    const [products, setProducts] = useState([]);
     const { setProfile } = useProfileStore();
     const { refreshRate } = useExchangeRate();
 
@@ -69,7 +76,17 @@ const SettingsPage = () => {
             const res = await request("settings", "get");
             if (res && res.settings) {
                 setSettings(res.settings);
-                form.setFieldsValue(res.settings);
+                
+                const parsedSettings = {
+                    ...res.settings,
+                    promo_applied_categories: res.settings.promo_applied_categories ? JSON.parse(res.settings.promo_applied_categories) : [],
+                    promo_applied_products: res.settings.promo_applied_products ? JSON.parse(res.settings.promo_applied_products) : [],
+                    discount_applied_categories: res.settings.discount_applied_categories ? JSON.parse(res.settings.discount_applied_categories) : [],
+                    discount_applied_products: res.settings.discount_applied_products ? JSON.parse(res.settings.discount_applied_products) : [],
+                    promo_start_date: res.settings.promo_start_date ? dayjs(res.settings.promo_start_date) : null,
+                    promo_end_date: res.settings.promo_end_date ? dayjs(res.settings.promo_end_date) : null,
+                };
+                form.setFieldsValue(parsedSettings);
 
                 // NEW: Sync local profile store whenever settings are fetched
                 const currentProfile = getProfile() || {};
@@ -90,6 +107,15 @@ const SettingsPage = () => {
                     setPreviewUrl(null);
                 }
             }
+
+            // Also fetch categories and products for the selective promo UI
+            const [catRes, prodRes] = await Promise.all([
+                request("category", "get"),
+                request("product", "get", { is_list_all: 1 })
+            ]);
+            if (catRes && catRes.list) setCategories(catRes.list);
+            if (prodRes && prodRes.list) setProducts(prodRes.list);
+
         } catch (error) {
             console.error("Fetch settings error:", error);
             message.error("Failed to load business settings");
@@ -104,7 +130,21 @@ const SettingsPage = () => {
             const formData = new FormData();
             Object.keys(values).forEach(key => {
                 if (values[key] !== undefined && values[key] !== null) {
-                    formData.append(key, values[key]);
+                    let val = values[key];
+                    // Handle dayjs objects
+                    if (val && typeof val === 'object' && val.format) {
+                        val = val.format("YYYY-MM-DD");
+                    }
+                    // Handle arrays (JSON stringify)
+                    else if (Array.isArray(val)) {
+                        // Special check for specific keys to ensure they are stringified even if empty
+                        val = JSON.stringify(val);
+                    }
+                    // Handle booleans (Convert true/false to 1/0 for MySQL)
+                    else if (typeof val === 'boolean') {
+                        val = val ? 1 : 0;
+                    }
+                    formData.append(key, val);
                 }
             });
 
@@ -203,22 +243,22 @@ const SettingsPage = () => {
                     <Text type="secondary">Manage your business information and Point of Sale configurations</Text>
                 </div>
 
-                <Tabs
-                    defaultActiveKey="general"
-                    size="large"
-                    style={{ background: "#fff", borderRadius: 20, padding: "0 24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
-                    items={[
-                        {
-                            key: "general",
-                            label: <span><SettingOutlined /> ការកំណត់ / General</span>,
-                            children: (
-                                <Form
-                                    form={form}
-                                    layout="vertical"
-                                    onFinish={onFinish}
-                                    requiredMark={false}
-                                    style={{ paddingTop: 24, paddingBottom: 24 }}
-                                >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={onFinish}
+                    requiredMark={false}
+                >
+                    <Tabs
+                        defaultActiveKey="general"
+                        size="large"
+                        style={{ background: "#fff", borderRadius: 20, padding: "0 24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                        items={[
+                            {
+                                key: "general",
+                                label: <span><SettingOutlined /> ការកំណត់ / General</span>,
+                                children: (
+                                    <div style={{ paddingTop: 24, paddingBottom: 24 }}>
                                     <Row gutter={24}>
                                         {/* Left Column: Business Info */}
                                         <Col xs={24} lg={16}>
@@ -450,9 +490,9 @@ const SettingsPage = () => {
                                             </Button>
                                         </Col>
                                     </Row>
-                                </Form>
-                            )
-                        },
+                                    </div>
+                                )
+                            },
                         {
                             key: "printer",
                             label: <span><PrinterOutlined /> ម៉ាស៊ីនព្រីន / Printer</span>,
@@ -460,17 +500,12 @@ const SettingsPage = () => {
                                 <PrinterSettingsTab />
                             )
                         },
-                        {
-                            key: "promo",
-                            label: <span><MobileOutlined /> Mobile App & Promo</span>,
-                            children: (
-                                <div style={{ paddingTop: 24, paddingBottom: 24 }}>
-                                    <Form
-                                        form={form}
-                                        layout="vertical"
-                                        onFinish={onFinish}
-                                        requiredMark={false}
-                                    >
+                            {
+                                key: "promo",
+                                label: <span><MobileOutlined /> Mobile App & Promo</span>,
+                                forceRender: true, // Ensure fields are registered
+                                children: (
+                                    <div style={{ paddingTop: 24, paddingBottom: 24 }}>
                                         <Row gutter={24}>
                                             <Col xs={24} md={16}>
                                                 <Card 
@@ -483,62 +518,218 @@ const SettingsPage = () => {
                                                     }
                                                 >
                                                     <Row gutter={16}>
-                                                        <Col xs={24} md={12}>
-                                                            <Form.Item label="Promotion Title (Khmer/English)" name="promo_title" tooltip="e.g. ឆុងថ្មីៗក្តៅៗ or Fresh Brewed">
-                                                                <Input placeholder="Enter primary title" size="large" />
+                                                        <Col xs={24} md={16}>
+                                                            <Form.Item label="Promo Tag (e.g. Grand Opening)" name="promo_tag" tooltip="This text appears in a small pill above the title">
+                                                                <Input placeholder="Limited Offer, Hot Deal, etc." size="large" />
                                                             </Form.Item>
                                                         </Col>
-                                                        <Col xs={24} md={12}>
-                                                            <Form.Item label="Subtitle/Discount Text" name="promo_subtitle" tooltip="e.g. ក្តីសុខ or Happiness">
-                                                                <Input placeholder="Enter subtitle" size="large" />
+                                                        <Col xs={24} md={8}>
+                                                            <Form.Item label="Tag Color" name="promo_tag_color">
+                                                                <Select size="large">
+                                                                    <Option value="#C8952A">Gold / មាស</Option>
+                                                                    <Option value="#E8534A">Red / ក្រហម</Option>
+                                                                    <Option value="#4A6741">Green / បៃតង</Option>
+                                                                    <Option value="#1D4ED8">Blue / ខៀវ</Option>
+                                                                </Select>
                                                             </Form.Item>
                                                         </Col>
-                                                        <Col xs={24} md={12}>
-                                                            <Form.Item label="Discount Amount" name="promo_discount" tooltip="e.g. 50% or Buy 1 Get 1">
-                                                                <Input prefix={<PercentageOutlined />} placeholder="50%" size="large" />
+                                                        <Col xs={24}>
+                                                            <Form.Item label="Banner Title" name="promo_title" tooltip="Main big text on the banner">
+                                                                <Input placeholder="e.g. BUY 1 GET 1 FREE" size="large" />
                                                             </Form.Item>
                                                         </Col>
-                                                        <Col xs={24} md={24}>
-                                                            <Form.Item label="Banner Image URL" name="promo_image" tooltip="Provide a high-quality image URL for the banner">
+                                                        <Col xs={24}>
+                                                            <Form.Item label="Banner Description" name="promo_desc" tooltip="Short explanation of the offer">
+                                                                <Input.TextArea placeholder="e.g. Celebrate our new branch with a free drink!" rows={2} />
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24}>
+                                                            <Form.Item label="Banner Background Image URL" name="promo_image" tooltip="Provide a high-quality image URL for the background">
                                                                 <Input prefix={<GlobalOutlined />} placeholder="https://images.unsplash.com..." size="large" />
                                                             </Form.Item>
                                                         </Col>
                                                         <Col xs={24}>
-                                                            <Divider orientation="left" style={{ borderTopColor: '#f0ede6', color: '#c0a060' }}>
-                                                                <PercentageOutlined /> Store-wide Global Discount
-                                                            </Divider>
-                                                            <div style={{ background: '#fffbe6', padding: '16px', borderRadius: 12, border: '1px solid #ffe58f' }}>
-                                                                <Row gutter={16} align="middle">
-                                                                    <Col xs={24} md={16}>
-                                                                        <Text strong>Apply Discount to ALL Products</Text>
-                                                                        <br />
-                                                                        <Text type="secondary" style={{ fontSize: 12 }}>
-                                                                            This will automatically discount every item in your shop by the specified percentage. 
-                                                                            Individual product discounts will be overridden.
-                                                                        </Text>
-                                                                    </Col>
+                                                            <Card 
+                                                                title={<Space><PercentageOutlined style={{ color: '#fa8c16' }} /> <span style={{ color: '#fa8c16' }}>Global Percentage Discount</span></Space>}
+                                                                style={{ marginBottom: 24, borderRadius: 16, border: '1px solid #ffd591', boxShadow: '0 4px 12px rgba(250,140,22,0.05)' }}
+                                                                headStyle={{ borderBottom: '1px solid #ffd591', background: '#fffbe6' }}
+                                                            >
+                                                                <Row gutter={[24, 16]}>
                                                                     <Col xs={24} md={8}>
-                                                                        <Form.Item name="global_discount" noStyle>
+                                                                        <Form.Item label={<b>DISCOUNT PERCENT (%)</b>} name="global_discount">
                                                                             <InputNumber 
+                                                                                style={{ width: '100%', borderRadius: 8 }} 
+                                                                                size="large" 
                                                                                 min={0} max={100} 
                                                                                 formatter={value => `${value}%`}
                                                                                 parser={value => value.replace('%', '')}
-                                                                                style={{ width: '100%' }} size="large" 
                                                                             />
                                                                         </Form.Item>
                                                                     </Col>
+                                                                    <Col xs={24} md={16}>
+                                                                        <Form.Item label={<b>DISCOUNT SCOPE</b>} name="discount_scope">
+                                                                            <Select size="large" style={{ borderRadius: 8 }}>
+                                                                                <Option value="all">Apply to ALL Products</Option>
+                                                                                <Option value="category">Specific Categories Only</Option>
+                                                                                <Option value="product">Selected Products Only</Option>
+                                                                            </Select>
+                                                                        </Form.Item>
+                                                                    </Col>
+
+                                                                    {/* Conditional Selectors for Discount */}
+                                                                    <Form.Item noStyle shouldUpdate={(prev, curr) => prev.discount_scope !== curr.discount_scope}>
+                                                                        {({ getFieldValue }) => {
+                                                                            const scope = getFieldValue('discount_scope');
+                                                                            if (scope === 'category') {
+                                                                                return (
+                                                                                    <Col xs={24}>
+                                                                                        <Form.Item label={<b>SELECT CATEGORIES</b>} name="discount_applied_categories">
+                                                                                            <Select mode="multiple" placeholder="Choose categories" size="large" options={categories.map(c => ({ label: c.name, value: c.id }))} />
+                                                                                        </Form.Item>
+                                                                                    </Col>
+                                                                                );
+                                                                            }
+                                                                            if (scope === 'product') {
+                                                                                return (
+                                                                                    <Col xs={24}>
+                                                                                        <Form.Item label={<b>SELECT PRODUCTS</b>} name="discount_applied_products">
+                                                                                            <Select mode="multiple" placeholder="Choose products" size="large" options={products.map(p => ({ label: p.name, value: p.id }))} />
+                                                                                        </Form.Item>
+                                                                                    </Col>
+                                                                                );
+                                                                            }
+                                                                            return null;
+                                                                        }}
+                                                                    </Form.Item>
                                                                 </Row>
-                                                            </div>
+                                                            </Card>
                                                         </Col>
                                                     </Row>
+                                                </Card>
                                                     
+                                                    <div style={{ 
+                                                        marginTop: 20, 
+                                                        padding: '24px', 
+                                                        background: '#f0f7ff', 
+                                                        border: '1px solid #bae7ff', 
+                                                        borderRadius: 16, 
+                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                                                    }}>
+                                                        <Row gutter={[16, 24]}>
+                                                            <Col xs={24} md={16}>
+                                                                <Space direction="vertical" size={0}>
+                                                                    <Title level={5} style={{ color: '#0050b3', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                                        <NotificationOutlined /> Promotion Engine: "Buy X Get Y"
+                                                                    </Title>
+                                                                    <Text type="secondary" style={{ fontSize: 13 }}>
+                                                                        Automate discounts and BOGO badges across your menu.
+                                                                    </Text>
+                                                                </Space>
+                                                            </Col>
+                                                            <Col xs={24} md={8} style={{ textAlign: 'right' }}>
+                                                                <Space style={{ background: '#fff', padding: '6px 12px', borderRadius: 10, border: '1px solid #d9d9d9' }}>
+                                                                    <Text strong style={{ fontSize: 11, color: '#595959' }}>ENABLED:</Text>
+                                                                    <Form.Item name="global_bogo_active" valuePropName="checked" noStyle>
+                                                                        <Switch checkedChildren="ON" unCheckedChildren="OFF" size="small" />
+                                                                    </Form.Item>
+                                                                </Space>
+                                                            </Col>
+                                                            
+                                                            <Col xs={24}>
+                                                                <div style={{ background: '#fff', padding: '20px', borderRadius: 12, border: '1px solid #e6f7ff' }}>
+                                                                    <Row gutter={[24, 16]}>
+                                                                        <Col xs={12} md={6}>
+                                                                            <Form.Item 
+                                                                                label={<Space><ShoppingOutlined style={{ color: '#1890ff' }} /> <b>BUY (ទិញ)</b></Space>} 
+                                                                                name="promo_buy_qty"
+                                                                            >
+                                                                                <InputNumber min={1} size="large" style={{ width: '100%', borderRadius: 8 }} />
+                                                                            </Form.Item>
+                                                                        </Col>
+                                                                        <Col xs={12} md={6}>
+                                                                            <Form.Item 
+                                                                                label={<Space><GiftOutlined style={{ color: '#52c41a' }} /> <b>FREE (ថែម)</b></Space>} 
+                                                                                name="promo_get_qty"
+                                                                            >
+                                                                                <InputNumber min={1} size="large" style={{ width: '100%', borderRadius: 8 }} />
+                                                                            </Form.Item>
+                                                                        </Col>
+                                                                        <Col xs={24} md={12}>
+                                                                            <Form.Item label={<b>PROMOTION SCOPE</b>} name="promo_scope">
+                                                                                <Select size="large" style={{ width: '100%' }}>
+                                                                                    <Option value="all">Apply to ALL Products</Option>
+                                                                                    <Option value="category">Specific Categories Only</Option>
+                                                                                    <Option value="product">Selected Products Only</Option>
+                                                                                </Select>
+                                                                            </Form.Item>
+                                                                        </Col>
+                                                                        <Col xs={24} md={12}>
+                                                                            <Form.Item label={<b>BADGE TEXT</b>} name="global_bogo_text" tooltip="e.g. Buy 1 Get 1 Free">
+                                                                                <Input placeholder="ទិញ១ ថែម១" size="large" style={{ borderRadius: 8 }} />
+                                                                            </Form.Item>
+                                                                        </Col>
+
+                                                                        <Col xs={24} md={12}>
+                                                                            <Form.Item label={<Space><CalendarOutlined /> <b>START DATE</b></Space>} name="promo_start_date">
+                                                                                <DatePicker style={{ width: '100%', borderRadius: 8 }} size="large" placeholder="Start Date" />
+                                                                            </Form.Item>
+                                                                        </Col>
+                                                                        <Col xs={24} md={12}>
+                                                                            <Form.Item label={<Space><CalendarOutlined /> <b>END DATE</b></Space>} name="promo_end_date">
+                                                                                <DatePicker style={{ width: '100%', borderRadius: 8 }} size="large" placeholder="End Date" />
+                                                                            </Form.Item>
+                                                                        </Col>
+                                                                        
+                                                                        {/* Conditional Multi-Select for Categories */}
+                                                                        <Form.Item 
+                                                                            noStyle 
+                                                                            shouldUpdate={(prev, curr) => prev.promo_scope !== curr.promo_scope}
+                                                                        >
+                                                                            {({ getFieldValue }) => getFieldValue('promo_scope') === 'category' ? (
+                                                                                <Col xs={24}>
+                                                                                    <Form.Item label={<b>SELECT TARGET CATEGORIES</b>} name="promo_applied_categories">
+                                                                                        <Select 
+                                                                                            mode="multiple" 
+                                                                                            placeholder="Choose categories" 
+                                                                                            size="large"
+                                                                                            style={{ width: '100%' }}
+                                                                                            options={categories.map(c => ({ label: c.name, value: c.id }))}
+                                                                                        />
+                                                                                    </Form.Item>
+                                                                                </Col>
+                                                                            ) : null}
+                                                                        </Form.Item>
+
+                                                                        {/* Conditional Multi-Select for Products */}
+                                                                        <Form.Item 
+                                                                            noStyle 
+                                                                            shouldUpdate={(prev, curr) => prev.promo_scope !== curr.promo_scope}
+                                                                        >
+                                                                            {({ getFieldValue }) => getFieldValue('promo_scope') === 'product' ? (
+                                                                                <Col xs={24}>
+                                                                                    <Form.Item label={<b>SELECT TARGET PRODUCTS</b>} name="promo_applied_products">
+                                                                                        <Select 
+                                                                                            mode="multiple" 
+                                                                                            placeholder="Choose products" 
+                                                                                            size="large"
+                                                                                            style={{ width: '100%' }}
+                                                                                            options={products.map(p => ({ label: p.name, value: p.id }))}
+                                                                                        />
+                                                                                    </Form.Item>
+                                                                                </Col>
+                                                                            ) : null}
+                                                                        </Form.Item>
+                                                                    </Row>
+                                                                </div>
+                                                            </Col>
+                                                        </Row>
+                                                    </div>
                                                     <div style={{ marginTop: 16, padding: '16px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 12 }}>
                                                         <Title level={5} style={{ color: '#52c41a' }}><RocketOutlined /> Preview Guide</Title>
                                                         <Text size="small" type="secondary">
-                                                            This promotion will appear on the guest app home screen. Ensure the image is horizontal for best results.
+                                                            These promotions will appear on the guest app home screen and product list.
                                                         </Text>
                                                     </div>
-                                                </Card>
                                             </Col>
                                             <Col xs={24} md={8}>
                                                 <Card 
@@ -564,21 +755,21 @@ const SettingsPage = () => {
                                                 </Card>
                                             </Col>
                                         </Row>
-                                    </Form>
-                                </div>
-                            )
-                        },
-                        isAdmin && {
-                            key: "categories",
-                            label: <span>🏷️ Category / ប្រភេទទំនិញ</span>,
-                            children: (
-                                <div style={{ paddingTop: 24, paddingBottom: 24 }}>
-                                    <CategoryManageTab targetBusinessId={profile?.business_id} />
-                                </div>
-                            )
-                        }
-                    ].filter(Boolean)}
-                />
+                                    </div>
+                                )
+                            },
+                            isAdmin && {
+                                key: "categories",
+                                label: <span>🏷️ Category / ប្រភេទទំនិញ</span>,
+                                children: (
+                                    <div style={{ paddingTop: 24, paddingBottom: 24 }}>
+                                        <CategoryManageTab targetBusinessId={profile?.business_id} />
+                                    </div>
+                                )
+                            }
+                        ].filter(Boolean)}
+                    />
+                </Form>
             </div>
         </div>
     );
@@ -665,6 +856,15 @@ const PrinterSettingsTab = () => {
                                     <Switch
                                         checked={pSettings.label_enabled}
                                         onChange={(val) => updateSetting('label_enabled', val)}
+                                    />
+                                </div>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
+                                    <Text>Enable Kitchen Ticket (Order Send)</Text>
+                                    <Switch
+                                        checked={pSettings.kitchen_enabled}
+                                        onChange={(val) => updateSetting('kitchen_enabled', val)}
                                     />
                                 </div>
                             </Col>

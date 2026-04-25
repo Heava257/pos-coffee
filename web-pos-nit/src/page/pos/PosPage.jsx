@@ -20,6 +20,7 @@ import {
   List,
   Space,
   Popconfirm,
+  ConfigProvider,
 } from "antd";
 import { request, isPermission } from "../../util/helper";
 import { configStore } from "../../store/configStore";
@@ -54,6 +55,7 @@ import {
   TableOutlined,
   PushpinOutlined,
   TagOutlined,
+  SyncOutlined,
 } from "@ant-design/icons";
 import { FiSettings } from "react-icons/fi";
 import { useUIStore } from "../../store/uiStore";
@@ -89,10 +91,9 @@ const safeParse = (str) => {
 
 // ─── Color Palette ──────────────────────────────────────────────────────────
 const COLORS = {
-  bg: "#f4f1eb",          // warm cream background
-  darkGreen: "#1e4a2d",   // primary dark green
-  midGreen: "#2d6a42",    // medium green
-  accentGreen: "#3a7d52", // accent green
+  darkGreen: "#1e4a2d",
+  midGreen: "#2d6a42",
+  accentGreen: "#3a7d52",
   white: "#ffffff",
   cardBg: "#ffffff",
   textPrimary: "#1a2e1a",
@@ -100,6 +101,8 @@ const COLORS = {
   softBorder: "#e8e3d8",
   redBadge: "#e85d5d",
   softGold: "#f7c06a",
+  gold: "#C8952A",
+  bg: "#FDFCFB",
 };
 
 // ─── Default categories ──────────────────────────────────────────────────────
@@ -150,9 +153,40 @@ function getCategoryEmoji(catId) {
 }
 
 // ─── Mini ProductCard (Memoized for performance) ──────────────────────────────
-const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
+const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
   const [hovered, setHovered] = useState(false);
   const [isImgLoaded, setIsImgLoaded] = useState(false);
+
+  // Helper to determine if product is on BOGO promotion
+  const isProductOnPromo = useCallback((product) => {
+    if (!selectedShop?.global_bogo_active) return product.is_promo || product.promotion_id;
+
+    // CHECK DATES: Automatically disable if outside of range
+    const today = new Date().toISOString().split('T')[0];
+    const startDate = selectedShop.promo_start_date ? selectedShop.promo_start_date.split('T')[0] : null;
+    const endDate = selectedShop.promo_end_date ? selectedShop.promo_end_date.split('T')[0] : null;
+
+    const isDateValid = (!startDate || today >= startDate) && (!endDate || today <= endDate);
+    if (!isDateValid) return product.is_promo || product.promotion_id;
+
+    const scope = selectedShop.promo_scope || 'all';
+    if (scope === 'all') return true;
+
+    // Ensure we have arrays and check both number/string for compatibility
+    const appliedCats = Array.isArray(selectedShop.promo_applied_categories) ? selectedShop.promo_applied_categories : [];
+    const appliedProds = Array.isArray(selectedShop.promo_applied_products) ? selectedShop.promo_applied_products : [];
+
+    if (scope === 'category') {
+      return appliedCats.map(String).includes(String(product.category_id));
+    }
+    if (scope === 'product') {
+      return appliedProds.map(String).includes(String(product.id));
+    }
+    return product.is_promo || product.promotion_id;
+  }, [selectedShop]);
+
+  const isOnPromo = isProductOnPromo(product);
+
   const productSizes = safeParse(product.sizes) || [];
   const productMoods = safeParse(product.moods) || [];
   const basePrice = Number(product.unit_price || product.price || product.actual_price || 0);
@@ -200,184 +234,238 @@ const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
         }} />
       )}
 
-      {/* discount badge */}
-      {product.discount > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            top: 10,
-            left: 10,
-            background: "#e85d5d",
-            color: "#fff",
-            borderRadius: "6px",
-            padding: "2px 6px",
-            fontSize: "10px",
-            fontWeight: 800,
-            zIndex: 2,
-          }}
-        >
-          -{product.discount}%
-        </div>
-      )}
+      {/* price calculation logic */}
+      {(() => {
+        let dPercent = 0;
+        const dScope = selectedShop?.discount_scope || 'all';
+        const globalD = Number(selectedShop?.global_discount || 0);
 
-      {/* cart badge */}
-      {cartQty > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            background: COLORS.darkGreen,
-            color: "#fff",
-            borderRadius: "50%",
-            width: 24,
-            height: 24,
-            fontSize: 12,
-            fontWeight: 800,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 8px rgba(30,74,45,0.3)",
-            zIndex: 2,
-          }}
-        >
-          {cartQty}
-        </div>
-      )}
+        if (globalD > 0) {
+          if (dScope === 'all') dPercent = globalD;
+          else if (dScope === 'category') {
+            const dCats = Array.isArray(selectedShop.discount_applied_categories) ? selectedShop.discount_applied_categories : [];
+            if (dCats.map(String).includes(String(product.category_id))) dPercent = globalD;
+          } else if (dScope === 'product') {
+            const dProds = Array.isArray(selectedShop.discount_applied_products) ? selectedShop.discount_applied_products : [];
+            if (dProds.map(String).includes(String(product.id))) dPercent = globalD;
+          }
+        }
 
-      {/* product image */}
-      <div
-        style={{
-          width: "100%",
-          aspectRatio: "1/1",
-          borderRadius: 14,
-          overflow: "hidden",
-          background: "#f8f7f2",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          marginBottom: 4,
-        }}
-      >
-        {imgUrl ? (
-          <img
-            src={imgUrl}
-            alt={product.name}
-            loading="lazy"
-            onLoad={() => setIsImgLoaded(true)}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              opacity: isImgLoaded ? 1 : 0,
-              transform: hovered ? "scale(1.1)" : "scale(1)",
-              transition: "opacity 0.4s ease, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
-            }}
-          />
-        ) : (
-          <span style={{ fontSize: 44 }}>
-            {getIconForCategory(product.category_name)}
-          </span>
-        )}
-      </div>
+        const discountedPrice = price * (1 - dPercent / 100);
 
-      {/* name + price */}
-      <div style={{ width: "100%", textAlign: "left" }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-          <Tag color={product.product_type === 'recipe' ? "orange" : "blue"} style={{ fontSize: 9, borderRadius: 4, margin: 0, padding: '0 4px' }}>
-            {product.product_type === 'recipe'
-              ? `RECIPE (${product.estimated_servings ?? 0} Srv)`
-              : `STOCK: ${product.qty}`}
-          </Tag>
-          <span style={{ fontSize: 9, color: COLORS.textSecondary, fontWeight: 700 }}>#{product.barcode || product.id}</span>
-        </div>
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: 14,
-            color: COLORS.textPrimary,
-            marginBottom: 2,
-            maxWidth: "100%",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {product.name}
-        </div>
-        <div style={{ fontSize: 10, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 600 }}>{product.category_name}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div>
-            {productSizes.length > 0 && (
-              <div style={{ fontSize: 9, color: COLORS.textSecondary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                from
+        return (
+          <>
+            {/* discount badge */}
+            {dPercent > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  left: 10,
+                  background: "#e85d5d",
+                  color: "#fff",
+                  borderRadius: "6px",
+                  padding: "2px 8px",
+                  fontSize: "10px",
+                  fontWeight: 900,
+                  zIndex: 2,
+                  boxShadow: "0 2px 8px rgba(232,93,93,0.3)"
+                }}
+              >
+                {dPercent}% OFF
               </div>
             )}
-            <span style={{ fontSize: 15, fontWeight: 800, color: COLORS.darkGreen }}>
-              ${(price - (price * (parseFloat(product.discount) || 0) / 100)).toFixed(2)}
-            </span>
-          </div>
-          {productSizes.length > 0 && (
-            <span style={{
-              fontSize: 9, fontWeight: 700, background: '#e6f0ea',
-              color: COLORS.midGreen, borderRadius: 4, padding: '2px 5px'
-            }}>
-              📏 {productSizes.length} sizes
-            </span>
-          )}
-          {productMoods.length > 0 && (
-            <span style={{
-              fontSize: 9, fontWeight: 700, background: '#fff7e6',
-              color: '#d46b08', borderRadius: 4, padding: '2px 5px'
-            }}>
-              🔥 {productMoods.length} moods
-            </span>
-          )}
-          {product.discount > 0 && (
-            <span style={{ fontSize: 11, color: COLORS.textSecondary, textDecoration: "line-through", fontWeight: 500 }}>
-              ${price.toFixed(2)}
-            </span>
-          )}
-        </div>
-      </div>
+
+            {/* Global BOGO Badge */}
+            {isOnPromo && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: dPercent > 0 ? 38 : 10, // Move down if discount badge exists
+                  left: 10,
+                  background: selectedShop?.promo_tag_color || "#C8952A",
+                  color: "#fff",
+                  borderRadius: "6px",
+                  padding: "2px 8px",
+                  fontSize: "10px",
+                  fontWeight: 800,
+                  zIndex: 2,
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4
+                }}
+              >
+                🎁 {selectedShop?.global_bogo_text || "Buy 1 Get 1"}
+              </div>
+            )}
+
+            {/* cart badge */}
+            {cartQty > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  right: 10,
+                  background: COLORS.darkGreen,
+                  color: "#fff",
+                  borderRadius: "50%",
+                  width: 24,
+                  height: 24,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 8px rgba(30,74,45,0.3)",
+                  zIndex: 2,
+                }}
+              >
+                {cartQty}
+              </div>
+            )}
+
+            {/* product image */}
+            <div
+              style={{
+                width: "100%",
+                aspectRatio: "1/1",
+                borderRadius: 14,
+                overflow: "hidden",
+                background: "#f8f7f2",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                marginBottom: 4,
+              }}
+            >
+              {imgUrl ? (
+                <img
+                  src={imgUrl}
+                  alt={product.name}
+                  loading="lazy"
+                  onLoad={() => setIsImgLoaded(true)}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    opacity: isImgLoaded ? 1 : 0,
+                    transform: hovered ? "scale(1.1)" : "scale(1)",
+                    transition: "opacity 0.4s ease, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: 44 }}>
+                  {getIconForCategory(product.category_name)}
+                </span>
+              )}
+            </div>
+
+            {/* name + price */}
+            <div style={{ width: "100%", textAlign: "left" }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                <Tag color={product.product_type === 'recipe' ? "orange" : "blue"} style={{ fontSize: 9, borderRadius: 4, margin: 0, padding: '0 4px' }}>
+                  {product.product_type === 'recipe'
+                    ? `RECIPE (${product.estimated_servings ?? 0} Srv)`
+                    : `STOCK: ${product.qty}`}
+                </Tag>
+                <span style={{ fontSize: 9, color: COLORS.textSecondary, fontWeight: 700 }}>#{product.barcode || product.id}</span>
+              </div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: 14,
+                  color: COLORS.textPrimary,
+                  marginBottom: 2,
+                  maxWidth: "100%",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {product.name}
+              </div>
+              <div style={{ fontSize: 10, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 600 }}>{product.category_name}</div>
+              
+              {/* options badges row */}
+              {(productSizes.length > 0 || productMoods.length > 0) && (
+                <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
+                  {productSizes.length > 0 && (
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, background: '#e6f0ea',
+                      color: COLORS.midGreen, borderRadius: 4, padding: '2px 5px'
+                    }}>
+                      📏 {productSizes.length} sizes
+                    </span>
+                  )}
+                  {productMoods.length > 0 && (
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, background: '#fff7e6',
+                      color: '#d46b08', borderRadius: 4, padding: '2px 5px'
+                    }}>
+                      🔥 {productMoods.length} moods
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div>
+                  {productSizes.length > 0 && (
+                    <div style={{ fontSize: 9, color: COLORS.textSecondary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      from
+                    </div>
+                  )}
+                  <span style={{ fontSize: 15, fontWeight: 800, color: COLORS.darkGreen }}>
+                    ${discountedPrice.toFixed(2)}
+                  </span>
+                </div>
+                {dPercent > 0 && (
+                  <span style={{ fontSize: 11, color: "#e85d5d", textDecoration: "line-through", fontWeight: 700, marginTop: 4 }}>
+                    ${price.toFixed(2)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* add button */}
-      <button
+      <div
         onClick={(e) => {
           e.stopPropagation();
           !isOOS && onAdd(product);
         }}
-        disabled={isOOS}
         style={{
           position: "absolute",
           bottom: 12,
           right: 12,
-          width: 30,
-          height: 30,
-          borderRadius: "50%",
-          background:
-            cartQty > 0
-              ? COLORS.darkGreen
-              : isOOS
-                ? "#ccc"
-                : COLORS.white,
-          border: `2px solid ${isOOS ? "#ccc" : COLORS.darkGreen}`,
+          width: 32,
+          height: 32,
+          borderRadius: "10px",
+          background: cartQty > 0 ? COLORS.darkGreen : COLORS.white,
+          border: `1.5px solid ${isOOS ? "#e0e0e0" : COLORS.darkGreen}`,
           color: cartQty > 0 ? "#fff" : COLORS.darkGreen,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           cursor: isOOS ? "not-allowed" : "pointer",
-          fontSize: 18,
-          fontWeight: 700,
-          transition: "all 0.2s ease",
-          boxShadow: cartQty > 0 ? "0 4px 12px rgba(30,74,45,0.3)" : "none",
-          lineHeight: 1,
-          padding: 0,
+          boxShadow: hovered && !isOOS 
+            ? `0 4px 12px ${COLORS.darkGreen}33` 
+            : "0 2px 6px rgba(0,0,0,0.05)",
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          transform: hovered && !isOOS ? "scale(1.1)" : "scale(1)",
+          zIndex: 3
         }}
       >
-        +
-      </button>
+        <PlusOutlined style={{ 
+          fontSize: 15, 
+          transition: "transform 0.4s ease",
+          transform: hovered ? "rotate(90deg)" : "rotate(0deg)"
+        }} />
+      </div>
       {/* styles */}
       <style>{`
         @keyframes shimmer {
@@ -390,7 +478,24 @@ const ProductCard = React.memo(({ product, onAdd, cartQty }) => {
 });
 
 // ─── Compact Product List View (New) ──────────────────────────────
-const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS }) => {
+const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selectedShop }) => {
+  // Helper to determine if product is on BOGO promotion
+  const isProductOnPromo = (product) => {
+    if (!selectedShop?.global_bogo_active) return product.is_promo || product.promotion_id;
+    const scope = selectedShop.promo_scope || 'all';
+    if (scope === 'all') return true;
+    const appliedCats = Array.isArray(selectedShop.promo_applied_categories) ? selectedShop.promo_applied_categories : [];
+    const appliedProds = Array.isArray(selectedShop.promo_applied_products) ? selectedShop.promo_applied_products : [];
+
+    if (scope === 'category') {
+      return appliedCats.map(String).includes(String(product.category_id));
+    }
+    if (scope === 'product') {
+      return appliedProds.map(String).includes(String(product.id));
+    }
+    return product.is_promo || product.promotion_id;
+  };
+
   return (
     <div style={{
       background: COLORS.white,
@@ -419,7 +524,22 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS }) => 
             const price = productSizes.length > 0
               ? Math.min(...productSizes.map(s => Number(s.price || 0)))
               : basePrice;
-            const finalPrice = price - (price * (parseFloat(p.discount) || 0) / 100);
+            
+            // Global Discount Logic
+            let dPercent = 0;
+            const dScope = selectedShop?.discount_scope || 'all';
+            const globalD = Number(selectedShop?.global_discount || 0);
+            if (globalD > 0) {
+              if (dScope === 'all') dPercent = globalD;
+              else if (dScope === 'category') {
+                const dCats = Array.isArray(selectedShop.discount_applied_categories) ? selectedShop.discount_applied_categories : [];
+                if (dCats.map(String).includes(String(p.category_id))) dPercent = globalD;
+              } else if (dScope === 'product') {
+                const dProds = Array.isArray(selectedShop.discount_applied_products) ? selectedShop.discount_applied_products : [];
+                if (dProds.map(String).includes(String(p.id))) dPercent = globalD;
+              }
+            }
+            const finalPrice = price * (1 - dPercent / 100);
 
             return (
               <tr
@@ -442,6 +562,16 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS }) => 
                       <div style={{ fontWeight: 700, fontSize: 14, color: COLORS.textPrimary }}>{p.name}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
                         <Tag color="blue" style={{ fontSize: 10, borderRadius: 4, margin: 0 }}>{p.category_name}</Tag>
+                        {isProductOnPromo(p) && (
+                          <Tag color="orange" style={{ fontSize: 9, borderRadius: 4, margin: 0, fontWeight: 800 }}>
+                            🎁 {selectedShop?.global_bogo_text || "BOGO"}
+                          </Tag>
+                        )}
+                        {dPercent > 0 && (
+                          <Tag color="red" style={{ fontSize: 9, borderRadius: 4, margin: 0, fontWeight: 800 }}>
+                            -{dPercent}%
+                          </Tag>
+                        )}
                         {p.generic_name && <span style={{ fontSize: 11, color: COLORS.textSecondary, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>({p.generic_name})</span>}
                       </div>
                     </div>
@@ -462,7 +592,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS }) => 
                       )}
                     </div>
                   </div>
-                  {p.discount > 0 && <div style={{ fontSize: 10, color: COLORS.textSecondary, textDecoration: 'line-through' }}>${price.toFixed(2)}</div>}
+                  {dPercent > 0 && <div style={{ fontSize: 10, color: "#e85d5d", textDecoration: 'line-through', fontWeight: 700 }}>${price.toFixed(2)}</div>}
                 </td>
                 <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                   <Badge
@@ -474,14 +604,27 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS }) => 
                 </td>
                 <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                   <Badge count={cartQty} size="small" offset={[5, -5]}>
-                    <Button
-                      type="primary"
-                      shape="circle"
-                      icon={<PlusOutlined />}
-                      size="small"
-                      disabled={isOOS}
-                      style={{ background: COLORS.darkGreen, border: 'none' }}
-                    />
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "8px",
+                        background: COLORS.darkGreen,
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: isOOS ? "not-allowed" : "pointer",
+                        transition: "all 0.3s ease",
+                        opacity: isOOS ? 0.5 : 1,
+                        transform: "scale(1)",
+                        boxShadow: "0 2px 5px rgba(30,74,45,0.2)"
+                      }}
+                      onMouseEnter={e => !isOOS && (e.currentTarget.style.transform = "scale(1.15)")}
+                      onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                    >
+                      <PlusOutlined style={{ fontSize: 14 }} />
+                    </div>
                   </Badge>
                 </td>
               </tr>
@@ -618,11 +761,19 @@ const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, 
 };
 
 // ─── Bill Cart Item (Memoized) ────────────────────────────────────────────────
-const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove, onEdit }) => {
+const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove, onEdit, selectedShop }) => {
   const imgUrl = item.image ? Config.getFullImagePath(item.image) : null;
   const originalPrice = Number(item.unit_price || item.price || 0);
   const discountPercent = parseFloat(item.discount || 0);
   const finalPrice = originalPrice * (1 - (discountPercent / 100));
+
+  const isBOGO = (item.is_promo || item.promotion_id || (
+    selectedShop?.global_bogo_active && (
+      (selectedShop.promo_scope === 'all') ||
+      (selectedShop.promo_scope === 'category' && (selectedShop.promo_applied_categories || []).map(String).includes(String(item.category_id))) ||
+      (selectedShop.promo_scope === 'product' && (selectedShop.promo_applied_products || []).map(String).includes(String(item.id)))
+    )
+  ));
 
   return (
     <div
@@ -662,6 +813,11 @@ const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove, onEdi
           </span>
           {discountPercent > 0 && (
             <span style={{ fontSize: 10, color: COLORS.redBadge, opacity: 0.8 }}>(-{discountPercent}%)</span>
+          )}
+          {isBOGO && (
+            <Tag color="orange" style={{ fontSize: 8, borderRadius: 4, margin: 0, padding: '0 4px', fontWeight: 800 }}>
+              🎁 {selectedShop?.global_bogo_text || "BOGO"}
+            </Tag>
           )}
           {item.note && (
             <span style={{
@@ -783,6 +939,39 @@ function PosPage() {
   const [branchInfo, setBranchInfo] = useState(null);
   const [tables, setTables] = useState([]);
 
+  const [selectedShop, setSelectedShop] = useState(null);
+
+  useEffect(() => {
+    if (profile?.business_id) {
+      fetchPublicConfig();
+    }
+  }, [profile?.business_id]);
+
+  const fetchPublicConfig = async () => {
+    setState(prev => ({ ...prev, loading: true }));
+    try {
+      const res = await request("business/public-config", "get", { business_id: profile.business_id });
+      if (res && res.config) {
+        setSelectedShop(res.config);
+      }
+    } catch (error) {
+      console.error("Error fetching public config:", error);
+    } finally {
+      setState(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Auto-sync when window becomes active
+  useEffect(() => {
+    const handleFocus = () => {
+      if (profile?.business_id) {
+        fetchPublicConfig();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [profile?.business_id]);
+
   useEffect(() => {
     if (branchInfo?.id) {
       fetchTables(branchInfo.id);
@@ -821,6 +1010,7 @@ function PosPage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [viewMode, setViewMode] = useState("grid"); // grid or list
 
+  const [isKitchenPending, setIsKitchenPending] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState(null);
   const { exchangeRate } = useExchangeRate();
   const [cashReceivedUSD, setCashReceivedUSD] = useState(0);
@@ -851,6 +1041,7 @@ function PosPage() {
     printSummary: null,
     rawMaterials: [],
     lowStockItems: [],
+    printType: null, // 'kitchen' or 'checkout'
   });
 
   const [objSummary, setObjSummary] = useState({
@@ -1061,13 +1252,25 @@ function PosPage() {
     if (!currentUserId) return;
     setState((p) => ({ ...p, loading: true }));
     try {
+      // 1. Fetch products for the current selected category (for the grid)
       const res = await request(`product`, "get", {
         category_id: selectedCategory === 'all' ? null : selectedCategory,
       });
+
+      // 2. ALSO fetch ALL products once to maintain correct counts in headers
+      // (We do this silently or only when needed, but here we do it to ensure counts are always right)
+      const resFull = await request(`product`, "get", { category_id: null });
+
       if (res && !res.error) {
-        // API already filters by parent_id — no need to filter client-side
         const products = res.list || [];
-        setState((p) => ({ ...p, list: products, total: products.length, loading: false }));
+        const fullProducts = resFull?.list || products; // Fallback to current if full fails
+        setState((p) => ({ 
+          ...p, 
+          list: products, 
+          fullList: fullProducts, // New state to hold everything for counts
+          total: products.length, 
+          loading: false 
+        }));
       } else {
         setState((p) => ({ ...p, loading: false }));
       }
@@ -1085,12 +1288,57 @@ function PosPage() {
     state.cart_list.forEach((item) => {
       const qty = Number(item.cart_qty) || 0;
       const originalUnitPrice = Number(item.unit_price || item.price || 0);
-      const discountPercent = parseFloat(item.discount || 0);
+
+      // Determine Selective Global Discount
+      let discountPercent = 0;
+      const dScope = selectedShop?.discount_scope || 'all';
+      const dPercent = Number(selectedShop?.global_discount || 0);
+
+      if (dPercent > 0) {
+        if (dScope === 'all') {
+          discountPercent = dPercent;
+        } else if (dScope === 'category') {
+          const dCats = Array.isArray(selectedShop.discount_applied_categories) ? selectedShop.discount_applied_categories : [];
+          if (dCats.map(String).includes(String(item.category_id))) {
+            discountPercent = dPercent;
+          }
+        } else if (dScope === 'product') {
+          const dProds = Array.isArray(selectedShop.discount_applied_products) ? selectedShop.discount_applied_products : [];
+          if (dProds.map(String).includes(String(item.id))) {
+            discountPercent = dPercent;
+          }
+        }
+      }
+
       const discountedUnitPrice = originalUnitPrice * (1 - (discountPercent / 100));
+
+      // BOGO LOGIC: Check if item is eligible for Buy 1 Get 1
+      const isBOGO = (item.is_promo || item.promotion_id || (
+        selectedShop?.global_bogo_active && (
+          (selectedShop.promo_scope === 'all') ||
+          (selectedShop.promo_scope === 'category' && (selectedShop.promo_applied_categories || []).map(String).includes(String(item.category_id))) ||
+          (selectedShop.promo_scope === 'product' && (selectedShop.promo_applied_products || []).map(String).includes(String(item.id)))
+        )
+      ));
+
+      let effectiveQty = qty;
+      if (isBOGO) {
+        // FLEXIBLE BOGO: Buy X Get Y
+        const buyQty = Number(selectedShop?.promo_buy_qty || 1);
+        const getQty = Number(selectedShop?.promo_get_qty || 1);
+        const totalPerSet = buyQty + getQty;
+
+        const numSets = Math.floor(qty / totalPerSet);
+        const freeItems = numSets * getQty;
+        effectiveQty = qty - freeItems;
+      }
 
       total_qty += qty;
       sub_total += originalUnitPrice * qty;
-      save_discount += (originalUnitPrice - discountedUnitPrice) * qty;
+
+      // Calculate savings: standard discount + BOGO free items
+      const bogoSavings = isBOGO ? (qty - effectiveQty) * discountedUnitPrice : 0;
+      save_discount += ((originalUnitPrice - discountedUnitPrice) * qty) + bogoSavings;
     });
 
     const total = sub_total - save_discount;
@@ -1103,6 +1351,26 @@ function PosPage() {
       total: parseFloat(total.toFixed(2)),
       tax: 0,
     }));
+  }, [state.cart_list]);
+  
+  const getCartPayload = useCallback((cartList = state.cart_list) => {
+    return cartList.map((item) => {
+      const qty = Number(item.cart_qty) || Number(item.qty) || 1;
+      const rawPrice = item.unit_price !== undefined && item.unit_price !== null ? item.unit_price : (item.price || 0);
+      const unitPrice = isNaN(Number(rawPrice)) ? 0 : Number(rawPrice);
+      return {
+        product_id: item.id,
+        qty: qty,
+        price: unitPrice,
+        note: item.note || "",
+        options: {
+          size: item.size,
+          sugar: item.sugar,
+          mood: item.mood,
+          addons: item.addons_selected
+        }
+      };
+    });
   }, [state.cart_list]);
 
   // ── cart helpers ──
@@ -1152,7 +1420,6 @@ function PosPage() {
           return prev;
         }
         const newItem = { ...product, cart_qty: 1, unique_id: standardId };
-        setTempUnassignedItems(prev => [...prev, newItem]);
         cart.push(newItem);
       } else {
         if (product.product_type !== 'recipe' && cart[idx].cart_qty >= Number(product.qty)) {
@@ -1195,10 +1462,7 @@ function PosPage() {
     const product = selectedProductForOptions;
     if (!product) return;
 
-    if (orderType === 'dine_in' && !tableNo) {
-      setTableModalVisible(true);
-      message.info("Please select a table to start this order / សូមជ្រើសរើសតុដើម្បីចាប់ផ្ដើម");
-    }
+    // Removed strict table check here to allow counter ordering before seat assignment
 
     // Prepare options string for unique identification
     // Treat size prices as surcharges (base + size price)
@@ -1319,7 +1583,17 @@ function PosPage() {
     }));
   }, []);
 
-  const handleHoldOrder = (directCart = null) => {
+  const handlePrintInvoice = useReactToPrint({
+    contentRef: refInvoice,
+    pageStyle: `@page { size: 80mm auto; margin: 0; } body { margin: 0; }`,
+  });
+
+  const handlePrintLabel = useReactToPrint({
+    contentRef: refLabel,
+    pageStyle: `@page { size: 40mm 30mm !important; margin: 0 !important; } @media print { body { -webkit-print-color-adjust: exact; margin: 0 !important; } }`,
+  });
+
+  const handleHoldOrder = (directCart = null, skipPrint = false) => {
     const cartToSave = directCart || state.cart_list;
     if (cartToSave.length === 0) {
       if (!directCart) message.warning("Cart is empty");
@@ -1335,9 +1609,10 @@ function PosPage() {
       }
     }
 
-    // Mark items as printed and trigger Label printing
+    // Mark items as printed/processed
     const labeledCart = cartToSave.map(item => ({ ...item, printed: true }));
 
+    // 1. Local Save (Keep as fallback/backup)
     holdOrder({
       id: draftIdToUpdate,
       cart_list: labeledCart,
@@ -1349,9 +1624,43 @@ function PosPage() {
       currentOrderId,
     });
 
-    // Auto-Print Label even when holding (for Dine-In drinks)
+    // 2. Server Sync for KDS (Essential for Restaurant mode)
+    const syncWithServer = async () => {
+      try {
+        const items = getCartPayload(labeledCart);
+        const payload = {
+          ...objSummary,
+          cart_items: items,
+          customer_name: customerName,
+          table_no: tableNo,
+          order_type: orderType,
+          guest_count: guestCount,
+          sub_total: +objSummary.sub_total,
+          total_amount: +objSummary.total,
+          total_qty: +objSummary.total_qty,
+          payment_method: objSummary.payment_method || 'Unpaid',
+          status: 'unpaid', // Drafts are unpaid
+          shift_id: currentShift?.id,
+          order_id: currentOrderId // If exists, update
+        };
+
+        const endpoint = currentOrderId ? "order/update" : "order";
+        const method = currentOrderId ? "put" : "post";
+        
+        const res = await request(endpoint, method, payload);
+        if (res && res.order_id && !currentOrderId) {
+           setCurrentOrderId(res.order_id);
+        }
+      } catch (err) {
+        console.error("KDS Server Sync failed:", err);
+        // We don't block the user, as local save still works
+      }
+    };
+    syncWithServer();
+
+    // 3. Auto-Print Label ONLY when explicitly requested
     const pSettings = getPrinterSettings();
-    if (pSettings.auto_print && pSettings.label_enabled) {
+    if (!skipPrint && pSettings.auto_print && pSettings.label_enabled) {
       setState(prev => ({
         ...prev,
         printCart: labeledCart,
@@ -1428,8 +1737,8 @@ function PosPage() {
 
 
 
-  const handleClearCart = useCallback((isCheckout = false) => {
-    // CRITICAL: For restaurant workflow, only remove from held storage on SUCCESSFUL checkout
+  const handleClearCart = useCallback((isCheckout = false, isSave = false) => {
+    // CRITICAL: Only remove from held storage on SUCCESSFUL final checkout
     if (isCheckout && currentDraftId) {
       removeHeldOrder(currentDraftId);
     }
@@ -1442,17 +1751,24 @@ function PosPage() {
       tax: 0, total: 0, total_paid: 0,
       customer_id: null, payment_method: null,
     }));
-    setCustomerName("");
-    setTableNo("");
-    setGuestCount(1);
-    setCurrentOrderId(null);
-    setCurrentDraftId(null);
+    
+    // Clear table/customer if we are checking out OR just saving a draft to serve next guest
+    if (isCheckout || isSave) {
+      setCustomerName("");
+      setTableNo("");
+      setGuestCount(1);
+      setCurrentOrderId(null);
+      setCurrentDraftId(null);
+    }
+    
     setCashReceivedUSD(0);
     setCashReceivedKHR(0);
     setCashPaymentModalVisible(false);
     if (form) form.resetFields();
     getPendingOrders();
   }, [currentDraftId, removeHeldOrder, form, setTempUnassignedItems]);
+
+  const kitchenItems = state.cart_list.filter(item => !item.isSentToKitchen);
 
   const handleSelectPendingOrder = useCallback(async (order) => {
     setState((p) => ({ ...p, loading: true }));
@@ -1475,10 +1791,14 @@ function PosPage() {
           cart_list: cart,
           loading: false,
         }));
-        setCustomerName(order.customer_name || "");
+        
+        // Restore table/customer context
         setTableNo(order.table_no || "");
-        setOrderType(order.order_type || "dine_in");
+        setCustomerName(order.customer_name || "");
+        if (order.guest_count) setGuestCount(order.guest_count);
         setCurrentOrderId(order.id);
+        setCurrentDraftId(null); // Pending orders from DB aren't local drafts
+        setOrderType(order.order_type || 'dine_in');
         setPendingOrdersVisible(false);
         message.info(`Loaded order for ${order.table_no ? "Table " + order.table_no : "Guest"}`);
       } else {
@@ -1490,6 +1810,149 @@ function PosPage() {
       setState((p) => ({ ...p, loading: false }));
     }
   }, []);
+
+  const triggerAutoPrintWorkflow = useCallback((skipLabel = false) => {
+    const pSettings = getPrinterSettings();
+    if (!pSettings.auto_print) {
+      handleClearCart(true); // Still clear if not auto printing
+      return;
+    }
+
+    // Move data to print snapshots before clearing cart
+    setState(prev => ({
+      ...prev,
+      printCart: [...prev.cart_list],
+      printSummary: {
+        ...objSummary,
+        order_type: orderType,
+        order_date: new Date().toISOString()
+      },
+      printType: 'checkout'
+    }));
+  }, [handleClearCart, objSummary, orderType]);
+
+
+  const executePrintKitchen = useReactToPrint({
+    contentRef: refKitchen,
+    onAfterPrint: () => {
+      message.success("Order printed successfully / បោះពុម្ពរួចរាល់");
+    }
+  });
+
+  const lastPrintedTypeRef = useRef(null);
+
+  // ── Print Synchronization Effect ──
+  useEffect(() => {
+    if (!state.printType) {
+      lastPrintedTypeRef.current = null;
+      return;
+    }
+
+    // Guard: Prevent double-triggering the same print type in a single cycle
+    if (lastPrintedTypeRef.current === state.printType) return;
+
+    const pSettings = getPrinterSettings();
+    
+    if (state.printType === 'checkout') {
+      lastPrintedTypeRef.current = 'checkout';
+      
+      const runWorkflow = async () => {
+        // 1. Determine the order
+        const tasks = [];
+        if (pSettings.label_first) {
+          if (pSettings.label_enabled) tasks.push('label');
+          if (pSettings.invoice_enabled) tasks.push('invoice');
+        } else {
+          if (pSettings.invoice_enabled) tasks.push('invoice');
+          if (pSettings.label_enabled) tasks.push('label');
+        }
+
+        // 2. Execute tasks with delay
+        for (let i = 0; i < tasks.length; i++) {
+          const task = tasks[i];
+          if (task === 'label') {
+            handlePrintLabel();
+          } else if (task === 'invoice') {
+            handlePrintInvoice();
+          }
+          
+          // Wait if there is a next task
+          if (i < tasks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
+        }
+
+        // 3. Cleanup
+        setTimeout(() => {
+          setState(prev => ({ ...prev, printType: null }));
+          handleClearCart(true);
+        }, 1000);
+      };
+
+      runWorkflow();
+      return;
+
+    } else if (state.printType === 'kitchen') {
+      lastPrintedTypeRef.current = 'kitchen';
+      // We always clear printType quickly
+      const timer = setTimeout(() => {
+        executePrintKitchen();
+        setState(prev => ({ ...prev, printType: null }));
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [state.printType, handlePrintLabel, handlePrintInvoice, executePrintKitchen, handleClearCart]);
+
+  const handlePrintKitchen = useCallback((selectedTable = null) => {
+    const finalTable = selectedTable || tableNo;
+    
+    if (kitchenItems.length === 0) {
+      message.warning("No new items to send / គ្មានមុខម្ហូបថ្មីសម្រាប់ផ្ញើទេ");
+      return;
+    }
+
+    // Validation for Kitchen Send: If Dine-In and NO table selected, open modal and wait
+    if (orderType === 'dine_in' && !finalTable) {
+      message.info(t.please_select_table || "Please select a table to continue / សូមជ្រើសរើសតុដើម្បីបន្ត");
+      setIsKitchenPending(true);
+      setTableModalVisible(true);
+      return;
+    }
+
+    // 1. Mark items as sent and update state immediately
+    const updatedItems = state.cart_list.map(item => ({
+      ...item,
+      isSentToKitchen: true
+    }));
+
+    setState(prev => ({
+      ...prev,
+      cart_list: updatedItems
+    }));
+
+    // 2. Sync to Server and Local Drafts (ALWAYS HAPPENS)
+    // skipPrint=true because we handle printing separately below
+    handleHoldOrder(updatedItems, true);
+
+    // 3. Trigger Physical Print ONLY if enabled in settings
+    const pSettings = getPrinterSettings();
+    if (pSettings.kitchen_enabled) {
+      setState(prev => ({
+        ...prev,
+        printCart: kitchenItems,
+        printSummary: {
+          ...objSummary,
+          customerName,
+          tableNo: finalTable,
+          order_type: orderType,
+          order_date: new Date().toISOString()
+        },
+        printType: 'kitchen'
+      }));
+    } else {
+      message.success("Order sent to kitchen screen / ផ្ញើទៅអេក្រង់ចង្ក្រានរួចរាល់");
+    }
+  }, [kitchenItems, objSummary, customerName, tableNo, orderType, handleHoldOrder]);
 
   // ── place order ──
   const handleClickOut = async () => {
@@ -1510,8 +1973,8 @@ function PosPage() {
     // Validation for Dine-In Table Requirement
     const hasTables = tables && tables.length > 0;
     if (orderType === "dine_in" && hasTables && !tableNo) {
-      message.warning(t.please_select_table || "Please select a table for Dine-In order!");
-      // Optional: Highlight the table selector
+      message.info(t.please_select_table || "Reminder: No table selected. Order will be processed as Walk-In. / សូមជ្រើសរើសតុ ឬបន្តជាការទិញផ្ទាល់");
+      // Highlight the table selector to remind the user, but DON'T block payment
       const tableSelector = document.getElementById('table-selector-trigger');
       if (tableSelector) {
         tableSelector.style.border = '2px solid #ef4444';
@@ -1521,7 +1984,7 @@ function PosPage() {
           tableSelector.style.boxShadow = '';
         }, 3000);
       }
-      return;
+      // We removed the 'return' here to allow payment to proceed for Walk-In Dine-In
     }
 
     // New Validation: For Cash, ensure enough money is received
@@ -1532,23 +1995,7 @@ function PosPage() {
         return;
       }
     }
-    const items = state.cart_list.map((item) => {
-      const qty = Number(item.cart_qty) || 1;
-      const rawPrice = item.unit_price !== undefined && item.unit_price !== null ? item.unit_price : (item.price || 0);
-      const unitPrice = isNaN(Number(rawPrice)) ? 0 : Number(rawPrice);
-      return {
-        product_id: item.id,
-        qty: qty,
-        price: unitPrice,
-        note: item.note || "",
-        options: {
-          size: item.size,
-          sugar: item.sugar,
-          mood: item.mood,
-          addons: item.addons_selected
-        }
-      };
-    });
+    const items = getCartPayload();
     const param = {
       ...objSummary,
       cart_items: items,
@@ -1571,11 +2018,9 @@ function PosPage() {
     try {
       let res;
       if (currentOrderId) {
-        res = await request("order-status", "put", {
-          order_id: currentOrderId,
-          status: "completed",
-          payment_method: objSummary.payment_method
-        });
+        // Send FULL updated order to server (handles added items + completion)
+        const updateParam = { ...param, order_id: currentOrderId, status: "completed" };
+        res = await request("order", "put", updateParam);
         if (res && !res.error) res.order_id = currentOrderId;
       } else {
         res = await request("order", "post", param);
@@ -1665,70 +2110,10 @@ function PosPage() {
     }
   };
 
-  // ── print ──
-  const handlePrintInvoice = useReactToPrint({
-    contentRef: refInvoice,
-    pageStyle: `@page { size: 80mm auto; margin: 0; } body { margin: 0; }`,
-  });
 
-  const handlePrintLabel = useReactToPrint({
-    contentRef: refLabel,
-    pageStyle: `@page { size: 40mm 30mm !important; margin: 0 !important; } @media print { body { -webkit-print-color-adjust: exact; margin: 0 !important; } }`,
-  });
 
-  const handlePrintKitchen = useReactToPrint({
-    contentRef: refKitchen,
-    onBeforeGetContent: () => {
-      if (kitchenItems.length === 0) {
-        message.warning("All items already sent to kitchen / មុខម្ហូបទាំងអស់ត្រូវបានផ្ញើរួចហើយ");
-        return Promise.reject("Empty");
-      }
-      return Promise.resolve();
-    },
-    onAfterPrint: () => {
-      // Mark all currently in-cart items as sent to kitchen
-      const updatedItems = state.cart_list.map(item => ({
-        ...item,
-        isSentToKitchen: true
-      }));
 
-      // We must hold the order WITH the updated flags before clearing
-      handleHoldOrder(updatedItems);
 
-      // Now safe to clear the cart
-      handleClearCart();
-      message.success("Order sent to kitchen and saved to table / ផ្ញើទៅចង្ក្រាន និងរក្សាទុកក្នុងតុរួចរាល់");
-    }
-  });
-
-  const triggerAutoPrintWorkflow = useCallback((skipLabel = false) => {
-    const pSettings = getPrinterSettings();
-    if (!pSettings.auto_print) {
-      handleClearCart(true); // Still clear if not auto printing
-      return;
-    }
-
-    setTimeout(() => {
-      const shouldPrintLabel = pSettings.label_enabled && !skipLabel;
-      const shouldPrintInvoice = pSettings.invoice_enabled;
-
-      if (pSettings.label_first) {
-        if (shouldPrintLabel) handlePrintLabel();
-        if (shouldPrintInvoice) {
-          setTimeout(() => handlePrintInvoice(), shouldPrintLabel ? 800 : 0);
-        }
-      } else {
-        if (shouldPrintInvoice) handlePrintInvoice();
-        if (shouldPrintLabel) {
-          setTimeout(() => handlePrintLabel(), shouldPrintInvoice ? 800 : 0);
-        }
-      }
-      // Final cleanup after all prints have started
-      setTimeout(() => handleClearCart(true), 1500);
-    }, 300);
-  }, [handlePrintLabel, handlePrintInvoice, handleClearCart]);
-
-  const kitchenItems = state.cart_list.filter(item => !item.isSentToKitchen);
 
   // ── filtered products (Memoized for performance) ──
   const filteredProducts = React.useMemo(() => {
@@ -1771,11 +2156,11 @@ function PosPage() {
         flexDirection: "column",
       }}
     >
-      <div style={{ 
-        display: "block", 
-        position: "absolute", 
-        left: "-9999px", 
-        top: 0, 
+      <div style={{
+        display: "block",
+        position: "absolute",
+        left: "-9999px",
+        top: 0,
         width: '80mm',
         opacity: 1,
         visibility: "visible",
@@ -2154,6 +2539,31 @@ function PosPage() {
             </button>
 
             <button
+              onClick={() => {
+                fetchPublicConfig();
+                message.success("Settings synchronized!");
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: COLORS.white,
+                border: `1px solid ${COLORS.softBorder}`,
+                borderRadius: 8,
+                padding: "6px 14px",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 700,
+                color: COLORS.textPrimary,
+                transition: "all 0.25s",
+                whiteSpace: "nowrap"
+              }}
+            >
+              <SyncOutlined spin={state.loading} style={{ fontSize: 16 }} />
+              <span>Sync</span>
+            </button>
+
+            <button
               onClick={toggleFullScreen}
               style={{
                 display: "flex",
@@ -2258,44 +2668,53 @@ function PosPage() {
             <div
               style={{
                 display: "flex",
-                gap: 10,
+                gap: 8,
                 overflowX: "auto",
-                paddingBottom: 6,
+                padding: "2px 2px 8px 2px",
                 scrollbarWidth: "none",
-                marginBottom: 4
+                marginBottom: 2
               }}
             >
               {parentCategories.map((cat) => {
                 const isSelected = selectedCategory === cat.id;
-                const total = state.list.filter((p) => p.category_id === cat.id).length;
-                const needsRestock = selectedCategory === cat.id ? outOfStock.length > 0 && inStock.length === 0 : false;
+                // Use fullList for accurate global counts across categories
+                const sourceList = state.fullList || state.list || [];
+                const total = sourceList.filter((p) => p.category_id === cat.id).length;
 
                 return (
-                  <div
+                  <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
                     style={{
-                      minWidth: 130,
-                      borderRadius: 14,
-                      padding: "10px 12px",
-                      background: isSelected ? primaryColor : COLORS.white,
-                      border: `1px solid ${isSelected ? primaryColor : COLORS.softBorder}`,
+                      padding: "6px 16px",
+                      borderRadius: 20,
+                      background: isSelected ? COLORS.darkGreen : COLORS.white,
+                      border: `1px solid ${isSelected ? COLORS.darkGreen : COLORS.softBorder}`,
                       cursor: "pointer",
-                      position: "relative",
-                      overflow: "hidden",
-                      transition: "all 0.25s ease",
-                      boxShadow: isSelected ? `0 4px 15px ${primaryColor}33` : "0 2px 6px rgba(0,0,0,0.04)",
+                      transition: "all 0.2s ease",
+                      boxShadow: isSelected ? "0 4px 10px rgba(30,74,45,0.2)" : "0 2px 4px rgba(0,0,0,0.02)",
                       flexShrink: 0,
+                      fontSize: 13,
+                      fontWeight: isSelected ? 700 : 600,
+                      color: isSelected ? "#fff" : COLORS.textPrimary,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      whiteSpace: "nowrap"
                     }}
                   >
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: needsRestock ? "rgba(232,93,93,0.15)" : isSelected ? "rgba(255,255,255,0.15)" : "rgba(30,74,45,0.06)", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 600, color: needsRestock ? COLORS.redBadge : isSelected ? "#fff" : COLORS.darkGreen, border: needsRestock ? `1px solid ${COLORS.redBadge}` : "none", marginBottom: 6 }}>
-                      {needsRestock && <span style={{ width: 5, height: 5, background: COLORS.redBadge, borderRadius: "50%", display: "inline-block" }} />}
-                      {isSelected ? t.viewing || "Selected" : t.available}
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: isSelected ? COLORS.white : COLORS.textPrimary, marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.name}</div>
-                    <div style={{ fontSize: 11, color: isSelected ? "rgba(255,255,255,0.7)" : COLORS.textSecondary }}>{selectedCategory === cat.id ? `${state.list.length} ${t.items}` : `${total} ${t.items}`}</div>
-                    <div style={{ position: "absolute", right: 6, bottom: 4, fontSize: 28, opacity: isSelected ? 0.2 : 0.06 }}>{cat.icon}</div>
-                  </div>
+                    {cat.name} 
+                    <span style={{ 
+                      fontSize: 11, 
+                      opacity: 0.8,
+                      background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(30,74,45,0.05)",
+                      padding: "1px 6px",
+                      borderRadius: 10,
+                      marginLeft: 2
+                    }}>
+                      {cat.id === 'all' ? sourceList.length : total}
+                    </span>
+                  </button>
                 );
               })}
             </div>
@@ -2335,6 +2754,7 @@ function PosPage() {
                       product={product}
                       onAdd={handleAdd}
                       cartQty={getCartQty(product.id)}
+                      selectedShop={selectedShop}
                     />
                   ))}
                 </div>
@@ -2344,6 +2764,7 @@ function PosPage() {
                   onAdd={handleAdd}
                   getCartQty={getCartQty}
                   COLORS={COLORS}
+                  selectedShop={selectedShop}
                 />
               )}
             </div>
@@ -2413,8 +2834,8 @@ function PosPage() {
                     size="small"
                     icon={<PushpinOutlined />}
                     onClick={() => {
-                      handleHoldOrder();
-                      handleClearCart();
+                      handleHoldOrder(state.cart_list, true); // Save SILENTLY (no print)
+                      handleClearCart(false, true); // Clear screen for next guest but KEEP draft
                       message.success(tableNo ? `Tab for Table ${tableNo} saved / រក្សាទុកតុលេខ ${tableNo} រួចរាល់` : "Draft saved!");
                     }}
                     disabled={state.cart_list.length === 0}
@@ -2507,9 +2928,14 @@ function PosPage() {
             onSelect={(val) => {
               setTableNo(val);
               setCurrentDraftId(null);
-              // When moving to an empty table, we only take our floatingItems
-              setState(prev => ({ ...prev, cart_list: [...tempUnassignedItems] }));
               setTableModalVisible(false);
+              message.success(`Table ${val} assigned to this order`);
+              
+              // If we were waiting for a table to print kitchen, trigger it now
+              if (isKitchenPending) {
+                setIsKitchenPending(false);
+                handlePrintKitchen(val);
+              }
             }}
             onResume={(order) => {
               // Switch to this existing table draft
@@ -2554,6 +2980,7 @@ function PosPage() {
                   onDecrease={handleDecrease}
                   onRemove={handleRemoveItem}
                   onEdit={handleEditCartItem}
+                  selectedShop={selectedShop}
                 />
               ))
             )}
@@ -2848,7 +3275,7 @@ function PosPage() {
           {(selectedProductForOptions?.moods && Array.isArray(safeParse(selectedProductForOptions.moods)) && safeParse(selectedProductForOptions.moods).length > 0) && (
             <div>
               <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 18 }}>🌶️</span> {layoutType === 'restaurant' ? "Taste Options / រសជាតិ" : (t.mood || "Choice")}
+                {layoutType === 'restaurant' ? "Taste Options / រសជាតិ" : (t.mood || "Choice")}
               </div>
               <Radio.Group
                 value={tempOptions.mood}
@@ -2861,7 +3288,17 @@ function PosPage() {
                     const mLabel = typeof m === 'object' ? (m.label || m.value) : m;
                     const mValue = typeof m === 'object' ? (m.value || m.label) : m;
                     return (
-                      <Radio.Button key={mValue} value={mValue} style={{ borderRadius: 8, margin: '2px' }}>
+                      <Radio.Button 
+                        key={mValue} 
+                        value={mValue} 
+                        style={{ 
+                          borderRadius: 8, 
+                          margin: '2px',
+                          borderColor: tempOptions.mood === mValue ? COLORS.darkGreen : '#d9d9d9',
+                          background: tempOptions.mood === mValue ? COLORS.darkGreen : '#fff',
+                          color: tempOptions.mood === mValue ? '#fff' : 'inherit'
+                        }}
+                      >
                         {mLabel}
                       </Radio.Button>
                     );
@@ -2875,7 +3312,7 @@ function PosPage() {
           {(selectedProductForOptions?.sizes && Array.isArray(safeParse(selectedProductForOptions.sizes)) && safeParse(selectedProductForOptions.sizes).length > 0) && (
             <div>
               <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 18 }}>🍽️</span> {layoutType === 'restaurant' ? "Portion / ទំហំ" : (t.size || "Size")}
+                {layoutType === 'restaurant' ? "Portion / ទំហំ" : (t.size || "Size")}
               </div>
               <Radio.Group
                 value={tempOptions.size}
@@ -2894,11 +3331,13 @@ function PosPage() {
                         textAlign: 'center',
                         display: 'flex',
                         flexDirection: 'column',
-                        lineHeight: 1.2
+                        lineHeight: 1.2,
+                        borderColor: tempOptions.size === s.label ? COLORS.darkGreen : '#d9d9d9',
+                        boxShadow: tempOptions.size === s.label ? `0 0 0 1px ${COLORS.darkGreen}` : 'none'
                       }}
                     >
-                      <div style={{ fontWeight: 700 }}>{s.label}</div>
-                      <div style={{ fontSize: 12, color: COLORS.midGreen }}>
+                      <div style={{ fontWeight: 700, color: tempOptions.size === s.label ? COLORS.darkGreen : 'inherit' }}>{s.label}</div>
+                      <div style={{ fontSize: 12, color: tempOptions.size === s.label ? COLORS.darkGreen : COLORS.midGreen }}>
                         ${Number(s.price || 0).toFixed(2)}
                       </div>
                     </Radio.Button>
@@ -2908,30 +3347,13 @@ function PosPage() {
             </div>
           )}
 
-          {/* 3. Sugar Selector (Only for Drinks) */}
-          {(selectedProductForOptions?.moods && safeParse(selectedProductForOptions.moods)?.length > 0) && (
-            <div>
-              <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 18 }}>🍯</span> {t.sugar_level || "Sugar Level"}
-              </div>
-              <Radio.Group
-                value={tempOptions.sugar}
-                onChange={e => setTempOptions(p => ({ ...p, sugar: e.target.value }))}
-                buttonStyle="solid"
-              >
-                <Radio.Button value="0%" style={{ borderRadius: '8px 0 0 8px' }}>0%</Radio.Button>
-                <Radio.Button value="25%">25%</Radio.Button>
-                <Radio.Button value="50%">50%</Radio.Button>
-                <Radio.Button value="100%" style={{ borderRadius: '0 8px 8px 0' }}>100%</Radio.Button>
-              </Radio.Group>
-            </div>
-          )}
+          {/* 3. Sugar Selector (Only for Drinks) - REMOVED redundant section */}
 
           {/* 4. Add-ons Selector (Side Dishes) */}
           {(selectedProductForOptions?.addons && Array.isArray(safeParse(selectedProductForOptions.addons)) && safeParse(selectedProductForOptions.addons).length > 0) && (
             <div>
               <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 18 }}>🥗</span> {layoutType === 'restaurant' ? "Side Dishes / គ្រឿមបន្ថែម" : (t.addons || "Add-ons")}
+                {layoutType === 'restaurant' ? "Side Dishes / គ្រឿមបន្ថែម" : (t.addons || "Add-ons")}
               </div>
               <Checkbox.Group
                 value={tempOptions.addons}
@@ -2947,12 +3369,14 @@ function PosPage() {
                       border: `1px solid ${tempOptions.addons.includes(a.label) ? COLORS.darkGreen : '#e2e8f0'}`,
                       transition: 'all 0.2s'
                     }}>
-                      <Checkbox value={a.label}>
-                        <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                          <span style={{ fontWeight: 600, fontSize: 13 }}>{a.label}</span>
-                          <span style={{ fontSize: 11, color: COLORS.midGreen }}>+${Number(a.price).toFixed(2)}</span>
-                        </div>
-                      </Checkbox>
+                      <ConfigProvider theme={{ token: { colorPrimary: COLORS.darkGreen } }}>
+                        <Checkbox value={a.label}>
+                          <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: 600, fontSize: 13 }}>{a.label}</span>
+                            <span style={{ fontSize: 11, color: COLORS.midGreen }}>+${Number(a.price).toFixed(2)}</span>
+                          </div>
+                        </Checkbox>
+                      </ConfigProvider>
                     </div>
                   ))}
                 </div>
@@ -2963,7 +3387,7 @@ function PosPage() {
           {/* 5. Kitchen Note */}
           <div style={{ marginTop: 4 }}>
             <div style={{ fontWeight: 800, marginBottom: 8, color: COLORS.textPrimary, fontSize: 14 }}>
-              🗒️ {layoutType === 'restaurant' ? "Kitchen Note / ចុងភៅ" : "Note / ចំណាំ"}
+              {layoutType === 'restaurant' ? "Kitchen Note / ចុងភៅ" : "Note / ចំណាំ"}
             </div>
             <Input.TextArea
               placeholder={layoutType === 'restaurant' ? "e.g. Less Spicy, No Peanuts..." : "Add your note here..."}

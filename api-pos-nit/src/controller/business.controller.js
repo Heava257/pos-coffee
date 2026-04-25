@@ -343,13 +343,26 @@ exports.getPublicConfig = async (req, res) => {
         if (!business_id) return res.status(400).json({ message: "Business ID is required" });
 
         const [list] = await db.query(`
-            SELECT name, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active 
+            SELECT name, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active,
+                   global_bogo_active, global_bogo_text, promo_scope, promo_applied_categories, promo_applied_products,
+                   promo_tag, promo_tag_color, promo_desc, promo_buy_qty, promo_get_qty, promo_start_date, promo_end_date,
+                   discount_scope, discount_applied_categories, discount_applied_products, global_discount
             FROM businesses 
             WHERE id = ?
         `, [business_id]);
 
         if (list.length === 0) return res.status(404).json({ message: "Business not found" });
-        res.json({ config: list[0] });
+        
+        // Parse JSON strings back to arrays for the frontend
+        const config = {
+            ...list[0],
+            promo_applied_categories: list[0].promo_applied_categories ? JSON.parse(list[0].promo_applied_categories) : [],
+            promo_applied_products: list[0].promo_applied_products ? JSON.parse(list[0].promo_applied_products) : [],
+            discount_applied_categories: list[0].discount_applied_categories ? JSON.parse(list[0].discount_applied_categories) : [],
+            discount_applied_products: list[0].discount_applied_products ? JSON.parse(list[0].discount_applied_products) : [],
+        };
+        
+        res.json({ config });
     } catch (error) {
         logError("business.getPublicConfig", error, res);
     }

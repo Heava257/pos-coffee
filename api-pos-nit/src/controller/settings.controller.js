@@ -4,7 +4,7 @@ exports.getSettings = async (req, res) => {
     try {
         const { business_id } = req;
         const [data] = await db.query(
-            "SELECT name, owner_name, email, phone, logo, address, website, tax_percent, service_charge, kh_exchange_rate, currency_symbol, telegram_link, facebook_link, telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active, global_discount FROM businesses WHERE id = ?",
+            "SELECT name, owner_name, email, phone, logo, address, website, tax_percent, service_charge, kh_exchange_rate, currency_symbol, telegram_link, facebook_link, telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active, global_discount, global_bogo_active, global_bogo_text, promo_scope, promo_applied_categories, promo_applied_products, promo_tag, promo_tag_color, promo_desc, promo_buy_qty, promo_get_qty, promo_start_date, promo_end_date, discount_scope, discount_applied_categories, discount_applied_products FROM businesses WHERE id = ?",
             [business_id]
         );
 
@@ -27,7 +27,11 @@ exports.updateSettings = async (req, res) => {
             currency_symbol, telegram_link, facebook_link,
             telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url,
             promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active,
-            global_discount
+            global_discount, global_bogo_active, global_bogo_text, promo_scope, 
+            promo_applied_categories, promo_applied_products,
+            promo_tag, promo_tag_color, promo_desc, promo_buy_qty, promo_get_qty,
+            promo_start_date, promo_end_date,
+            discount_scope, discount_applied_categories, discount_applied_products
         } = req.body;
 
         const logo = req.file?.path || req.file?.filename;
@@ -39,7 +43,12 @@ exports.updateSettings = async (req, res) => {
         currency_symbol = ?, telegram_link = ?, facebook_link = ?,
         telegram_token = ?, telegram_chat_id = ?, telegram_mode = ?, telegram_webhook_url = ?,
         promo_title = ?, promo_subtitle = ?, promo_image = ?, promo_discount = ?, promo_is_active = ?,
-        global_discount = ?
+        global_discount = ?, global_bogo_active = ?, global_bogo_text = ?, promo_scope = ?, 
+        promo_applied_categories = ?, promo_applied_products = ?,
+        promo_tag = ?, promo_tag_color = ?, promo_desc = ?,
+        promo_buy_qty = ?, promo_get_qty = ?,
+        promo_start_date = ?, promo_end_date = ?,
+        discount_scope = ?, discount_applied_categories = ?, discount_applied_products = ?
     `;
         let params = [
             name, owner_name, email, phone, address, website,
@@ -47,7 +56,12 @@ exports.updateSettings = async (req, res) => {
             currency_symbol, telegram_link, facebook_link,
             telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url,
             promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active || 0,
-            global_discount || 0
+            global_discount || 0, global_bogo_active || 0, global_bogo_text || '', promo_scope || 'all',
+            promo_applied_categories || '[]', promo_applied_products || '[]',
+            promo_tag || '', promo_tag_color || '#C8952A', promo_desc || '',
+            promo_buy_qty || 1, promo_get_qty || 1,
+            promo_start_date || null, promo_end_date || null,
+            discount_scope || 'all', discount_applied_categories || '[]', discount_applied_products || '[]'
         ];
 
         if (logo) {

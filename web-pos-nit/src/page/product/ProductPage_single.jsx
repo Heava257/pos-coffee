@@ -724,7 +724,7 @@ function ProductPage() {
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name={"discount"} label={t.discount}>
+                    <Form.Item name={"discount"} label={t.discount} hidden>
                       <InputNumber size="large" placeholder={t.discount} style={{ width: "100%" }} />
                     </Form.Item>
                   </Col>
@@ -832,11 +832,6 @@ function ProductPage() {
               }
               return <span style={{ fontWeight: 700 }}>${Number(price || 0).toFixed(2)}</span>;
             }
-          },
-          {
-            key: "discount",
-            title: t.discount,
-            dataIndex: "discount",
           },
           {
             key: "medical_info",

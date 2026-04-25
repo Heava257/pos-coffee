@@ -7,11 +7,13 @@ exports.getList = async (req, res) => {
     const { business_id } = req;
     const cacheKey = `categories_biz_${business_id}`;
 
+    /*
     // 1. Check Redis Cache
     const cachedData = await getCache(cacheKey);
     if (cachedData) {
       return res.json({ list: cachedData, source: "redis" });
     }
+    */
     
     let sql;
     let params = [];
@@ -20,19 +22,22 @@ exports.getList = async (req, res) => {
       // Platform Admin sees EVERYTHING for management
       sql = `SELECT * FROM categories WHERE business_id = 1 ORDER BY id ASC`;
     } else {
-      // Show BOTH:
-      // 1. Global categories that are ACTIVATED via Access Control
-      // 2. Local categories created by this specific business
+      // Show BOTH and SORT by popularity (order volume)
       sql = `
-        (SELECT c.* 
-         FROM categories c
-         JOIN business_categories bc ON c.id = bc.category_id
-         WHERE bc.business_id = ? AND bc.is_active = 1)
-        UNION
-        (SELECT * FROM categories WHERE business_id = ?)
-        ORDER BY id ASC
+        SELECT c.*, 
+               (SELECT COUNT(od.id) 
+                FROM order_details od 
+                JOIN products p ON od.product_id = p.id 
+                JOIN orders o ON od.order_id = o.id
+                WHERE p.category_id = c.id AND o.business_id = ? AND o.status != 'cancelled'
+               ) as total_orders
+        FROM categories c
+        LEFT JOIN business_categories bc ON c.id = bc.category_id
+        WHERE (bc.business_id = ? AND bc.is_active = 1) OR (c.business_id = ?)
+        GROUP BY c.id
+        ORDER BY total_orders DESC, c.name ASC
       `;
-      params = [business_id, business_id];
+      params = [business_id, business_id, business_id];
     }
 
     const [list] = await db.query(sql, params);

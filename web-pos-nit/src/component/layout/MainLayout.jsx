@@ -188,8 +188,11 @@ const MainLayout = () => {
   const [subAlert, setSubAlert] = useState(null);
   const { setConfig } = configStore();
   const { profile, setProfile: setProfileStore } = useProfileStore(); // Use reactive profile from the store
-  const { isFullScreen, setFullScreen } = useUIStore();
-  const [collapsed, setCollapsed] = useState(false);
+  const { isFullScreen, setFullScreen, isHeaderVisible, setHeaderVisible, isSidebarCollapsed, setSidebarCollapsed } = useUIStore();
+  const COLORS = {
+    darkGreen: "#1e4a2d",
+    white: "#ffffff",
+  };
   const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
@@ -266,13 +269,17 @@ const MainLayout = () => {
       setIsMobile(width < 768);
       setIsTablet(width >= 768 && width < 1024);
 
-      // Auto-collapse sidebar on tablet and mobile
+      // Only auto-collapse on active resize if we cross the threshold
       if (width < 1024) {
-        setCollapsed(true);
+        setSidebarCollapsed(true);
       }
     };
 
-    checkScreenSize();
+    // Set initial mobile/tablet states WITHOUT forcing collapse
+    const initialWidth = window.innerWidth;
+    setIsMobile(initialWidth < 768);
+    setIsTablet(initialWidth >= 768 && initialWidth < 1024);
+    
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
@@ -317,7 +324,7 @@ const MainLayout = () => {
     if (parentKey) {
       setOpenKeys([parentKey]);
     }
-  }, [location.pathname, lang, permision]); // Added permision to dependencies
+  }, [location.pathname, lang, permision, isSidebarCollapsed]); // Added isSidebarCollapsed
 
   const checkISnotPermissionViewPage = () => {
     // Guard: if no profile or permissions loaded yet, don't redirect
@@ -461,7 +468,7 @@ const MainLayout = () => {
     };
 
     return filterMenuItems(MENU_STRUCTURE);
-  }, [permision, profile, lang, collapsed, t]);
+  }, [permision, profile, lang, isSidebarCollapsed, t]);
 
   const getMenuByUser = () => {
     // This function is now redundant due to useMemo
@@ -531,7 +538,7 @@ const MainLayout = () => {
   // Calculate responsive margins and dimensions
   const getSiderWidth = () => {
     if (isMobile) return 0;
-    return collapsed ? 80 : 280;
+    return isSidebarCollapsed ? 80 : 280;
   };
 
   const getContentMargin = () => {
@@ -561,12 +568,12 @@ const MainLayout = () => {
           alt="Logo"
           className="admin-logo"
           style={{
-            height: isMobile ? "80px" : collapsed ? "45px" : "130px",
+            height: isMobile ? "80px" : isSidebarCollapsed ? "45px" : "130px",
             width: "auto",
-            maxWidth: collapsed ? "60px" : "200px",
+            maxWidth: isSidebarCollapsed ? "60px" : "200px",
             objectFit: "contain",
             transition: "all 0.3s ease",
-            margin: collapsed ? "0 auto" : "0"
+            margin: isSidebarCollapsed ? "0 auto" : "0"
           }}
         />
       </div>
@@ -585,7 +592,7 @@ const MainLayout = () => {
           overflowY: "auto",
           fontSize: isMobile ? "14px" : "inherit"
         }}
-        inlineCollapsed={!isMobile && collapsed}
+        inlineCollapsed={!isMobile && isSidebarCollapsed}
       />
     </>
   );
@@ -601,8 +608,8 @@ const MainLayout = () => {
       {!isMobile && !isFullScreen && (
         <Sider
           collapsible
-          collapsed={collapsed}
-          onCollapse={(value) => setCollapsed(value)}
+          collapsed={isSidebarCollapsed}
+          onCollapse={(value) => setSidebarCollapsed(value)}
           trigger={null}
           style={{
             background: "#ffffff",
@@ -616,7 +623,6 @@ const MainLayout = () => {
           }}
           width={280}
           collapsedWidth={80}
-          breakpoint="lg"
         >
           <SidebarContent />
         </Sider>
@@ -646,8 +652,69 @@ const MainLayout = () => {
         transition: "margin-left 0.3s",
         background: "#f4f1eb"
       }}>
-        {/* Header */}
+        {/* Sidebar Toggle Button (Floating) - Only visible when header is hidden */}
+        {!isFullScreen && !isHeaderVisible && !isMobile && (
+          <div 
+            onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
+            style={{
+              position: "fixed",
+              top: 10,
+              left: isSidebarCollapsed ? 90 : 290,
+              zIndex: 9999,
+              background: COLORS.white,
+              color: COLORS.darkGreen,
+              width: 40,
+              height: 40,
+              borderRadius: "10px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+              border: `1px solid #e8e3d8`,
+              transition: "all 0.3s ease",
+            }}
+          >
+            {isSidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          </div>
+        )}
+
+        {/* Header Toggle Button (Floating) */}
         {!isFullScreen && (
+          <div 
+            onClick={() => setHeaderVisible(!isHeaderVisible)}
+            style={{
+              position: "fixed",
+              top: isHeaderVisible ? (isMobile ? 55 : 65) : 0,
+              right: 20, // Move to far right
+              zIndex: 9999,
+              background: isHeaderVisible ? "rgba(30,74,45,0.6)" : COLORS.darkGreen,
+              color: "#fff",
+              padding: "2px 12px",
+              borderRadius: "0 0 8px 8px",
+              cursor: "pointer",
+              fontSize: 9,
+              fontWeight: 800,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              opacity: isHeaderVisible ? 0.3 : 0.9,
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+            onMouseLeave={e => { if (isHeaderVisible) e.currentTarget.style.opacity = "0.3" }}
+          >
+            {isHeaderVisible ? (
+              <><MenuFoldOutlined style={{ fontSize: 10, transform: 'rotate(-90deg)' }} /> HIDE HEADER</>
+            ) : (
+              <><MenuUnfoldOutlined style={{ fontSize: 10, transform: 'rotate(-90deg)' }} /> SHOW HEADER</>
+            )}
+          </div>
+        )}
+
+        {/* Header */}
+        {!isFullScreen && isHeaderVisible && (
           <div
             className="admin-header"
             style={{
@@ -663,14 +730,15 @@ const MainLayout = () => {
               zIndex: 999,
               boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)",
               borderTop: `4px solid ${["pharmacy", "medical"].some(k => (profile?.blueprint_name || "").toLowerCase().includes(k)) ? "#2196f3" : "#1e4a2d"}`,
+              transition: "all 0.3s ease",
             }}
           >
             {/* Mobile Menu Button */}
-            <Tooltip title={isMobile ? (mobileDrawerVisible ? "Close Menu" : "Open Menu") : (collapsed ? "Expand Menu" : "Collapse Menu")} placement="bottom">
+            <Tooltip title={isMobile ? (mobileDrawerVisible ? "Close Menu" : "Open Menu") : (isSidebarCollapsed ? "Expand Menu" : "Collapse Menu")} placement="bottom">
               <Button
                 type="text"
-                icon={collapsed && !isMobile ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                onClick={isMobile ? toggleMobileDrawer : () => setCollapsed(!collapsed)}
+                icon={isSidebarCollapsed && !isMobile ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                onClick={isMobile ? toggleMobileDrawer : () => setSidebarCollapsed(!isSidebarCollapsed)}
                 className="sidebar-toggle-btn"
                 style={{
                   fontSize: "18px",
