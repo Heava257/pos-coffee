@@ -74,8 +74,8 @@ exports.getList = async (req, res) => {
     const [matStats] = await db.query(`
       SELECT 
         COUNT(id) as total_items,
-        SUM(CASE WHEN qty <= min_stock THEN 1 ELSE 0 END) as low_stock_count,
-        SUM(qty * price) as total_stock_value
+        SUM(CASE WHEN qty <= par_level OR qty <= min_stock THEN 1 ELSE 0 END) as low_stock_count,
+        SUM(qty * COALESCE(avg_cost, price)) as total_stock_value
       FROM raw_material
       WHERE business_id = ? ${target_branch_id ? 'AND branch_id = ?' : ''} AND status = 1
     `, [business_id, ...(target_branch_id ? [target_branch_id] : [])]);
@@ -92,9 +92,22 @@ exports.getList = async (req, res) => {
     const [lowMatList] = await db.query(`
       SELECT name, qty, 'material' as type
       FROM raw_material
-      WHERE business_id = ? AND qty <= min_stock AND status = 1
+      WHERE business_id = ? AND (qty <= min_stock OR qty <= par_level) AND status = 1
       ${target_branch_id ? 'AND branch_id = ?' : ''}
       ORDER BY qty ASC LIMIT 5
+    `, [business_id, ...(target_branch_id ? [target_branch_id] : [])]);
+
+    // 3.1 Expiry Alerts (Next 30 days)
+    const [expiryAlerts] = await db.query(`
+        SELECT DISTINCT rm.name, sl.expiry_date, sl.batch_no, rm.qty
+        FROM stock_logs sl
+        JOIN raw_material rm ON sl.item_id = rm.id
+        WHERE sl.item_type = 'raw_material'
+        AND sl.expiry_date IS NOT NULL
+        AND sl.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+        AND rm.business_id = ?
+        ${target_branch_id ? 'AND sl.branch_id = ?' : ''}
+        ORDER BY sl.expiry_date ASC LIMIT 5
     `, [business_id, ...(target_branch_id ? [target_branch_id] : [])]);
 
     const combinedStats = {
@@ -177,7 +190,8 @@ exports.getList = async (req, res) => {
       },
       stock_summary: {
         ...combinedStats,
-        low_stock_list: combinedLowList
+        low_stock_list: combinedLowList,
+        expiry_alerts: expiryAlerts
       },
       range_summary: {
         total_sale: totalSale,

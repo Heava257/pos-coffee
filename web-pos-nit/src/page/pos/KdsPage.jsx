@@ -25,6 +25,7 @@ import {
 import { request } from "../../util/helper";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { useLanguage, translations } from "../../store/language.store";
 
 dayjs.extend(relativeTime);
 
@@ -36,6 +37,8 @@ const KdsPage = () => {
     const [isHistory, setIsHistory] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const audioRef = useRef(null);
+    const { lang } = useLanguage();
+    const t = translations[lang];
 
     const fetchOrders = async (silent = false) => {
         if (!silent) setLoading(true);
@@ -110,7 +113,7 @@ const KdsPage = () => {
         <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <Title level={2} style={{ margin: 0 }}>
-                    <CoffeeOutlined /> {isHistory ? "KDS History (Today)" : "KDS - Kitchen Display System"}
+                    <CoffeeOutlined /> {isHistory ? t.kds_history_title : t.kds_header}
                 </Title>
                 <Space>
                     <Button 
@@ -118,13 +121,13 @@ const KdsPage = () => {
                         icon={<HistoryOutlined />}
                         onClick={() => setIsHistory(!isHistory)}
                     >
-                        {isHistory ? "Show Active" : "History"}
+                        {isHistory ? t.show_active_btn : t.history_btn}
                     </Button>
                     <Button 
                         icon={<SyncOutlined spin={loading} />} 
                         onClick={() => fetchOrders()}
                     >
-                        Refresh
+                        {t.refresh_btn}
                     </Button>
                     {!isHistory && (
                         <Button 
@@ -132,7 +135,7 @@ const KdsPage = () => {
                             icon={<NotificationOutlined />}
                             onClick={() => setAutoRefresh(!autoRefresh)}
                         >
-                            Auto-Refresh: {autoRefresh ? "ON" : "OFF"}
+                            {autoRefresh ? t.auto_refresh_on : t.auto_refresh_off}
                         </Button>
                     )}
                 </Space>
@@ -141,7 +144,7 @@ const KdsPage = () => {
             {loading && orders.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 100 }}><Spin size="large" /></div>
             ) : orders.length === 0 ? (
-                <Empty description={isHistory ? "No served orders today" : "No active preparation tickets"} style={{ marginTop: 100 }} />
+                <Empty description={isHistory ? t.served_today_empty : t.active_tickets_empty} style={{ marginTop: 100 }} />
             ) : (
                 <Row gutter={[16, 16]}>
                     {orders.map((order) => (
@@ -155,7 +158,7 @@ const KdsPage = () => {
                                 }}
                                 title={
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Text strong>#{order.id} - {order.table_no || 'Takeaway'}</Text>
+                                        <Text strong>#{order.id} - {order.table_no || t.takeaway_label}</Text>
                                         {getTimeDiff(order.created_at)}
                                     </div>
                                 }
@@ -169,7 +172,9 @@ const KdsPage = () => {
                                 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                                     <Tag color={getStatusColor(order.kitchen_status)}>
-                                        {(order.kitchen_status || 'pending').toUpperCase()}
+                                        {(order.kitchen_status === 'preparing' ? t.preparing_status : 
+                                          order.kitchen_status === 'ready' ? t.done_status : 
+                                          t.pending_status).toUpperCase()}
                                     </Tag>
                                     <Text type="secondary" style={{ fontSize: 12 }}>{order.customer_name || 'Walking Guest'}</Text>
                                 </div>
@@ -183,7 +188,7 @@ const KdsPage = () => {
                                                 icon={<ClockCircleOutlined />}
                                                 onClick={() => updateStatus(order.id, 'preparing')}
                                             >
-                                                Start Preparing
+                                                {t.start_preparing_btn}
                                             </Button>
                                         </Col>
                                     )}
@@ -196,7 +201,7 @@ const KdsPage = () => {
                                                 icon={<CheckCircleOutlined />}
                                                 onClick={() => updateStatus(order.id, 'ready')}
                                             >
-                                                Mark Ready
+                                                {t.mark_ready_btn}
                                             </Button>
                                         </Col>
                                     )}
@@ -209,7 +214,7 @@ const KdsPage = () => {
                                                 icon={<NotificationOutlined />}
                                                 onClick={() => updateStatus(order.id, 'served')}
                                             >
-                                                Mark Served
+                                                {t.mark_served_btn}
                                             </Button>
                                         </Col>
                                     )}

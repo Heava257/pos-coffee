@@ -13,8 +13,11 @@ import {
     Space,
     Table,
     Tag,
+    Typography,
     Upload,
 } from "antd";
+
+const { Text } = Typography;
 import { request } from "../../util/helper";
 import { MdAdd, MdDelete, MdEdit } from "react-icons/md";
 import MainPage from "../../component/layout/MainPage";
@@ -29,6 +32,7 @@ const getBase64 = (file) =>
     });
 
 import { useLanguage, translations } from "../../store/language.store";
+import { AlertCircle, TrendingUp } from "lucide-react";
 
 function RawMaterialPage() {
     const { lang } = useLanguage();
@@ -85,6 +89,7 @@ function RawMaterialPage() {
         params.append("price", items.price || 0);
         params.append("qty", items.qty || 0);
         params.append("min_stock", items.min_stock || 0);
+        params.append("par_level", items.par_level || 0);
         params.append("status", items.status);
         params.append("id", form.getFieldValue("id"));
 
@@ -247,8 +252,17 @@ function RawMaterialPage() {
             key: "price",
             title: t.last_cost,
             dataIndex: "price",
+            width: 100,
             align: 'right',
-            render: (val) => <b style={{ color: "#333" }}>${Number(val).toFixed(2)}</b>
+            render: (val) => <Text type="secondary" style={{ fontSize: 12 }}>${Number(val).toFixed(2)}</Text>
+        },
+        {
+            key: "avg_cost",
+            title: translations[lang].avg_cost,
+            dataIndex: "avg_cost",
+            width: 100,
+            align: 'right',
+            render: (val) => <b style={{ color: "#1e4a2d" }}>${Number(val || 0).toFixed(4)}</b>
         },
         {
             key: "status",
@@ -399,7 +413,11 @@ function RawMaterialPage() {
                                 <InputNumber size="large" style={{ width: "100%" }} min={0} />
                             </Form.Item>
  
-                            <Form.Item name="min_stock" label={t.min_stock_alert} initialValue={10}>
+                            <Form.Item name="min_stock" label={<Space><AlertCircle size={14} /> {translations[lang].min_alert}</Space>} initialValue={10}>
+                                <InputNumber size="large" style={{ width: "100%" }} min={0} />
+                            </Form.Item>
+
+                            <Form.Item name="par_level" label={<Space><TrendingUp size={14} /> {translations[lang].par_level}</Space>} initialValue={50}>
                                 <InputNumber size="large" style={{ width: "100%" }} min={0} />
                             </Form.Item>
  

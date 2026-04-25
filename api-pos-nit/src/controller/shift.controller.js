@@ -82,6 +82,13 @@ exports.openShift = async (req, res) => {
         const { business_id, branch_id, user_id } = req;
         const { opening_cash_usd, opening_cash_khr } = req.body;
 
+        if (opening_cash_usd === undefined || opening_cash_usd === null || opening_cash_khr === undefined || opening_cash_khr === null) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide opening cash for both USD and KHR."
+            });
+        }
+
         // Check if there's already an open shift for this user/branch
         const [existing] = await db.query(
             "SELECT id FROM shifts WHERE business_id = ? AND branch_id = ? AND user_id = ? AND status = 'Open' LIMIT 1",
@@ -158,8 +165,12 @@ exports.getList = async (req, res) => {
         }
 
         if (from_date && to_date) {
-            sql += " AND DATE(s.created_at) BETWEEN ? AND ? ";
-            params.push(from_date, to_date);
+            sql += ` AND (
+                (s.status = 'Closed' AND DATE(s.closed_at) BETWEEN ? AND ?)
+                OR 
+                (s.status = 'Open' AND DATE(s.created_at) BETWEEN ? AND ?)
+            ) `;
+            params.push(from_date, to_date, from_date, to_date);
         }
 
         sql += " ORDER BY s.id DESC ";
@@ -175,11 +186,12 @@ exports.getList = async (req, res) => {
 exports.getShiftSummary = async (req, res) => {
     try {
         const { business_id, branch_id, user_id } = req;
-        const { id } = req.query; // Optional specific shift ID
+        const { id, shift_id } = req.query; // Optional specific shift ID
+        const targetId = id || shift_id;
 
         let currentShift = null;
-        if (id) {
-            const [rows] = await db.query("SELECT * FROM shifts WHERE id = ?", [id]);
+        if (targetId) {
+            const [rows] = await db.query("SELECT * FROM shifts WHERE id = ?", [targetId]);
             if (rows.length > 0) currentShift = rows[0];
         } else {
             const [rows] = await db.query(
@@ -199,7 +211,8 @@ exports.getShiftSummary = async (req, res) => {
         let salesSql = `
             SELECT 
                 payment_method, 
-                SUM(total_amount) as total 
+                SUM(total_amount) as total_usd,
+                SUM(total_paid) as total_paid_usd
             FROM orders 
             WHERE business_id = ? AND branch_id = ? 
             AND status != 'cancelled'
@@ -219,47 +232,59 @@ exports.getShiftSummary = async (req, res) => {
 
         // B. Sum Expenses
         const [expenses] = await db.query(`
-            SELECT SUM(amount) as total 
+            SELECT 
+                SUM(amount) as total_usd,
+                0 as total_khr
             FROM expense 
             WHERE business_id = ? AND branch_id = ? 
             AND created_at >= ?
         `, [business_id, branch_id, startTime]);
 
-        // C. Breakdown totals
-        let totalSales = 0;
-        let cashSales = 0;
-        let abaSales = 0;
-        let wingSales = 0;
+        // C. Get Exchange Rate (from business settings or default)
+        const [settings] = await db.query("SELECT kh_exchange_rate FROM businesses WHERE id = ?", [business_id]);
+        const exchangeRate = settings[0]?.kh_exchange_rate || 4000;
+
+        // D. Breakdown totals
+        let totalSalesUSD = 0;
+        let cashSalesUSD = 0;
+        let abaSalesUSD = 0;
+        let wingSalesUSD = 0;
 
         sales.forEach(s => {
             const method = (s.payment_method || "").toLowerCase();
-            const amount = parseFloat(s.total || 0);
-            totalSales += amount;
+            const amount = parseFloat(s.total_usd || 0);
+            totalSalesUSD += amount;
             
             if (method === 'cash') {
-                cashSales += amount;
+                cashSalesUSD += amount;
             } else if (method === 'wing') {
-                wingSales += amount;
+                wingSalesUSD += amount;
             } else {
-                abaSales += amount;
+                abaSalesUSD += amount;
             }
         });
 
-        const expenseTotal = parseFloat(expenses[0]?.total || 0);
+        const expenseUSD = parseFloat(expenses[0]?.total_usd || 0);
+        const expenseKHR = parseFloat(expenses[0]?.total_khr || 0);
 
-        // Expected Cash = Opening + Cash Sales - Expenses
-        const expectedCash = (parseFloat(currentShift.opening_cash_usd || 0)) + cashSales - expenseTotal;
+        // Expected Cash USD = Opening USD + Cash Sales USD - Expense USD
+        const expectedCashUSD = (parseFloat(currentShift.opening_cash_usd || 0)) + cashSalesUSD - expenseUSD;
+        // Expected Cash KHR = Opening KHR - Expense KHR (Assuming all sales are converted to USD at POS)
+        const expectedCashKHR = (parseFloat(currentShift.opening_cash_khr || 0)) - expenseKHR;
 
         res.json({
             success: true,
             shift: currentShift,
             summary: {
-                total_sales_usd: totalSales,
-                total_cash_usd: cashSales,
-                total_aba_usd: abaSales,
-                total_wing_usd: wingSales,
-                total_expense_usd: expenseTotal,
-                expected_cash_usd: expectedCash
+                total_sales_usd: totalSalesUSD,
+                total_cash_usd: cashSalesUSD,
+                total_aba_usd: abaSalesUSD,
+                total_wing_usd: wingSalesUSD,
+                total_expense_usd: expenseUSD,
+                total_expense_khr: expenseKHR,
+                expected_cash_usd: expectedCashUSD,
+                expected_cash_khr: expectedCashKHR,
+                exchange_rate: exchangeRate
             }
         });
 

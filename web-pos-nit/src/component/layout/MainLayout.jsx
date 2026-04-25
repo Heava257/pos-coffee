@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Breadcrumb, Button, Dropdown, Input, Layout, Menu, Tag, theme, Drawer, Divider, Space } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import "./MainLayout.css";
-import logo from "../../assets/coffee.png";
+import logo from "../../assets/business_default_logo.png";
 import ImgUser from "../../assets/profile.png";
 import { Tooltip } from "antd";
 import { MdOutlineMarkEmailUnread, MdRestaurantMenu, MdCompareArrows } from "react-icons/md";
@@ -279,7 +279,7 @@ const MainLayout = () => {
     const initialWidth = window.innerWidth;
     setIsMobile(initialWidth < 768);
     setIsTablet(initialWidth >= 768 && initialWidth < 1024);
-    
+
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
@@ -568,7 +568,7 @@ const MainLayout = () => {
           alt="Logo"
           className="admin-logo"
           style={{
-            height: isMobile ? "80px" : isSidebarCollapsed ? "45px" : "130px",
+            height: isMobile ? "80px" : isSidebarCollapsed ? "45px" : "110px",
             width: "auto",
             maxWidth: isSidebarCollapsed ? "60px" : "200px",
             objectFit: "contain",
@@ -654,7 +654,7 @@ const MainLayout = () => {
       }}>
         {/* Sidebar Toggle Button (Floating) - Only visible when header is hidden */}
         {!isFullScreen && !isHeaderVisible && !isMobile && (
-          <div 
+          <div
             onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
             style={{
               position: "fixed",
@@ -681,7 +681,7 @@ const MainLayout = () => {
 
         {/* Header Toggle Button (Floating) */}
         {!isFullScreen && (
-          <div 
+          <div
             onClick={() => setHeaderVisible(!isHeaderVisible)}
             style={{
               position: "fixed",
@@ -706,9 +706,9 @@ const MainLayout = () => {
             onMouseLeave={e => { if (isHeaderVisible) e.currentTarget.style.opacity = "0.3" }}
           >
             {isHeaderVisible ? (
-              <><MenuFoldOutlined style={{ fontSize: 10, transform: 'rotate(-90deg)' }} /> HIDE HEADER</>
+              <><MenuFoldOutlined style={{ fontSize: 10, transform: 'rotate(-90deg)' }} /> {t.hide_header || "លាក់ក្បាលទំព័រ"}</>
             ) : (
-              <><MenuUnfoldOutlined style={{ fontSize: 10, transform: 'rotate(-90deg)' }} /> SHOW HEADER</>
+              <><MenuUnfoldOutlined style={{ fontSize: 10, transform: 'rotate(-90deg)' }} /> {t.show_header || "បង្ហាញក្បាលទំព័រ"}</>
             )}
           </div>
         )}
@@ -796,7 +796,7 @@ const MainLayout = () => {
                       gap: '6px'
                     }}
                   >
-                    {profile?.plan_id === 1 ? "UPGRADE" : (profile?.plan_id === 2 ? "PRO" : "PREMIUM")}
+                    {profile?.plan_id === 1 ? t.upgrade : (profile?.plan_id === 2 ? t.pro_label : t.premium_label)}
                   </Button>
                 )}
 
@@ -827,7 +827,7 @@ const MainLayout = () => {
                       textTransform: 'uppercase',
                       marginTop: '2px'
                     }}>
-                      {profile?.branch_name || "Main Branch"}
+                      {profile?.branch_name || t.main_branch}
                     </div>
                   </div>
                 )}
@@ -853,7 +853,7 @@ const MainLayout = () => {
                         textTransform: 'uppercase'
                       }}
                     >
-                      {profile?.business_id === 1 ? (t.executives || "Admin") : (profile?.role_name || "Staff")}
+                      {profile?.business_id === 1 ? t.admin_label : (profile?.role_name || t.staff_label)}
                     </Tag>
                   </div>
                 )}
@@ -942,7 +942,7 @@ const MainLayout = () => {
                 style={{ marginBottom: 20, borderRadius: '8px' }}
                 action={
                   <Button size="small" type="primary" ghost onClick={() => navigate('/my-plan')}>
-                    Subscription Details
+                    {t.subscription_details}
                   </Button>
                 }
               />

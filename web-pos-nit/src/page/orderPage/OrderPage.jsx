@@ -34,7 +34,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   EyeOutlined,
-  MoreOutlined,
+  HistoryOutlined,
   ExportOutlined,
   SearchOutlined,
   FilterOutlined,
@@ -83,16 +83,21 @@ function OrderPage() {
   const [loading, setLoading] = useState(false);
   const [openingCash, setOpeningCash] = useState(0);
   const [openingCashKHR, setOpeningCashKHR] = useState(0);
-  const [actualCash, setActualCash] = useState(0);
-  const [actualCashKHR, setActualCashKHR] = useState(0);
+  const [actualCash, setActualCash] = useState(null);
+  const [actualCashKHR, setActualCashKHR] = useState(null);
   const [remark, setRemark] = useState("");
-  const [currentShift, setCurrentShift] = useState(null); // 🏁 Track current open shift
+  const [currentShift, setCurrentShift] = useState(null); 
   const [visibleOpenShiftModal, setVisibleOpenShiftModal] = useState(false);
   const [shiftHistory, setShiftHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [visibleCloseShiftModal, setVisibleCloseShiftModal] = useState(false);
   const [closeShiftSummary, setCloseShiftSummary] = useState(null);
   const [isClosingShift, setIsClosingShift] = useState(false);
+  const [printSummary, setPrintSummary] = useState(null);
+  const [printStaffName, setPrintStaffName] = useState("");
+  const [printShiftDate, setPrintShiftDate] = useState(null);
+  const [printOpeningUSD, setPrintOpeningUSD] = useState(0);
+  const [printOpeningKHR, setPrintOpeningKHR] = useState(0);
   const refShiftReport = useRef(null);
   const { profile } = useProfileStore();
   const isOwner = profile?.role_name?.toUpperCase() === "OWNER" || profile?.role_code === "owner";
@@ -127,22 +132,39 @@ function OrderPage() {
   };
 
   const onOpenShift = async (values) => {
-    try {
-      const data = {
-        opening_cash_usd: values.opening_cash_usd || 0,
-        opening_cash_khr: values.opening_cash_khr || 0,
-      };
-      const res = await request("shift/open", "post", data);
-      if (res && res.success) {
-        message.success(res.message);
-        setVisibleOpenShiftModal(false);
-        getCurrentShift(); // Refresh to get the shift ID
-      } else {
-        message.warning(res.message);
+    const usd = Number(values.opening_cash_usd || 0);
+    const khr = Number(values.opening_cash_khr || 0);
+
+    const proceed = async () => {
+      try {
+        const data = {
+          opening_cash_usd: usd,
+          opening_cash_khr: khr,
+        };
+        const res = await request("shift/open", "post", data);
+        if (res && res.success) {
+          message.success(res.message);
+          setVisibleOpenShiftModal(false);
+          getCurrentShift(); // Refresh to get the shift ID
+        } else {
+          message.warning(res.message);
+        }
+      } catch (error) {
+        console.error(error);
+        message.error("Failed to open shift");
       }
-    } catch (error) {
-       console.error(error);
-       message.error("Failed to open shift");
+    };
+
+    if (usd === 0 && khr === 0) {
+      Modal.confirm({
+        title: 'Open with zero cash? / បើកបញ្ជីដោយគ្មានលុយដើម?',
+        content: 'You are opening this shift with $0.00 and 0៛. Are you sure? / អ្នកកំពុងបើកបញ្ជីដោយគ្មានសាច់ប្រាក់ដើមគ្រាសោះ តើអ្នកប្រាកដទេ?',
+        onOk: proceed,
+        okText: 'Yes, Open / បាទ/ចាស បើក',
+        cancelText: 'Cancel / បោះបង់'
+      });
+    } else {
+      proceed();
     }
   };
 
@@ -157,8 +179,8 @@ function OrderPage() {
       const res = await request("shift/summary", "get");
       if (res && res.success) {
         setCloseShiftSummary(res.summary);
-        setActualCash(0);
-        setActualCashKHR(0);
+        setActualCash(null);
+        setActualCashKHR(null);
         setRemark("");
         setVisibleCloseShiftModal(true);
       }
@@ -172,44 +194,76 @@ function OrderPage() {
   const onConfirmCloseShift = async () => {
     if (!currentShift || !closeShiftSummary) return;
 
-    setIsClosingShift(true);
-    try {
-      const opening_usd = Number(openingCash);
-      const opening_khr_usd = Number(openingCashKHR) / exchangeRate;
-      
-      const actual_total_usd = Number(actualCash) + (Number(actualCashKHR) / exchangeRate);
-      const expected_total_usd = closeShiftSummary.expected_cash_usd;
-      const diff_usd = actual_total_usd - expected_total_usd;
+    const actual_usd = Number(actualCash || 0);
+    const actual_khr = Number(actualCashKHR || 0);
 
-      const data = {
-        id: currentShift.id,
-        opening_cash_usd: openingCash,
-        opening_cash_khr: openingCashKHR,
-        actual_cash_usd: actualCash,
-        actual_cash_khr: actualCashKHR,
-        expected_cash_usd: expected_total_usd,
-        total_sales_usd: closeShiftSummary.total_sales_usd,
-        total_cash_usd: closeShiftSummary.total_cash_usd,
-        total_aba_usd: closeShiftSummary.total_aba_usd,
-        total_wing_usd: closeShiftSummary.total_wing_usd,
-        total_expense_usd: closeShiftSummary.total_expense_usd,
-        diff_usd: diff_usd,
-        remark: remark
-      };
+    const proceed = async () => {
+      setIsClosingShift(true);
+      try {
+        const opening_usd = Number(openingCash);
+        const opening_khr = Number(openingCashKHR);
+        
+        const actual_total_usd = actual_usd + (actual_khr / exchangeRate);
+        const expected_total_usd = closeShiftSummary.expected_cash_usd;
+        const diff_usd = actual_total_usd - expected_total_usd;
 
-      const res = await request("shift", "post", data);
-      if (res && res.success) {
-        message.success("Shift Closed Successfully!");
-        setVisibleCloseShiftModal(false);
-        handlePrintShift();
-        getCurrentShift();
-        getShiftHistory();
-        getList();
+        const data = {
+          id: currentShift.id,
+          opening_cash_usd: opening_usd,
+          opening_cash_khr: opening_khr,
+          actual_cash_usd: actual_usd,
+          actual_cash_khr: actual_khr,
+          expected_cash_usd: expected_total_usd,
+          total_sales_usd: closeShiftSummary.total_sales_usd,
+          total_cash_usd: closeShiftSummary.total_cash_usd,
+          total_aba_usd: closeShiftSummary.total_aba_usd,
+          total_wing_usd: closeShiftSummary.total_wing_usd,
+          total_expense_usd: closeShiftSummary.total_expense_usd,
+          diff_usd: diff_usd,
+          remark: remark
+        };
+
+        const res = await request("shift", "post", data);
+        if (res && res.success) {
+          message.success("Shift Closed Successfully!");
+          
+          // Prepare for immediate print
+          setPrintSummary(closeShiftSummary);
+          setPrintStaffName(profile?.name || "Staff");
+          setPrintShiftDate(dayjs());
+          setPrintOpeningUSD(openingCash);
+          setPrintOpeningKHR(openingCashKHR);
+
+          setVisibleCloseShiftModal(false);
+          setTimeout(() => {
+            handlePrintShift();
+            getCurrentShift();
+            getShiftHistory();
+            getList();
+          }, 500);
+        }
+      } catch (error) {
+        message.error("Shift closing failed");
+      } finally {
+        setIsClosingShift(false);
       }
-    } catch (error) {
-      message.error("Shift closing failed");
-    } finally {
-      setIsClosingShift(false);
+    };
+
+    if (actualCash === null || actualCashKHR === null) {
+      message.warning("Please enter actual cash counts / សូមបញ្ចូលចំនួនសាច់ប្រាក់ជាក់ស្តែង");
+      return;
+    }
+
+    if (actual_usd === 0 && actual_khr === 0) {
+      Modal.confirm({
+        title: 'Close with zero cash? / បិទបញ្ជីដោយគ្មានលុយ?',
+        content: 'You are closing this shift with $0.00 and 0៛ actual cash count. Are you sure? / អ្នកកំពុងបិទបញ្ជីដោយគ្មានសាច់ប្រាក់រាប់បានសោះ តើអ្នកប្រាកដទេ?',
+        onOk: proceed,
+        okText: 'Yes, Close / បាទ/ចាស បិទ',
+        cancelText: 'Cancel / បោះបង់'
+      });
+    } else {
+      proceed();
     }
   };
 
@@ -226,7 +280,7 @@ function OrderPage() {
     visibleModal: false,
     visibleExpenseModal: false,
     txtSearch: "",
-    activeTab: "all",
+    activeTab: "1", // Initial state updated to match Segmented
   });
 
   // Determine default user filter: Owners/Admins see "All", Staff sees themselves
@@ -405,117 +459,247 @@ function OrderPage() {
 
   return (
     <div style={{
-      padding: '24px',
+      padding: '16px',
       background: '#f4f6f8',
       minHeight: '100vh'
     }}>
       {/* Header Section */}
-      <div style={{ marginBottom: 32 }}>
-        <Title level={2} style={{ color: '#2d3748', margin: 0 }}>
+      <div style={{ marginBottom: 16 }}>
+        <Title level={3} style={{ color: '#2d3748', margin: 0 }}>
           <ShopOutlined style={{ marginRight: 12 }} />
           {t.daily_closing_title}
         </Title>
-        <Text style={{ color: '#6b7280', fontSize: 16 }}>
+        <Text style={{ color: '#6b7280', fontSize: 14 }}>
           {t.daily_closing_desc}
         </Text>
       </div>
 
+      <style>{`
+        .premium-table .ant-table-thead > tr > th {
+          background-color: #1e4a2d !important;
+          color: white !important;
+          border-bottom: none !important;
+          font-weight: 600 !important;
+          font-size: 13px !important;
+          padding: 12px !important;
+        }
+        .premium-table .ant-table-tbody > tr > td {
+          padding: 12px !important;
+        }
+        .premium-table .ant-table-tbody > tr:hover > td {
+          background-color: #f0fdf4 !important;
+        }
+        .premium-table {
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+      `}</style>
+
       {/* Summary Cards - Only visible to Owners/Admins */}
       {canSeeAllReports && (
-        <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
+        <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
+          {/* Total Orders Card */}
           <Col xs={24} sm={12} lg={4}>
-            <Card className="summary-card" bodyStyle={{ padding: 20 }}>
-              <Statistic
-                title={<span style={{ color: '#6b7280' }}>{t.total_orders_label}</span>}
-                value={summary.total_order || 0}
-                prefix={<ShoppingCartOutlined style={{ color: '#1e4a2d' }} />}
-                valueStyle={{ color: '#1e4a2d', fontWeight: 'bold' }}
-              />
-            </Card>
+            <div style={{
+              background: '#fff',
+              padding: '16px 12px',
+              borderRadius: 16,
+              boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              border: '1px solid #f1f5f9'
+            }}>
+              <div style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 10, 
+                background: '#f1f5f9', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                marginBottom: 8
+              }}>
+                <ShoppingCartOutlined style={{ fontSize: 20, color: '#1e4a2d' }} />
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#1e293b' }}>{summary.total_order || 0}</div>
+              <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{t.total_orders_label}</div>
+            </div>
           </Col>
 
-          <Col xs={24} sm={12} lg={5}>
-            <Card className="summary-card" bodyStyle={{ padding: 20 }}>
-              <Statistic
-                title={<span style={{ color: '#6b7280' }}>{t.dash_cash}</span>}
-                value={summary.total_cash || 0}
-                prefix={<DollarOutlined style={{ color: '#059669' }} />}
-                precision={2}
-                valueStyle={{ color: '#059669', fontWeight: 'bold' }}
-              />
-            </Card>
-          </Col>
-
-          <Col xs={24} sm={12} lg={5}>
-            <Card className="summary-card" bodyStyle={{ padding: 20 }}>
-              <Statistic
-                title={<span style={{ color: '#6b7280' }}>{t.dash_aba}</span>}
-                value={summary.total_aba || 0}
-                prefix={<CheckCircleOutlined style={{ color: '#2563eb' }} />}
-                precision={2}
-                valueStyle={{ color: '#2563eb', fontWeight: 'bold' }}
-              />
-            </Card>
-          </Col>
-
-          <Col xs={24} sm={12} lg={5}>
-            <Card className="summary-card" bodyStyle={{ padding: 20 }}>
-              <Statistic
-                title={<span style={{ color: '#6b7280' }}>{t.dash_wing}</span>}
-                value={Number(summary.total_wing || 0) + Number(summary.total_other || 0)}
-                prefix={<div style={{ 
-                  background: '#ca8a04', 
-                  color: '#fff', 
-                  width: 28, 
-                  height: 28, 
-                  borderRadius: 8, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  fontSize: 14,
-                  fontWeight: 900
-                }}>W</div>}
-                precision={2}
-                valueStyle={{ color: '#ca8a04', fontWeight: 'bold' }}
-              />
-            </Card>
-          </Col>
-
+          {/* Cash Card */}
           <Col xs={24} sm={12} lg={4}>
-            <Card className="summary-card" style={{ background: '#ef4444' }} bodyStyle={{ padding: 20 }}>
-              <Statistic
-                title={<span style={{ color: '#fff' }}>{t.expenses}</span>}
-                value={summary.total_expense || 0}
-                prefix={<ArrowDownOutlined style={{ color: '#fff' }} />}
-                precision={2}
-                valueStyle={{ color: '#fff', fontWeight: 'bold' }}
-              />
-            </Card>
+            <div style={{
+              background: '#fff',
+              padding: '24px 20px',
+              borderRadius: 20,
+              boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              border: '1px solid #f1f5f9'
+            }}>
+              <div style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 10, 
+                background: '#f1f5f9', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                marginBottom: 8
+              }}>
+                <DollarOutlined style={{ fontSize: 20, color: '#1e4a2d' }} />
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#1e293b' }}>${(summary.total_cash || 0).toLocaleString()}</div>
+              <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{t.dash_cash}</div>
+            </div>
           </Col>
 
+          {/* ABA Card */}
           <Col xs={24} sm={12} lg={4}>
-            <Card className="summary-card" style={{ background: '#1e4a2d' }} bodyStyle={{ padding: 20 }}>
-              <Statistic
-                title={<span style={{ color: '#ffffffcc' }}>{t.net_profit}</span>}
-                value={Number(summary.total_amount || 0) - Number(summary.total_expense || 0)}
-                prefix={<DollarOutlined style={{ color: '#fff' }} />}
-                precision={2}
-                valueStyle={{ color: '#fff', fontWeight: 'bold' }}
-              />
-            </Card>
+            <div style={{
+              background: '#fff',
+              padding: '24px 20px',
+              borderRadius: 20,
+              boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              border: '1px solid #f1f5f9'
+            }}>
+              <div style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 10, 
+                background: '#f1f5f9', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                marginBottom: 8
+              }}>
+                <CheckCircleOutlined style={{ fontSize: 20, color: '#1e4a2d' }} />
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#1e293b' }}>${(summary.total_aba || 0).toLocaleString()}</div>
+              <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{t.dash_aba}</div>
+            </div>
           </Col>
 
-          <Col xs={24} sm={12} lg={6}>
-              <Card bodyStyle={{ padding: '8px 16px' }}>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{t.top_selling_label}</div>
-                  {summary.top_products?.map((item, index) => (
-                      <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                          <span>{item.name}</span>
-                          <Text strong>{item.total_qty} {t.items}</Text>
-                      </div>
-                  ))}
-                  {(!summary.top_products || summary.top_products.length === 0) && <Text type="secondary" style={{fontSize: 10}}>No data</Text>}
-              </Card>
+          {/* Wing Card */}
+          <Col xs={24} sm={12} lg={4}>
+            <div style={{
+              background: '#fff',
+              padding: '24px 20px',
+              borderRadius: 20,
+              boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              border: '1px solid #f1f5f9'
+            }}>
+              <div style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 10, 
+                background: '#1e4a2d', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                marginBottom: 8
+              }}>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>W</div>
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#1e293b' }}>${(Number(summary.total_wing || 0) + Number(summary.total_other || 0)).toLocaleString()}</div>
+              <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{t.dash_wing}</div>
+            </div>
+          </Col>
+
+          {/* Expenses Card */}
+          <Col xs={24} sm={12} lg={4}>
+            <div style={{
+              background: '#fff',
+              padding: '24px 20px',
+              borderRadius: 20,
+              boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              border: '1px solid #f1f5f9'
+            }}>
+              <div style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 10, 
+                background: '#f1f5f9', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                marginBottom: 8
+              }}>
+                <ArrowDownOutlined style={{ fontSize: 20, color: '#1e4a2d' }} />
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#1e293b' }}>${(summary.total_expense || 0).toLocaleString()}</div>
+              <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{t.expenses}</div>
+            </div>
+          </Col>
+
+          {/* Net Profit Card */}
+          <Col xs={24} sm={12} lg={4}>
+            <div style={{
+              background: '#1e4a2d',
+              padding: '24px 20px',
+              borderRadius: 20,
+              boxShadow: '0 10px 25px rgba(30, 74, 45, 0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              color: '#fff'
+            }}>
+              <div style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 10, 
+                background: 'rgba(255, 255, 255, 0.2)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                marginBottom: 8
+              }}>
+                <DollarOutlined style={{ fontSize: 20, color: '#fff' }} />
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800 }}>${(Number(summary.total_amount || 0) - Number(summary.total_expense || 0)).toLocaleString()}</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>{t.net_profit}</div>
+            </div>
+          </Col>
+          {/* Top Selling Card */}
+          <Col xs={24} sm={12} lg={4}>
+            <div style={{
+              background: '#fff',
+              padding: '12px 16px',
+              borderRadius: 16,
+              boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+              border: '1px solid #f1f5f9',
+              minHeight: 128,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.top_selling_label}</div>
+              {summary.top_products?.slice(0, 3).map((item, index) => (
+                  <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
+                      <span style={{ color: '#1e293b', fontWeight: 500 }}>{item.name}</span>
+                      <span style={{ color: '#1e4a2d', fontWeight: 700 }}>{item.total_qty} qty</span>
+                  </div>
+              ))}
+              {(!summary.top_products || summary.top_products.length === 0) && <div style={{fontSize: 10, color: '#94a3b8'}}>No data</div>}
+            </div>
           </Col>
         </Row>
       )}
@@ -528,14 +712,62 @@ function OrderPage() {
           boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
           border: 'none'
         }}
-        bodyStyle={{ padding: 32 }}
+        bodyStyle={{ padding: 20 }}
       >
-        {/* Tabs Control */}
-        <Tabs defaultActiveKey="1" style={{ marginBottom: 24 }}>
-          <TabPane 
-            tab={<span><ClockCircleOutlined /> {t.tab_today}</span>} 
-            key="1"
-          >
+        {/* Tabs Control - Redesigned as Segmented Pill */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+          <div style={{
+            background: '#f1f5f9',
+            padding: 4,
+            borderRadius: 30,
+            display: 'inline-flex',
+            gap: 4
+          }}>
+            <button
+              onClick={() => setState(prev => ({ ...prev, activeTab: "1" }))}
+              style={{
+                padding: '8px 20px',
+                borderRadius: 25,
+                border: 'none',
+                background: state.activeTab === "1" ? '#1e4a2d' : 'transparent',
+                color: state.activeTab === "1" ? '#fff' : '#64748b',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 14,
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: state.activeTab === "1" ? '0 4px 10px rgba(30, 74, 45, 0.2)' : 'none'
+              }}
+            >
+              <ClockCircleOutlined /> {t.tab_today}
+            </button>
+            <button
+              onClick={() => setState(prev => ({ ...prev, activeTab: "2" }))}
+              style={{
+                padding: '8px 20px',
+                borderRadius: 25,
+                border: 'none',
+                background: state.activeTab === "2" ? '#1e4a2d' : 'transparent',
+                color: state.activeTab === "2" ? '#fff' : '#64748b',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 14,
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: state.activeTab === "2" ? '0 4px 10px rgba(30, 74, 45, 0.2)' : 'none'
+              }}
+            >
+              <HistoryOutlined /> {t.tab_history}
+            </button>
+          </div>
+        </div>
+
+        {state.activeTab === "1" && (
+          <div>
             {/* Filter Header & Actions */}
             <div style={{
               display: 'flex',
@@ -604,7 +836,7 @@ function OrderPage() {
               </Button>
             </div>
 
-            <Divider style={{ margin: '32px 0' }} />
+            <Divider style={{ margin: '16px 0' }} />
 
             {/* Filter Controls (Search Orders) */}
             <div style={{
@@ -659,7 +891,7 @@ function OrderPage() {
               </Row>
             </div>
             
-            <Divider style={{ margin: '32px 0' }} />
+            <Divider style={{ margin: '16px 0' }} />
             <Text strong>{t.orders_this_shift}</Text>
 
             {/* Orders Table */}
@@ -668,9 +900,9 @@ function OrderPage() {
               rowKey="id"
               dataSource={list}
               pagination={false}
+              className="premium-table"
               style={{
                 background: '#fff',
-                borderRadius: 12,
                 marginTop: 16
               }}
               locale={{
@@ -789,13 +1021,11 @@ function OrderPage() {
                 }
               ]}
             />
-          </TabPane>
+          </div>
+        )}
 
-          <TabPane 
-            tab={<span><FileTextOutlined style={{marginRight: 8}} /> {t.tab_history}</span>} 
-            key="2"
-          >
-            <div style={{ background: '#fff', borderRadius: 16, padding: 24 }}>
+        {state.activeTab === "2" && (
+            <div style={{ background: '#fff', borderRadius: 16, padding: 16 }}>
                <Row gutter={16} style={{marginBottom: 20}}>
                   <Col span={12}>
                      <RangePicker 
@@ -818,58 +1048,133 @@ function OrderPage() {
                   </Col>
                </Row>
 
-               <Table 
-                 loading={loadingHistory}
-                 dataSource={shiftHistory}
-                 rowKey="id"
-                 columns={[
-                   { 
-                     title: t.close_date, 
-                     dataIndex: 'closed_at', 
-                     render: v => v ? formatDateClient(v, "DD MMM HH:mm") : '-'
-                   },
-                   { title: t.staff, dataIndex: 'staff_name' },
-                   { 
-                     title: t.opening_cash_label, 
-                     render: r => `$${Number(r.opening_cash_usd).toFixed(2)}`
-                   },
-                   { 
-                     title: t.expected_label, 
-                     render: r => `$${Number(r.expected_cash_usd).toFixed(2)}`
-                   },
-                   { 
-                     title: t.actual_in_drawer, 
-                     render: r => (
-                       <div style={{fontWeight: 'bold'}}>
-                         ${Number(r.actual_cash_usd).toFixed(2)}
-                       </div>
-                     )
-                   },
-                   { 
-                     title: t.difference_label, 
-                     dataIndex: 'diff_usd',
-                     render: v => (
-                       <Tag color={Math.abs(v) < 0.1 ? 'green' : v > 0 ? 'blue' : 'red'}>
-                         ${Number(v).toFixed(2)}
-                       </Tag>
-                     )
-                   },
-                   { 
-                     title: t.total_sales_all, 
-                     dataIndex: 'total_sales_usd',
-                     render: v => `$${Number(v).toFixed(2)}`
-                   },
-                   { 
-                    title: t.note, 
-                    dataIndex: 'remark',
-                    width: 150,
-                    render: v => <Text type="secondary" style={{fontSize: 11}}>{v || '-'}</Text>
-                  }
-                ]}
-               />
+                <Table 
+                  loading={loadingHistory}
+                  dataSource={shiftHistory}
+                  rowKey="id"
+                  className="premium-table"
+                  style={{ background: '#fff' }}
+                  columns={[
+                    { 
+                      title: t.close_date, 
+                      dataIndex: 'closed_at', 
+                      render: v => (
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{formatDateClient(v, "MMM DD, YYYY")}</div>
+                          <div style={{ fontSize: 11, color: '#64748b' }}>{formatDateClient(v, "hh:mm A")}</div>
+                        </div>
+                      )
+                    },
+                    { 
+                      title: t.staff, 
+                      dataIndex: 'staff_name',
+                      render: v => (
+                        <Space>
+                          <div style={{ background: '#f1f5f9', width: 32, height: 32, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <UserOutlined style={{ color: '#64748b' }} />
+                          </div>
+                          <Text style={{ fontWeight: 500 }}>{v}</Text>
+                        </Space>
+                      )
+                    },
+                    { 
+                      title: t.opening_cash_label, 
+                      dataIndex: 'opening_cash_usd',
+                      render: v => <Text style={{ color: '#1e293b' }}>${Number(v || 0).toFixed(2)}</Text>
+                    },
+                    { 
+                      title: t.expected_label, 
+                      dataIndex: 'expected_cash_usd',
+                      render: v => <Text style={{ color: '#1e293b' }}>${Number(v || 0).toFixed(2)}</Text>
+                    },
+                    { 
+                      title: t.actual_in_drawer, 
+                      dataIndex: 'actual_cash_usd',
+                      render: v => <Text strong style={{ color: '#1e293b' }}>${Number(v || 0).toFixed(2)}</Text>
+                    },
+                    { 
+                      title: t.difference_label, 
+                      dataIndex: 'diff_usd',
+                      render: v => {
+                        const isZero = Math.abs(v) < 0.1;
+                        return (
+                          <Text style={{ color: isZero ? '#059669' : '#ef4444', fontWeight: 600 }}>
+                            {v >= 0 ? '+' : ''}${Number(v).toFixed(2)}
+                          </Text>
+                        );
+                      }
+                    },
+                    { 
+                      title: t.status_label, 
+                      dataIndex: 'diff_usd',
+                      render: v => {
+                        const isZero = Math.abs(v) < 0.1;
+                        return (
+                          <Tag 
+                            color={isZero ? 'green' : 'red'} 
+                            style={{ 
+                              borderRadius: 20, 
+                              padding: '0 12px', 
+                              border: 'none',
+                              background: isZero ? '#f0fdf4' : '#fef2f2',
+                              color: isZero ? '#059669' : '#ef4444',
+                              fontWeight: 600
+                            }}
+                          >
+                            {isZero ? t.balanced_status : t.discrepancy_status}
+                          </Tag>
+                        );
+                      }
+                    },
+                    {
+                      title: t.action,
+                      width: 150,
+                      render: (row) => (
+                        <Space>
+                          <Button 
+                            icon={<FileTextOutlined />} 
+                            style={{ 
+                              borderRadius: 8, 
+                              borderColor: '#1e4a2d', 
+                              color: '#1e4a2d',
+                              fontWeight: 500,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6
+                            }}
+                            onClick={async () => {
+                              setLoadingHistory(true);
+                              try {
+                                const res = await request(`shift/summary?id=${row.id}`, "get");
+                                if (res && res.success) {
+                                  setPrintSummary(res.summary);
+                                  setActualCash(row.actual_cash_usd);
+                                  setActualCashKHR(row.actual_cash_khr);
+                                  setPrintStaffName(row.staff_name);
+                                  setPrintShiftDate(row.closed_at);
+                                  setPrintOpeningUSD(row.opening_cash_usd);
+                                  setPrintOpeningKHR(row.opening_cash_khr);
+                                  
+                                  setTimeout(() => {
+                                    handlePrintShift();
+                                    setLoadingHistory(false);
+                                  }, 500);
+                                }
+                              } catch (err) {
+                                message.error("Failed to load report");
+                                setLoadingHistory(false);
+                              }
+                            }}
+                          >
+                            {t.print_receipt_btn}
+                          </Button>
+                        </Space>
+                      )
+                    }
+                  ]}
+                />
             </div>
-          </TabPane>
-        </Tabs>
+        )}
       </Card>
 
       {/* Enhanced Order Detail Modal */}
@@ -897,7 +1202,7 @@ function OrderPage() {
           background: '#f8fafc'
         }}
       >
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: 16 }}>
           {/* Order Summary */}
           {currentOrder && (
             <Card style={{ marginBottom: 16, borderRadius: 8 }}>
@@ -1173,15 +1478,15 @@ function OrderPage() {
       <div style={{ display: "none" }}>
         <PrintShiftReport
           ref={refShiftReport}
-          summary={closeShiftSummary || summary}
+          summary={printSummary}
           profile={profile}
-          filter={filter}
+          staff_name={printStaffName}
+          filter={{ from_date: printShiftDate }}
           actual_cash={actualCash}
           actual_cash_khr={actualCashKHR}
-          opening_cash={openingCash}
-          opening_cash_khr={openingCashKHR}
+          opening_cash={printOpeningUSD}
+          opening_cash_khr={printOpeningKHR}
           exchange_rate={exchangeRate}
-          staff_name={filter.user_id ? (config?.user?.find(u => u.value === filter.user_id)?.label) : 'All Business (សរុបទាំងអស់)'}
         />
         <div ref={refLabel}>
           <PrintLabel 

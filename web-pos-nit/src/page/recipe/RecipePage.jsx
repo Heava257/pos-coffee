@@ -145,7 +145,7 @@ const RecipePage = () => {
                 }))
             });
             notification.success({
-                message: "រក្សាទុកបានជោគជ័យ",
+                message: t.save_success || "រក្សាទុកបានជោគជ័យ",
                 description: `Recipe for ${state.selectedProduct.name}${state.selectedSize ? ` (${state.selectedSize})` : ''} saved!`,
                 placement: "topRight", duration: 4
             });
@@ -173,14 +173,15 @@ const RecipePage = () => {
             render: (name, record) => (
                 <Space>
                     <Text strong>{name}</Text>
-                    {record.size_label && <Tag color="purple">{record.size_label}</Tag>}
+                    {record.size_label && <Tag color="purple">{t.size || "ទំហំ"}: {record.size_label}</Tag>}
                 </Space>
             )
         },
         {
-            title: "បរិមាណ (qty)",
+            title: t.quantity || "បរិមាណ",
             dataIndex: "qty",
             key: "qty",
+            width: 110,
             render: (qty, record, index) => (
                 <InputNumber
                     min={0.0001}
@@ -201,8 +202,8 @@ const RecipePage = () => {
         },
         {
             title: (
-                <Tooltip title="Waste % — Extra qty used due to spill/loss. E.g: 5 means 5% more will be deducted.">
-                    <Space>Waste % <InfoCircleOutlined /></Space>
+                <Tooltip title={t.waste_factor_desc || "ភាគរយខ្ជះខ្ជាយ — បរិមាណបន្ថែមដែលត្រូវដកចេញពីស្តុកដោយសារការហៀរ ឬបាត់បង់។"}>
+                    <Space>{t.waste || "ភាគរយខ្ជះខ្ជាយ"} <InfoCircleOutlined /></Space>
                 </Tooltip>
             ),
             dataIndex: "waste_factor",
@@ -227,12 +228,13 @@ const RecipePage = () => {
             )
         },
         {
-            title: "ប្រើប្រាស់ពិត (Effective)",
+            title: t.effective_qty || "ប្រើប្រាស់ពិត",
             key: "effective_qty",
+            width: 120,
             render: (_, record) => {
                 const eff = record.effective_qty || record.qty;
                 return (
-                    <Tooltip title={`After ${record.waste_factor || 0}% waste`}>
+                    <Tooltip title={`${t.after_waste || "ក្រោយការខ្ជះខ្ជាយ"} ${record.waste_factor || 0}%`}>
                         <Text type={record.waste_factor > 0 ? "warning" : "secondary"}>
                             {Number(eff || 0).toFixed(4)} {record.base_unit}
                         </Text>
@@ -244,17 +246,20 @@ const RecipePage = () => {
             title: t.unit,
             dataIndex: "base_unit",
             key: "unit",
+            width: 80,
             render: (unit) => <Tag color="blue">{unit}</Tag>
         },
         {
-            title: "ថ្លៃ/Unit (Real-time)",
+            title: t.cost_per_unit || "ថ្លៃដើមមធ្យម",
             dataIndex: "cost_price",
             key: "cost_price",
+            width: 110,
             render: (num) => <Text style={{ color: '#888' }}>${Number(num).toFixed(2)}</Text>
         },
         {
-            title: "ថ្លៃដើម/កែវ",
+            title: t.cost_per_cup || "ថ្លៃដើមក្នុង ១ កែវ",
             key: "line_cost",
+            width: 120,
             render: (_, record) => {
                 const eff = record.effective_qty || record.qty;
                 const cost = eff * record.cost_price;
@@ -262,29 +267,34 @@ const RecipePage = () => {
             }
         },
         {
-            title: "ស្តុកនៅសល់",
+            title: t.current_stock || "ស្តុកនៅសល់",
             key: "stock",
+            width: 180,
             render: (_, record) => {
                 const eff = record.effective_qty || record.qty;
                 const stockQty = record.stock_qty || 0;
                 const servings = eff > 0 ? Math.floor(stockQty / eff) : 0;
                 const isLow = servings < 50;
                 return (
-                    <Space>
-                        <Text>{stockQty} {record.base_unit}</Text>
-                        <Tag color={isLow ? 'red' : 'green'}>
-                            {isLow && <WarningOutlined />} {servings} កែវ
-                        </Tag>
-                    </Space>
+                    <div style={{ minWidth: 150, whiteSpace: 'nowrap' }}>
+                        <Text strong>{Number(stockQty).toFixed(4)} {record.base_unit}</Text>
+                        <div style={{ marginTop: 4 }}>
+                            <Tag color={isLow ? 'red' : 'green'} style={{ borderRadius: 6 }}>
+                                {isLow && <WarningOutlined />} {servings} {t.cups || 'កែវ'}
+                            </Tag>
+                        </div>
+                    </div>
                 );
             }
         },
         {
-            title: t.action,
+            title: t.action || "សកម្មភាព",
             key: "action",
+            width: 90,
+            align: 'center',
             render: (_, record, index) => (
                 <Popconfirm
-                    title="លុបចេញ?"
+                    title={t.confirm_delete || "លុបចេញ?"}
                     onConfirm={() => {
                         const updated = [...state.ingredients];
                         updated.splice(index, 1);
@@ -300,17 +310,23 @@ const RecipePage = () => {
     ];
 
     return (
-        <div style={{ padding: '24px' }}>
-            <Row gutter={24}>
+        <div style={{ padding: '16px' }}>
+            <Row gutter={16}>
                 {/* Left: Product list */}
                 <Col span={7}>
-                    <Card title={<Space><ExperimentOutlined />{t.product}</Space>} bodyStyle={{ padding: '12px' }}>
+                    <Card 
+                        title={<Space><ExperimentOutlined />{t.product}</Space>} 
+                        bodyStyle={{ padding: '8px' }}
+                        headStyle={{ minHeight: '40px', padding: '0 12px' }}
+                        className="recipe-product-card"
+                    >
                         <Input
                             placeholder={`${t.search}...`}
                             prefix={<SearchOutlined />}
                             value={state.searchText}
                             onChange={handleSearch}
-                            style={{ marginBottom: 12 }}
+                            style={{ marginBottom: 8 }}
+                            size="middle"
                         />
                         <Table
                             size="small"
@@ -318,21 +334,23 @@ const RecipePage = () => {
                                 title: t.product,
                                 key: "product",
                                 render: (_, record) => (
-                                    <Space>
+                                    <Space size={8}>
                                         <img
                                             src={record.image ? Config.getFullImagePath(record.image) : "https://via.placeholder.com/36"}
-                                            style={{ width: 36, height: 36, borderRadius: 4, objectFit: 'cover' }}
+                                            style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', border: '1px solid #f0f0f0' }}
                                             alt={record.name}
                                         />
-                                        <div>
-                                            <div style={{ fontWeight: 'bold', fontSize: 13 }}>{record.name}</div>
-                                            <div style={{ fontSize: 11, color: '#888' }}>
+                                        <div style={{ lineHeight: '1.2' }}>
+                                            <div style={{ fontWeight: 600, fontSize: 13, color: '#1e4a2d' }}>{record.name}</div>
+                                            <div style={{ marginTop: 2 }}>
                                                 {record.product_type === 'recipe' 
-                                                    ? <Tag color="green" style={{ fontSize: 10 }}>Recipe</Tag>
-                                                    : <Tag color="orange" style={{ fontSize: 10 }}>No Recipe</Tag>
+                                                    ? <Tag color="success" style={{ fontSize: 9, margin: 0, padding: '0 4px', borderRadius: 4 }}>Recipe</Tag>
+                                                    : <Tag color="default" style={{ fontSize: 9, margin: 0, padding: '0 4px', borderRadius: 4 }}>No Recipe</Tag>
                                                 }
                                                 {record.estimated_servings > 0 && (
-                                                    <Tag color="blue" style={{ fontSize: 10 }}>{record.estimated_servings} cups</Tag>
+                                                    <Tag color="processing" style={{ fontSize: 9, margin: '0 0 0 4px', padding: '0 4px', borderRadius: 4, border: 'none' }}>
+                                                        {record.estimated_servings} cups
+                                                    </Tag>
                                                 )}
                                             </div>
                                         </div>
@@ -342,54 +360,67 @@ const RecipePage = () => {
                             dataSource={state.filteredProducts}
                             rowKey="id"
                             loading={state.loading && state.products.length === 0}
-                            pagination={{ pageSize: 12, size: 'small' }}
+                            pagination={{ pageSize: 12, size: 'small', simple: true }}
                             onRow={(record) => ({
                                 onClick: () => fetchRecipe(record, null),
                                 style: {
                                     cursor: 'pointer',
-                                    backgroundColor: state.selectedProduct?.id === record.id ? '#e6f7ff' : 'inherit'
+                                    backgroundColor: state.selectedProduct?.id === record.id ? '#f6ffed' : 'transparent',
+                                    borderLeft: state.selectedProduct?.id === record.id ? '3px solid #1e4a2d' : 'none',
+                                    transition: 'all 0.2s'
                                 }
                             })}
+                            showHeader={false}
                         />
                     </Card>
                 </Col>
 
                 {/* Right: Recipe editor */}
                 <Col span={17}>
-                    <Card bodyStyle={{ padding: '16px' }}>
+                    <Card 
+                        bodyStyle={{ padding: '12px' }}
+                        className="recipe-editor-card"
+                    >
                         {/* Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                            <Space>
-                                <ExperimentOutlined style={{ fontSize: 18 }} />
-                                <Title level={5} style={{ margin: 0 }}>{t.ingredients}</Title>
-                                {state.selectedProduct && (
-                                    <Tag color="green">{state.selectedProduct.name}</Tag>
-                                )}
-                                {state.selectedSize && (
-                                    <Tag color="purple">Size: {state.selectedSize}</Tag>
-                                )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                            <Space size={12}>
+                                <div style={{ 
+                                    width: 36, height: 36, borderRadius: 8, background: '#1e4a2d', 
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                                }}>
+                                    <ExperimentOutlined style={{ color: '#fff', fontSize: 18 }} />
+                                </div>
+                                <div>
+                                    <Title level={5} style={{ margin: 0, color: '#1e4a2d' }}>{t.ingredients}</Title>
+                                    <Space size={4}>
+                                        {state.selectedProduct && (
+                                            <Text type="secondary" style={{ fontSize: 12 }}>{state.selectedProduct.name}</Text>
+                                        )}
+                                        {state.selectedSize && (
+                                            <Tag color="purple" style={{ margin: 0, fontSize: 10 }}>{t.size || "ទំហំ"}: {state.selectedSize}</Tag>
+                                        )}
+                                    </Space>
+                                </div>
                             </Space>
-                            <Space>
+                            <Space size={8}>
                                 <Button
-                                    type="primary"
+                                    type="default"
                                     icon={<PlusOutlined />}
-                                    size="large"
                                     disabled={!state.selectedProduct}
                                     onClick={() => setState(p => ({ ...p, isAddModalVisible: true }))}
-                                    style={{ fontWeight: 'bold' }}
+                                    style={{ borderRadius: 6, fontWeight: 500 }}
                                 >
                                     {t.add_ingredient}
                                 </Button>
                                 <Button
                                     type="primary"
                                     icon={<SaveOutlined />}
-                                    size="large"
                                     loading={state.saving}
                                     disabled={!state.selectedProduct}
                                     onClick={saveRecipe}
-                                    style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', fontWeight: 'bold' }}
+                                    style={{ backgroundColor: '#1e4a2d', borderColor: '#1e4a2d', borderRadius: 6, fontWeight: 500 }}
                                 >
-                                    រក្សាទុក / Save
+                                    {t.save || "រក្សាទុក"}
                                 </Button>
                             </Space>
                         </div>
@@ -402,14 +433,16 @@ const RecipePage = () => {
                                     const size = key === 'null' ? null : key;
                                     fetchRecipe(state.selectedProduct, size);
                                 }}
-                                style={{ marginBottom: 8 }}
+                                style={{ marginBottom: 12 }}
+                                size="small"
+                                tabBarGutter={16}
                                 items={sizeTabs.map(s => ({
                                     key: String(s.key),
                                     label: (
-                                        <span>
+                                        <span style={{ fontSize: 13, fontWeight: 500 }}>
                                             {s.label}
                                             {s.key && state.selectedProduct?.product_type === 'recipe' && (
-                                                <Badge status="success" style={{ marginLeft: 4 }} />
+                                                <Badge status="success" style={{ marginLeft: 6 }} />
                                             )}
                                         </span>
                                     )
@@ -425,64 +458,114 @@ const RecipePage = () => {
                                     rowKey={(_, idx) => idx}
                                     loading={state.loading}
                                     pagination={false}
-                                    locale={{ emptyText: <Empty description="មិនមានគ្រឿងផ្សំ — ចុច '+ Add Ingredient' ដើម្បីបន្ថែម" /> }}
+                                    size="small"
+                                    scroll={{ x: 1100, y: 400 }}
+                                    className="recipe-table"
+                                    rowClassName={() => 'compact-row'}
+                                    locale={{ emptyText: <Empty description={t.no_ingredients_defined || "មិនមានគ្រឿងផ្សំ — ចុច '+ Add' ដើម្បីបន្ថែម"} /> }}
+                                    components={{
+                                        header: {
+                                            cell: (props) => (
+                                                <th {...props} style={{ 
+                                                    ...props.style, 
+                                                    backgroundColor: '#1e4a2d', 
+                                                    color: '#fff', 
+                                                    padding: '8px 12px',
+                                                    fontSize: '12px'
+                                                }} />
+                                            )
+                                        }
+                                    }}
                                 />
 
-                                {/* Summary Card */}
-                                <Card
-                                    style={{ marginTop: 16, background: 'linear-gradient(135deg, #f6ffed 0%, #e6f7ff 100%)', border: '1px solid #b7eb8f' }}
-                                    bodyStyle={{ padding: '16px 24px' }}
-                                >
+                                {/* Summary Card - Premium Design */}
+                                <div style={{ 
+                                    marginTop: 16, 
+                                    padding: '16px 20px', 
+                                    background: '#fff', 
+                                    borderRadius: '12px',
+                                    border: '1px solid #e8e3d8',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                                }}>
                                     <Row justify="space-between" align="middle">
                                         <Col>
-                                            <div style={{ background: '#fff', border: '1px solid #91d5ff', padding: '10px 20px', borderRadius: 8, textAlign: 'center' }}>
-                                                <div style={{ fontSize: 11, color: '#1890ff', fontWeight: 800 }}>
-                                                    ESTIMATED SERVINGS / ចំនួនកែវ
-                                                </div>
-                                                <div style={{ fontSize: 28, fontWeight: 900, color: '#096dd9' }}>
-                                                    {getServings().toLocaleString()} {t.cups || 'កែវ'}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                <div style={{ 
+                                                    background: '#f6ffed', 
+                                                    border: '1px solid #b7eb8f', 
+                                                    padding: '8px 20px', 
+                                                    borderRadius: 10, 
+                                                    textAlign: 'center' 
+                                                }}>
+                                                    <div style={{ fontSize: 10, color: '#389e0d', fontWeight: 700, letterSpacing: '0.5px' }}>
+                                                    {t.estimated_servings_label || "ចំនួនកែវសរុប"}
+                                                    </div>
+                                                    <div style={{ fontSize: 24, fontWeight: 800, color: '#1e4a2d', lineHeight: '1.2' }}>
+                                                        {getServings().toLocaleString()} <span style={{ fontSize: 14 }}>{t.cups || 'កែវ'}</span>
+                                                    </div>
                                                 </div>
                                                 {getServings() < 50 && getServings() > 0 && (
-                                                    <Tag color="red" icon={<WarningOutlined />}>ស្តុកជិតអស់!</Tag>
+                                                    <div style={{ 
+                                                        background: '#fff1f0', 
+                                                        border: '1px solid #ffa39e', 
+                                                        padding: '4px 12px', 
+                                                        borderRadius: 6,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px'
+                                                    }}>
+                                                        <WarningOutlined style={{ color: '#cf1322', fontSize: 12 }} />
+                                                        <Text style={{ color: '#cf1322', fontSize: 11, fontWeight: 600 }}>{t.low_stock || "ស្តុកជិតអស់!"}</Text>
+                                                    </div>
                                                 )}
                                             </div>
                                         </Col>
                                         <Col style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: 11, color: '#888', fontWeight: 800 }}>
-                                                TOTAL RECIPE COST / ថ្លៃដើម ១ កែវ
+                                            <div style={{ fontSize: 10, color: '#8c8c8c', fontWeight: 700, letterSpacing: '0.5px' }}>
+                                                {t.cost_per_cup || "ថ្លៃដើមក្នុង ១ កែវ (បច្ចុប្បន្ន)"}
                                             </div>
-                                            <Title level={2} style={{ margin: 0, color: '#d32f2f' }}>
-                                                ${Number(calculateTotal() || 0).toFixed(4)}
-                                            </Title>
-                                            <Text type="secondary" style={{ fontSize: 11 }}>
-                                                (Real-time price, including waste)
+                                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '4px' }}>
+                                                <span style={{ fontSize: 16, fontWeight: 700, color: '#cf1322' }}>$</span>
+                                                <span style={{ fontSize: 28, fontWeight: 800, color: '#cf1322', lineHeight: '1' }}>
+                                                    {Number(calculateTotal() || 0).toFixed(4)}
+                                                </span>
+                                            </div>
+                                            <Text type="secondary" style={{ fontSize: 10 }}>
+                                                ( {t.real_time_price || "តម្លៃបច្ចុប្បន្ន រួមទាំងការខ្ជះខ្ជាយ"} )
                                             </Text>
                                         </Col>
                                     </Row>
-                                </Card>
+                                </div>
 
-                                {/* Low Stock Alert */}
+                                {/* Low Stock Alert - Minimalist */}
                                 {state.ingredients.some(i => {
                                     const eff = i.effective_qty || i.qty;
                                     return eff > 0 && (i.stock_qty || 0) / eff < 50;
                                 }) && (
-                                    <Card
-                                        style={{ marginTop: 8, background: '#fff2e8', border: '1px solid #ffbb96' }}
-                                        bodyStyle={{ padding: '8px 16px' }}
-                                    >
-                                        <Space>
-                                            <WarningOutlined style={{ color: '#fa541c' }} />
-                                            <Text style={{ color: '#fa541c', fontWeight: 'bold' }}>
-                                                WARNING: គ្រឿងផ្សំខ្លះនឹងអស់ក្នុងពេលឆាប់ៗ! ត្រូវទិញបន្ថែម!
-                                            </Text>
-                                        </Space>
-                                    </Card>
+                                    <div style={{ 
+                                        marginTop: 8, 
+                                        padding: '8px 16px', 
+                                        background: 'rgba(255, 77, 79, 0.05)', 
+                                        border: '1px dashed #ffa39e',
+                                        borderRadius: 8,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px'
+                                    }}>
+                                        <WarningOutlined style={{ color: '#ff4d4f' }} />
+                                        <Text style={{ color: '#ff4d4f', fontSize: 11, fontWeight: 500 }}>
+                                            {t.low_stock_warning || "គ្រឿងផ្សំខ្លះជិតអស់ពីស្តុក! សូមត្រួតពិនិត្យ និងទិញបន្ថែម។"}
+                                        </Text>
+                                    </div>
                                 )}
                             </>
                         ) : (
-                            <Card bordered={false} style={{ textAlign: 'center', padding: '80px 0' }}>
-                                <Empty description={t.select_product_to_view_recipe || "ជ្រើសរើសផលិតផលដើម្បីមើលរូបមន្ត"} />
-                            </Card>
+                            <div style={{ textAlign: 'center', padding: '100px 0', background: '#fafafa', borderRadius: 12 }}>
+                                <Empty 
+                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                    description={<Text type="secondary">{t.select_product_to_view_recipe || "ជ្រើសរើសផលិតផលដើម្បីមើលរូបមន្ត"}</Text>} 
+                                />
+                            </div>
                         )}
                     </Card>
                 </Col>
@@ -490,135 +573,150 @@ const RecipePage = () => {
 
             {/* Add Ingredient Modal */}
             <Modal
-                title={<Space><PlusOutlined />{t.add_ingredient}</Space>}
+                title={<Space><ExperimentOutlined style={{ color: '#1e4a2d' }} /> <span style={{ color: '#1e4a2d' }}>{t.add_ingredient}</span></Space>}
                 open={state.isAddModalVisible}
                 onCancel={() => { setState(p => ({ ...p, isAddModalVisible: false, tempCost: 0, recipeUnit: null })); form.resetFields(); }}
                 onOk={() => form.submit()}
-                okText={t.ok_btn || "OK"}
-                cancelText={t.cancel_btn || "Cancel"}
+                okText={t.ok_btn || "បន្ថែម"}
+                cancelText={t.cancel_btn || "បោះបង់"}
                 destroyOnClose
-                width={520}
+                width={500}
+                okButtonProps={{ style: { backgroundColor: '#1e4a2d', borderColor: '#1e4a2d' } }}
             >
-                <Form form={form} layout="vertical" onFinish={handleAddIngredient}>
-                    <Form.Item
-                        name="raw_material_id"
-                        label={t.raw_material || "វត្ថុធាតុដើម"}
-                        rules={[{ required: true, message: "Please select" }]}
-                    >
-                        <Select
-                            showSearch
-                            placeholder="ជ្រើសរើសសម្ភារ..."
-                            optionFilterProp="label"
-                            onChange={(id) => {
-                                const rm = state.rawMaterials.find(m => m.id === id);
-                                if (rm) {
-                                    const canConvert = ["kg", "l"].includes(rm.unit?.toLowerCase());
-                                    const defaultUnit = canConvert
-                                        ? (rm.unit.toLowerCase() === 'kg' ? 'g' : 'ml')
-                                        : rm.unit;
-                                    setState(p => ({ ...p, recipeUnit: defaultUnit, baseUnit: rm.unit, tempCost: 0 }));
-                                }
-                            }}
-                            options={state.rawMaterials.map(rm => ({
-                                value: rm.id,
-                                label: `${rm.name} (${rm.unit}) — ស្តុក: ${rm.qty} | $${rm.price}/${rm.unit}`
-                            }))}
-                        />
-                    </Form.Item>
+                <div style={{ paddingTop: 8 }}>
+                    <Form form={form} layout="vertical" onFinish={handleAddIngredient} requiredMark={false}>
+                        <Form.Item
+                            name="raw_material_id"
+                            label={<Text strong style={{ fontSize: 13 }}>{t.raw_material}</Text>}
+                            rules={[{ required: true, message: t.required }]}
+                        >
+                            <Select
+                                showSearch
+                                size="large"
+                                placeholder={t.select_material || "ជ្រើសរើសសម្ភារ..."}
+                                optionFilterProp="label"
+                                style={{ borderRadius: 8 }}
+                                onChange={(id) => {
+                                    const rm = state.rawMaterials.find(m => m.id === id);
+                                    if (rm) {
+                                        const canConvert = ["kg", "l"].includes(rm.unit?.toLowerCase());
+                                        const defaultUnit = canConvert
+                                            ? (rm.unit.toLowerCase() === 'kg' ? 'g' : 'ml')
+                                            : rm.unit;
+                                        setState(p => ({ ...p, recipeUnit: defaultUnit, baseUnit: rm.unit, tempCost: 0 }));
+                                    }
+                                }}
+                                options={state.rawMaterials.map(rm => ({
+                                    value: rm.id,
+                                    label: `${rm.name} (${rm.unit}) — ${t.stock || "ស្តុក"}: ${rm.qty} | $${rm.price}/${rm.unit}`
+                                }))}
+                            />
+                        </Form.Item>
 
-                    <Row gutter={12}>
-                        <Col span={10}>
-                            <Form.Item name="qty" label="បរិមាណ" initialValue={20} rules={[{ required: true }]}>
-                                <InputNumber
-                                    size="large"
-                                    min={0.0001}
-                                    step={1}
-                                    style={{ width: '100%' }}
-                                    onChange={(val) => {
-                                        const rmId = form.getFieldValue("raw_material_id");
-                                        const rm = state.rawMaterials.find(m => m.id === rmId);
-                                        if (rm && val) {
-                                            let fq = val;
-                                            if (state.recipeUnit === 'g'  && rm.unit === 'kg')  fq = val / 1000;
-                                            if (state.recipeUnit === 'ml' && rm.unit === 'l')   fq = val / 1000;
-                                            const waste = form.getFieldValue("waste_factor") || 0;
-                                            const eff = fq * (1 + waste / 100);
-                                            setState(p => ({ ...p, tempCost: eff * rm.price, finalQty: fq }));
-                                        }
-                                    }}
-                                />
-                            </Form.Item>
-                        </Col>
-                        <Col span={7}>
-                            <Form.Item label="ឯកតា">
-                                <Select
-                                    size="large"
-                                    value={state.recipeUnit}
-                                    onChange={(val) => {
-                                        setState(p => ({ ...p, recipeUnit: val }));
-                                        const qty = form.getFieldValue("qty");
-                                        const rmId = form.getFieldValue("raw_material_id");
-                                        const rm = state.rawMaterials.find(m => m.id === rmId);
-                                        if (rm && qty) {
-                                            let fq = qty;
-                                            if (val === 'g'  && rm.unit === 'kg')  fq = qty / 1000;
-                                            if (val === 'ml' && rm.unit === 'l')   fq = qty / 1000;
-                                            const waste = form.getFieldValue("waste_factor") || 0;
-                                            const eff = fq * (1 + waste / 100);
-                                            setState(p => ({ ...p, tempCost: eff * rm.price, finalQty: fq }));
-                                        }
-                                    }}
-                                    options={[
-                                        { label: state.baseUnit, value: state.baseUnit },
-                                        ...(state.baseUnit === 'kg' ? [{ label: 'g (ក្រាម)', value: 'g' }] : []),
-                                        ...(state.baseUnit === 'l'  ? [{ label: 'ml (ML)', value: 'ml' }] : [])
-                                    ].filter(o => o.value)}
-                                />
-                            </Form.Item>
-                        </Col>
-                        <Col span={7}>
-                            <Form.Item name="waste_factor" label="Waste %" initialValue={0}>
-                                <InputNumber
-                                    size="large"
-                                    min={0} max={100}
-                                    step={1}
-                                    style={{ width: '100%' }}
-                                    formatter={v => `${v}%`}
-                                    parser={v => v.replace('%', '')}
-                                    onChange={(waste) => {
-                                        if (state.finalQty && waste !== undefined) {
+                        <Row gutter={12}>
+                            <Col span={10}>
+                                <Form.Item 
+                                    name="qty" 
+                                    label={<Text strong style={{ fontSize: 13 }}>{t.quantity || "បរិមាណ"}</Text>} 
+                                    initialValue={20} 
+                                    rules={[{ required: true }]}
+                                >
+                                    <InputNumber
+                                        size="large"
+                                        min={0.0001}
+                                        step={1}
+                                        style={{ width: '100%', borderRadius: 8 }}
+                                        onChange={(val) => {
                                             const rmId = form.getFieldValue("raw_material_id");
                                             const rm = state.rawMaterials.find(m => m.id === rmId);
-                                            if (rm) {
-                                                const eff = state.finalQty * (1 + waste / 100);
-                                                setState(p => ({ ...p, tempCost: eff * rm.price }));
+                                            if (rm && val) {
+                                                let fq = val;
+                                                if (state.recipeUnit === 'g'  && rm.unit === 'kg')  fq = val / 1000;
+                                                if (state.recipeUnit === 'ml' && rm.unit === 'l')   fq = val / 1000;
+                                                const waste = form.getFieldValue("waste_factor") || 0;
+                                                const eff = fq * (1 + waste / 100);
+                                                setState(p => ({ ...p, tempCost: eff * rm.price, finalQty: fq }));
                                             }
-                                        }
-                                    }}
-                                />
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                                        }}
+                                    />
+                                </Form.Item>
+                            </Col>
+                            <Col span={7}>
+                                <Form.Item label={<Text strong style={{ fontSize: 13 }}>{t.unit || "ឯកតា"}</Text>}>
+                                    <Select
+                                        size="large"
+                                        value={state.recipeUnit}
+                                        style={{ borderRadius: 8 }}
+                                        onChange={(val) => {
+                                            setState(p => ({ ...p, recipeUnit: val }));
+                                            const qty = form.getFieldValue("qty");
+                                            const rmId = form.getFieldValue("raw_material_id");
+                                            const rm = state.rawMaterials.find(m => m.id === rmId);
+                                            if (rm && qty) {
+                                                let fq = qty;
+                                                if (val === 'g'  && rm.unit === 'kg')  fq = qty / 1000;
+                                                if (val === 'ml' && rm.unit === 'l')   fq = qty / 1000;
+                                                const waste = form.getFieldValue("waste_factor") || 0;
+                                                const eff = fq * (1 + waste / 100);
+                                                setState(p => ({ ...p, tempCost: eff * rm.price, finalQty: fq }));
+                                            }
+                                        }}
+                                        options={[
+                                            { label: state.baseUnit, value: state.baseUnit },
+                                            ...(state.baseUnit === 'kg' ? [{ label: `g (${t.gram || "ក្រាម"})`, value: 'g' }] : []),
+                                            ...(state.baseUnit === 'l'  ? [{ label: 'ml (ML)', value: 'ml' }] : [])
+                                        ].filter(o => o.value)}
+                                    />
+                                </Form.Item>
+                            </Col>
+                            <Col span={7}>
+                                <Form.Item name="waste_factor" label={<Text strong style={{ fontSize: 13 }}>Waste %</Text>} initialValue={0}>
+                                    <InputNumber
+                                        size="large"
+                                        min={0} max={100}
+                                        step={1}
+                                        style={{ width: '100%', borderRadius: 8 }}
+                                        formatter={v => `${v}%`}
+                                        parser={v => v.replace('%', '')}
+                                        onChange={(waste) => {
+                                            if (state.finalQty && waste !== undefined) {
+                                                const rmId = form.getFieldValue("raw_material_id");
+                                                const rm = state.rawMaterials.find(m => m.id === rmId);
+                                                if (rm) {
+                                                    const eff = state.finalQty * (1 + waste / 100);
+                                                    setState(p => ({ ...p, tempCost: eff * rm.price }));
+                                                }
+                                            }
+                                        }}
+                                    />
+                                </Form.Item>
+                            </Col>
+                        </Row>
 
-                    {state.tempCost > 0 && (
-                        <div style={{
-                            background: '#f6ffed', border: '1px solid #b7eb8f',
-                            padding: '12px', borderRadius: 8, textAlign: 'center'
-                        }}>
-                            <div style={{ fontSize: 11, color: '#52c41a', fontWeight: 800 }}>
-                                ថ្លៃដើមក្នុង ១ កែវ (Real-time)
-                            </div>
-                            <div style={{ fontSize: 26, fontWeight: 900, color: '#389e0d' }}>
-                                ${Number(state.tempCost || 0).toFixed(4)}
-                            </div>
-                            {state.finalQty && (
-                                <div style={{ fontSize: 11, color: '#73d13d' }}>
-                                    ✓ នឹងដក {Number(state.finalQty * (1 + (form.getFieldValue('waste_factor') || 0) / 100) || 0).toFixed(4)} {state.baseUnit} ពីស្តុក
+                        {state.tempCost > 0 && (
+                            <div style={{
+                                background: 'rgba(30, 74, 45, 0.04)', 
+                                border: '1px solid rgba(30, 74, 45, 0.1)',
+                                padding: '16px', 
+                                borderRadius: 12, 
+                                textAlign: 'center',
+                                marginTop: 8
+                            }}>
+                                <div style={{ fontSize: 10, color: '#1e4a2d', fontWeight: 800, letterSpacing: '0.5px' }}>
+                                    {t.estimated_cost_per_cup || "ថ្លៃដើមក្នុង ១ កែវ (ប៉ាន់ស្មាន)"}
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </Form>
+                                <div style={{ fontSize: 28, fontWeight: 900, color: '#cf1322', margin: '4px 0' }}>
+                                    ${Number(state.tempCost || 0).toFixed(4)}
+                                </div>
+                                {state.finalQty && (
+                                    <div style={{ fontSize: 11, color: '#1e4a2d', opacity: 0.7 }}>
+                                        ✓ {t.will_deduct || "នឹងដក"} {Number(state.finalQty * (1 + (form.getFieldValue('waste_factor') || 0) / 100) || 0).toFixed(4)} {state.base_unit} {t.from_stock || "ពីស្តុក"}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </Form>
+                </div>
             </Modal>
         </div>
     );

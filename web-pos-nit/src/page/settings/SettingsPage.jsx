@@ -49,6 +49,8 @@ import { getProfile } from "../../store/profile.store";
 import { useProfileStore } from "../../store/profileStore";
 import { useExchangeRate } from "../../component/pos/ExchangeRateContext";
 import { getPrinterSettings, setPrinterSettings } from "../../store/printer.store";
+import defaultLogo from "../../assets/business_default_logo.png";
+import { useLanguage, translations } from "../../store/language.store";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -65,6 +67,8 @@ const SettingsPage = () => {
     const [products, setProducts] = useState([]);
     const { setProfile } = useProfileStore();
     const { refreshRate } = useExchangeRate();
+    const { lang } = useLanguage();
+    const t = translations[lang];
 
     useEffect(() => {
         fetchSettings();
@@ -76,7 +80,7 @@ const SettingsPage = () => {
             const res = await request("settings", "get");
             if (res && res.settings) {
                 setSettings(res.settings);
-                
+
                 const parsedSettings = {
                     ...res.settings,
                     promo_applied_categories: res.settings.promo_applied_categories ? JSON.parse(res.settings.promo_applied_categories) : [],
@@ -104,7 +108,7 @@ const SettingsPage = () => {
                 if (res.settings.logo && res.settings.logo !== "null" && res.settings.logo !== "undefined") {
                     setPreviewUrl(Config.getFullImagePath(res.settings.logo));
                 } else {
-                    setPreviewUrl(null);
+                    setPreviewUrl(defaultLogo);
                 }
             }
 
@@ -238,9 +242,9 @@ const SettingsPage = () => {
             <div style={{ maxWidth: 1200, margin: "0 auto" }}>
                 <div style={{ marginBottom: "24px" }}>
                     <Title level={2} style={{ color: "#1e4a2d", display: "flex", alignItems: "center", gap: "12px" }}>
-                        <SettingOutlined /> General Settings / ការកំណត់ទូទៅ
+                        <SettingOutlined /> {t.menu_setting}
                     </Title>
-                    <Text type="secondary">Manage your business information and Point of Sale configurations</Text>
+                    <Text type="secondary">{t.general_settings_desc}</Text>
                 </div>
 
                 <Form
@@ -252,264 +256,263 @@ const SettingsPage = () => {
                     <Tabs
                         defaultActiveKey="general"
                         size="large"
-                        style={{ background: "#fff", borderRadius: 20, padding: "0 24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
                         items={[
                             {
                                 key: "general",
-                                label: <span><SettingOutlined /> ការកំណត់ / General</span>,
+                                label: <span><SettingOutlined /> {t.general_settings}</span>,
                                 children: (
                                     <div style={{ paddingTop: 24, paddingBottom: 24 }}>
-                                    <Row gutter={24}>
-                                        {/* Left Column: Business Info */}
-                                        <Col xs={24} lg={16}>
-                                            <Card
-                                                title={<Space><ShopOutlined /> Business Information</Space>}
-                                                style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
-                                            >
-                                                <Row gutter={16}>
-                                                    <Col xs={24} md={6}>
-                                                        <div style={{ textAlign: "center", marginBottom: "20px" }}>
-                                                            <Text strong style={{ display: "block", marginBottom: "12px" }}>Business Logo</Text>
-                                                            <div style={{ position: "relative", display: "inline-block" }}>
-                                                                <Avatar
-                                                                    size={120}
-                                                                    shape="square"
-                                                                    src={previewUrl}
-                                                                    icon={<ShopOutlined />}
-                                                                    style={{
-                                                                        borderRadius: "12px",
-                                                                        border: "1px solid #e8e3d8",
-                                                                        background: "#fff",
-                                                                        color: "#1e4a2d"
-                                                                    }}
-                                                                />
-                                                                <Upload
-                                                                    showUploadList={false}
-                                                                    beforeUpload={() => false}
-                                                                    onChange={handleLogoChange}
-                                                                >
-                                                                    <Button
-                                                                        size="small"
-                                                                        shape="circle"
-                                                                        icon={<CameraOutlined />}
-                                                                        style={{ position: "absolute", bottom: -10, right: -10, background: "#c0a060", color: "#fff", border: "none" }}
-                                                                    />
-                                                                </Upload>
-                                                            </div>
-                                                        </div>
-                                                    </Col>
-
-                                                    <Col xs={24} md={18}>
-                                                        <Row gutter={16}>
-                                                            <Col xs={24} md={12}>
-                                                                <Form.Item label="Business Name" name="name" rules={[{ required: true }]}>
-                                                                    <Input placeholder="e.g. Green Grounds Coffee" size="large" />
-                                                                </Form.Item>
-                                                            </Col>
-                                                            <Col xs={24} md={12}>
-                                                                <Form.Item label="Owner Name" name="owner_name">
-                                                                    <Input placeholder="System Owner Name" size="large" />
-                                                                </Form.Item>
-                                                            </Col>
-                                                            <Col xs={24} md={12}>
-                                                                <Form.Item label="Phone Number" name="phone">
-                                                                    <Input prefix={<PhoneOutlined />} placeholder="012 345 678" size="large" />
-                                                                </Form.Item>
-                                                            </Col>
-                                                            <Col xs={24} md={12}>
-                                                                <Form.Item label="Email Address" name="email">
-                                                                    <Input prefix={<MailOutlined />} placeholder="business@example.com" size="large" />
-                                                                </Form.Item>
-                                                            </Col>
-                                                        </Row>
-                                                    </Col>
-                                                    <Col xs={24}>
-                                                        <Form.Item label="Address" name="address">
-                                                            <Input.TextArea rows={2} placeholder="No. 123, St 456, Phnom Penh" />
-                                                        </Form.Item>
-                                                    </Col>
-                                                    <Col xs={24} md={12}>
-                                                        <Form.Item label="Website / URL" name="website">
-                                                            <Input prefix={<GlobalOutlined />} placeholder="https://www.example.com" size="large" />
-                                                        </Form.Item>
-                                                    </Col>
-                                                </Row>
-                                            </Card>
-
-                                            <Card
-                                                title={<Space><GlobalOutlined /> Social & Online Connectivity</Space>}
-                                                style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
-                                            >
-                                                <Row gutter={16}>
-                                                    <Col xs={24} md={12}>
-                                                        <Form.Item label="Telegram Channel/Bot Link" name="telegram_link">
-                                                            <Input prefix={<SendOutlined style={{ color: '#0088cc' }} />} placeholder="https://t.me/yourcoffee" />
-                                                        </Form.Item>
-                                                    </Col>
-                                                    <Col xs={24} md={12}>
-                                                        <Form.Item label="Facebook Page" name="facebook_link">
-                                                            <Input prefix={<FacebookOutlined style={{ color: '#1877f2' }} />} placeholder="https://fb.com/yourpage" />
-                                                        </Form.Item>
-                                                    </Col>
-                                                </Row>
-                                            </Card>
-
-                                            <Card
-                                                title={
-                                                    <Space>
-                                                        <SendOutlined style={{ color: '#0088cc' }} />
-                                                        <span>Telegram Bot Notifications (Order Alerts)</span>
-                                                    </Space>
-                                                }
-                                                extra={
-                                                    <Button 
-                                                        type="primary" 
-                                                        ghost 
-                                                        size="small"
-                                                        loading={testLoading}
-                                                        onClick={handleTestTelegram}
-                                                    >
-                                                        Test Connection
-                                                    </Button>
-                                                }
-                                                style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
-                                            >
-                                                <div style={{ marginBottom: 16, padding: '10px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 8, fontSize: 13 }}>
-                                                    <Space align="start">
-                                                        <InfoCircleOutlined style={{ color: '#1890ff', marginTop: 3 }} />
-                                                        <div>
-                                                            Get your <b>Bot Token</b> from <a href="https://t.me/botfather" target="_blank" rel="noreferrer">@BotFather</a> and your <b>Chat ID</b> from <a href="https://t.me/GetIDsBot" target="_blank" rel="noreferrer">@GetIDsBot</a>.
-                                                        </div>
-                                                    </Space>
-                                                </div>
-                                                <Row gutter={16}>
-                                                    <Col xs={24} md={12}>
-                                                        <Form.Item
-                                                            label="Telegram Bot Token"
-                                                            name="telegram_token"
-                                                            tooltip="Example: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-                                                        >
-                                                            <Input.Password placeholder="Enter your bot token here" size="large" />
-                                                        </Form.Item>
-                                                    </Col>
-                                                    <Col xs={24} md={12}>
-                                                        <Form.Item
-                                                            label="Telegram Chat ID"
-                                                            name="telegram_chat_id"
-                                                            tooltip="Can be a private chat ID or a Group/Channel ID (must start with -100 for groups)"
-                                                        >
-                                                            <Input placeholder="e.g. -100123456789" size="large" />
-                                                        </Form.Item>
-                                                    </Col>
-                                                    <Col xs={24} md={12}>
-                                                        <Form.Item label="Listening Mode" name="telegram_mode">
-                                                            <Select size="large">
-                                                                <Option value="polling">Stable Mode (Polling) - Works Everywhere</Option>
-                                                                <Option value="webhook">Real-time Mode (Webhook) - Fast but needs URL</Option>
-                                                            </Select>
-                                                        </Form.Item>
-                                                    </Col>
-                                                    <Col xs={24} md={12}>
-                                                        <Form.Item 
-                                                            label="Server Webhook URL" 
-                                                            name="telegram_webhook_url"
-                                                            tooltip="Only used for Webhook mode. Must be a public HTTPS URL."
-                                                        >
-                                                            <Input prefix={<RocketOutlined />} placeholder="https://your-api.com" size="large" />
-                                                        </Form.Item>
-                                                    </Col>
-                                                </Row>
-                                            </Card>
-                                        </Col>
-
-                                        {/* Right Column: POS Configuration */}
-                                        <Col xs={24} lg={8}>
-                                            <Card
-                                                title={<Space><DollarOutlined /> POS & Financial Config</Space>}
-                                                style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
-                                            >
-                                                <Form.Item label="Currency Symbol" name="currency_symbol">
-                                                    <Select size="large">
-                                                        <Option value="$">$ (USD)</Option>
-                                                        <Option value="៛">៛ (KHR)</Option>
-                                                        <Option value="฿">฿ (THB)</Option>
-                                                    </Select>
-                                                </Form.Item>
-
-                                                <Form.Item
-                                                    label="Exchange Rate (1 USD = ? KHR)"
-                                                    name="kh_exchange_rate"
+                                        <Row gutter={24}>
+                                            {/* Left Column: Business Info */}
+                                            <Col xs={24} lg={16}>
+                                                <Card
+                                                    title={<Space><ShopOutlined /> {t.business_info_header}</Space>}
+                                                    style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
                                                 >
-                                                    <InputNumber
-                                                        style={{ width: "100%" }}
-                                                        size="large"
-                                                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                                        parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                                                    />
-                                                </Form.Item>
+                                                    <Row gutter={16}>
+                                                        <Col xs={24} md={6}>
+                                                            <div style={{ textAlign: "center", marginBottom: "20px" }}>
+                                                                <Text strong style={{ display: "block", marginBottom: "12px" }}>{t.logo || 'Business Logo'}</Text>
+                                                                <div style={{ position: "relative", display: "inline-block" }}>
+                                                                    <Avatar
+                                                                        size={120}
+                                                                        shape="square"
+                                                                        src={previewUrl || defaultLogo}
+                                                                        icon={<ShopOutlined />}
+                                                                        style={{
+                                                                            borderRadius: "12px",
+                                                                            border: "1px solid #e8e3d8",
+                                                                            background: "#fff",
+                                                                            color: "#1e4a2d"
+                                                                        }}
+                                                                    />
+                                                                    <Upload
+                                                                        showUploadList={false}
+                                                                        beforeUpload={() => false}
+                                                                        onChange={handleLogoChange}
+                                                                    >
+                                                                        <Button
+                                                                            size="small"
+                                                                            shape="circle"
+                                                                            icon={<CameraOutlined />}
+                                                                            style={{ position: "absolute", bottom: -10, right: -10, background: "#c0a060", color: "#fff", border: "none" }}
+                                                                        />
+                                                                    </Upload>
+                                                                </div>
+                                                            </div>
+                                                        </Col>
 
-                                                <Divider />
+                                                        <Col xs={24} md={18}>
+                                                            <Row gutter={16}>
+                                                                <Col xs={24} md={12}>
+                                                                    <Form.Item label={t.business_name_label} name="name" rules={[{ required: true }]}>
+                                                                        <Input placeholder="e.g. Green Grounds Coffee" size="large" />
+                                                                    </Form.Item>
+                                                                </Col>
+                                                                <Col xs={24} md={12}>
+                                                                    <Form.Item label={t.owner_name_label} name="owner_name">
+                                                                        <Input placeholder="System Owner Name" size="large" />
+                                                                    </Form.Item>
+                                                                </Col>
+                                                                <Col xs={24} md={12}>
+                                                                    <Form.Item label={t.phone_number_label} name="phone" rules={[{ required: true }]}>
+                                                                        <Input prefix={<PhoneOutlined />} placeholder="012 345 678" size="large" />
+                                                                    </Form.Item>
+                                                                </Col>
+                                                                <Col xs={24} md={12}>
+                                                                    <Form.Item label={t.email_address_label} name="email">
+                                                                        <Input prefix={<MailOutlined />} placeholder="business@example.com" size="large" />
+                                                                    </Form.Item>
+                                                                </Col>
+                                                            </Row>
+                                                        </Col>
+                                                        <Col xs={24}>
+                                                            <Form.Item label={t.address_label} name="address">
+                                                                <Input.TextArea rows={2} placeholder="No. 123, St 456, Phnom Penh" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24} md={12}>
+                                                            <Form.Item label={t.website_url_label} name="website">
+                                                                <Input prefix={<GlobalOutlined />} placeholder="https://www.example.com" size="large" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                    </Row>
+                                                </Card>
 
-                                                <Form.Item label="VAT / Tax (%)" name="tax_percent">
-                                                    <InputNumber
-                                                        style={{ width: "100%" }}
-                                                        size="large"
-                                                        min={0}
-                                                        max={100}
-                                                        prefix={<PercentageOutlined />}
-                                                    />
-                                                </Form.Item>
+                                                <Card
+                                                    title={<Space><GlobalOutlined /> Social & Online Connectivity</Space>}
+                                                    style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                                                >
+                                                    <Row gutter={16}>
+                                                        <Col xs={24} md={12}>
+                                                            <Form.Item label="Telegram Channel/Bot Link" name="telegram_link">
+                                                                <Input prefix={<SendOutlined style={{ color: '#0088cc' }} />} placeholder="https://t.me/yourcoffee" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24} md={12}>
+                                                            <Form.Item label="Facebook Page" name="facebook_link">
+                                                                <Input prefix={<FacebookOutlined style={{ color: '#1877f2' }} />} placeholder="https://fb.com/yourpage" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                    </Row>
+                                                </Card>
 
-                                                <Form.Item label="Service Charge (%)" name="service_charge">
-                                                    <InputNumber
-                                                        style={{ width: "100%" }}
-                                                        size="large"
-                                                        min={0}
-                                                        max={100}
-                                                        prefix={<PercentageOutlined />}
-                                                    />
-                                                </Form.Item>
-                                            </Card>
+                                                <Card
+                                                    title={
+                                                        <Space>
+                                                            <SendOutlined style={{ color: '#0088cc' }} />
+                                                            <span>Telegram Bot Notifications (Order Alerts)</span>
+                                                        </Space>
+                                                    }
+                                                    extra={
+                                                        <Button
+                                                            type="primary"
+                                                            ghost
+                                                            size="small"
+                                                            loading={testLoading}
+                                                            onClick={handleTestTelegram}
+                                                        >
+                                                            Test Connection
+                                                        </Button>
+                                                    }
+                                                    style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                                                >
+                                                    <div style={{ marginBottom: 16, padding: '10px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 8, fontSize: 13 }}>
+                                                        <Space align="start">
+                                                            <InfoCircleOutlined style={{ color: '#1890ff', marginTop: 3 }} />
+                                                            <div>
+                                                                Get your <b>Bot Token</b> from <a href="https://t.me/botfather" target="_blank" rel="noreferrer">@BotFather</a> and your <b>Chat ID</b> from <a href="https://t.me/GetIDsBot" target="_blank" rel="noreferrer">@GetIDsBot</a>.
+                                                            </div>
+                                                        </Space>
+                                                    </div>
+                                                    <Row gutter={16}>
+                                                        <Col xs={24} md={12}>
+                                                            <Form.Item
+                                                                label="Telegram Bot Token"
+                                                                name="telegram_token"
+                                                                tooltip="Example: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                                                            >
+                                                                <Input.Password placeholder="Enter your bot token here" size="large" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24} md={12}>
+                                                            <Form.Item
+                                                                label="Telegram Chat ID"
+                                                                name="telegram_chat_id"
+                                                                tooltip="Can be a private chat ID or a Group/Channel ID (must start with -100 for groups)"
+                                                            >
+                                                                <Input placeholder="e.g. -100123456789" size="large" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24} md={12}>
+                                                            <Form.Item label="Listening Mode" name="telegram_mode">
+                                                                <Select size="large">
+                                                                    <Option value="polling">Stable Mode (Polling) - Works Everywhere</Option>
+                                                                    <Option value="webhook">Real-time Mode (Webhook) - Fast but needs URL</Option>
+                                                                </Select>
+                                                            </Form.Item>
+                                                        </Col>
+                                                        <Col xs={24} md={12}>
+                                                            <Form.Item
+                                                                label="Server Webhook URL"
+                                                                name="telegram_webhook_url"
+                                                                tooltip="Only used for Webhook mode. Must be a public HTTPS URL."
+                                                            >
+                                                                <Input prefix={<RocketOutlined />} placeholder="https://your-api.com" size="large" />
+                                                            </Form.Item>
+                                                        </Col>
+                                                    </Row>
+                                                </Card>
+                                            </Col>
 
-                                            <Button
-                                                type="primary"
-                                                htmlType="submit"
-                                                loading={loading}
-                                                icon={<SaveOutlined />}
-                                                size="large"
-                                                style={{
-                                                    width: "100%",
-                                                    height: "56px",
-                                                    borderRadius: "12px",
-                                                    background: "#1e4a2d",
-                                                    borderColor: "#1e4a2d",
-                                                    boxShadow: "0 8px 20px rgba(30,74,45,0.2)"
-                                                }}
-                                            >
-                                                Save All Changes
-                                            </Button>
-                                        </Col>
-                                    </Row>
+                                            {/* Right Column: POS Configuration */}
+                                            <Col xs={24} lg={8}>
+                                                <Card
+                                                    title={<Space><DollarOutlined /> {t.pos_financial_config_header}</Space>}
+                                                    style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                                                >
+                                                    <Form.Item label={t.currency_symbol_label} name="currency_symbol">
+                                                        <Select size="large">
+                                                            <Option value="$">$ (USD)</Option>
+                                                            <Option value="៛">៛ (KHR)</Option>
+                                                            <Option value="฿">฿ (THB)</Option>
+                                                        </Select>
+                                                    </Form.Item>
+ 
+                                                    <Form.Item
+                                                        label={t.exchange_rate_label}
+                                                        name="kh_exchange_rate"
+                                                    >
+                                                        <InputNumber
+                                                            style={{ width: "100%" }}
+                                                            size="large"
+                                                            formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                                            parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                                                        />
+                                                    </Form.Item>
+ 
+                                                    <Divider />
+ 
+                                                    <Form.Item label={t.vat_tax_label} name="tax_percent">
+                                                        <InputNumber
+                                                            style={{ width: "100%" }}
+                                                            size="large"
+                                                            min={0}
+                                                            max={100}
+                                                            prefix={<PercentageOutlined />}
+                                                        />
+                                                    </Form.Item>
+ 
+                                                    <Form.Item label={t.service_charge_label} name="service_charge">
+                                                        <InputNumber
+                                                            style={{ width: "100%" }}
+                                                            size="large"
+                                                            min={0}
+                                                            max={100}
+                                                            prefix={<PercentageOutlined />}
+                                                        />
+                                                    </Form.Item>
+                                                </Card>
+ 
+                                                <Button
+                                                    type="primary"
+                                                    htmlType="submit"
+                                                    loading={loading}
+                                                    icon={<SaveOutlined />}
+                                                    size="large"
+                                                    style={{
+                                                        width: "100%",
+                                                        height: "56px",
+                                                        borderRadius: "12px",
+                                                        background: "#1e4a2d",
+                                                        borderColor: "#1e4a2d",
+                                                        boxShadow: "0 8px 20px rgba(30,74,45,0.2)"
+                                                    }}
+                                                >
+                                                    {t.save_all_changes_btn}
+                                                </Button>
+                                            </Col>
+                                        </Row>
                                     </div>
                                 )
                             },
-                        {
-                            key: "printer",
-                            label: <span><PrinterOutlined /> ម៉ាស៊ីនព្រីន / Printer</span>,
-                            children: (
-                                <PrinterSettingsTab />
-                            )
-                        },
+                            {
+                                key: "printer",
+                                label: <span><PrinterOutlined /> {t.printer_settings || 'Printer'}</span>,
+                                children: (
+                                    <PrinterSettingsTab />
+                                )
+                            },
                             {
                                 key: "promo",
-                                label: <span><MobileOutlined /> Mobile App & Promo</span>,
+                                label: <span><MobileOutlined /> {t.mobile_app_promo_tab}</span>,
                                 forceRender: true, // Ensure fields are registered
                                 children: (
                                     <div style={{ paddingTop: 24, paddingBottom: 24 }}>
                                         <Row gutter={24}>
                                             <Col xs={24} md={16}>
-                                                <Card 
-                                                    title={<Space><NotificationOutlined /> Home Banner Promotion</Space>}
+                                                <Card
+                                                    title={<Space><NotificationOutlined /> {t.promo_banner_header}</Space>}
                                                     style={{ borderRadius: "16px", marginBottom: "24px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
                                                     extra={
                                                         <Form.Item name="promo_is_active" valuePropName="checked" noStyle>
@@ -519,12 +522,12 @@ const SettingsPage = () => {
                                                 >
                                                     <Row gutter={16}>
                                                         <Col xs={24} md={16}>
-                                                            <Form.Item label="Promo Tag (e.g. Grand Opening)" name="promo_tag" tooltip="This text appears in a small pill above the title">
+                                                            <Form.Item label={t.promo_tag_label} name="promo_tag" tooltip="This text appears in a small pill above the title">
                                                                 <Input placeholder="Limited Offer, Hot Deal, etc." size="large" />
                                                             </Form.Item>
                                                         </Col>
                                                         <Col xs={24} md={8}>
-                                                            <Form.Item label="Tag Color" name="promo_tag_color">
+                                                            <Form.Item label={t.tag_color || 'Tag Color'} name="promo_tag_color">
                                                                 <Select size="large">
                                                                     <Option value="#C8952A">Gold / មាស</Option>
                                                                     <Option value="#E8534A">Red / ក្រហម</Option>
@@ -534,40 +537,40 @@ const SettingsPage = () => {
                                                             </Form.Item>
                                                         </Col>
                                                         <Col xs={24}>
-                                                            <Form.Item label="Banner Title" name="promo_title" tooltip="Main big text on the banner">
+                                                            <Form.Item label={t.promo_title_label} name="promo_title" tooltip="Main big text on the banner">
                                                                 <Input placeholder="e.g. BUY 1 GET 1 FREE" size="large" />
                                                             </Form.Item>
                                                         </Col>
                                                         <Col xs={24}>
-                                                            <Form.Item label="Banner Description" name="promo_desc" tooltip="Short explanation of the offer">
+                                                            <Form.Item label={t.promo_desc_label} name="promo_desc" tooltip="Short explanation of the offer">
                                                                 <Input.TextArea placeholder="e.g. Celebrate our new branch with a free drink!" rows={2} />
                                                             </Form.Item>
                                                         </Col>
                                                         <Col xs={24}>
-                                                            <Form.Item label="Banner Background Image URL" name="promo_image" tooltip="Provide a high-quality image URL for the background">
+                                                            <Form.Item label={t.promo_image_label} name="promo_image" tooltip="Provide a high-quality image URL for the background">
                                                                 <Input prefix={<GlobalOutlined />} placeholder="https://images.unsplash.com..." size="large" />
                                                             </Form.Item>
                                                         </Col>
                                                         <Col xs={24}>
-                                                            <Card 
-                                                                title={<Space><PercentageOutlined style={{ color: '#fa8c16' }} /> <span style={{ color: '#fa8c16' }}>Global Percentage Discount</span></Space>}
+                                                            <Card
+                                                                title={<Space><PercentageOutlined style={{ color: '#fa8c16' }} /> <span style={{ color: '#fa8c16' }}>{t.global_discount_header}</span></Space>}
                                                                 style={{ marginBottom: 24, borderRadius: 16, border: '1px solid #ffd591', boxShadow: '0 4px 12px rgba(250,140,22,0.05)' }}
                                                                 headStyle={{ borderBottom: '1px solid #ffd591', background: '#fffbe6' }}
                                                             >
                                                                 <Row gutter={[24, 16]}>
                                                                     <Col xs={24} md={8}>
-                                                                        <Form.Item label={<b>DISCOUNT PERCENT (%)</b>} name="global_discount">
-                                                                            <InputNumber 
-                                                                                style={{ width: '100%', borderRadius: 8 }} 
-                                                                                size="large" 
-                                                                                min={0} max={100} 
+                                                                        <Form.Item label={<b>{t.discount_label?.toUpperCase() || 'DISCOUNT (%)'}</b>} name="global_discount">
+                                                                            <InputNumber
+                                                                                style={{ width: '100%', borderRadius: 8 }}
+                                                                                size="large"
+                                                                                min={0} max={100}
                                                                                 formatter={value => `${value}%`}
                                                                                 parser={value => value.replace('%', '')}
                                                                             />
                                                                         </Form.Item>
                                                                     </Col>
                                                                     <Col xs={24} md={16}>
-                                                                        <Form.Item label={<b>DISCOUNT SCOPE</b>} name="discount_scope">
+                                                                        <Form.Item label={<b>{t.discount_scope_label}</b>} name="discount_scope">
                                                                             <Select size="large" style={{ borderRadius: 8 }}>
                                                                                 <Option value="all">Apply to ALL Products</Option>
                                                                                 <Option value="category">Specific Categories Only</Option>
@@ -606,134 +609,134 @@ const SettingsPage = () => {
                                                         </Col>
                                                     </Row>
                                                 </Card>
-                                                    
-                                                    <div style={{ 
-                                                        marginTop: 20, 
-                                                        padding: '24px', 
-                                                        background: '#f0f7ff', 
-                                                        border: '1px solid #bae7ff', 
-                                                        borderRadius: 16, 
-                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                                                    }}>
-                                                        <Row gutter={[16, 24]}>
-                                                            <Col xs={24} md={16}>
-                                                                <Space direction="vertical" size={0}>
-                                                                    <Title level={5} style={{ color: '#0050b3', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                                        <NotificationOutlined /> Promotion Engine: "Buy X Get Y"
-                                                                    </Title>
-                                                                    <Text type="secondary" style={{ fontSize: 13 }}>
-                                                                        Automate discounts and BOGO badges across your menu.
-                                                                    </Text>
-                                                                </Space>
-                                                            </Col>
-                                                            <Col xs={24} md={8} style={{ textAlign: 'right' }}>
-                                                                <Space style={{ background: '#fff', padding: '6px 12px', borderRadius: 10, border: '1px solid #d9d9d9' }}>
-                                                                    <Text strong style={{ fontSize: 11, color: '#595959' }}>ENABLED:</Text>
-                                                                    <Form.Item name="global_bogo_active" valuePropName="checked" noStyle>
-                                                                        <Switch checkedChildren="ON" unCheckedChildren="OFF" size="small" />
+
+                                                <div style={{
+                                                    marginTop: 20,
+                                                    padding: '24px',
+                                                    background: '#f0f7ff',
+                                                    border: '1px solid #bae7ff',
+                                                    borderRadius: 16,
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                                                }}>
+                                                    <Row gutter={[16, 24]}>
+                                                        <Col xs={24} md={16}>
+                                                            <Space direction="vertical" size={0}>
+                                                                <Title level={5} style={{ color: '#0050b3', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                                    <NotificationOutlined /> {t.buy_x_get_y_header}
+                                                                </Title>
+                                                                <Text type="secondary" style={{ fontSize: 13 }}>
+                                                                    Automate discounts and BOGO badges across your menu.
+                                                                </Text>
+                                                            </Space>
+                                                        </Col>
+                                                        <Col xs={24} md={8} style={{ textAlign: 'right' }}>
+                                                            <Space style={{ background: '#fff', padding: '6px 12px', borderRadius: 10, border: '1px solid #d9d9d9' }}>
+                                                                <Text strong style={{ fontSize: 11, color: '#595959' }}>{t.promo_active_status?.toUpperCase()}:</Text>
+                                                                <Form.Item name="global_bogo_active" valuePropName="checked" noStyle>
+                                                                    <Switch checkedChildren="ON" unCheckedChildren="OFF" size="small" />
+                                                                </Form.Item>
+                                                            </Space>
+                                                        </Col>
+
+                                                        <Col xs={24}>
+                                                            <div style={{ background: '#fff', padding: '20px', borderRadius: 12, border: '1px solid #e6f7ff' }}>
+                                                                <Row gutter={[24, 16]}>
+                                                                    <Col xs={12} md={6}>
+                                                                        <Form.Item
+                                                                            label={<Space><ShoppingOutlined style={{ color: '#1890ff' }} /> <b>BUY (ទិញ)</b></Space>}
+                                                                            name="promo_buy_qty"
+                                                                        >
+                                                                            <InputNumber min={1} size="large" style={{ width: '100%', borderRadius: 8 }} />
+                                                                        </Form.Item>
+                                                                    </Col>
+                                                                    <Col xs={12} md={6}>
+                                                                        <Form.Item
+                                                                            label={<Space><GiftOutlined style={{ color: '#52c41a' }} /> <b>FREE (ថែម)</b></Space>}
+                                                                            name="promo_get_qty"
+                                                                        >
+                                                                            <InputNumber min={1} size="large" style={{ width: '100%', borderRadius: 8 }} />
+                                                                        </Form.Item>
+                                                                    </Col>
+                                                                    <Col xs={24} md={12}>
+                                                                        <Form.Item label={<b>PROMOTION SCOPE</b>} name="promo_scope">
+                                                                            <Select size="large" style={{ width: '100%' }}>
+                                                                                <Option value="all">Apply to ALL Products</Option>
+                                                                                <Option value="category">Specific Categories Only</Option>
+                                                                                <Option value="product">Selected Products Only</Option>
+                                                                            </Select>
+                                                                        </Form.Item>
+                                                                    </Col>
+                                                                    <Col xs={24} md={12}>
+                                                                        <Form.Item label={<b>BADGE TEXT</b>} name="global_bogo_text" tooltip="e.g. Buy 1 Get 1 Free">
+                                                                            <Input placeholder="ទិញ១ ថែម១" size="large" style={{ borderRadius: 8 }} />
+                                                                        </Form.Item>
+                                                                    </Col>
+
+                                                                    <Col xs={24} md={12}>
+                                                                        <Form.Item label={<Space><CalendarOutlined /> <b>{t.start_date_label?.toUpperCase()}</b></Space>} name="promo_start_date">
+                                                                            <DatePicker style={{ width: '100%', borderRadius: 8 }} size="large" placeholder={t.start_date_label} />
+                                                                        </Form.Item>
+                                                                    </Col>
+                                                                    <Col xs={24} md={12}>
+                                                                        <Form.Item label={<Space><CalendarOutlined /> <b>{t.end_date_label?.toUpperCase()}</b></Space>} name="promo_end_date">
+                                                                            <DatePicker style={{ width: '100%', borderRadius: 8 }} size="large" placeholder={t.end_date_label} />
+                                                                        </Form.Item>
+                                                                    </Col>
+
+                                                                    {/* Conditional Multi-Select for Categories */}
+                                                                    <Form.Item
+                                                                        noStyle
+                                                                        shouldUpdate={(prev, curr) => prev.promo_scope !== curr.promo_scope}
+                                                                    >
+                                                                        {({ getFieldValue }) => getFieldValue('promo_scope') === 'category' ? (
+                                                                            <Col xs={24}>
+                                                                                <Form.Item label={<b>SELECT TARGET CATEGORIES</b>} name="promo_applied_categories">
+                                                                                    <Select
+                                                                                        mode="multiple"
+                                                                                        placeholder="Choose categories"
+                                                                                        size="large"
+                                                                                        style={{ width: '100%' }}
+                                                                                        options={categories.map(c => ({ label: c.name, value: c.id }))}
+                                                                                    />
+                                                                                </Form.Item>
+                                                                            </Col>
+                                                                        ) : null}
                                                                     </Form.Item>
-                                                                </Space>
-                                                            </Col>
-                                                            
-                                                            <Col xs={24}>
-                                                                <div style={{ background: '#fff', padding: '20px', borderRadius: 12, border: '1px solid #e6f7ff' }}>
-                                                                    <Row gutter={[24, 16]}>
-                                                                        <Col xs={12} md={6}>
-                                                                            <Form.Item 
-                                                                                label={<Space><ShoppingOutlined style={{ color: '#1890ff' }} /> <b>BUY (ទិញ)</b></Space>} 
-                                                                                name="promo_buy_qty"
-                                                                            >
-                                                                                <InputNumber min={1} size="large" style={{ width: '100%', borderRadius: 8 }} />
-                                                                            </Form.Item>
-                                                                        </Col>
-                                                                        <Col xs={12} md={6}>
-                                                                            <Form.Item 
-                                                                                label={<Space><GiftOutlined style={{ color: '#52c41a' }} /> <b>FREE (ថែម)</b></Space>} 
-                                                                                name="promo_get_qty"
-                                                                            >
-                                                                                <InputNumber min={1} size="large" style={{ width: '100%', borderRadius: 8 }} />
-                                                                            </Form.Item>
-                                                                        </Col>
-                                                                        <Col xs={24} md={12}>
-                                                                            <Form.Item label={<b>PROMOTION SCOPE</b>} name="promo_scope">
-                                                                                <Select size="large" style={{ width: '100%' }}>
-                                                                                    <Option value="all">Apply to ALL Products</Option>
-                                                                                    <Option value="category">Specific Categories Only</Option>
-                                                                                    <Option value="product">Selected Products Only</Option>
-                                                                                </Select>
-                                                                            </Form.Item>
-                                                                        </Col>
-                                                                        <Col xs={24} md={12}>
-                                                                            <Form.Item label={<b>BADGE TEXT</b>} name="global_bogo_text" tooltip="e.g. Buy 1 Get 1 Free">
-                                                                                <Input placeholder="ទិញ១ ថែម១" size="large" style={{ borderRadius: 8 }} />
-                                                                            </Form.Item>
-                                                                        </Col>
 
-                                                                        <Col xs={24} md={12}>
-                                                                            <Form.Item label={<Space><CalendarOutlined /> <b>START DATE</b></Space>} name="promo_start_date">
-                                                                                <DatePicker style={{ width: '100%', borderRadius: 8 }} size="large" placeholder="Start Date" />
-                                                                            </Form.Item>
-                                                                        </Col>
-                                                                        <Col xs={24} md={12}>
-                                                                            <Form.Item label={<Space><CalendarOutlined /> <b>END DATE</b></Space>} name="promo_end_date">
-                                                                                <DatePicker style={{ width: '100%', borderRadius: 8 }} size="large" placeholder="End Date" />
-                                                                            </Form.Item>
-                                                                        </Col>
-                                                                        
-                                                                        {/* Conditional Multi-Select for Categories */}
-                                                                        <Form.Item 
-                                                                            noStyle 
-                                                                            shouldUpdate={(prev, curr) => prev.promo_scope !== curr.promo_scope}
-                                                                        >
-                                                                            {({ getFieldValue }) => getFieldValue('promo_scope') === 'category' ? (
-                                                                                <Col xs={24}>
-                                                                                    <Form.Item label={<b>SELECT TARGET CATEGORIES</b>} name="promo_applied_categories">
-                                                                                        <Select 
-                                                                                            mode="multiple" 
-                                                                                            placeholder="Choose categories" 
-                                                                                            size="large"
-                                                                                            style={{ width: '100%' }}
-                                                                                            options={categories.map(c => ({ label: c.name, value: c.id }))}
-                                                                                        />
-                                                                                    </Form.Item>
-                                                                                </Col>
-                                                                            ) : null}
-                                                                        </Form.Item>
-
-                                                                        {/* Conditional Multi-Select for Products */}
-                                                                        <Form.Item 
-                                                                            noStyle 
-                                                                            shouldUpdate={(prev, curr) => prev.promo_scope !== curr.promo_scope}
-                                                                        >
-                                                                            {({ getFieldValue }) => getFieldValue('promo_scope') === 'product' ? (
-                                                                                <Col xs={24}>
-                                                                                    <Form.Item label={<b>SELECT TARGET PRODUCTS</b>} name="promo_applied_products">
-                                                                                        <Select 
-                                                                                            mode="multiple" 
-                                                                                            placeholder="Choose products" 
-                                                                                            size="large"
-                                                                                            style={{ width: '100%' }}
-                                                                                            options={products.map(p => ({ label: p.name, value: p.id }))}
-                                                                                        />
-                                                                                    </Form.Item>
-                                                                                </Col>
-                                                                            ) : null}
-                                                                        </Form.Item>
-                                                                    </Row>
-                                                                </div>
-                                                            </Col>
-                                                        </Row>
-                                                    </div>
-                                                    <div style={{ marginTop: 16, padding: '16px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 12 }}>
-                                                        <Title level={5} style={{ color: '#52c41a' }}><RocketOutlined /> Preview Guide</Title>
-                                                        <Text size="small" type="secondary">
-                                                            These promotions will appear on the guest app home screen and product list.
-                                                        </Text>
-                                                    </div>
+                                                                    {/* Conditional Multi-Select for Products */}
+                                                                    <Form.Item
+                                                                        noStyle
+                                                                        shouldUpdate={(prev, curr) => prev.promo_scope !== curr.promo_scope}
+                                                                    >
+                                                                        {({ getFieldValue }) => getFieldValue('promo_scope') === 'product' ? (
+                                                                            <Col xs={24}>
+                                                                                <Form.Item label={<b>SELECT TARGET PRODUCTS</b>} name="promo_applied_products">
+                                                                                    <Select
+                                                                                        mode="multiple"
+                                                                                        placeholder="Choose products"
+                                                                                        size="large"
+                                                                                        style={{ width: '100%' }}
+                                                                                        options={products.map(p => ({ label: p.name, value: p.id }))}
+                                                                                    />
+                                                                                </Form.Item>
+                                                                            </Col>
+                                                                        ) : null}
+                                                                    </Form.Item>
+                                                                </Row>
+                                                            </div>
+                                                        </Col>
+                                                    </Row>
+                                                </div>
+                                                <div style={{ marginTop: 16, padding: '16px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 12 }}>
+                                                    <Title level={5} style={{ color: '#52c41a' }}><RocketOutlined /> Preview Guide</Title>
+                                                    <Text size="small" type="secondary">
+                                                        These promotions will appear on the guest app home screen and product list.
+                                                    </Text>
+                                                </div>
                                             </Col>
                                             <Col xs={24} md={8}>
-                                                <Card 
-                                                    title="Quick Actions" 
+                                                <Card
+                                                    title="Quick Actions"
                                                     style={{ borderRadius: "16px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
                                                 >
                                                     <Button
@@ -750,7 +753,7 @@ const SettingsPage = () => {
                                                             borderColor: "#1e4a2d"
                                                         }}
                                                     >
-                                                        Save Promotion
+                                                        {t.update || 'Save Promotion'}
                                                     </Button>
                                                 </Card>
                                             </Col>
@@ -760,7 +763,7 @@ const SettingsPage = () => {
                             },
                             isAdmin && {
                                 key: "categories",
-                                label: <span>🏷️ Category / ប្រភេទទំនិញ</span>,
+                                label: <span>🏷️ {t.category_tab}</span>,
                                 children: (
                                     <div style={{ paddingTop: 24, paddingBottom: 24 }}>
                                         <CategoryManageTab targetBusinessId={profile?.business_id} />
@@ -777,18 +780,20 @@ const SettingsPage = () => {
 
 // --- NEW COMPONENT: PrinterSettingsTab ---
 const PrinterSettingsTab = () => {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [pSettings, setPSettings] = useState(getPrinterSettings());
 
     const updateSetting = (key, value) => {
         const newSettings = { ...pSettings, [key]: value };
         setPSettings(newSettings);
         setPrinterSettings(newSettings);
-        message.success("Printer settings updated locally!");
+        message.success(lang === 'kh' ? "បានធ្វើបច្ចុប្បន្នភាពការកំណត់ម៉ាស៊ីនព្រីន!" : "Printer settings updated locally!");
     };
 
     return (
         <div style={{ paddingTop: 24, paddingBottom: 24, maxWidth: 800 }}>
-            <Title level={4}><PrinterOutlined /> Printing Workflow Configuration</Title>
+            <Title level={4}><PrinterOutlined /> {t.printing_workflow_header}</Title>
             <Divider />
 
             <Row gutter={[24, 24]}>
@@ -796,13 +801,13 @@ const PrinterSettingsTab = () => {
                     <Card
                         hoverable
                         style={{ borderRadius: 16, border: '1px solid #e8e3d8' }}
-                        title={<Space><RocketOutlined style={{ color: '#1e4a2d' }} /> Automation</Space>}
+                        title={<Space><RocketOutlined style={{ color: '#1e4a2d' }} /> {t.automation || 'Automation'}</Space>}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                             <div>
-                                <Text strong>Auto Print on Checkout</Text>
+                                <Text strong>{t.auto_print_label}</Text>
                                 <br />
-                                <Text type="secondary" style={{ fontSize: 12 }}>Automatically trigger print dialog after each sale</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>{t.auto_print_desc}</Text>
                             </div>
                             <Switch
                                 checked={pSettings.auto_print}
@@ -818,17 +823,17 @@ const PrinterSettingsTab = () => {
                     <Card
                         hoverable
                         style={{ borderRadius: 16, border: '1px solid #e8e3d8' }}
-                        title={<Space><OrderedListOutlined style={{ color: '#c0a060' }} /> Execution Order</Space>}
+                        title={<Space><OrderedListOutlined style={{ color: '#c0a060' }} /> {t.execution_order_header}</Space>}
                     >
                         <Form layout="vertical">
-                            <Form.Item label="Which should print first?">
+                            <Form.Item label={t.print_priority_label}>
                                 <Select
                                     size="large"
                                     value={pSettings.label_first ? 'label' : 'invoice'}
                                     onChange={(val) => updateSetting('label_first', val === 'label')}
                                 >
-                                    <Option value="label">Label (Sticker) First</Option>
-                                    <Option value="invoice">Invoice (Receipt) First</Option>
+                                    <Option value="label">{t.label_first_option}</Option>
+                                    <Option value="invoice">{t.invoice_first_option}</Option>
                                 </Select>
                             </Form.Item>
                         </Form>
@@ -837,13 +842,13 @@ const PrinterSettingsTab = () => {
 
                 <Col xs={24}>
                     <Card
-                        title={<Space><CheckCircleOutlined style={{ color: '#52c41a' }} /> Document Availability</Space>}
+                        title={<Space><CheckCircleOutlined style={{ color: '#52c41a' }} /> {t.doc_availability_header}</Space>}
                         style={{ borderRadius: 16, border: '1px solid #e8e3d8' }}
                     >
                         <Row gutter={24}>
                             <Col xs={24} sm={12}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
-                                    <Text>Enable Customer Invoice</Text>
+                                    <Text>{t.enable_invoice_label}</Text>
                                     <Switch
                                         checked={pSettings.invoice_enabled}
                                         onChange={(val) => updateSetting('invoice_enabled', val)}
@@ -852,7 +857,7 @@ const PrinterSettingsTab = () => {
                             </Col>
                             <Col xs={24} sm={12}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
-                                    <Text>Enable Cup Labels (Stickers)</Text>
+                                    <Text>{t.enable_label_stickers}</Text>
                                     <Switch
                                         checked={pSettings.label_enabled}
                                         onChange={(val) => updateSetting('label_enabled', val)}
@@ -861,7 +866,7 @@ const PrinterSettingsTab = () => {
                             </Col>
                             <Col xs={24} sm={12}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
-                                    <Text>Enable Kitchen Ticket (Order Send)</Text>
+                                    <Text>{t.enable_kitchen_ticket}</Text>
                                     <Switch
                                         checked={pSettings.kitchen_enabled}
                                         onChange={(val) => updateSetting('kitchen_enabled', val)}
@@ -874,9 +879,9 @@ const PrinterSettingsTab = () => {
             </Row>
 
             <div style={{ marginTop: 40, padding: 20, background: '#fffbe6', borderRadius: 12, border: '1px solid #ffe58f' }}>
-                <Text type="warning" strong>💡 Pro Tip:</Text>
+                <Text type="warning" strong>💡 {t.pro_tip_label}:</Text>
                 <br />
-                <Text size="small">
+                <Text size="small" type="secondary">
                     For maximum speed during busy hours, enable <b>Auto Print</b> and set <b>Label First</b>.
                     Combine this with browser "Kiosk Printing" for a truly silent experience.
                 </Text>

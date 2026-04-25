@@ -43,7 +43,7 @@ function HomePage() {
 
   // Data States
   const [todaySummary, setTodaySummary] = useState({ income: 0, expense: 0 });
-  const [stockSummary, setStockSummary] = useState({ total_items: 0, low_stock_count: 0, total_stock_value: 0, low_stock_list: [] });
+  const [stockSummary, setStockSummary] = useState({ total_items: 0, low_stock_count: 0, total_stock_value: 0, low_stock_list: [], expiry_alerts: [] });
   const [rangeSummary, setRangeSummary] = useState({ total_sale: 0, total_expense: 0, net_profit: 0, order_count: 0 });
   const [salesData, setSalesData] = useState([]);
   const [transactionData, setTransactionData] = useState([]);
@@ -68,9 +68,22 @@ function HomePage() {
 
       const res = await request('dashboard', "get", params);
       if (res && res.success) {
-        setTodaySummary(res.today_summary || { income: 0, expense: 0 });
-        setStockSummary(res.stock_summary || { total_items: 0, low_stock_count: 0, total_stock_value: 0, low_stock_list: [] });
-        setRangeSummary(res.range_summary || { total_sale: 0, total_expense: 0, net_profit: 0, order_count: 0 });
+        setTodaySummary({
+            income: Number(res.today_summary?.income || 0),
+            expense: Number(res.today_summary?.expense || 0)
+        });
+        setStockSummary(res.stock_summary ? {
+            ...res.stock_summary,
+            total_stock_value: Number(res.stock_summary.total_stock_value || 0),
+            total_items: Number(res.stock_summary.total_items || 0),
+            low_stock_count: Number(res.stock_summary.low_stock_count || 0)
+        } : { total_items: 0, low_stock_count: 0, total_stock_value: 0, low_stock_list: [], expiry_alerts: [] });
+        setRangeSummary({
+            total_sale: Number(res.range_summary?.total_sale || 0),
+            total_expense: Number(res.range_summary?.total_expense || 0),
+            net_profit: Number(res.range_summary?.net_profit || 0),
+            order_count: Number(res.range_summary?.order_count || 0)
+        });
 
         if (res.recentOrders) {
           setTransactionData(res.recentOrders.map((item, idx) => ({ ...item, key: idx })));
@@ -96,7 +109,11 @@ function HomePage() {
     }
   };
 
-  const formatCurrency = (val) => `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  const formatCurrency = (val) => {
+    const num = Number(val);
+    if (isNaN(num)) return "$0.00";
+    return `$${num.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  };
 
   return (
     <div style={{ padding: '0 0 24px 0' }}>
@@ -105,9 +122,9 @@ function HomePage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <Title level={4} style={{ margin: 0, color: '#1e4a2d', fontWeight: 800 }}>
-            Welcome back, {profile?.name || 'Partner'}!
+            {lang === 'en' ? 'Welcome back' : 'ស្វាគមន៍ការត្រឡប់មកវិញ'}, {profile?.name || 'Partner'}!
           </Title>
-          <Text type="secondary">Here's what's happening with your store today.</Text>
+          <Text type="secondary">{lang === 'en' ? "Here's what's happening with your store today." : "នេះគឺជាអ្វីដែលកំពុងកើតឡើងនៅក្នុងហាងរបស់អ្នកថ្ងៃនេះ"}</Text>
         </div>
         <Space direction="vertical" align="end">
           <RangePicker
@@ -133,7 +150,7 @@ function HomePage() {
                 <AntTooltip title="Total Sales in selected period"><InfoCircleOutlined style={{ color: '#c0a060' }} /></AntTooltip>
               </div>
               <div style={{ marginTop: 16 }}>
-                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>PERIOD REVENUE</Text>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>{translations[lang].period_revenue}</Text>
                 <div style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>{formatCurrency(rangeSummary.total_sale)}</div>
               </div>
             </div>
@@ -145,7 +162,7 @@ function HomePage() {
                 <div className="icon-box expense"><Wallet size={20} color="#f5222d" /></div>
               </div>
               <div style={{ marginTop: 16 }}>
-                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>PERIOD EXPENSES</Text>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>{translations[lang].period_expenses}</Text>
                 <div style={{ fontSize: 28, fontWeight: 900, color: '#f5222d' }}>{formatCurrency(rangeSummary.total_expense)}</div>
               </div>
             </div>
@@ -157,7 +174,7 @@ function HomePage() {
                 <div className="icon-box profit"><TrendingUp size={20} color="#52c41a" /></div>
               </div>
               <div style={{ marginTop: 16 }}>
-                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>NET PROFIT</Text>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>{translations[lang].net_profit}</Text>
                 <div style={{ fontSize: 28, fontWeight: 900, color: '#52c41a' }}>{formatCurrency(rangeSummary.net_profit)}</div>
               </div>
             </div>
@@ -166,11 +183,11 @@ function HomePage() {
           <Col xs={24} sm={12} lg={6}>
             <div className="dash-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div className="icon-box order"><ShoppingBag size={20} color="#1890ff" /></div>
+                <div className="icon-box inventory"><Package size={20} color="#c0a060" /></div>
               </div>
               <div style={{ marginTop: 16 }}>
-                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>ORDERS</Text>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>{rangeSummary.order_count}</div>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>{translations[lang].stock_valuation}</Text>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#c0a060' }}>{formatCurrency(stockSummary.total_stock_value)}</div>
               </div>
             </div>
           </Col>
@@ -181,7 +198,7 @@ function HomePage() {
           {/* Main Chart */}
           <Col xs={24} lg={16}>
             <Card
-              title={<Space><BarChartOutlined /> Financial Trend</Space>}
+              title={<Space><BarChartOutlined /> {translations[lang].financial_trend}</Space>}
               style={{ borderRadius: 20, boxShadow: '0 4px 15px rgba(0,0,0,0.02)', border: '1px solid #f0f0f0' }}
             >
               <div style={{ height: 350 }}>
@@ -206,22 +223,22 @@ function HomePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               {/* Today's Live Info */}
               <Card
-                title={<Space><SyncOutlined spin={isLoading} /> Live Summary (Today)</Space>}
+                title={<Space><SyncOutlined spin={isLoading} /> {translations[lang].live_summary_today}</Space>}
                 style={{ borderRadius: 20, border: '1px solid #e6f2eb', background: '#fdfdfd' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                   <div>
-                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>TODAY'S INCOME</Text>
+                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>{translations[lang].todays_income}</Text>
                     <div style={{ fontSize: 20, fontWeight: 800, color: '#1e4a2d' }}>{formatCurrency(todaySummary.income)}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>TODAY'S EXPENSE</Text>
+                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>{translations[lang].todays_expense}</Text>
                     <div style={{ fontSize: 20, fontWeight: 800, color: '#f5222d' }}>{formatCurrency(todaySummary.expense)}</div>
                   </div>
                 </div>
                 <Divider style={{ margin: '12px 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text strong>Net Daily Profit</Text>
+                  <Text strong>{translations[lang].net_daily_profit}</Text>
                   <Tag color={todaySummary.income - todaySummary.expense >= 0 ? "green" : "red"} style={{ borderRadius: 20 }}>
                     {formatCurrency(todaySummary.income - todaySummary.expense)}
                   </Tag>
@@ -230,14 +247,14 @@ function HomePage() {
 
               {/* Stock Warning Widget */}
               <Card
-                title={<Space><Package color="#c0a060" size={18} /> Stock Inventory</Space>}
-                style={{ borderRadius: 20 }}
+                title={<Space><Package color="#c0a060" size={18} /> {translations[lang].stock_insights}</Space>}
+                style={{ borderRadius: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}
               >
                 <Row gutter={16}>
                   <Col span={12}>
                     <div style={{ textAlign: 'center', background: '#f9f9f9', padding: '12px', borderRadius: 12 }}>
                       <div style={{ fontSize: 22, fontWeight: 800, color: '#1e4a2d' }}>{stockSummary.total_items}</div>
-                      <Text type="secondary" style={{ fontSize: 10 }}>TOTAL PRODUCTS</Text>
+                      <Text type="secondary" style={{ fontSize: 10 }}>{translations[lang].total_items}</Text>
                     </div>
                   </Col>
                   <Col span={12}>
@@ -245,21 +262,33 @@ function HomePage() {
                       <div style={{ fontSize: 22, fontWeight: 800, color: stockSummary.low_stock_count > 0 ? '#f5222d' : '#1e4a2d' }}>
                         {stockSummary.low_stock_count}
                       </div>
-                      <Text type="secondary" style={{ fontSize: 10, color: stockSummary.low_stock_count > 0 ? '#f5222d' : '' }}>LOW STOCK!</Text>
+                      <Text type="secondary" style={{ fontSize: 10, color: stockSummary.low_stock_count > 0 ? '#f5222d' : '' }}>{translations[lang].low_stock}</Text>
                     </div>
                   </Col>
                 </Row>
 
+                {stockSummary.expiry_alerts?.length > 0 && (
+                  <div style={{ marginTop: 16, padding: '12px', background: '#fff7e6', borderRadius: 12, border: '1px solid #ffd591' }}>
+                    <Text strong style={{ fontSize: 12, color: '#d46b08' }}><AlertCircle size={14} style={{ marginRight: 4 }} /> {translations[lang].expiring_soon}:</Text>
+                    {stockSummary.expiry_alerts.map((item, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                        <Text style={{ fontSize: 11 }}>{item.name}</Text>
+                        <Tag color="orange" style={{ fontSize: 9, margin: 0 }}>{dayjs(item.expiry_date).format('MMM DD')}</Tag>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {stockSummary.low_stock_list?.length > 0 && (
                   <div style={{ marginTop: 16 }}>
-                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>URGENT RESTOCK:</Text>
+                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>{translations[lang].reorder_needed}:</Text>
                     {stockSummary.low_stock_list.map((item, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
                         <Text style={{ fontSize: 12 }}>{item.name}</Text>
                         <Badge count={item.qty} color="#f5222d" size="small" />
                       </div>
                     ))}
-                    <Button type="link" size="small" style={{ padding: 0, marginTop: 8 }} onClick={() => navigate('/stock')}>Manage Stock</Button>
+                    <Button type="link" size="small" style={{ padding: 0, marginTop: 8 }} onClick={() => navigate('/stock')}>{translations[lang].view_inventory}</Button>
                   </div>
                 )}
               </Card>
@@ -269,9 +298,9 @@ function HomePage() {
 
         {/* Row 3: Recent Transactions */}
         <Card
-          title={<Space><CalendarOutlined /> Recent Transactions</Space>}
+          title={<Space><CalendarOutlined /> {translations[lang].recent_activity}</Space>}
           style={{ borderRadius: 20 }}
-          extra={<Button type="link" onClick={() => navigate('/order')}>View All</Button>}
+          extra={<Button type="link" onClick={() => navigate('/order')}>{translations[lang].view_all_orders}</Button>}
         >
           <Table
             dataSource={transactionData}
@@ -311,7 +340,8 @@ function HomePage() {
         }
         .dash-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 10px 30px rgba(30, 74, 45, 0.08);
+          box-shadow: 0 12px 40px rgba(30, 74, 45, 0.12);
+          border-color: #c0a060;
         }
         .dash-card.primary {
            border-bottom: 4px solid #c0a060;

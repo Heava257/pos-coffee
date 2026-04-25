@@ -94,14 +94,14 @@ const CategoryOptions = ({ selectedCategory, t }) => {
         paddingBottom: 10
       }}>
         {isPharmacy ? <span style={{ fontSize: 22 }}>📋</span> : <span style={{ fontSize: 22 }}>🍳</span>}
-        {selectedCategory?.name || selectedCategory?.label} {isPharmacy ? "Blueprint" : (isRestaurant ? "Cooking & Options" : (typeof t?.customize_coffee === 'string' ? t.customize_coffee : "Customization"))}
+        {selectedCategory?.name || selectedCategory?.label} {isPharmacy ? "Blueprint" : (isRestaurant ? t.cooking_options_title : (typeof t?.customize_coffee === 'string' ? t.customize_coffee : "Customization"))}
       </div>
 
       {/* Moods/Instructions Section */}
       {defaultMoods && defaultMoods.length > 0 && (
         <>
           <div style={{ fontWeight: 700, marginBottom: 10, color: COLORS.textPrimary, fontSize: 14 }}>
-            {isPharmacy ? "💊 Usage / Dosage Instructions" : (isRestaurant ? "🌶️ Taste / Special Instructions" : `🔥❄️ ${t.mood || "Temperature"}`)}
+            {isPharmacy ? t.dosage_instructions_label : (isRestaurant ? t.taste_instructions_label : `🔥❄️ ${t.mood || "Temperature"}`)}
           </div>
           <Form.Item name="moods" label={false} style={{ marginBottom: 16 }}>
             <Checkbox.Group
@@ -123,10 +123,10 @@ const CategoryOptions = ({ selectedCategory, t }) => {
             {(fields, { add, remove }) => (
               <>
                 <div style={{ fontWeight: 800, marginBottom: 4, color: isPharmacy ? "#0958d9" : COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>{isPharmacy ? "📦" : (isRestaurant ? "🍽️" : "☕")}</span> {isPharmacy ? "Packaging / Units" : (isRestaurant ? "Portions / Sizes" : (typeof t?.sizes === 'string' ? t.sizes : "Sizes"))}
+                  <span>{isPharmacy ? "📦" : (isRestaurant ? "🍽️" : "☕")}</span> {isPharmacy ? t.packaging_units_label : (isRestaurant ? t.portions_sizes_label : (typeof t?.sizes === 'string' ? t.sizes : "Sizes"))}
                 </div>
                 <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 12, fontStyle: 'italic' }}>
-                  {isPharmacy ? "Define unit types and their specific pricing" : (t.sizes_override_msg || "Price per size overrides the base price")}
+                  {isPharmacy ? "Define unit types and their specific pricing" : (t.price_per_size_msg || "Price per size overrides the base price")}
                 </div>
                 {fields.map(({ key, name, ...restField }) => (
                   <div key={key} style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: 'center' }}>
@@ -138,7 +138,7 @@ const CategoryOptions = ({ selectedCategory, t }) => {
                     >
                       <Select
                         size="large"
-                        placeholder={isPharmacy ? "Select Unit" : (isRestaurant ? "Portion" : "Size")}
+                        placeholder={isPharmacy ? "Select Unit" : (isRestaurant ? t.portions_sizes_label : "Size")}
                         options={defaultSizes.map(s => {
                           const label = typeof s === 'object' ? (s.label || s.value) : s;
                           const value = typeof s === 'object' ? (s.value || s.label) : s;
@@ -155,7 +155,7 @@ const CategoryOptions = ({ selectedCategory, t }) => {
                     >
                       <InputNumber
                         size="large"
-                        placeholder="Price"
+                        placeholder={t.price}
                         style={{ width: '100%' }}
                         min={0}
                         step={0.1}
@@ -178,7 +178,7 @@ const CategoryOptions = ({ selectedCategory, t }) => {
                   block
                   style={{ marginBottom: 20, borderRadius: 10, height: 40, borderColor: isPharmacy ? "#4096ff" : COLORS.midGreen, color: isPharmacy ? "#4096ff" : COLORS.midGreen }}
                 >
-                  {isPharmacy ? "+ Add Packaging Unit" : (isRestaurant ? "+ Add Portion" : (t.add_size || "+ Add Size"))}
+                  {isPharmacy ? "+ Add Packaging Unit" : (isRestaurant ? `+ ${t.portions_sizes_label}` : (t.add_size || "+ Add Size"))}
                 </Button>
               </>
             )}
@@ -193,7 +193,7 @@ const CategoryOptions = ({ selectedCategory, t }) => {
             <>
               <div style={{ margin: '20px 0', borderTop: `1px dashed ${isPharmacy ? "#d6e4ff" : "#d9e6dc"}` }} />
               <div style={{ fontWeight: 800, marginBottom: 12, color: isPharmacy ? "#d46b08" : COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>{isPharmacy ? "⚠️" : (isRestaurant ? "🥗" : "➕")}</span> {isPharmacy ? "Warnings / Special Notes" : (isRestaurant ? "Side Dishes / Extras" : (typeof t?.addons === 'string' ? t.addons : "Add-ons"))}
+                <span>{isPharmacy ? "⚠️" : (isRestaurant ? "🥗" : "➕")}</span> {isPharmacy ? "Warnings / Special Notes" : (isRestaurant ? t.side_dishes_extras_label : (typeof t?.addons === 'string' ? t.addons : "Add-ons"))}
               </div>
               {fields.map(({ key, name, ...restField }) => (
                 <div key={key} style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: 'center' }}>
@@ -205,7 +205,7 @@ const CategoryOptions = ({ selectedCategory, t }) => {
                   >
                     <Select
                       size="large"
-                      placeholder={isPharmacy ? "Select Warning" : (isRestaurant ? "Select Side" : "Add-on")}
+                      placeholder={isPharmacy ? "Select Warning" : (isRestaurant ? t.side_dishes_extras_label : "Add-on")}
                       options={defaultAddons.map(a => {
                         const label = typeof a === 'object' ? (a.label || a.value) : a;
                         const value = typeof a === 'object' ? (a.value || a.label) : a;
@@ -246,7 +246,7 @@ const CategoryOptions = ({ selectedCategory, t }) => {
                 block
                 style={{ borderRadius: 10, height: 40, borderColor: isPharmacy ? "#ffa940" : COLORS.midGreen, color: isPharmacy ? "#ffa940" : COLORS.midGreen }}
               >
-                {isPharmacy ? "+ Add Warning" : (isRestaurant ? "+ Add Side/Extra" : (t.add_addon || "+ Add Addon"))}
+                {isPharmacy ? "+ Add Warning" : (isRestaurant ? `+ ${t.side_dishes_extras_label}` : (t.add_addon || "+ Add Addon"))}
               </Button>
             </>
           )}
@@ -597,7 +597,7 @@ function ProductPage() {
               <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
                 <div style={{ fontWeight: 700, marginBottom: 20, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ background: '#e6f0e9', padding: '6px', borderRadius: '8px' }}>📦</span>
-                  Basic Details
+                  {t.basic_details_title}
                 </div>
 
                 <Form.Item
@@ -685,24 +685,24 @@ function ProductPage() {
                 <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
                   <div style={{ fontWeight: 700, marginBottom: 20, color: '#0958d9', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ background: '#e6f4ff', padding: '6px', borderRadius: '8px' }}>💊</span>
-                    Medical Specifications
+                    {t.medical_specs_title}
                   </div>
 
-                  <Form.Item name="generic_name" label="Generic Name (Chemical)">
+                  <Form.Item name="generic_name" label={t.generic_name_label}>
                     <Input size="large" placeholder="e.g. Paracetamol" />
                   </Form.Item>
 
-                  <Form.Item name="strength" label="Strength (mg/ml)">
+                  <Form.Item name="strength" label={t.strength_label}>
                     <Input size="large" placeholder="500mg" />
                   </Form.Item>
 
-                  <Form.Item name="expiry_date" label="Expiry Date">
+                  <Form.Item name="expiry_date" label={t.expiry_column_label}>
                     <DatePicker size="large" style={{ width: '100%' }} format="DD/MM/YYYY" />
                   </Form.Item>
 
                   <div style={{ background: '#f0f7ff', padding: 16, borderRadius: 12, marginTop: 20, border: '1px solid #d6e4ff' }}>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      💡 <strong>Note:</strong> ព័ត៌មានទាំងនេះនឹងបង្ហាញនៅលើប័ណ្ណបញ្ជាទិញ និងសម្រាប់គ្រប់គ្រងថ្ងៃផុតកំណត់។
+                      💡 <strong>{t.note}:</strong> {t.medical_note}
                     </Text>
                   </div>
                 </div>
@@ -714,7 +714,7 @@ function ProductPage() {
               <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
                 <div style={{ fontWeight: 700, marginBottom: 20, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ background: '#e6f0e9', padding: '6px', borderRadius: '8px' }}>📊</span>
-                  Inventory & Media
+                  {t.inventory_media_title}
                 </div>
 
                 <Row gutter={12}>
@@ -778,215 +778,216 @@ function ProductPage() {
 
       <Table
         dataSource={state.list}
+        rowKey="id"
+        className="premium-table"
+        pagination={{ 
+          pageSize: 10, 
+          showTotal: (total) => `${t.total} ${total} ${t.products}`,
+          style: { marginTop: 20 }
+        }}
         columns={[
           {
-            key: "name",
-            title: t.product_name,
-            dataIndex: "name",
+            key: "product",
+            title: t.product_label || "Product",
+            width: 380,
+            render: (_, r) => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ position: 'relative' }}>
+                  <Image
+                    src={Config.getFullImagePath(r.image)}
+                    width={65}
+                    height={65}
+                    style={{ borderRadius: 16, objectFit: 'cover', border: `1px solid ${COLORS.softBorder}`, boxShadow: '0 4px 8px rgba(0,0,0,0.05)' }}
+                    fallback="https://placehold.co/100x100?text=No+Image"
+                  />
+                  {(() => {
+                    const cat = state.categoryList.find(c => String(c.id) === String(r.category_id));
+                    const isService = cat?.industry_code === 'restaurant' || cat?.industry_code === 'coffee_cafe';
+                    if (r.qty <= 0 && !isService) {
+                      return (
+                        <div style={{ 
+                          position: 'absolute', 
+                          top: -5, 
+                          right: -5, 
+                          background: COLORS.redBadge, 
+                          color: '#fff', 
+                          fontSize: 10, 
+                          padding: '2px 6px', 
+                          borderRadius: 10,
+                          fontWeight: 800,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}>
+                          OUT
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, color: COLORS.textPrimary, fontSize: 16, lineHeight: 1.2 }}>{r.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                    <Tag color="default" style={{ margin: 0, fontSize: 10, borderRadius: 4, fontWeight: 700, background: '#f1f5f9', border: 'none' }}>{r.barcode}</Tag>
+                    {r.brand && <Tag color="blue" style={{ margin: 0, fontSize: 10, borderRadius: 4, fontWeight: 700, border: 'none' }}>{r.brand}</Tag>}
+                  </div>
+                </div>
+              </div>
+            )
           },
           {
-            key: "barcode",
-            title: t.barcode,
-            dataIndex: "barcode",
-          },
-          {
-            key: "description",
-            title: t.description,
-            dataIndex: "description",
-          },
-          {
-            key: "category_name",
+            key: "category",
             title: t.category,
-            dataIndex: "category_name",
+            width: 160,
+            render: (_, r) => (
+              <Tag style={{ 
+                borderRadius: 20, 
+                padding: '4px 14px', 
+                fontWeight: 700, 
+                border: 'none',
+                background: COLORS.accentGreen + '30',
+                color: COLORS.darkGreen,
+                fontSize: 12
+              }}>
+                {r.category_name}
+              </Tag>
+            )
           },
           {
-            key: "brand",
-            title: t.brand,
-            dataIndex: "brand",
-          },
-          {
-            key: "qty",
-            title: t.quantity,
-            dataIndex: "qty",
-          },
-          {
-            key: "price",
-            title: t.price,
-            dataIndex: "price",
-            render: (price, record) => {
+            key: "inventory",
+            title: t.value_stock_label || "Value & Stock",
+            width: 200,
+            render: (_, r) => {
+              const isLow = r.qty > 0 && r.qty <= 10;
+              const isOut = r.qty <= 0;
+              
+              let priceDisplay = <span style={{ fontSize: 18, fontWeight: 900, color: COLORS.darkGreen }}>${Number(r.price || 0).toFixed(2)}</span>;
               try {
-                const sizes = record.sizes ? (typeof record.sizes === 'string' ? JSON.parse(record.sizes) : record.sizes) : [];
+                const sizes = r.sizes ? (typeof r.sizes === 'string' ? JSON.parse(r.sizes) : r.sizes) : [];
                 if (Array.isArray(sizes) && sizes.length > 0) {
                   const prices = sizes.map(s => Number(s.price || 0));
-                  const min = Math.min(...prices);
-                  const max = Math.max(...prices);
-                  return (
-                    <div style={{ fontWeight: 800, color: COLORS.darkGreen }}>
-                      {min === max ? `$${min.toFixed(2)}` : `$${min.toFixed(2)} - $${max.toFixed(2)}`}
-                      <div style={{ fontSize: 10, color: COLORS.textSecondary, fontWeight: 400 }}>({sizes.length} Sizes)</div>
+                  priceDisplay = (
+                    <div>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: COLORS.darkGreen }}>
+                        ${Math.min(...prices).toFixed(2)} - ${Math.max(...prices).toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>({sizes.length} Sizes)</div>
                     </div>
                   );
                 }
-              } catch (e) {
-                console.error("Price parse error", e);
-              }
-              return <span style={{ fontWeight: 700 }}>${Number(price || 0).toFixed(2)}</span>;
-            }
-          },
-          {
-            key: "medical_info",
-            title: "Medical Info",
-            render: (record) => {
-              if (record.industry_code !== 'pharmacy') return "-";
-              return (record.generic_name || record.strength ? (
-                <div style={{ fontSize: '12px' }}>
-                  <div style={{ color: COLORS.darkGreen, fontWeight: 600 }}>{record.generic_name}</div>
-                  <div style={{ color: COLORS.textSecondary }}>{record.strength}</div>
-                </div>
-              ) : "-");
-            }
-          },
-          {
-            key: "expiry_date",
-            title: "Expiry",
-            dataIndex: "expiry_date",
-            render: (date, record) => {
-              if (!date || date.startsWith("1899") || date.startsWith("0000") || record.industry_code !== 'pharmacy') return "-";
-              const isExpired = dayjs().isAfter(dayjs(date));
-              const isNear = dayjs().add(3, 'month').isAfter(dayjs(date));
+              } catch(e) {}
+
               return (
-                <Tag color={isExpired ? "error" : isNear ? "warning" : "success"} style={{ borderRadius: 6 }}>
-                  {isExpired && <span style={{ marginRight: 4 }}>⚠️</span>}
-                  {dayjs(date).format("DD/MM/YYYY")}
-                </Tag>
+                <div>
+                  {priceDisplay}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                    {(() => {
+                      const cat = state.categoryList.find(c => String(c.id) === String(r.category_id));
+                      const isService = cat?.industry_code === 'restaurant' || cat?.industry_code === 'coffee_cafe';
+                      
+                      if (isService) {
+                        return (
+                          <>
+                            <div style={{ 
+                              width: 10, 
+                              height: 10, 
+                              borderRadius: '50%', 
+                              background: '#3b82f6',
+                              boxShadow: '0 0 8px #dbeafe'
+                            }} />
+                            <span style={{ fontSize: 13, fontWeight: 800, color: '#3b82f6' }}>
+                              {t.ready_to_serve_label || "Ready"}
+                            </span>
+                          </>
+                        );
+                      }
+
+                      return (
+                        <>
+                          <div style={{ 
+                            width: 10, 
+                            height: 10, 
+                            borderRadius: '50%', 
+                            background: isOut ? '#ef4444' : (isLow ? '#f59e0b' : '#22c55e'),
+                            boxShadow: `0 0 8px ${isOut ? '#fecaca' : (isLow ? '#fef3c7' : '#dcfce7')}`
+                          }} />
+                          <span style={{ 
+                            fontSize: 13, 
+                            fontWeight: 800, 
+                            color: isOut ? '#ef4444' : (isLow ? '#f59e0b' : '#334155') 
+                          }}>
+                            {r.qty.toLocaleString()} {t.in_stock_label || "in stock"}
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
               );
             }
           },
-
+          {
+            key: "medical",
+            title: t.medical_info_label,
+            render: (_, r) => r.generic_name ? (
+              <div style={{ background: '#f0f7ff', padding: '8px 12px', borderRadius: 10, border: '1px solid #d6e4ff' }}>
+                <div style={{ fontWeight: 800, color: '#0958d9', fontSize: 13 }}>{r.generic_name}</div>
+                <div style={{ color: '#64748b', fontSize: 11, fontWeight: 600 }}>{r.strength}</div>
+                {r.expiry_date && (
+                  <div style={{ 
+                    marginTop: 4,
+                    color: dayjs().isAfter(dayjs(r.expiry_date)) ? '#ef4444' : '#64748b', 
+                    fontSize: 10, 
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}>
+                    🗓️ EXP: {dayjs(r.expiry_date).format("DD/MM/YYYY")}
+                  </div>
+                )}
+              </div>
+            ) : "-"
+          },
           {
             key: "status",
             title: t.status,
-            dataIndex: "status",
-            render: (status) =>
-              status == 1 ? (
-                <Tag color="green">{t.active}</Tag>
-              ) : (
-                <Tag color="red">{t.inactive}</Tag>
-              ),
+            width: 100,
+            align: 'center',
+            render: (v) => (
+              <Tag color={v == 1 ? "success" : "error"} style={{ borderRadius: 6, fontWeight: 800, border: 'none', padding: '2px 8px' }}>
+                {v == 1 ? t.active : t.inactive}
+              </Tag>
+            )
           },
           {
-            key: "image",
-            title: t.image,
-            dataIndex: "image",
-            render: (value) => (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  width: 60,
-                  height: 60,
-                  borderRadius: "50%",
-                  overflow: "hidden",
-                  border: "2px solid #e0e0e0",
-                  boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-                  transition: "transform 0.3s, box-shadow 0.3s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "scale(1.1)";
-                  e.currentTarget.style.boxShadow = "0 6px 12px rgba(0, 0, 0, 0.2)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
-                }}
-              >
-                {value ? (
-                  <Image
-                    src={Config.optimizeCloudinary(Config.getFullImagePath(value), "w_120,c_fill,f_auto,q_auto")}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                    preview={{
-                      mask: (
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            width: "100%",
-                            height: "100%",
-                            backgroundColor: "rgba(0, 0, 0, 0.5)",
-                            color: "#fff",
-                            fontSize: 16,
-                          }}
-                        >
-                          {t.view_details}
-                        </div>
-                      ),
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      backgroundColor: "#EEE",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      fontSize: 10,
-                      color: "#999",
-                      textAlign: "center",
-                      padding: 2
-                    }}
-                  >
-                    {t.no_data}
-                  </div>
-                )}
-              </div>
-            ),
-          },
-          {
-            key: "Action",
+            key: "action",
             title: t.action,
-            align: "center",
-            render: (item, data, index) => (
+            width: 180,
+            align: 'right',
+            render: (_, r, index) => (
               <Space>
+                <Tooltip title={t.recipe_tooltip || "Recipe / Ingredients"}>
+                  <Button
+                    type="text"
+                    icon={<MdRestaurantMenu style={{ fontSize: 22, color: COLORS.midGreen }} />}
+                    onClick={() => onClickRecipe(r)}
+                    style={{ background: COLORS.accentGreen + '15', borderRadius: 10, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  />
+                </Tooltip>
                 <Button
-                  title={t.recipe || "Recipe"}
-                  style={{ borderColor: "#faad14", color: "#faad14" }}
-                  icon={<MdRestaurantMenu />}
-                  onClick={() => onClickRecipe(item)}
+                  type="text"
+                  icon={<MdEdit style={{ fontSize: 20, color: '#3b82f6' }} />}
+                  onClick={() => onClickEdit(r, index)}
+                  style={{ background: '#eff6ff', borderRadius: 10, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 />
                 <Button
-                  type="primary"
-                  icon={<MdEdit />}
-                  onClick={() => onClickEdit(data, index)}
-                />
-                <Button
-                  type="primary"
+                  type="text"
                   danger
-                  icon={<MdDelete />}
-                  onClick={() => onClickDelete(data, index)}
+                  icon={<MdDelete style={{ fontSize: 20 }} />}
+                  onClick={() => onClickDelete(r, index)}
+                  style={{ background: '#fef2f2', borderRadius: 10, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 />
               </Space>
-            ),
-          },
-          {
-            key: "created_by",
-            title: t.staff,
-            render: (text, record) => (
-              <div>
-                <strong>{record.created_by_name}</strong>
-                {record.created_by_username && (
-                  <div style={{ fontSize: '12px', color: '#666' }}>
-                    @{record.created_by_username}
-                  </div>
-                )}
-              </div>
             ),
           },
         ]}

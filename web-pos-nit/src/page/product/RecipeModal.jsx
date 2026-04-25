@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Button, Form, InputNumber, message, Modal, Select, Space, Table } from "antd";
+import { Button, Form, InputNumber, message, Modal, Select, Space, Table, Tag, Tooltip } from "antd";
 import { request } from "../../util/helper";
 import { MdDelete, MdAdd } from "react-icons/md";
+import { useLanguage, translations } from "../../store/language.store";
 
 function RecipeModal({ open, onCancel, product }) {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [rawMaterials, setRawMaterials] = useState([]);
@@ -97,7 +100,7 @@ function RecipeModal({ open, onCancel, product }) {
 
     return (
         <Modal
-            title={<b>☕ Recipe Configuration - {product?.name}</b>}
+            title={<b>☕ {t.recipe_config_title} - {product?.name}</b>}
             open={open}
             onCancel={onCancel}
             width={720}
@@ -115,15 +118,15 @@ function RecipeModal({ open, onCancel, product }) {
                 border: "1px solid #dee2e6"
             }}>
                 <div>
-                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>Est. Cost Per Cup</div>
+                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>{t.est_cost_per_cup}</div>
                     <div style={{ fontSize: 20, fontWeight: "bold", color: "#333" }}>${summary.totalCost}</div>
                 </div>
                 <div>
-                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>Selling Price</div>
+                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>{t.selling_price_label}</div>
                     <div style={{ fontSize: 20, fontWeight: "bold", color: "#333" }}>${Number(product?.price || 0).toFixed(2)}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>Gross Profit</div>
+                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>{t.gross_profit_label}</div>
                     <div style={{ fontSize: 20, fontWeight: "bold", color: "#2ecc71" }}>
                         ${summary.profit} <span style={{ fontSize: 14, fontWeight: "normal" }}>({summary.margin}%)</span>
                     </div>
@@ -142,8 +145,8 @@ function RecipeModal({ open, onCancel, product }) {
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, "raw_material_id"]}
-                                                    label="Select Ingredient"
-                                                    rules={[{ required: true, message: "Required" }]}
+                                                    label={t.select_ingredient_label}
+                                                    rules={[{ required: true, message: t.required }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <Select
@@ -158,8 +161,8 @@ function RecipeModal({ open, onCancel, product }) {
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, "qty"]}
-                                                    label="Usage Qty"
-                                                    rules={[{ required: true, message: "Required" }]}
+                                                    label={t.usage_qty_label}
+                                                    rules={[{ required: true, message: t.required }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <InputNumber
@@ -198,7 +201,7 @@ function RecipeModal({ open, onCancel, product }) {
                                     icon={<MdAdd />}
                                     style={{ height: 45, borderRadius: 8 }}
                                 >
-                                    Add New Ingredient Link
+                                    {t.add_ingredient_link}
                                 </Button>
                             </>
                         )}
@@ -207,9 +210,9 @@ function RecipeModal({ open, onCancel, product }) {
 
                 <div style={{ textAlign: "right", marginTop: 24, borderTop: "1px solid #eee", paddingTop: 20 }}>
                     <Space size="middle">
-                        <Button size="large" onClick={onCancel}>Close</Button>
+                        <Button size="large" onClick={onCancel}>{t.close}</Button>
                         <Button size="large" type="primary" htmlType="submit" loading={loading} style={{ paddingLeft: 40, paddingRight: 40 }}>
-                            Sync Recipe
+                            {t.sync_recipe_btn}
                         </Button>
                     </Space>
                 </div>

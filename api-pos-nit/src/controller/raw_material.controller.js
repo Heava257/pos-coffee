@@ -32,16 +32,16 @@ exports.getList = async (req, res) => {
 exports.create = async (req, res) => {
     try {
         const { business_id, branch_id } = req;
-        const { name, code, unit, price, qty, min_stock, status } = req.body;
+        const { name, code, unit, price, qty, min_stock, par_level, status } = req.body;
         const image = req.file?.filename || null;
 
         const sql = `
       INSERT INTO raw_material 
-      (business_id, branch_id, name, code, unit, price, qty, min_stock, status, image) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (business_id, branch_id, name, code, unit, price, qty, min_stock, par_level, status, image) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
         const [data] = await db.query(sql, [
-            business_id, branch_id, name, code, unit, price || 0, qty || 0, min_stock || 0, status || 1, image
+            business_id, branch_id, name, code, unit, price || 0, qty || 0, min_stock || 0, par_level || 0, status || 1, image
         ]);
 
         res.json({ success: true, message: "Raw material added successfully!", data });
@@ -53,16 +53,16 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         const { business_id, branch_id } = req;
-        const { id, name, code, unit, price, qty, min_stock, status } = req.body;
+        const { id, name, code, unit, price, qty, min_stock, par_level, status } = req.body;
         const image = req.file?.filename || req.body.image;
 
         const sql = `
       UPDATE raw_material 
-      SET name=?, code=?, unit=?, price=?, qty=?, min_stock=?, status=?, image=? 
+      SET name=?, code=?, unit=?, price=?, qty=?, min_stock=?, par_level=?, status=?, image=? 
       WHERE id=? AND business_id=?
     `;
         await db.query(sql, [
-            name, code, unit, price, qty, min_stock, status, image, id, business_id
+            name, code, unit, price, qty, min_stock, par_level, status, image, id, business_id
         ]);
 
         res.json({ success: true, message: "Raw material updated successfully!" });

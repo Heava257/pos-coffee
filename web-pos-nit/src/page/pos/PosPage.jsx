@@ -21,6 +21,8 @@ import {
   Space,
   Popconfirm,
   ConfigProvider,
+  Row,
+  Col,
 } from "antd";
 import { request, isPermission } from "../../util/helper";
 import { configStore } from "../../store/configStore";
@@ -69,6 +71,7 @@ import {
   SaveOutlined,
   FolderOpenOutlined,
   PlusCircleOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 
 
@@ -479,6 +482,7 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
 
 // ─── Compact Product List View (New) ──────────────────────────────
 const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selectedShop }) => {
+  const { lang } = useLanguage();
   // Helper to determine if product is on BOGO promotion
   const isProductOnPromo = (product) => {
     if (!selectedShop?.global_bogo_active) return product.is_promo || product.promotion_id;
@@ -508,10 +512,10 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead style={{ background: '#f8fafc', borderBottom: `2px solid ${COLORS.softBorder}` }}>
           <tr>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>PRODUCT & CATEGORY / ទំនិញ និងប្រភេទ</th>
-            <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>UNIT PRICE / តម្លៃ</th>
-            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>STOCK / ស្តុក</th>
-            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>ADD</th>
+            <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>{t.product_category_header}</th>
+            <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>{t.unit_price_header}</th>
+            <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>{t.stock_header}</th>
+            <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 13, color: COLORS.textSecondary, fontWeight: 800 }}>{t.add_new?.toUpperCase() || 'ADD'}</th>
           </tr>
         </thead>
         <tbody>
@@ -549,7 +553,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
                 onMouseEnter={e => !isOOS && (e.currentTarget.style.background = '#fcfbf7')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                <td style={{ padding: '12px 16px' }}>
+                <td style={{ padding: '8px 12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 34, height: 34, borderRadius: 8, background: '#f8f7f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${COLORS.softBorder}` }}>
                       {p.image ? (
@@ -577,7 +581,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
                     </div>
                   </div>
                 </td>
-                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                <td style={{ padding: '8px 12px', textAlign: 'right' }}>
                   <div style={{ fontWeight: 800, color: COLORS.darkGreen, fontSize: 15 }}>
                     {productSizes.length > 0 && (
                       <div style={{ fontSize: 9, color: COLORS.textSecondary, fontWeight: 600, textTransform: 'uppercase' }}>from</div>
@@ -594,7 +598,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
                   </div>
                   {dPercent > 0 && <div style={{ fontSize: 10, color: "#e85d5d", textDecoration: 'line-through', fontWeight: 700 }}>${price.toFixed(2)}</div>}
                 </td>
-                <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                   <Badge
                     count={p.product_type === 'recipe' ? p.estimated_servings : p.qty}
                     overflowCount={999}
@@ -602,7 +606,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
                     style={{ background: isOOS ? COLORS.redBadge : (p.qty < 5 || (p.product_type === 'recipe' && p.estimated_servings < 5)) ? COLORS.softGold : COLORS.darkGreen, boxShadow: 'none' }}
                   />
                 </td>
-                <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                   <Badge count={cartQty} size="small" offset={[5, -5]}>
                     <div
                       style={{
@@ -638,6 +642,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
 
 // ─── Table Selector Modal (New) ──────────────────────────────
 const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, heldOrders, onResume, guestCount, setGuestCount }) => {
+  const { lang } = useLanguage();
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -667,12 +672,12 @@ const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ background: `${COLORS.darkGreen}10`, padding: 8, borderRadius: 10 }}><TableOutlined style={{ color: COLORS.darkGreen }} /></div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 18, color: COLORS.darkGreen }}>TABLE DASHBOARD / គ្រប់គ្រងតុ</div>
+            <div style={{ fontWeight: 800, fontSize: 18, color: COLORS.darkGreen }}>{t.table_dashboard}</div>
             <div style={{ fontSize: 11, color: COLORS.textSecondary, marginTop: -2 }}>Select a table and update guest headcount</div>
           </div>
           {/* Compact Guest Select in Header */}
           <div style={{ background: '#f8fafc', padding: '4px 12px', borderRadius: 12, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.textSecondary }}>PEOPLE 👥</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.textSecondary }}>{t.people_count?.toUpperCase()} 👥</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button onClick={() => setGuestCount(Math.max(1, guestCount - 1))} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18, fontWeight: 700, color: COLORS.textSecondary }}>−</button>
               <span style={{ fontSize: 16, fontWeight: 800, minWidth: 20, textAlign: 'center' }}>{guestCount}</span>
@@ -742,12 +747,12 @@ const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, 
                   {isOccupied ? (
                     <>
                       <div style={{ fontSize: 13, fontWeight: 900, color: COLORS.redBadge, marginTop: 4 }}>${(activeOrder.objSummary?.total || 0).toFixed(2)}</div>
-                      <Tag color="volcano" style={{ fontSize: 9, borderRadius: 10, margin: '6px 0 0' }}>OCCUPIED</Tag>
+                      <Tag color="volcano" style={{ fontSize: 9, borderRadius: 10, margin: '6px 0 0' }}>{t.occupied_status}</Tag>
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize: 11, color: COLORS.textSecondary, marginTop: 4 }}>FREE</div>
-                      <Tag color="green" style={{ fontSize: 9, borderRadius: 10, margin: '6px 0 0' }}>AVAILABLE</Tag>
+                      <div style={{ fontSize: 11, color: COLORS.textSecondary, marginTop: 4 }}>{t.free_status}</div>
+                      <Tag color="green" style={{ fontSize: 9, borderRadius: 10, margin: '6px 0 0' }}>{t.available_status}</Tag>
                     </>
                   )}
                 </div>
@@ -1018,6 +1023,10 @@ function PosPage() {
   const [cashPaymentModalVisible, setCashPaymentModalVisible] = useState(false);
   const [currentShift, setCurrentShift] = useState(null);
   const [openShiftModalVisible, setOpenShiftModalVisible] = useState(false);
+  const [closeShiftModalVisible, setCloseShiftModalVisible] = useState(false);
+  const [shiftSummary, setShiftSummary] = useState(null);
+  const [actualCashUSD, setActualCashUSD] = useState(null);
+  const [actualCashKHR, setActualCashKHR] = useState(null);
 
   const { heldOrders, holdOrder, resumeOrder, removeHeldOrder } = useHeldOrdersStore();
   const [heldOrdersVisible, setHeldOrdersVisible] = useState(false);
@@ -1119,22 +1128,89 @@ function PosPage() {
     }
   };
 
-  const onOpenShift = async (values) => {
+  const handlePrintShiftReport = useReactToPrint({
+    content: () => refShiftReport.current,
+  });
+
+  const fetchShiftSummary = async () => {
     try {
-      const data = {
-        opening_cash_usd: values.opening_cash_usd || 0,
-        opening_cash_khr: values.opening_cash_khr || 0,
-      };
-      const res = await request("shift/open", "post", data);
+      const res = await request("shift/summary", "get");
       if (res && res.success) {
-        message.success(res.message);
+        setShiftSummary(res.summary);
+        setActualCashUSD(0);
+        setActualCashKHR(0);
+        setCloseShiftModalVisible(true);
+      }
+    } catch (error) {
+      console.error("Error fetching shift summary:", error);
+      message.error("Failed to fetch shift summary");
+    }
+  };
+
+  const onCloseShift = async (values) => {
+    const valUSD = actualCashUSD || 0;
+    const valKHR = actualCashKHR || 0;
+    try {
+      const diffUSD = valUSD - (shiftSummary?.expected_cash_usd || 0);
+      const data = {
+        id: currentShift?.id,
+        actual_cash_usd: valUSD,
+        actual_cash_khr: valKHR,
+        expected_cash_usd: shiftSummary?.expected_cash_usd,
+        total_sales_usd: shiftSummary?.total_sales_usd,
+        total_cash_usd: shiftSummary?.total_cash_usd,
+        total_aba_usd: shiftSummary?.total_aba_usd,
+        total_wing_usd: shiftSummary?.total_wing_usd,
+        total_expense_usd: shiftSummary?.total_expense_usd,
+        diff_usd: diffUSD,
+        remark: values.remark
+      };
+      const res = await request("shift", "post", data);
+      if (res && res.success) {
+        handlePrintShiftReport();
+        message.success("Shift closed successfully!");
+        setCloseShiftModalVisible(false);
         checkShiftStatus();
-      } else {
-        message.warning(res.message);
       }
     } catch (error) {
       console.error(error);
-      message.error("Failed to open shift");
+      message.error("Failed to close shift");
+    }
+  };
+
+  const onOpenShift = async (values) => {
+    const usd = Number(values.opening_cash_usd || 0);
+    const khr = Number(values.opening_cash_khr || 0);
+
+    const proceed = async () => {
+      try {
+        const data = {
+          opening_cash_usd: usd,
+          opening_cash_khr: khr,
+        };
+        const res = await request("shift/open", "post", data);
+        if (res && res.success) {
+          message.success(res.message);
+          checkShiftStatus();
+        } else {
+          message.warning(res.message);
+        }
+      } catch (error) {
+        console.error(error);
+        message.error("Failed to open shift");
+      }
+    };
+
+    if (usd === 0 && khr === 0) {
+      Modal.confirm({
+        title: 'Open with zero cash? / បើកបញ្ជីដោយគ្មានលុយដើម?',
+        content: 'You are opening this shift with $0.00 and 0៛. Are you sure? / អ្នកកំពុងបើកបញ្ជីដោយគ្មានសាច់ប្រាក់ដើមគ្រាសោះ តើអ្នកប្រាកដទេ?',
+        onOk: proceed,
+        okText: 'Yes, Open / បាទ/ចាស បើក',
+        cancelText: 'Cancel / បោះបង់'
+      });
+    } else {
+      proceed();
     }
   };
 
@@ -2183,7 +2259,17 @@ function PosPage() {
           />
         </div>
         <div ref={refShiftReport}>
-          {/* Shift report data source needs to be verified before re-enabling */}
+          <PrintShiftReport
+            summary={shiftSummary}
+            profile={profile}
+            staff_name={profile?.name}
+            actual_cash={actualCashUSD}
+            actual_cash_khr={actualCashKHR}
+            opening_cash={currentShift?.opening_cash_usd}
+            opening_cash_khr={currentShift?.opening_cash_khr}
+            exchange_rate={shiftSummary?.exchange_rate || exchangeRate}
+            filter={{ from_date: currentShift?.created_at }}
+          />
         </div>
         <div ref={refKitchen}>
           <PrintKitchenTicket
@@ -2360,7 +2446,24 @@ function PosPage() {
                 color: COLORS.darkGreen, fontSize: 13, fontWeight: 700
               }}>
                 <div style={{ width: 8, height: 8, background: COLORS.midGreen, borderRadius: "50%" }} />
-                Shift Started: {currentShift?.start_date ? new Date(currentShift.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just Now"}
+                {t.shift_started}: {currentShift?.created_at ? new Date(currentShift.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just Now"}
+                <Divider type="vertical" />
+                <button
+                  onClick={fetchShiftSummary}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: COLORS.redBadge,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}
+                >
+                  <LogoutOutlined /> {t.close_shift}
+                </button>
               </div>
             )}
 
@@ -2371,7 +2474,7 @@ function PosPage() {
               placeholder={
                 layoutType === "pharmacy" ? "Search medicine, SKU, or generic name..." :
                   layoutType === "retail" ? "Search items or scan barcode..." :
-                    "Discover your coffee or snacks..."
+                    t.discover_placeholder
               }
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -2404,7 +2507,7 @@ function PosPage() {
             <Divider type="vertical" />
 
             <div style={{ fontSize: 13, color: COLORS.textSecondary, fontWeight: 500, whiteSpace: "nowrap" }}>
-              {t.total}: <span style={{ fontWeight: 700, color: primaryColor }}>{state.cart_list.length}</span>
+              {t.total_items}: <span style={{ fontWeight: 700, color: primaryColor }}>{state.cart_list.length}</span>
             </div>
 
             <Divider type="vertical" />
@@ -2431,7 +2534,7 @@ function PosPage() {
                   }}
                 >
                   <FolderOpenOutlined style={{ fontSize: 16, color: COLORS.softGold }} />
-                  <span>Held Drafts</span>
+                  <span>{t.held_drafts}</span>
                 </button>
               </Badge>
             )}
@@ -2560,7 +2663,7 @@ function PosPage() {
               }}
             >
               <SyncOutlined spin={state.loading} style={{ fontSize: 16 }} />
-              <span>Sync</span>
+              <span>{t.sync_btn}</span>
             </button>
 
             <button
@@ -2583,7 +2686,7 @@ function PosPage() {
               }}
             >
               {isFullScreen ? <CompressOutlined style={{ fontSize: 16 }} /> : <ExpandOutlined style={{ fontSize: 16 }} />}
-              <span>{isFullScreen ? "Exit Full" : "Full Screen"}</span>
+              <span>{isFullScreen ? (t.exit_fullscreen || "Exit Full") : t.full_screen}</span>
             </button>
 
             <button
@@ -2797,7 +2900,7 @@ function PosPage() {
           >
             <div>
               <div style={{ fontSize: 10, fontWeight: 800, color: COLORS.textSecondary, letterSpacing: 1, marginBottom: 2 }}>
-                PURCHASE RECEIPT
+                {t.purchase_receipt_header}
               </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
                 #{String(objSummary.order_no || "00000").padStart(5, "0")}
@@ -2828,7 +2931,7 @@ function PosPage() {
                       color: kitchenItems.length === 0 ? '#bfbfbf' : COLORS.textPrimary
                     }}
                   >
-                    {kitchenItems.length === 0 ? "Sent ✅" : "Kitchen"}
+                    {kitchenItems.length === 0 ? (t.sent_status + " ✅") : t.kds}
                   </Button>
                   <Button
                     size="small"
@@ -2849,7 +2952,7 @@ function PosPage() {
                       border: `1px solid ${COLORS.darkGreen}`
                     }}
                   >
-                    {currentDraftId ? "Update" : "Save"}
+                    {currentDraftId ? t.update : t.save_btn}
                   </Button>
                 </>
               )}
@@ -2887,8 +2990,8 @@ function PosPage() {
                 {orderType === 'dine_in' ? (
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 10, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
-                      TABLE / តុ
-                      <span onClick={() => setTableModalVisible(true)} style={{ color: COLORS.darkGreen, cursor: 'pointer', textDecoration: 'underline', fontWeight: 800 }}>DASHBOARD 📋</span>
+                      {t.table_label?.toUpperCase()}
+                      <span onClick={() => setTableModalVisible(true)} style={{ color: COLORS.darkGreen, cursor: 'pointer', textDecoration: 'underline', fontWeight: 800 }}>{t.dashboard?.toUpperCase()} 📋</span>
                     </div>
                     <div
                       onClick={() => setTableModalVisible(true)}
@@ -2900,11 +3003,11 @@ function PosPage() {
                     >
                       {tableNo ? (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                          <span>TABLE {tableNo}</span>
+                          <span>{t.table_label?.toUpperCase()} {tableNo}</span>
                           <span style={{ fontSize: 11, color: COLORS.textSecondary, fontWeight: 500, background: '#eee', padding: '1px 8px', borderRadius: 20 }}>{guestCount} 👥</span>
                         </div>
                       ) : (
-                        <span style={{ color: state.cart_list.length > 0 ? COLORS.redBadge : 'inherit' }}>SELECT TABLE</span>
+                        <span style={{ color: state.cart_list.length > 0 ? COLORS.redBadge : 'inherit' }}>{t.select_material?.replace('Material', 'Table')?.toUpperCase() || 'SELECT TABLE'}</span>
                       )}
                     </div>
                   </div>
@@ -2999,11 +3102,11 @@ function PosPage() {
             {/* Quick Stats Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
               <div style={{ background: '#f8f9fa', padding: '6px 10px', borderRadius: 8, border: '1px solid #f1f3f5' }}>
-                <div style={{ fontSize: 8, color: COLORS.textSecondary, marginBottom: 1, fontWeight: 700 }}>SUBTOTAL</div>
+                <div style={{ fontSize: 8, color: COLORS.textSecondary, marginBottom: 1, fontWeight: 700 }}>{t.subtotal_label}</div>
                 <div style={{ fontSize: 13, fontWeight: 800 }}>${objSummary.sub_total.toFixed(2)}</div>
               </div>
               <div style={{ background: objSummary.save_discount > 0 ? '#fff5f5' : '#f8f9fa', padding: '6px 10px', borderRadius: 8, border: `1px solid ${objSummary.save_discount > 0 ? '#ffe3e3' : '#f1f3f5'}` }}>
-                <div style={{ fontSize: 8, color: objSummary.save_discount > 0 ? '#e85d5d' : COLORS.textSecondary, marginBottom: 1, fontWeight: 700 }}>DISCOUNT</div>
+                <div style={{ fontSize: 8, color: objSummary.save_discount > 0 ? '#e85d5d' : COLORS.textSecondary, marginBottom: 1, fontWeight: 700 }}>{t.discount_label}</div>
                 <div style={{ fontSize: 13, fontWeight: 800 }}>-${objSummary.save_discount.toFixed(2)}</div>
               </div>
             </div>
@@ -3021,11 +3124,11 @@ function PosPage() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, opacity: 0.9 }}>TOTAL / សរុប</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, opacity: 0.9 }}>{t.total_label}</div>
                   <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>${objSummary.total.toFixed(2)}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 8, opacity: 0.9 }}>KHR / រៀល</div>
+                  <div style={{ fontSize: 8, opacity: 0.9 }}>{t.khr_label}</div>
                   <div style={{ fontSize: 13, fontWeight: 800 }}>{(objSummary.total * exchangeRate).toLocaleString()} ៛</div>
                 </div>
               </div>
@@ -3655,52 +3758,236 @@ function PosPage() {
           </div>
         </div>
       </Modal>
-      {/* 🚀 Open Shift Modal */}
+      {/* 🚀 Premium Close Shift Modal */}
       <Modal
         title={
-          <div style={{ textAlign: 'center', padding: '10px 0' }}>
-            <Typography.Title level={4} style={{ margin: 0 }}><ShoppingOutlined /> Open New Shift / បើកបញ្ជីថ្មី</Typography.Title>
-            <Typography.Text type="secondary">Enter your opening cash to start / បញ្ចូលសាច់ប្រាក់ដើមគ្រាដើម្បីចាប់ផ្តើម</Typography.Text>
+          <div style={{ textAlign: 'center', padding: '15px 0' }}>
+            <div style={{ 
+              background: `${COLORS.darkGreen}10`, 
+              width: 50, height: 50, borderRadius: 15, 
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 10px', color: COLORS.darkGreen
+            }}>
+              <LogoutOutlined style={{ fontSize: 24 }} />
+            </div>
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 800 }}>{t.shift_audit_title}</Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t.shift_report_summary}</Typography.Text>
+          </div>
+        }
+        open={closeShiftModalVisible}
+        onCancel={() => setCloseShiftModalVisible(false)}
+        footer={null}
+        width={800}
+        centered
+        styles={{ content: { borderRadius: 24, padding: '10px 24px 24px' } }}
+      >
+        <Form layout="vertical" onFinish={onCloseShift}>
+          <Row gutter={32}>
+            {/* Left Column: Financial Audit */}
+            <Col span={11}>
+              <div style={{ background: '#f8fafc', padding: 24, borderRadius: 20, height: '100%', border: '1px solid #edf2f7' }}>
+                <Typography.Title level={5} style={{ marginBottom: 20, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b' }}>
+                  {t.shift_report_summary}
+                </Typography.Title>
+                
+                <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text style={{ color: '#64748b' }}>{t.opening_cash_label}</Text>
+                    <Text strong>${shiftSummary?.opening_cash_usd?.toFixed(2)}</Text>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text style={{ color: '#64748b' }}>{t.total_sales_cash}</Text>
+                    <Text strong>${shiftSummary?.total_cash_usd?.toFixed(2)}</Text>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text style={{ color: '#64748b' }}>{t.total_sales_online}</Text>
+                    <Text strong>${(shiftSummary?.total_aba_usd + shiftSummary?.total_wing_usd)?.toFixed(2)}</Text>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text type="danger">{t.total_expenses_label}</Text>
+                    <Text strong type="danger">-${shiftSummary?.total_expense_usd?.toFixed(2)}</Text>
+                  </div>
+                  
+                  <Divider style={{ margin: '8px 0' }} />
+                  
+                  <div style={{ 
+                    background: COLORS.darkGreen, 
+                    padding: '16px 20px', 
+                    borderRadius: 15, 
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(30,74,45,0.2)'
+                  }}>
+                    <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 600 }}>{t.expected_cash_label}</div>
+                    <div style={{ fontSize: 28, fontWeight: 900 }}>${shiftSummary?.expected_cash_usd?.toFixed(2)}</div>
+                  </div>
+                </Space>
+              </div>
+            </Col>
+
+            {/* Right Column: Physical Counting */}
+            <Col span={13}>
+              <div style={{ padding: '8px 0' }}>
+                <Typography.Title level={5} style={{ marginBottom: 20, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b' }}>
+                  {t.actual_cash_label}
+                </Typography.Title>
+
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item label={<span style={{ fontWeight: 700 }}>$ USD</span>}>
+                      <InputNumber
+                        placeholder="0.00"
+                        size="large"
+                        style={{ width: '100%', borderRadius: 12 }}
+                        value={actualCashUSD}
+                        onChange={setActualCashUSD}
+                        min={0}
+                        prefix={<span style={{ color: '#94a3b8' }}>$</span>}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item label={<span style={{ fontWeight: 700 }}>៛ KHR</span>}>
+                      <InputNumber
+                        placeholder="0"
+                        size="large"
+                        style={{ width: '100%', borderRadius: 12 }}
+                        value={actualCashKHR}
+                        onChange={setActualCashKHR}
+                        min={0}
+                        step={100}
+                        prefix={<span style={{ color: '#94a3b8' }}>៛</span>}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                {/* Variance Live Feedback */}
+                {actualCashUSD !== null && (
+                  <div style={{ 
+                    marginTop: 5,
+                    padding: '15px 20px', 
+                    borderRadius: 15, 
+                    background: '#fff',
+                    border: '2px dashed #e2e8f0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>{t.cash_variance_label}</div>
+                      {(() => {
+                        const totalActual = (actualCashUSD || 0) + ((actualCashKHR || 0) / (shiftSummary?.exchange_rate || exchangeRate));
+                        const variance = totalActual - (shiftSummary?.expected_cash_usd || 0);
+                        const isSafe = Math.abs(variance) < 0.01;
+                        
+                        return (
+                          <div style={{ 
+                            fontSize: 22, 
+                            fontWeight: 900, 
+                            color: isSafe ? COLORS.darkGreen : (variance > 0 ? '#10b981' : '#ef4444')
+                          }}>
+                            {variance > 0 ? '+' : ''}{variance.toFixed(2)}$
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div style={{ 
+                      width: 40, height: 40, borderRadius: 12, 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: '#f1f5f9', color: '#64748b'
+                    }}>
+                      <SyncOutlined spin={actualCashUSD === null} />
+                    </div>
+                  </div>
+                )}
+
+                <Form.Item name="remark" label={<span style={{ fontWeight: 700, marginTop: 20, display: 'block' }}>{t.remark_reason}</span>}>
+                  <Input.TextArea 
+                    placeholder={t.closing_note_placeholder} 
+                    rows={3} 
+                    style={{ borderRadius: 12 }} 
+                  />
+                </Form.Item>
+
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  block
+                  size="large"
+                  style={{ 
+                    height: 55, 
+                    borderRadius: 15, 
+                    background: COLORS.darkGreen, 
+                    fontSize: 16, 
+                    fontWeight: 800,
+                    boxShadow: '0 8px 20px rgba(30,74,45,0.2)',
+                    marginTop: 10
+                  }}
+                >
+                  {t.close_shift_title}
+                </Button>
+              </div>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      {/* 🚀 Premium Open Shift Modal */}
+      <Modal
+        title={
+          <div style={{ textAlign: 'center', padding: '15px 0' }}>
+            <div style={{ 
+              background: `${COLORS.darkGreen}10`, 
+              width: 50, height: 50, borderRadius: 15, 
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 10px', color: COLORS.darkGreen
+            }}>
+              <ShoppingOutlined style={{ fontSize: 24 }} />
+            </div>
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 800 }}>{t.open_shift_title || "Start New Shift"}</Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t.opening_cash_label}</Typography.Text>
           </div>
         }
         open={openShiftModalVisible}
         footer={null}
-        width={400}
+        width={450}
         closable={false}
         maskClosable={false}
+        centered
+        styles={{ content: { borderRadius: 24, padding: '10px 30px 30px' } }}
       >
         <Form layout="vertical" onFinish={onOpenShift}>
-          <div style={{ background: '#f8fafc', padding: 20, borderRadius: 12, marginBottom: 20 }}>
+          <div style={{ background: '#f8fafc', padding: '24px 30px', borderRadius: 20, marginBottom: 24, border: '1px solid #edf2f7' }}>
             <Form.Item
               name="opening_cash_usd"
-              label="Opening Cash (USD) / លុយដើម ($)"
+              label={<span style={{ fontWeight: 700, color: '#475569' }}>$ USD</span>}
               initialValue={0}
             >
               <InputNumber
-                style={{ width: '100%' }}
+                style={{ width: '100%', borderRadius: 12 }}
                 size="large"
-                prefix="$"
+                prefix={<span style={{ color: '#94a3b8' }}>$</span>}
                 min={0}
               />
             </Form.Item>
             <Form.Item
               name="opening_cash_khr"
-              label="Opening Cash (KHR) / លុយដើម (៛)"
+              label={<span style={{ fontWeight: 700, color: '#475569' }}>៛ KHR</span>}
               initialValue={0}
             >
               <InputNumber
-                style={{ width: '100%' }}
+                style={{ width: '100%', borderRadius: 12 }}
                 size="large"
-                prefix="៛"
+                prefix={<span style={{ color: '#94a3b8' }}>៛</span>}
                 min={0}
                 step={100}
               />
             </Form.Item>
           </div>
 
-          <div style={{ textAlign: 'center', marginBottom: 10 }}>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Authorized By: <Typography.Text strong>{profile?.name}</Typography.Text>
+          <div style={{ textAlign: 'center', marginBottom: 20, padding: '12px', background: '#f1f5f9', borderRadius: 12 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>
+              👤 Authorized Staff: <Typography.Text strong style={{ color: COLORS.darkGreen }}>{profile?.name}</Typography.Text>
             </Typography.Text>
           </div>
 
@@ -3709,16 +3996,17 @@ function PosPage() {
             htmlType="submit"
             block
             size="large"
-            style={{ height: 50, borderRadius: 8, background: COLORS.darkGreen }}
+            style={{ 
+              height: 55, 
+              borderRadius: 15, 
+              background: COLORS.darkGreen, 
+              fontSize: 16, 
+              fontWeight: 800,
+              boxShadow: '0 8px 20px rgba(30,74,45,0.2)'
+            }}
           >
-            Open Shift Now / បើកបញ្ជីឥឡូវនេះ
+            {t.open_shift_now_btn}
           </Button>
-
-          <div style={{ marginTop: 15, textAlign: 'center' }}>
-            <Button type="link" onClick={() => window.location.href = '/'}>
-              Back to Dashboard / ត្រឡប់ទៅផ្ទាំងគ្រប់គ្រង
-            </Button>
-          </div>
         </Form>
       </Modal>
     </div>

@@ -1,7 +1,7 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import dayjs from "dayjs";
 
-const PrintShiftReport = (props) => {
+const PrintShiftReport = forwardRef((props, ref) => {
     const { 
         summary = {}, 
         profile = {}, 
@@ -31,13 +31,14 @@ const PrintShiftReport = (props) => {
         });
     };
 
+    const safeSummary = summary || {};
     const opening_total_usd = Number(opening_cash) + (Number(opening_cash_khr) / exchange_rate);
     const actual_total_usd = Number(actual_cash) + (Number(actual_cash_khr) / exchange_rate);
-    const expected_total_usd = opening_total_usd + Number(summary.total_cash || 0) - (props.summary?.total_cash_expense || 0);
+    const expected_total_usd = opening_total_usd + Number(safeSummary.total_cash_usd || 0) - (Number(total_expense_usd) || 0);
     const diff = actual_total_usd - expected_total_usd;
 
     return (
-        <div className="print-shift-report-wrapper" style={{ width: '80mm', color: '#000', margin: '0 auto', backgroundColor: '#fff', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
+        <div ref={ref} className="print-shift-report-wrapper" style={{ width: '80mm', color: '#000', margin: '0 auto', backgroundColor: '#fff', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
             <div style={{
                 width: '74mm',
                 margin: '0 auto',
@@ -85,25 +86,17 @@ const PrintShiftReport = (props) => {
                 <div style={{ marginBottom: '12px' }}>
                     <div style={{ fontWeight: '900', fontSize: '13px', marginBottom: '4px' }}>SALES SUMMARY:</div>
                     <div style={{ fontSize: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Total Orders:</span>
-                            <span>{summary.total_order || 0}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Total Qty:</span>
-                            <span>{summary.total_qty || 0}</span>
-                        </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '900', marginTop: '2px' }}>
                             <span>GROSS SALES:</span>
-                            <span>${formatUSD(summary.total_amount)}</span>
+                            <span>${formatUSD(safeSummary.total_sales_usd)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#000', fontStyle: 'italic' }}>
                             <span>Total Expense:</span>
-                            <span>-${formatUSD(summary.total_expense)}</span>
+                            <span>-${formatUSD(safeSummary.total_expense_usd)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '900', marginTop: '4px', fontSize: '15px', borderTop: '0.5pt solid #000', paddingTop: '4px' }}>
                             <span>NET PROFIT:</span>
-                            <span>${formatUSD(Number(summary.total_amount) - Number(summary.total_expense))}</span>
+                            <span>${formatUSD(Number(safeSummary.total_sales_usd || 0) - Number(safeSummary.total_expense_usd || 0))}</span>
                         </div>
                     </div>
                 </div>
@@ -116,15 +109,15 @@ const PrintShiftReport = (props) => {
                     <div style={{ fontSize: '12px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span>CASH ($):</span>
-                            <span>${formatUSD(summary.total_cash)}</span>
+                            <span>${formatUSD(safeSummary.total_cash_usd)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span>ABA (QR):</span>
-                            <span>${formatUSD(summary.total_aba)}</span>
+                            <span>${formatUSD(safeSummary.total_aba_usd)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span>WING/OTHER:</span>
-                            <span>${formatUSD(Number(summary.total_wing) + Number(summary.total_other || 0))}</span>
+                            <span>${formatUSD(safeSummary.total_wing_usd)}</span>
                         </div>
                     </div>
                 </div>
@@ -140,18 +133,18 @@ const PrintShiftReport = (props) => {
                             <span>${formatUSD(opening_cash)} | {formatKHR(opening_cash_khr)}៛</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Expected (Cash):</span>
-                            <span>${formatUSD(summary.total_cash)}</span>
+                            <span>Expected Cash ($):</span>
+                            <span>${formatUSD(safeSummary.expected_cash_usd)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Expense (Cash):</span>
-                            <span>-${formatUSD(summary.total_cash_expense)}</span>
+                            <span>Expected Cash (៛):</span>
+                            <span>{formatKHR(safeSummary.expected_cash_khr)}៛</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.8 }}>
+                            <span>Total Expenses:</span>
+                            <span>-${formatUSD(safeSummary.total_expense_usd)}</span>
                         </div>
                         <div style={{ borderTop: '0.5pt dashed #000', margin: '4px 0' }}></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.8 }}>
-                            <span>Expected Total:</span>
-                            <span>${formatUSD(expected_total_usd)}</span>
-                        </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '2px' }}>
                             <span>Actual Cash:</span>
                             <span>${formatUSD(actual_cash)} | {formatKHR(actual_cash_khr)}៛</span>
@@ -172,10 +165,10 @@ const PrintShiftReport = (props) => {
                 </div>
 
                 {/* Top Products */}
-                {summary.top_products && summary.top_products.length > 0 && (
+                {safeSummary.top_products && safeSummary.top_products.length > 0 && (
                     <div style={{ marginBottom: '15px' }}>
                         <div style={{ fontWeight: '900', fontSize: '11px', borderBottom: '0.5pt solid #ccc', marginBottom: '2px' }}>TOP SELLING ITEMS:</div>
-                        {summary.top_products.map((item, index) => (
+                        {safeSummary.top_products.map((item, index) => (
                             <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
                                 <span>{item.name}</span>
                                 <span>{item.total_qty} qty</span>
@@ -196,6 +189,6 @@ const PrintShiftReport = (props) => {
             </div>
         </div>
     );
-};
+});
 
 export default PrintShiftReport;

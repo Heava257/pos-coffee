@@ -11,11 +11,15 @@ exports.getLogs = async (req, res) => {
                    CASE l.item_type 
                         WHEN 'product' THEN p.name 
                         WHEN 'raw_material' THEN rm.name 
-                   END as item_name
+                   END as item_name,
+                   bp.price,
+                   c.name as category_name
             FROM stock_logs l
             LEFT JOIN users u ON l.created_by = u.id
             LEFT JOIN products p ON l.item_type = 'product' AND l.item_id = p.id
             LEFT JOIN raw_material rm ON l.item_type = 'raw_material' AND l.item_id = rm.id
+            LEFT JOIN branch_products bp ON l.item_type = 'product' AND l.item_id = bp.product_id AND l.branch_id = bp.branch_id
+            LEFT JOIN categories c ON p.category_id = c.id
             WHERE l.business_id = ?
         `;
         let params = [business_id];

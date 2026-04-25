@@ -630,25 +630,25 @@ function PurchasePage() {
                     <div style={{ background: '#fff', padding: isMobile ? '16px' : '0', borderRadius: '12px', marginBottom: '20px', border: isMobile ? '1px solid #e2e8f0' : 'none' }}>
                         <Row gutter={[16, 16]}>
                             <Col xs={24} sm={12} md={4}><Form.Item name="supplier_id" label={t.supplier} rules={[{ required: true }]}><Select size="large" options={state.suppliers} placeholder={t.supplier} showSearch /></Form.Item></Col>
-                            <Col xs={24} sm={12} md={4}><Form.Item name="ref" label={t.ref_no}><Input size="large" placeholder="Invoice #" /></Form.Item></Col>
+                            <Col xs={24} sm={12} md={4}><Form.Item name="ref" label={t.ref_no}><Input size="large" placeholder={t.invoice_placeholder} /></Form.Item></Col>
                             <Col xs={24} sm={12} md={4}><Form.Item name="purchase_date" label={t.receive_date} rules={[{ required: true }]}><DatePicker size="large" showTime style={{ width: '100%' }} /></Form.Item></Col>
                             {!isMobile && (
                                 <>
-                                    <Col span={4}><Form.Item name="status" label={t.status} rules={[{ required: true }]} initialValue="Received"><Select size="large" options={[{ label: "📥 Request", value: "Request" }, { label: "⌛ Pending", value: "Pending" }, { label: "✅ Received", value: "Received" }]} /></Form.Item></Col>
-                                    <Col span={4}><Form.Item name="payment_method" label={t.payment_method} initialValue="Cash"><Select size="large" options={[{ label: "💵 Cash", value: "Cash" }, { label: "💳 Bank", value: "Bank" }]} /></Form.Item></Col>
+                                    <Col span={4}><Form.Item name="status" label={t.status} rules={[{ required: true }]} initialValue="Received"><Select size="large" options={[{ label: `📥 ${t.request_status}`, value: "Request" }, { label: `⌛ ${t.pending_status_simple}`, value: "Pending" }, { label: `✅ ${t.received_status}`, value: "Received" }]} /></Form.Item></Col>
+                                    <Col span={4}><Form.Item name="payment_method" label={t.payment_method} initialValue="Cash"><Select size="large" options={[{ label: `💵 ${t.cash_method}`, value: "Cash" }, { label: `💳 ${t.bank_method}`, value: "Bank" }]} /></Form.Item></Col>
                                     <Col span={4}><Form.Item name="note" label={t.note}><Input size="large" placeholder={t.note} /></Form.Item></Col>
                                 </>
                             )}
                         </Row>
                         {isMobile && (
                              <Row gutter={[12, 12]}>
-                                <Col span={12}><Form.Item name="status" label={t.status} initialValue="Received"><Select size="large" options={[{ label: "Request", value: "Request" }, { label: "Pending", value: "Pending" }, { label: "Received", value: "Received" }]} /></Form.Item></Col>
-                                <Col span={12}><Form.Item name="payment_method" label={t.payment_method} initialValue="Cash"><Select size="large" options={[{ label: "Cash", value: "Cash" }, { label: "Bank", value: "Bank" }]} /></Form.Item></Col>
+                                <Col span={12}><Form.Item name="status" label={t.status} initialValue="Received"><Select size="large" options={[{ label: t.request_status, value: "Request" }, { label: t.pending_status_simple, value: "Pending" }, { label: t.received_status, value: "Received" }]} /></Form.Item></Col>
+                                <Col span={12}><Form.Item name="payment_method" label={t.payment_method} initialValue="Cash"><Select size="large" options={[{ label: t.cash_method, value: "Cash" }, { label: t.bank_method, value: "Bank" }]} /></Form.Item></Col>
                              </Row>
                         )}
                     </div>
 
-                    <Divider orientation="left" style={{ margin: '10px 0 20px 0' }}><span style={{ color: '#64748b', fontSize: '14px' }}>PRODUCT LIST</span></Divider>
+                    <Divider orientation="left" style={{ margin: '10px 0 20px 0' }}><span style={{ color: '#64748b', fontSize: '14px' }}>{t.product_list_header}</span></Divider>
 
                     <Form.List name="items">
                         {(fields, { add, remove }) => (
@@ -693,20 +693,20 @@ function PurchasePage() {
 
                                         <Row gutter={12}>
                                             <Col span={12}>
-                                                <Form.Item {...restField} name={[name, 'qty']} label="Quantity" rules={[{ required: true }]}>
+                                                <Form.Item {...restField} name={[name, 'qty']} label={t.quantity_label} rules={[{ required: true }]}>
                                                     <InputNumber size="large" placeholder="0" style={{ width: '100%', borderRadius: '10px' }} onChange={() => setState({ ...state })} />
                                                 </Form.Item>
                                             </Col>
                                             <Col span={12}>
-                                                <Form.Item name={[name, 'unit']} label="Unit">
-                                                    <Select size="large" style={{ borderRadius: '10px' }} options={[{ label: "Pcs", value: "Pcs" }, { label: "Box", value: "Box" }, { label: "Case", value: "Case" }]} />
+                                                <Form.Item name={[name, 'unit']} label={t.unit_label}>
+                                                    <Select size="large" style={{ borderRadius: '10px' }} options={[{ label: t.unit_pcs, value: "Pcs" }, { label: t.unit_box, value: "Box" }, { label: t.unit_case, value: "Case" }]} />
                                                 </Form.Item>
                                             </Col>
                                         </Row>
 
                                         <Row gutter={12}>
                                             <Col span={12}>
-                                                <Form.Item {...restField} name={[name, 'cost']} label="Cost Price" rules={[{ required: true }]}>
+                                                <Form.Item {...restField} name={[name, 'cost']} label={t.cost_price_label} rules={[{ required: true }]}>
                                                     <InputNumber size="large" prefix="$" style={{ width: '100%', borderRadius: '10px' }} onChange={() => setState({ ...state })} />
                                                 </Form.Item>
                                             </Col>
@@ -839,7 +839,7 @@ function PurchasePage() {
                                 <MdQrCodeScanner size={22} />
                             </div>
                             <Input 
-                                placeholder="Scan Barcode or Type..." 
+                                placeholder={t.scan_barcode_placeholder} 
                                 autoFocus 
                                 value={state.txt_barcode} 
                                 style={{ 
@@ -872,7 +872,7 @@ function PurchasePage() {
                                 }} 
                                 onClick={() => setState(p => ({ ...p, showCamera: !p.showCamera }))}
                             >
-                                {state.showCamera ? "Close" : "Camera"}
+                                {state.showCamera ? t.close_camera_btn : t.camera_btn}
                             </Button>
                             {state.scanFilterId && (
                                 <Button 
@@ -880,7 +880,7 @@ function PurchasePage() {
                                     style={{ height: '48px', borderRadius: '12px', fontWeight: 600 }}
                                     onClick={() => setState(p => ({ ...p, scanFilterId: null }))}
                                 >
-                                    SHOW ALL
+                                    {t.show_all_btn}
                                 </Button>
                             )}
                         </div>
@@ -942,27 +942,27 @@ function PurchasePage() {
 
                                         <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', background: '#f1f5f9', padding: '10px', borderRadius: '12px' }}>
                                             <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: '10px', color: '#64748b' }}>ORDER</div>
+                                                <div style={{ fontSize: '10px', color: '#64748b' }}>{t.order_qty_label?.toUpperCase()}</div>
                                                 <div style={{ fontSize: '14px', fontWeight: 700 }}>{item.qty}</div>
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: '10px', color: '#64748b' }}>RECEIVED</div>
+                                                <div style={{ fontSize: '10px', color: '#64748b' }}>{t.rec_qty_label?.toUpperCase()}</div>
                                                 <div style={{ fontSize: '14px', fontWeight: 700, color: '#10b981' }}>{item.received_qty}</div>
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: '10px', color: '#64748b' }}>REMAINING</div>
+                                                <div style={{ fontSize: '10px', color: '#64748b' }}>{t.outstanding?.toUpperCase() || 'REMAINING'}</div>
                                                 <div style={{ fontSize: '14px', fontWeight: 700, color: '#f59e0b' }}>{remaining}</div>
                                             </div>
                                         </div>
 
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                                             <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>BATCH #</div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>{t.batch_label?.toUpperCase()} #</div>
                                                 <Input size="large" placeholder="Lot Num" style={{ borderRadius: '10px' }} value={item.batch_no} onChange={(e) => { const d = [...state.purchaseDetails]; d[index].batch_no = e.target.value; setState(p => ({ ...p, purchaseDetails: d })); }} />
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>EXPIRY</div>
-                                                <DatePicker size="large" placeholder="Date" style={{ width: '100%', borderRadius: '10px' }} value={item.expiry_date} onChange={(date) => { const d = [...state.purchaseDetails]; d[index].expiry_date = date; setState(p => ({ ...p, purchaseDetails: d })); }} />
+                                                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>{t.expiry_label?.toUpperCase()}</div>
+                                                <DatePicker size="large" placeholder={t.expiry_label} style={{ width: '100%', borderRadius: '10px' }} value={item.expiry_date} onChange={(date) => { const d = [...state.purchaseDetails]; d[index].expiry_date = date; setState(p => ({ ...p, purchaseDetails: d })); }} />
                                             </div>
                                         </div>
 
@@ -975,7 +975,7 @@ function PurchasePage() {
                                             borderRadius: '12px',
                                             border: isOver ? '1px solid #fecaca' : '1px solid #d1fae5'
                                         }}>
-                                            <span style={{ fontWeight: 700, color: isOver ? '#991b1b' : '#065f46', fontSize: '14px' }}>RECEIVE NOW:</span>
+                                            <span style={{ fontWeight: 700, color: isOver ? '#991b1b' : '#065f46', fontSize: '14px' }}>{t.receive_now_label?.toUpperCase()}:</span>
                                             <InputNumber 
                                                 style={{ width: '120px', fontWeight: 'bold' }} 
                                                 size="large"
@@ -993,14 +993,14 @@ function PurchasePage() {
                             dataSource={state.scanFilterId ? state.purchaseDetails.filter(d => d.id === state.scanFilterId) : state.purchaseDetails}
                             rowKey="id" pagination={false} size="small"
                             columns={[
-                                { title: "Product", dataIndex: "name", render: (t, r) => <div><b>{t}</b><br/><small>{r.category_name}</small></div> },
-                                { title: "Unit", dataIndex: "unit", render: v => <Tag>{v}</Tag> },
-                                { title: "Order", dataIndex: "qty", width: 80, align: 'center' },
-                                { title: "Rec", dataIndex: "received_qty", width: 80, align: 'center' },
-                                { title: "Batch", dataIndex: "batch_no", width: 140, render: (_, r, index) => <Input value={r.batch_no} onChange={(e) => { const d = [...state.purchaseDetails]; d[index].batch_no = e.target.value; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
-                                { title: "Expiry", dataIndex: "expiry_date", width: 160, render: (_, r, index) => <DatePicker style={{ width: '100%' }} value={r.expiry_date} onChange={(date) => { const d = [...state.purchaseDetails]; d[index].expiry_date = date; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
-                                { title: "Receive Now", width: 130, render: (_, r, index) => <InputNumber min={0} value={r.receive_now} style={{ width: '100%' }} onChange={(val) => { const d = [...state.purchaseDetails]; d[index].receive_now = val; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
-                                { title: "Total", width: 100, align: 'right', render: (_, r) => <b>${(Number(r.receive_now || 0) * Number(r.cost || 0)).toFixed(2)}</b> }
+                                { title: t.product_label, dataIndex: "name", render: (t, r) => <div><b>{t}</b><br/><small>{r.category_name}</small></div> },
+                                { title: t.unit_label, dataIndex: "unit", render: v => <Tag>{v}</Tag> },
+                                { title: t.order_qty_label, dataIndex: "qty", width: 80, align: 'center' },
+                                { title: t.rec_qty_label, dataIndex: "received_qty", width: 80, align: 'center' },
+                                { title: t.batch_label, dataIndex: "batch_no", width: 140, render: (_, r, index) => <Input value={r.batch_no} onChange={(e) => { const d = [...state.purchaseDetails]; d[index].batch_no = e.target.value; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
+                                { title: t.expiry_label, dataIndex: "expiry_date", width: 160, render: (_, r, index) => <DatePicker placeholder={t.select_date_placeholder} style={{ width: '100%' }} value={r.expiry_date} onChange={(date) => { const d = [...state.purchaseDetails]; d[index].expiry_date = date; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
+                                { title: t.receive_now_label, width: 130, render: (_, r, index) => <InputNumber min={0} value={r.receive_now} style={{ width: '100%' }} onChange={(val) => { const d = [...state.purchaseDetails]; d[index].receive_now = val; setState(p => ({ ...p, purchaseDetails: d })); }} /> },
+                                { title: t.total, width: 100, align: 'right', render: (_, r) => <b>${(Number(r.receive_now || 0) * Number(r.cost || 0)).toFixed(2)}</b> }
                             ]}
                         />
                     )}
@@ -1025,7 +1025,7 @@ function PurchasePage() {
                             onClick={() => setState(p => ({ ...p, visibleReceiveModal: false }))} 
                             style={{ flex: 1, height: '50px', borderRadius: '14px', fontWeight: 600, fontSize: '15px' }}
                         >
-                            Cancel
+                            {t.cancel}
                         </Button>
                         <Button 
                             type="primary" 
@@ -1041,7 +1041,7 @@ function PurchasePage() {
                                 boxShadow: '0 4px 6px rgba(59, 130, 246, 0.2)'
                             }}
                         >
-                            SAVE RECEIVING
+                            {t.save_receiving_btn?.toUpperCase()}
                         </Button>
                     </div>
                 )}
@@ -1049,8 +1049,8 @@ function PurchasePage() {
                 {/* 💾 DESKTOP FOOTER */}
                 {!isMobile && (
                     <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                        <Button onClick={() => setState(p => ({ ...p, visibleReceiveModal: false }))}>Cancel</Button>
-                        <Button type="primary" onClick={onFinishReceive} loading={state.isSavingReceive}>Confirm Receiving</Button>
+                        <Button onClick={() => setState(p => ({ ...p, visibleReceiveModal: false }))}>{t.cancel}</Button>
+                        <Button type="primary" onClick={onFinishReceive} loading={state.isSavingReceive}>{t.confirm_receiving_btn}</Button>
                     </div>
                 )}
             </Modal>

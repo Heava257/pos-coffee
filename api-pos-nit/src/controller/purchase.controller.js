@@ -87,19 +87,25 @@ exports.create = async (req, res) => {
                 // B. Update Stock ONLY if status is Received
                 if (status === 'Received') {
                     if (isRM) {
-                        const [rm] = await conn.query("SELECT qty FROM raw_material WHERE id = ?", [item.product_id]);
-                        const old_qty = rm[0]?.qty || 0;
-                        const new_qty = old_qty + item.qty;
+                        const [rm] = await conn.query("SELECT qty, avg_cost, price FROM raw_material WHERE id = ?", [item.product_id]);
+                        const old_qty = Number(rm[0]?.qty || 0);
+                        const old_avg_cost = Number(rm[0]?.avg_cost || rm[0]?.price || 0);
+                        const new_qty = old_qty + Number(item.qty);
+                        
+                        // Weighted Average Cost Calculation
+                        const new_cost = Number(item.cost);
+                        const total_value = (old_qty * old_avg_cost) + (Number(item.qty) * new_cost);
+                        const new_avg_cost = new_qty > 0 ? total_value / new_qty : new_cost;
 
                         await conn.query(
-                            "UPDATE raw_material SET qty = qty + ? WHERE id = ?",
-                            [item.qty, item.product_id]
+                            "UPDATE raw_material SET qty = ?, price = ?, avg_cost = ? WHERE id = ?",
+                            [new_qty, new_cost, new_avg_cost, item.product_id]
                         );
 
                         await conn.query(`
-                            INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
-                            VALUES (?, ?, 'raw_material', ?, ?, ?, ?, 'purchase', ?, 'Supplier Purchase', ?)
-                        `, [business_id, branch_id, item.product_id, old_qty, new_qty, item.qty, ref, user_id]);
+                            INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by, batch_no, expiry_date, unit_cost)
+                            VALUES (?, ?, 'raw_material', ?, ?, ?, ?, 'purchase', ?, 'Supplier Purchase', ?, ?, ?, ?)
+                        `, [business_id, branch_id, item.product_id, old_qty, new_qty, item.qty, ref, user_id, item.batch_no || null, item.expiry_date || null, new_cost]);
 
                     } else {
                         const [bp] = await conn.query("SELECT stock_qty FROM branch_products WHERE product_id = ? AND branch_id = ?", [item.product_id, branch_id]);
@@ -178,16 +184,21 @@ exports.receive = async (req, res) => {
 
                 // 2. Update stock & cost
                 if (item.item_type === 'raw_material') {
-                    const [rm] = await conn.query("SELECT qty FROM raw_material WHERE id = ?", [item.real_id]);
-                    const old_qty = rm[0]?.qty || 0;
-                    const new_qty = old_qty + item.receive_now;
+                    const [rm] = await conn.query("SELECT qty, avg_cost, price FROM raw_material WHERE id = ?", [item.real_id]);
+                    const old_qty = Number(rm[0]?.qty || 0);
+                    const old_avg_cost = Number(rm[0]?.avg_cost || rm[0]?.price || 0);
+                    const new_qty = old_qty + Number(item.receive_now);
 
-                    await conn.query("UPDATE raw_material SET qty = qty + ?, price = ? WHERE id = ?", [item.receive_now, currentCost, item.real_id]);
+                    // Weighted Average Cost Calculation
+                    const total_value = (old_qty * old_avg_cost) + (Number(item.receive_now) * currentCost);
+                    const new_avg_cost = new_qty > 0 ? total_value / new_qty : currentCost;
+
+                    await conn.query("UPDATE raw_material SET qty = ?, price = ?, avg_cost = ? WHERE id = ?", [new_qty, currentCost, new_avg_cost, item.real_id]);
 
                     await conn.query(`
-                        INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by)
-                        VALUES (?, ?, 'raw_material', ?, ?, ?, ?, 'receive', ?, 'Supplier Goods Received', ?)
-                    `, [business_id, branch_id, item.real_id, old_qty, new_qty, item.receive_now, ref, user_id]);
+                        INSERT INTO stock_logs (business_id, branch_id, item_type, item_id, old_qty, new_qty, qty_changed, type, ref_id, reason, created_by, batch_no, expiry_date, unit_cost)
+                        VALUES (?, ?, 'raw_material', ?, ?, ?, ?, 'receive', ?, 'Supplier Goods Received', ?, ?, ?, ?)
+                    `, [business_id, branch_id, item.real_id, old_qty, new_qty, item.receive_now, ref, user_id, item.batch_no || null, item.expiry_date || null, currentCost]);
                 } else {
                     const [bp] = await conn.query("SELECT stock_qty FROM branch_products WHERE product_id = ? AND branch_id = ?", [item.real_id, branch_id]);
                     const old_qty = bp[0]?.stock_qty || 0;
