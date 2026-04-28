@@ -1,4 +1,4 @@
-const dns = require('dns');
+const axios = require('axios');
 const { db, logError } = require("../util/helper");
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client("222467462843-3mc4kb1636gcpugur0cgmb4mbdgfpbfl.apps.googleusercontent.com");
@@ -259,61 +259,52 @@ exports.sendPromoEmail = async (req, res) => {
         return res.json({ success: false, message: "Email server (SMTP) not configured for this business." });
     }
 
-    const transporter = nodemailer.createTransport({
-      host: 'smtp-relay.brevo.com', // 🚀 SWITCHED TO BREVO (Reliable for Cloud)
-      port: 587,
-      secure: false, // STARTTLS for Port 587
-      auth: {
-        user: smtpUser,
-        pass: smtpPass
-      },
-      tls: {
-        rejectUnauthorized: false
-      },
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 15000
-    });
-
-    const shopLink = `${platform_url || "https://pos-coffee-web-production.up.railway.app"}/customer/menu?biz=${business_id}`; 
-
-    const mailOptions = {
-      from: `"${bizName}" <${smtpUser}>`,
-      to: customer.email,
-      subject: `Special Offer from ${bizName}! ☕`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="color: #4A6741; margin: 0; text-transform: uppercase;">${bizName}</h1>
-            <p style="color: #8A8070; font-size: 12px; letter-spacing: 2px;">LOYALTY PROGRAM</p>
+    // 🚀 USE BREVO API (HTTP) - Bypass Railway SMTP blocks
+    try {
+      const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+        sender: { name: bizName, email: smtpUser },
+        to: [{ email: customer.email, name: customer.name }],
+        subject: `Special Offer from ${bizName}! ☕`,
+        htmlContent: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h1 style="color: #4A6741; margin: 0; text-transform: uppercase;">${bizName}</h1>
+              <p style="color: #8A8070; font-size: 12px; letter-spacing: 2px;">LOYALTY PROGRAM</p>
+            </div>
+            <h2 style="color: #1C1C1C;">Hello ${customer.name},</h2>
+            <p style="font-size: 16px; color: #555; line-height: 1.6;">
+              We miss you at <b>${bizName}</b>! It has been a while since your last visit. We'd love to see you again soon.
+            </p>
+            <div style="background: #F5F0E8; padding: 25px; border-radius: 12px; margin: 25px 0; text-align: center; border: 1px dashed #C0A060;">
+              <p style="font-size: 20px; font-weight: 800; color: #1C1C1C; margin: 0;">${promo_text || "Get 15% OFF on your next drink!"}</p>
+              <p style="font-size: 12px; color: #8A8070; margin-top: 10px;">Use code: <b>WELCOMEBACK</b></p>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="${platform_url || "https://pos-coffee-web-production.up.railway.app"}/customer/menu?biz=${business_id}" style="background: #4A6741; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">Order Now</a>
+            </div>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 40px 0 20px;">
+            <p style="font-size: 11px; color: #aaa; text-align: center; line-height: 1.5;">
+              You received this email because you are a valued member of ${bizName} Loyalty Program.
+            </p>
           </div>
-          <h2 style="color: #1C1C1C;">Hello ${customer.name},</h2>
-          <p style="font-size: 16px; color: #555; line-height: 1.6;">
-            We miss you at <b>${bizName}</b>! It has been a while since your last visit. We'd love to see you again soon.
-          </p>
-          <div style="background: #F5F0E8; padding: 25px; border-radius: 12px; margin: 25px 0; text-align: center; border: 1px dashed #C0A060;">
-            <p style="font-size: 20px; font-weight: 800; color: #1C1C1C; margin: 0;">${promo_text || "Get 15% OFF on your next drink!"}</p>
-            <p style="font-size: 12px; color: #8A8070; margin-top: 10px;">Use code: <b>WELCOMEBACK</b></p>
-          </div>
-          <div style="text-align: center; margin-top: 30px;">
-            <a href="${shopLink}" style="background: #4A6741; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">Order Now</a>
-          </div>
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 40px 0 20px;">
-          <p style="font-size: 11px; color: #aaa; text-align: center; line-height: 1.5;">
-            You received this email because you are a valued member of ${bizName} Loyalty Program.
-          </p>
-        </div>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
-    res.json({ success: true, message: "Promotion email sent successfully!" });
+        `
+      }, {
+        headers: {
+          'api-key': smtpPass,
+          'Content-Type': 'application/json'
+        }
+      });
+      res.json({ success: true, message: "Promotion email sent successfully via API!" });
+    } catch (apiError) {
+      console.error("Brevo API Error:", apiError.response?.data || apiError.message);
+      res.json({ success: false, message: "Failed to send email via API." });
+    }
 
   } catch (error) {
     console.error("Email Error:", error);
     res.json({ 
         success: false, 
-        message: `Failed to send email: ${error.message}. Please check your Gmail App Password configuration in Business Settings.` 
+        message: `Failed to send email: ${error.message}` 
     });
   }
 };
@@ -340,19 +331,11 @@ exports.sendOTP = async (req, res) => {
     const rawSmtpPass = bizData[0]?.smtp_pass || process.env.SMTP_PASS;
     const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
 
-    const transporter = nodemailer.createTransport({
-      host: 'smtp-relay.brevo.com',
-      port: 587,
-      secure: false,
-      auth: { user: smtpUser, pass: smtpPass },
-      tls: { rejectUnauthorized: false }
-    });
-
-    await transporter.sendMail({
-      from: `"${bizName} Security" <${smtpUser}>`,
-      to: customer.email,
+    await axios.post('https://api.brevo.com/v3/smtp/email', {
+      sender: { name: bizName, email: smtpUser },
+      to: [{ email: customer.email }],
       subject: `Your Verification Code: ${otp}`,
-      html: `
+      htmlContent: `
         <div style="font-family: sans-serif; text-align: center; padding: 40px; background: #f9f9f9;">
           <h1 style="color: #4A6741;">Verification</h1>
           <p style="font-size: 16px; color: #555;">Use this code to login:</p>
@@ -360,6 +343,8 @@ exports.sendOTP = async (req, res) => {
           <p style="font-size: 12px; color: #999;">Expires in 10 minutes.</p>
         </div>
       `
+    }, {
+      headers: { 'api-key': smtpPass, 'Content-Type': 'application/json' }
     });
 
     res.json({ success: true, message: "Code sent to " + customer.email });
@@ -424,28 +409,22 @@ exports.redeemReward = async (req, res) => {
     const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
 
     if (customer.email && smtpUser && smtpPass) {
-      const nodemailer = require('nodemailer');
-      const transporter = nodemailer.createTransport({
-        host: 'smtp-relay.brevo.com',
-        port: 587,
-        secure: false,
-        auth: { user: smtpUser, pass: smtpPass },
-        tls: { rejectUnauthorized: false }
-      });
-
-      await transporter.sendMail({
-        from: `"${bizName}" <${smtpUser}>`,
-        to: customer.email,
-        subject: `Reward Redeemed: ${reward_name}`,
-        html: `
-          <div style="font-family: sans-serif; padding: 40px; background: #f9f9f9;">
-            <div style="max-width: 500px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 20px;">
-              <h2 style="color: #4A6741; text-align: center;">Congratulations!</h2>
-              <p style="text-align: center;">You've successfully redeemed <b>${stars_cost} Stars</b> for:</p>
-              <div style="background: #F5F0E8; padding: 20px; border-radius: 12px; text-align: center; font-size: 20px; font-weight: 800; margin: 20px 0;">
-                ${reward_name}
+      // 🚀 USE BREVO API (HTTP)
+      try {
+        await axios.post('https://api.brevo.com/v3/smtp/email', {
+          sender: { name: bizName, email: smtpUser },
+          to: [{ email: customer.email, name: customer.name }],
+          subject: `Reward Redeemed: ${reward_name}`,
+          htmlContent: `
+            <div style="font-family: sans-serif; padding: 40px; background: #f9f9f9;">
+              <div style="max-width: 500px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 20px;">
+                <h2 style="color: #4A6741; text-align: center;">Congratulations!</h2>
+                <p style="text-align: center;">You've successfully redeemed <b>${stars_cost} Stars</b> for:</p>
+                <div style="background: #F5F0E8; padding: 20px; border-radius: 12px; text-align: center; font-size: 20px; font-weight: 800; margin: 20px 0;">
+                  ${reward_name}
+                </div>
+                <p style="text-align: center; font-size: 13px; color: #666;">Please show this email to our staff to claim your reward.</p>
               </div>
-              <p style="text-align: center; font-size: 13px; color: #666;">Please show this email to our staff to claim your reward.</p>
             </div>
           </div>
         `
