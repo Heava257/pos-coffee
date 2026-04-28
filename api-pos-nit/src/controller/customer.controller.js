@@ -260,9 +260,9 @@ exports.sendPromoEmail = async (req, res) => {
     }
 
     const transporter = nodemailer.createTransport({
-      host: '64.233.184.108', // 🚀 DIRECT IPv4 for smtp.gmail.com
-      port: 587,
-      secure: false, // STARTTLS
+      host: '64.233.184.108', // 🚀 DIRECT IPv4
+      port: 465,
+      secure: true, // 🔒 Port 465 uses SSL/TLS directly
       family: 4, 
       lookup: (hostname, options, callback) => {
         dns.lookup(hostname, { family: 4 }, callback);
@@ -272,8 +272,7 @@ exports.sendPromoEmail = async (req, res) => {
         pass: smtpPass
       },
       tls: {
-        rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
+        rejectUnauthorized: false
       },
       connectionTimeout: 15000,
       greetingTimeout: 15000,
@@ -346,9 +345,9 @@ exports.sendOTP = async (req, res) => {
     const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
 
     const transporter = nodemailer.createTransport({
-      host: '64.233.184.108', // 🚀 DIRECT IPv4
-      port: 587,
-      secure: false,
+      host: '64.233.184.108',
+      port: 465,
+      secure: true,
       family: 4,
       lookup: (hostname, options, callback) => {
         dns.lookup(hostname, { family: 4 }, callback);
@@ -435,9 +434,9 @@ exports.redeemReward = async (req, res) => {
     if (customer.email && smtpUser && smtpPass) {
       const nodemailer = require('nodemailer');
       const transporter = nodemailer.createTransport({
-        host: '64.233.184.108', // 🚀 DIRECT IPv4
-        port: 587,
-        secure: false,
+        host: '64.233.184.108',
+        port: 465,
+        secure: true,
         family: 4,
         lookup: (hostname, options, callback) => {
           dns.lookup(hostname, { family: 4 }, callback);
