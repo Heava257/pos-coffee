@@ -96,7 +96,7 @@ exports.removeFile = async (fileName) => {
 
 
 
-exports.generatePaymentLink = async ({ orderNo, total, customerEmail, customerName }) => {
+exports.generatePaymentLink = async ({ orderNo, total, customerEmail, customerName, req_origin }) => {
   try {
     const response = await axios.post(
       "https://api.flutterwave.com/v3/payments",
@@ -104,7 +104,7 @@ exports.generatePaymentLink = async ({ orderNo, total, customerEmail, customerNa
         tx_ref: orderNo,
         amount: total,
         currency: "USD",
-        redirect_url: "http://localhost:3000/payment-success",
+        redirect_url: `${req_origin || 'http://localhost:3000'}/payment/result`,
         payment_options: "qr",
         customer: {
           email: customerEmail || "test@example.com",

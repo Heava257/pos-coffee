@@ -40,7 +40,7 @@ export const Config = {
   version: "1.0",
   token: "",
   image_path: import.meta.env.VITE_IMAGE_PATH || defaultImagePath,
-  platform_url: import.meta.env.VITE_PLATFORM_URL || "http://localhost:3000",
+  platform_url: typeof window !== 'undefined' ? window.location.origin : (import.meta.env.VITE_PLATFORM_URL || "http://localhost:3000"),
   optimizeCloudinary: (url, transform = "f_auto,q_auto") => {
     if (!url || typeof url !== 'string' || !url.includes("cloudinary.com")) return url;
     if (url.includes("/upload/f_auto") || url.includes("/upload/w_")) return url;

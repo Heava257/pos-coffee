@@ -247,7 +247,8 @@ const MarketingDashboard = () => {
                             try {
                                 const res = await request("customer/send-promo", "post", {
                                     customer_id: selectedCustomer?.id,
-                                    promo_text: "Hey " + selectedCustomer?.name + ", we miss you! Come back today and enjoy 15% OFF on your favorite drink. ☕️"
+                                    promo_text: "Hey " + selectedCustomer?.name + ", we miss you! Come back today and enjoy 15% OFF on your favorite drink. ☕️",
+                                    platform_url: window.location.origin
                                 });
                                 if (res?.success) {
                                     message.success(res.message);

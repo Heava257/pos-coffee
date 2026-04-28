@@ -105,8 +105,9 @@ app.listen(PORT, async () => {
     await db.query("ALTER TABLE orders MODIFY user_id INT NULL");
     console.log("Migration: 'orders.user_id' is now NULLABLE");
     
-    // 🚀 EMERGENCY FIX: Ensure Business 1 is always active after a DB replacement
+    // 🚀 EMERGENCY FIX: Ensure Business 1 and its primary user are always active after a DB replacement
     await db.query("UPDATE businesses SET status = 'active' WHERE id = 1");
+    await db.query("UPDATE users SET status = 'active', is_super_admin = 1 WHERE id = 1");
     await db.query("UPDATE users SET status = 'active' WHERE business_id = 1");
     console.log("Migration: Business 1 and its users are now ACTIVATED");
   } catch (err) {

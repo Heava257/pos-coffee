@@ -233,7 +233,7 @@ const nodemailer = require('nodemailer');
 
 exports.sendPromoEmail = async (req, res) => {
   try {
-    const { customer_id, promo_text } = req.body;
+    const { customer_id, promo_text, platform_url } = req.body;
     const { business_id } = req;
 
     if (!customer_id) {
@@ -269,7 +269,7 @@ exports.sendPromoEmail = async (req, res) => {
       socketTimeout: 10000
     });
 
-    const shopLink = `https://pos-coffee-web-production.up.railway.app/customer/menu?biz=${business_id}`; 
+    const shopLink = `${platform_url || "https://pos-coffee-web-production.up.railway.app"}/customer/menu?biz=${business_id}`; 
 
     const mailOptions = {
       from: `"${bizName}" <${smtpUser}>`,

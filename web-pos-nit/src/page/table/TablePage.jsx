@@ -133,12 +133,17 @@ const TablePage = () => {
         if (!url) return "";
         try {
             const urlObj = new URL(url);
-            // Always use current origin + /scan + original query params
+            // 🚀 SMART ENVIRONMENT DETECTION
+            // If the stored URL is localhost but we are on Railway, or vice-versa,
+            // we override the origin to the current window origin.
+            // This ensures QR codes ALWAYS point to the environment you are currently using.
             return `${window.location.origin}/scan${urlObj.search}`;
         } catch (e) {
             return url;
         }
     };
+
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
     const handlePrint = () => {
         const dynamicUrl = getDynamicQrUrl(selectedTable.qr_code_url);
@@ -373,6 +378,13 @@ const TablePage = () => {
                             <Title level={3} style={{ margin: 0, color: '#1e4a2d' }}>{selectedTable?.table_name}</Title>
                             <Text strong type="secondary">{t.open_menu.toUpperCase()}</Text>
                         </div>
+                        {isLocalhost && (
+                            <div style={{ marginTop: 12, padding: 8, background: '#fff7e6', borderRadius: 8, border: '1px solid #ffd591', fontSize: 11 }}>
+                                <Text type="warning" strong>⚠️ LOCALHOST DETECTED</Text>
+                                <br />
+                                <Text type="secondary">This QR will only work on this machine. For phone testing, use the production link.</Text>
+                            </div>
+                        )}
                     </Card>
                 </div>
             </Modal>
