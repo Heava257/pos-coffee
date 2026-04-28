@@ -200,53 +200,73 @@ const BusinessPage = () => {
             title: "Business / Enterprise",
             dataIndex: "name",
             key: "name",
+            width: 250, // 📏 Increased width
             render: (text, record) => (
-                <Space size="middle">
-                    <div style={{
-                        width: 45, height: 45, borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
-                    }}>
-                        <ShopOutlined style={{ fontSize: '20px' }} />
-                    </div>
-                    <div>
-                        <Text strong style={{ fontSize: '15px', color: '#1e4a2d' }}>{text}</Text>
-                        <br />
-                        <Text type="secondary" style={{ fontSize: '11px' }}>ID: BIZ-{record.id.toString().padStart(4, '0')}</Text>
-                    </div>
-                </Space>
+                <div style={{ minWidth: 220 }}>
+                    <Space size="middle">
+                        <div style={{
+                            width: 50, height: 50, borderRadius: '14px',
+                            background: 'linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                            color: 'white', flexShrink: 0,
+                            boxShadow: '0 4px 10px rgba(30, 74, 45, 0.2)'
+                        }}>
+                            <ShopOutlined style={{ fontSize: '22px' }} />
+                        </div>
+                        <div style={{ lineHeight: 1.3 }}>
+                            <Text strong style={{ fontSize: '15px', color: '#1e4a2d', display: 'block' }}>{text}</Text>
+                            <Text type="secondary" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>ID: BIZ-{record.id.toString().padStart(4, '0')}</Text>
+                        </div>
+                    </Space>
+                </div>
             )
         },
         {
             title: "Owner Identity",
             dataIndex: "owner_name",
             key: "owner_name",
+            width: 200,
             render: (text, record) => (
-                <Space direction="vertical" size={0}>
-                    <Text strong style={{ fontSize: '13px' }}><UserOutlined /> {text}</Text>
-                    <Text type="secondary" style={{ fontSize: '12px' }}><MailOutlined /> {record.email}</Text>
-                </Space>
+                <div style={{ minWidth: 180 }}>
+                    <div style={{ marginBottom: 4 }}>
+                        <Text strong style={{ fontSize: '13px' }}><UserOutlined style={{ color: '#c0a060' }} /> {text}</Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}><MailOutlined style={{ marginRight: 4 }} />{record.email}</Text>
+                </div>
             )
         },
         {
             title: "Operations",
             key: "ops",
+            width: 160,
             render: (_, record) => (
-                <Space direction="vertical" size={0}>
-                    <Text style={{ fontSize: '12px' }}>Branches: <Tag color="blue">{record.total_branches}</Tag></Text>
-                    <Text style={{ fontSize: '12px' }}>Staff Capacity: <Tag color="green">{record.total_users}</Tag></Text>
-                </Space>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>Branches</Text>
+                        <Tag color="blue" style={{ margin: 0, borderRadius: 4, fontSize: 11 }}>{record.total_branches}</Tag>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>Staff Cap</Text>
+                        <Tag color="green" style={{ margin: 0, borderRadius: 4, fontSize: 11 }}>{record.total_users}</Tag>
+                    </div>
+                </div>
             )
         },
         {
             title: "Plan Architecture",
             dataIndex: "plan_type",
             key: "plan_type",
+            width: 150,
             render: (type) => {
-                const colors = { basic: 'blue', standard: 'gold', premium: 'purple' };
+                const configs = { 
+                    basic: { color: 'blue', icon: <SafetyCertificateOutlined /> }, 
+                    standard: { color: 'gold', icon: <CrownOutlined /> }, 
+                    premium: { color: 'purple', icon: <CrownOutlined /> } 
+                };
+                const conf = configs[type] || { color: 'default', icon: <SafetyCertificateOutlined /> };
                 return (
-                    <Tag color={colors[type] || 'default'} style={{ borderRadius: '8px', border: 'none', padding: '2px 10px', fontWeight: 600 }}>
-                        <SafetyCertificateOutlined /> {type?.toUpperCase()}
+                    <Tag color={conf.color} style={{ borderRadius: '6px', border: 'none', padding: '4px 12px', fontWeight: 600 }}>
+                        {conf.icon} {type?.toUpperCase()}
                     </Tag>
                 );
             }
@@ -255,47 +275,64 @@ const BusinessPage = () => {
             title: "Enabled Modules",
             dataIndex: "active_modules",
             key: "active_modules",
+            width: 180,
             render: (modules) => (
-                <Space size={2} wrap>
-                    {modules?.split(',').map(m => <Tag key={m} style={{ fontSize: '10px' }}>{m}</Tag>)}
-                </Space>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {modules?.split(',').map(m => (
+                        <Tag key={m} style={{ fontSize: '10px', borderRadius: 4, margin: 0, background: '#f5f5f5', border: '1px solid #eee' }}>
+                            {m}
+                        </Tag>
+                    ))}
+                </div>
             )
         },
         {
             title: "Expiry / Period",
             dataIndex: "expiry_date",
             key: "expiry_date",
+            width: 160,
             render: (date) => (
-                <Space direction="vertical" size={0}>
-                    <Text style={{ fontSize: '13px' }}>
-                        <CalendarOutlined /> {date ? new Date(date).toLocaleDateString() : "Life-time"}
-                    </Text>
+                <div>
+                    <div style={{ marginBottom: 4 }}>
+                        <CalendarOutlined style={{ marginRight: 6, color: '#999' }} />
+                        <Text style={{ fontSize: '13px' }}>{date ? new Date(date).toLocaleDateString() : "Life-time"}</Text>
+                    </div>
                     {date && new Date(date) < new Date() ? (
-                        <Tag color="error" style={{ fontSize: '10px' }}>EXPIRED</Tag>
+                        <Tag color="error" style={{ fontSize: '10px', borderRadius: 4 }}>EXPIRED</Tag>
                     ) : date && (
-                        <Tag color="processing" style={{ fontSize: '10px' }}>ACTIVE</Tag>
+                        <Tag color="success" style={{ fontSize: '10px', borderRadius: 4 }}>ACTIVE</Tag>
                     )}
-                </Space>
+                </div>
             )
         },
         {
             title: "Health Status",
             dataIndex: "status",
             key: "status",
+            width: 160, // 📏 Increased width
             render: (status) => (
-                <Badge
-                    status={status === 'active' ? 'success' : 'error'}
-                    text={status === 'active' ? "Operational" : "Suspended"}
-                    style={{ fontWeight: 500 }}
-                />
+                <div style={{ 
+                    padding: '4px 12px', 
+                    borderRadius: '20px', 
+                    background: status === 'active' ? '#f6ffed' : '#fff2f0',
+                    border: `1px solid ${status === 'active' ? '#b7eb8f' : '#ffccc7'}`,
+                    display: 'inline-block',
+                    whiteSpace: 'nowrap' // 🛡️ Prevent wrapping
+                }}>
+                    <Badge
+                        status={status === 'active' ? 'success' : 'error'}
+                        text={<Text strong style={{ color: status === 'active' ? '#52c41a' : '#ff4d4f', fontSize: 12, whiteSpace: 'nowrap' }}>{status === 'active' ? "Operational" : "Suspended"}</Text>}
+                    />
+                </div>
             )
         },
         {
             title: "Management",
             key: "actions",
             align: 'right',
+            width: 450, // 📏 Increased width to fit all buttons
             render: (record) => (
-                <Space>
+                <Space style={{ whiteSpace: 'nowrap' }}>
                     <Tooltip title="View Enterprise Details">
                         <Button
                             icon={<EyeOutlined />}
@@ -367,6 +404,8 @@ const BusinessPage = () => {
                         danger={record.status === 'active'}
                         icon={record.status === 'active' ? <StopOutlined /> : <CheckCircleOutlined />}
                         onClick={() => toggleStatus(record)}
+                        disabled={record.id === 1} // 🛡️ Protect Super Admin Business
+                        style={{ whiteSpace: 'nowrap' }}
                     >
                         {record.status === 'active' ? "Suspend" : "Activate"}
                     </Button>

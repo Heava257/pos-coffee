@@ -76,6 +76,11 @@ exports.register = async (req, res) => {
         const statusVal = (is_active === 1 || is_active === '1' || is_active === true) ? 'active' : 'inactive';
 
         if (id) {
+            // 🛡️ SECURITY: Prevent deactivating the master super admin (ID 1)
+            if (id == 1 && statusVal !== 'active') {
+                return res.status(403).json({ message: "Action Forbidden: The Master Super Admin account cannot be deactivated." });
+            }
+
             // Update existing staff
             let sql = "UPDATE users SET name=?, email=?, role_id=?, branch_id=?, is_super_admin=?, address=?, tel=?, status=?";
             let params = [name, username, role_id, branch_id, is_super_admin || 0, address, tel, statusVal];
@@ -127,6 +132,11 @@ exports.remove = async (req, res) => {
     try {
         const { business_id } = req;
         const { id } = req.body;
+
+        // 🛡️ SECURITY: Prevent deleting the master super admin (ID 1)
+        if (id == 1) {
+            return res.status(403).json({ message: "Action Forbidden: The Master Super Admin account cannot be deleted." });
+        }
 
         // Prevent self-deletion if needed, but for now just restrict by business_id
         const [data] = await db.query("DELETE FROM users WHERE id = ? AND business_id = ?", [id, business_id]);

@@ -162,6 +162,12 @@ exports.updateStatus = async (req, res) => {
         if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
 
         const { id, status } = req.body;
+
+        // 🛡️ SECURITY: Never allow suspending the primary system business (Super Admin)
+        if (id == 1 && status === 'suspended') {
+            return res.status(400).json({ message: "Action Forbidden: The Master System Business cannot be suspended." });
+        }
+
         await db.query("UPDATE businesses SET status = ? WHERE id = ?", [status, id]);
         res.json({ message: `Business ${status} successfully` });
     } catch (error) {
