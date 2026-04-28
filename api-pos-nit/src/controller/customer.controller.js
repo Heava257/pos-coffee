@@ -426,9 +426,13 @@ exports.redeemReward = async (req, res) => {
                 <p style="text-align: center; font-size: 13px; color: #666;">Please show this email to our staff to claim your reward.</p>
               </div>
             </div>
-          </div>
-        `
-      }).catch(e => console.error("Email send fail", e));
+          `
+        }, {
+          headers: { 'api-key': smtpPass, 'Content-Type': 'application/json' }
+        });
+      } catch (e) {
+        console.error("Email send fail (Reward API)", e.response?.data || e.message);
+      }
     }
 
     await conn.commit();
