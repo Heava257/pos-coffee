@@ -1,3 +1,4 @@
+const dns = require('dns');
 const { db, logError } = require("../util/helper");
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client("222467462843-3mc4kb1636gcpugur0cgmb4mbdgfpbfl.apps.googleusercontent.com");
@@ -262,7 +263,10 @@ exports.sendPromoEmail = async (req, res) => {
       host: 'smtp.gmail.com',
       port: 587,
       secure: false, // STARTTLS
-      family: 4, // 🚀 FORCE IPv4 (Fix ENETUNREACH on Railway)
+      family: 4, 
+      lookup: (hostname, options, callback) => {
+        dns.lookup(hostname, { family: 4 }, callback);
+      },
       auth: {
         user: smtpUser,
         pass: smtpPass
@@ -345,7 +349,10 @@ exports.sendOTP = async (req, res) => {
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
-      family: 4, // 🚀 FORCE IPv4
+      family: 4,
+      lookup: (hostname, options, callback) => {
+        dns.lookup(hostname, { family: 4 }, callback);
+      },
       auth: { user: smtpUser, pass: smtpPass },
       tls: { rejectUnauthorized: false }
     });
@@ -431,7 +438,10 @@ exports.redeemReward = async (req, res) => {
         host: 'smtp.gmail.com',
         port: 587,
         secure: false,
-        family: 4, // 🚀 FORCE IPv4
+        family: 4,
+        lookup: (hostname, options, callback) => {
+          dns.lookup(hostname, { family: 4 }, callback);
+        },
         auth: { user: smtpUser, pass: smtpPass },
         tls: { rejectUnauthorized: false }
       });

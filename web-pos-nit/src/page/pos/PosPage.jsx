@@ -485,6 +485,7 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
 // ─── Compact Product List View (New) ──────────────────────────────
 const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selectedShop }) => {
   const { lang } = useLanguage();
+  const t = translations[lang];
   // Helper to determine if product is on BOGO promotion
   const isProductOnPromo = (product) => {
     if (!selectedShop?.global_bogo_active) return product.is_promo || product.promotion_id;
