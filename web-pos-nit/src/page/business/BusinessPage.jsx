@@ -736,7 +736,7 @@ const BusinessPage = () => {
                                 <Form.Item 
                                             name="package_id" 
                                             label="Industry Type (e.g. Mart, Restaurant, Cafe - Changes system behavior)"
-                                            rules={[{ required: true, message: 'Please select industry type' }]}
+                                            rules={[{ required: form.getFieldValue("id") !== 1, message: 'Please select industry type' }]}
                                         >
                                             <Select 
                                                 placeholder="Change Industry Blueprint" 
