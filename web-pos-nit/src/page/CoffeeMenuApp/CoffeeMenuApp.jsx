@@ -819,7 +819,8 @@ const CoffeeMenuApp = () => {
             customer_id: member.id,
             business_id: bizId,
             reward_name: gift.name,
-            stars_cost: gift.cost
+            stars_cost: gift.cost,
+            branch_id: selectedShop?.id
           });
           if (res && res.success) {
             message.success(res.message);

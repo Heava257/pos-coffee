@@ -234,17 +234,23 @@ const nodemailer = require('nodemailer');
 
 exports.sendPromoEmail = async (req, res) => {
   try {
-    const { customer_id, promo_text, platform_url } = req.body;
+    const { customer_id, promo_text, platform_url, branch_id } = req.body;
     const { business_id } = req;
 
     if (!customer_id) {
         return res.status(400).json({ success: false, message: "Missing customer ID" });
     }
 
-    // Fetch Customer and Business Info
+    // Fetch Customer, Business and Branch Info
     const [custData] = await db.query("SELECT * FROM customers WHERE id = ?", [customer_id]);
     const [bizData] = await db.query("SELECT name, smtp_user, smtp_pass FROM businesses WHERE id = ?", [business_id]);
     
+    let branchName = "";
+    if (branch_id) {
+      const [branchData] = await db.query("SELECT name FROM branches WHERE id = ?", [branch_id]);
+      if (branchData.length > 0) branchName = branchData[0].name;
+    }
+
     if (custData.length === 0 || !custData[0].email) {
       return res.json({ success: false, message: "Customer email not found" });
     }
@@ -262,13 +268,13 @@ exports.sendPromoEmail = async (req, res) => {
     // 🚀 USE BREVO API (HTTP) - Bypass Railway SMTP blocks
     try {
       const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
-        sender: { name: bizName, email: smtpUser },
+        sender: { name: branchName || bizName, email: smtpUser },
         to: [{ email: customer.email, name: customer.name }],
-        subject: `Special Offer from ${bizName}! ☕`,
+        subject: `Special Offer from ${branchName || bizName}! ☕`,
         htmlContent: `
           <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
             <div style="text-align: center; margin-bottom: 20px;">
-              <h1 style="color: #4A6741; margin: 0; text-transform: uppercase;">${bizName}</h1>
+              <h1 style="color: #4A6741; margin: 0; text-transform: uppercase;">${branchName || bizName}</h1>
               <p style="color: #8A8070; font-size: 12px; letter-spacing: 2px;">LOYALTY PROGRAM</p>
             </div>
             <h2 style="color: #1C1C1C;">Hello ${customer.name},</h2>
@@ -377,7 +383,7 @@ exports.verifyOTP = async (req, res) => {
 exports.redeemReward = async (req, res) => {
   const conn = await db.getConnection();
   try {
-    const { customer_id, business_id, reward_name, stars_cost } = req.body;
+    const { customer_id, business_id, reward_name, stars_cost, branch_id } = req.body;
     if (!customer_id || !stars_cost) return res.json({ success: false, message: "Missing info" });
 
     await conn.beginTransaction();
@@ -408,18 +414,24 @@ exports.redeemReward = async (req, res) => {
     const rawSmtpPass = bizData[0]?.smtp_pass || process.env.SMTP_PASS;
     const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
 
+    let branchName = "";
+    if (branch_id) {
+      const [branchData] = await conn.query("SELECT name FROM branches WHERE id = ?", [branch_id]);
+      if (branchData.length > 0) branchName = branchData[0].name;
+    }
+
     if (customer.email && smtpUser && smtpPass) {
       // 🚀 USE BREVO API (HTTP)
       try {
         await axios.post('https://api.brevo.com/v3/smtp/email', {
-          sender: { name: bizName, email: smtpUser },
+          sender: { name: branchName || bizName, email: smtpUser },
           to: [{ email: customer.email, name: customer.name }],
-          subject: `Reward Redeemed: ${reward_name}`,
+          subject: `Reward Redeemed at ${branchName || bizName}`,
           htmlContent: `
             <div style="font-family: sans-serif; padding: 40px; background: #f9f9f9;">
               <div style="max-width: 500px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 20px;">
                 <h2 style="color: #4A6741; text-align: center;">Congratulations!</h2>
-                <p style="text-align: center;">You've successfully redeemed <b>${stars_cost} Stars</b> for:</p>
+                <p style="text-align: center;">You've successfully redeemed <b>${stars_cost} Stars</b> at <b>${branchName || bizName}</b> for:</p>
                 <div style="background: #F5F0E8; padding: 20px; border-radius: 12px; text-align: center; font-size: 20px; font-weight: 800; margin: 20px 0;">
                   ${reward_name}
                 </div>

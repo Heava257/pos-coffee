@@ -10,11 +10,13 @@ import {
     SearchOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
+import { getProfile } from "../../store/profile.store";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 
 const MarketingDashboard = () => {
+    const profile = getProfile();
     const [inactiveList, setInactiveList] = useState([]);
     const [allMembers, setAllMembers] = useState([]);
     const [stats, setStats] = useState({ total_members: 0, inactive_count: 0, recovery_rate: 0 });
@@ -248,7 +250,8 @@ const MarketingDashboard = () => {
                                 const res = await request("customer/send-promo", "post", {
                                     customer_id: selectedCustomer?.id,
                                     promo_text: "Hey " + selectedCustomer?.name + ", we miss you! Come back today and enjoy 15% OFF on your favorite drink. ☕️",
-                                    platform_url: window.location.origin
+                                    platform_url: window.location.origin,
+                                    branch_id: profile?.branch_id
                                 });
                                 if (res?.success) {
                                     message.success(res.message);
