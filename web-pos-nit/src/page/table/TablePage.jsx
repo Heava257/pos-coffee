@@ -129,7 +129,19 @@ const TablePage = () => {
         setQrModalVisible(true);
     };
 
+    const getDynamicQrUrl = (url) => {
+        if (!url) return "";
+        try {
+            const urlObj = new URL(url);
+            // Always use current origin + /scan + original query params
+            return `${window.location.origin}/scan${urlObj.search}`;
+        } catch (e) {
+            return url;
+        }
+    };
+
     const handlePrint = () => {
+        const dynamicUrl = getDynamicQrUrl(selectedTable.qr_code_url);
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
       <html>
@@ -139,7 +151,7 @@ const TablePage = () => {
             body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; margin: 0; }
             .qr-container { padding: 40px; border: 3px dashed #1e4a2d; border-radius: 20px; text-align: center; background: #fff; }
             img { width: 350px; height: 350px; margin-bottom: 20px; }
-            <h1> { margin: 0; font-size: 32px; color: #1e4a2d; }
+            h1 { margin: 0; font-size: 32px; color: #1e4a2d; }
             p { font-size: 18px; color: #666; margin-top: 10px; }
             .logo { font-weight: bold; color: #1e4a2d; font-size: 24px; margin-bottom: 30px; }
           </style>
@@ -147,9 +159,9 @@ const TablePage = () => {
         <body>
             <div class="qr-container">
             <div class="logo">☕ GREEN GROUNDS POS</div>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(selectedTable.qr_code_url)}" />
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(dynamicUrl)}" />
             <h1>${t.table.toUpperCase()}: ${selectedTable.table_name}</h1>
-            <p>{t.scan_menu_order}</p>
+            <p>${t.scan_menu_order}</p>
           </div>
           <script>
             window.onload = () => { 
@@ -166,15 +178,17 @@ const TablePage = () => {
     };
 
     const handleCopy = () => {
-        if (selectedTable?.qr_code_url) {
-            navigator.clipboard.writeText(selectedTable.qr_code_url);
+        const dynamicUrl = getDynamicQrUrl(selectedTable?.qr_code_url);
+        if (dynamicUrl) {
+            navigator.clipboard.writeText(dynamicUrl);
             message.success(t.success);
         }
     };
 
     const handleOpenMenu = () => {
-        if (selectedTable?.qr_code_url) {
-            window.open(selectedTable.qr_code_url, '_blank');
+        const dynamicUrl = getDynamicQrUrl(selectedTable?.qr_code_url);
+        if (dynamicUrl) {
+            window.open(dynamicUrl, '_blank');
         }
     };
 
@@ -350,7 +364,7 @@ const TablePage = () => {
                     <Card style={{ borderRadius: 15, border: '1px dashed #1e4a2d', background: '#fff' }}>
                         {selectedTable?.qr_code_url && (
                             <img
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(selectedTable.qr_code_url)}`}
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getDynamicQrUrl(selectedTable.qr_code_url))}`}
                                 alt="QR Code"
                                 style={{ width: '100%', maxWidth: '250px', height: 'auto' }}
                             />
