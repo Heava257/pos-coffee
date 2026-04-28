@@ -1,0 +1,266 @@
+import React, { useEffect, useState } from "react";
+import { Table, Card, Row, Col, Typography, Button, Space, Tag, Modal, Input, message, Statistic, Tooltip, Avatar } from "antd";
+import { 
+    TeamOutlined, 
+    SendOutlined, 
+    GiftOutlined, 
+    ThunderboltOutlined,
+    UserDeleteOutlined,
+    ClockCircleOutlined,
+    SearchOutlined
+} from "@ant-design/icons";
+import { request } from "../../util/helper";
+import dayjs from "dayjs";
+
+const { Title, Text } = Typography;
+
+const MarketingDashboard = () => {
+    const [inactiveList, setInactiveList] = useState([]);
+    const [allMembers, setAllMembers] = useState([]);
+    const [stats, setStats] = useState({ total_members: 0, inactive_count: 0, recovery_rate: 0 });
+    const [loading, setLoading] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [isPromoModalVisible, setIsPromoModalVisible] = useState(false);
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            // 1. Fetch Inactive List
+            const resList = await request("customer/inactive", "get", { days: 30 });
+            if (resList && resList.list) setInactiveList(resList.list);
+
+            // 2. Fetch All Members
+            const resAll = await request("customer", "get");
+            if (resAll && resAll.list) setAllMembers(resAll.list);
+
+            // 3. Fetch Stats Summary
+            const resStats = await request("customer/marketing-stats", "get");
+            if (resStats) setStats(resStats);
+        } catch (e) {
+            console.error(e);
+        }
+        setLoading(false);
+    };
+
+    const handleSendPromo = (customer) => {
+        setSelectedCustomer(customer);
+        setIsPromoModalVisible(true);
+    };
+
+    const columns = [
+        {
+            title: "Customer",
+            render: (row) => (
+                <Space>
+                    <Avatar style={{ backgroundColor: '#1e4a2d' }}>{row.name ? row.name[0] : 'C'}</Avatar>
+                    <div>
+                        <div style={{ fontWeight: 700 }}>{row.name || "Unknown"}</div>
+                        <Text type="secondary" style={{ fontSize: 12 }}>{row.phone || "No Phone"}</Text>
+                    </div>
+                </Space>
+            )
+        },
+        {
+            title: "Tier",
+            dataIndex: "tier_name",
+            render: (text) => <Tag color="gold">{text || "Standard"}</Tag>
+        },
+        {
+            title: "Last Visit",
+            dataIndex: "last_order_date",
+            render: (text) => text ? dayjs(text).format("DD MMM YYYY") : <Tag color="default">Never</Tag>
+        },
+        {
+            title: "Days Inactive",
+            dataIndex: "days_since_last_order",
+            render: (days) => (
+                <Tag color={(days > 60 || days === null) ? "error" : "warning"}>
+                    {days === null ? "Never" : `${days} days ago`}
+                </Tag>
+            )
+        },
+        {
+            title: "Action",
+            render: (row) => (
+                <Button 
+                    type="primary" 
+                    icon={<GiftOutlined />} 
+                    size="small" 
+                    onClick={() => handleSendPromo(row)}
+                    style={{ background: '#c0a060', border: 'none', borderRadius: 6 }}
+                >
+                    Win Back
+                </Button>
+            )
+        }
+    ];
+
+    const allMemberColumns = [
+        {
+            title: "Member",
+            render: (row) => (
+                <Space>
+                    <Avatar style={{ backgroundColor: '#4A6741' }}>{row.name ? row.name[0] : 'M'}</Avatar>
+                    <div>
+                        <div style={{ fontWeight: 700 }}>{row.name || "Guest"}</div>
+                        <Text type="secondary" style={{ fontSize: 11 }}>{row.phone || "-"}</Text>
+                    </div>
+                </Space>
+            )
+        },
+        {
+            title: "Tier",
+            dataIndex: "tier_name",
+            render: (text) => <Tag color="gold" style={{ borderRadius: 4 }}>{text || "Standard"}</Tag>
+        },
+        {
+            title: "Points",
+            dataIndex: "points",
+            sorter: (a, b) => a.points - b.points,
+            render: (p) => <span style={{ fontWeight: 800, color: '#c0a060' }}>{p || 0} ⭐</span>
+        },
+        {
+            title: "Total Spent",
+            dataIndex: "total_spent",
+            sorter: (a, b) => a.total_spent - b.total_spent,
+            render: (v) => <span style={{ fontWeight: 700 }}>${parseFloat(v || 0).toFixed(2)}</span>
+        },
+        {
+            title: "Balance",
+            dataIndex: "wallet_balance",
+            render: (v) => <Text strong type="success">${parseFloat(v || 0).toFixed(2)}</Text>
+        },
+        {
+            title: "Action",
+            render: (row) => (
+                <Button 
+                    type="primary" 
+                    icon={<SendOutlined />} 
+                    size="small" 
+                    onClick={() => handleSendPromo(row)}
+                    style={{ background: '#4A6741', border: 'none', borderRadius: 6 }}
+                >
+                    Email
+                </Button>
+            )
+        }
+    ];
+
+    return (
+        <div style={{ padding: 24 }}>
+            <Row gutter={24} style={{ marginBottom: 24 }}>
+                <Col span={16}>
+                    <Title level={2}>Smart Marketing & CRM 🚀</Title>
+                    <Text type="secondary">Identify and re-engage with your most valuable customers.</Text>
+                </Col>
+            </Row>
+
+            <Row gutter={24} style={{ marginBottom: 24 }}>
+                <Col span={8}>
+                    <Card style={{ borderRadius: 20 }}>
+                        <Statistic 
+                            title="Inactive VIPs (>30 days)" 
+                            value={stats.inactive_count} 
+                            prefix={<UserDeleteOutlined />} 
+                            valueStyle={{ color: '#e74c3c', fontWeight: 800 }}
+                            loading={loading}
+                        />
+                    </Card>
+                </Col>
+                <Col span={8}>
+                    <Card style={{ borderRadius: 20 }}>
+                        <Statistic 
+                            title="Total Loyalty Members" 
+                            value={stats.total_members} 
+                            prefix={<TeamOutlined />} 
+                            valueStyle={{ color: '#1e4a2d', fontWeight: 800 }}
+                            loading={loading}
+                        />
+                    </Card>
+                </Col>
+                <Col span={8}>
+                    <Card style={{ borderRadius: 20, background: '#1e4a2d', color: '#fff' }}>
+                        <Statistic 
+                            title={<span style={{ color: '#fff', opacity: 0.8 }}>Recovery Rate</span>}
+                            value={stats.recovery_rate} 
+                            suffix="%" 
+                            prefix={<ThunderboltOutlined />} 
+                            valueStyle={{ color: '#fff', fontWeight: 800 }}
+                            loading={loading}
+                        />
+                    </Card>
+                </Col>
+            </Row>
+
+            <Row gutter={[24, 24]}>
+                <Col span={24}>
+                    <Card 
+                        title={<span><ClockCircleOutlined /> At-Risk Customers</span>} 
+                        style={{ borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.05)" }}
+                        extra={<Button onClick={fetchData} icon={<SearchOutlined />}>Refresh Analysis</Button>}
+                    >
+                        <Table 
+                            columns={columns} 
+                            dataSource={inactiveList} 
+                            loading={loading} 
+                            rowKey="id"
+                            pagination={{ pageSize: 5 }}
+                        />
+                    </Card>
+                </Col>
+                
+                <Col span={24}>
+                    <Card 
+                        title={<span><TeamOutlined /> All Loyalty Members</span>} 
+                        style={{ borderRadius: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.05)" }}
+                    >
+                        <Table 
+                            columns={allMemberColumns} 
+                            dataSource={allMembers} 
+                            loading={loading} 
+                            rowKey="id"
+                            pagination={{ pageSize: 10 }}
+                        />
+                    </Card>
+                </Col>
+            </Row>
+
+            <Modal
+                title={<b>Win Back Campaign</b>}
+                open={isPromoModalVisible}
+                onCancel={() => setIsPromoModalVisible(false)}
+                footer={[
+                    <Button key="cancel" onClick={() => setIsPromoModalVisible(false)}>Cancel</Button>,
+                    <Button key="send" type="primary" icon={<SendOutlined />} style={{ background: '#1e4a2d' }} onClick={async () => {
+                        const res = await request("customer/send-promo", "post", {
+                            customer_id: selectedCustomer?.id,
+                            promo_text: "Hey " + selectedCustomer?.name + ", we miss you! Come back today and enjoy 15% OFF on your favorite drink. ☕️"
+                        });
+                        if (res?.success) {
+                            message.success(res.message);
+                            setIsPromoModalVisible(false);
+                        } else {
+                            message.error(res?.message || "Failed to send email");
+                        }
+                    }}>
+                        Send Promotion
+                    </Button>
+                ]}
+            >
+                <div style={{ padding: '20px 0' }}>
+                    <p>Offering a promotion to <b>{selectedCustomer?.name}</b></p>
+                    <div style={{ background: '#f8fafc', padding: 15, borderRadius: 12 }}>
+                        <Text strong>Suggested Offer:</Text>
+                        <p style={{ margin: '5px 0 0 0' }}>"Hey {selectedCustomer?.name}, we miss you! Come back today and enjoy <b>15% OFF</b> on your favorite drink. ☕️"</p>
+                    </div>
+                </div>
+            </Modal>
+        </div>
+    );
+};
+
+export default MarketingDashboard;

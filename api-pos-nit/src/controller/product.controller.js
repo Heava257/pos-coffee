@@ -10,7 +10,10 @@ const cleanVal = (val) => {
 exports.getList = async (req, res) => {
     try {
         const { txt_search, category_id, is_list_all } = req.query;
-        const { business_id, branch_id } = req;
+        const business_id = req.business_id || req.query.business_id;
+        const branch_id = req.branch_id || req.query.branch_id;
+
+        if (!business_id || !branch_id) return res.json({ list: [] });
 
         const cacheKey = txt_search ? null : `products_biz_${business_id}_branch_${branch_id}_cat_${category_id || 'all'}_all_${is_list_all || 0}`;
 

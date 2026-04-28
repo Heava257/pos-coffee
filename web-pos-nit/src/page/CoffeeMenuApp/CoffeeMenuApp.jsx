@@ -1,9 +1,59 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import dayjs from 'dayjs';
 import { request } from '../../util/helper';
 import { Config } from '../../util/config';
-import { getProfile, getGuestProfile } from '../../store/profile.store';
-import { message, Spin } from 'antd';
+import { getProfile, getGuestProfile, setGuestProfile } from '../../store/profile.store';
+import { message, Spin, Typography, Modal } from 'antd';
+import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
+const { Text } = Typography;
+
+const CustomGoogleButton = ({ onSuccess, loading, bizId }) => {
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      // For this custom flow, we might need to adjust the backend or fetch userinfo here
+      // But to keep it simple, we'll try to get the profile info and send it
+      fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokenResponse.access_token}`)
+        .then(res => res.json())
+        .then(data => {
+           onSuccess({ 
+             isCustom: true,
+             profile: data,
+             token: tokenResponse.access_token 
+           });
+        });
+    },
+    onError: () => message.error("Google Login Failed"),
+  });
+
+  return (
+    <button 
+      onClick={() => login()}
+      disabled={loading}
+      style={{ 
+        width: "100%", 
+        height: 50, 
+        borderRadius: 100, 
+        border: "1px solid #EDE8DF", 
+        background: "#fff", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center", 
+        gap: 12, 
+        cursor: "pointer",
+        fontWeight: 700,
+        fontSize: 14,
+        boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+        marginTop: 10,
+        transition: "all 0.2s"
+      }}
+      onMouseOver={(e) => e.currentTarget.style.background = "#f9f9f9"}
+      onMouseOut={(e) => e.currentTarget.style.background = "#fff"}
+    >
+      <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="G" style={{ width: 20 }} />
+      <span style={{ color: "#3c4043" }}>Continue with Google</span>
+    </button>
+  );
+};
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage, translations } from '../../store/language.store';
 
@@ -118,6 +168,7 @@ const Ico = {
   Plus: ({s=16})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   Minus: ({s=15})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   X: ({s=18})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  Lock: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
   Arrow: ()=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
   Leaf: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-8 2"/></svg>,
   Pin: ()=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
@@ -466,7 +517,7 @@ const isProductOnPromo = (item, selectedShop) => {
   return item.is_promo || item.promotion_id;
 };
 
-function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar, selectedShop }) {
+function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar, selectedShop, loading, activeOrder }) {
   const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
   
   // Calculate Discounts & BOGO Savings
@@ -496,30 +547,64 @@ function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar, sele
         {!asSidebar && <button onClick={onClose} style={{ width:32, height:32, borderRadius:"50%", background:"#F5F0E8", border:"none", display:"flex", alignItems:"center", justifyContent:"center" }}><Ico.X s={16}/></button>}
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"16px" }} className="noscroll">
-        {cart.length === 0 ? <div style={{ textAlign:"center", padding:"52px 0", color:"#B0A496" }}><div style={{ fontSize:46, marginBottom:12 }}>🛒</div><p style={{ fontSize:15, fontWeight:600 }}>Your basket is empty</p></div>
-        : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>{cart.map(item => (
-          <div key={item.cid} className="cart-item">
-            <img src={Config.getFullImagePath(item.image)} alt={item.name} style={{ width:54, height:54, borderRadius:12, objectFit:"cover" }} />
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#1C1C1C" }}>{item.name}</div>
-              {isProductOnPromo(item, selectedShop) && (
-                <div style={{ display: "inline-flex", color: "#059669", fontSize: 10, fontWeight: 700, marginTop: 1 }}>
-                  • {selectedShop?.global_bogo_text || "Buy 1 Get 1 Applied"}
+        {/* ACTIVE BILL SECTION */}
+        {activeOrder && activeOrder.details && activeOrder.details.length > 0 && (
+          <div style={{ marginBottom: 24, padding: "16px", background: "#fdf8ef", borderRadius: 20, border: "1.5px dashed #D0C5B3" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: "#8A7E6A", textTransform: "uppercase", letterSpacing: 0.5 }}>Ongoing Bill / មុខម្ហូបកំពុងមាន</span>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4A6741", boxShadow: "0 0 10px #4A6741" }}></div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {activeOrder.details.map((d, idx) => (
+                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                  <span style={{ color: "#4B5563", fontWeight: 500 }}>
+                    {d.product_name} <span style={{ color: "#9A9083", fontSize: 12 }}>x{d.qty}</span>
+                  </span>
+                  <span style={{ fontWeight: 700, color: "#1C1C1C" }}>{fmt(d.price * d.qty)}</span>
                 </div>
-              )}
-              <div style={{ fontSize:11, color:"#9A9083", marginBottom:4 }}>{item.custom}</div>
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <span style={{ fontSize:14, fontWeight:700, color:"#4A6741" }}>{fmt(item.price * item.qty)}</span>
-                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <button className="qty-btn" style={{ width:26, height:26, background:"#EDE8DF" }} onClick={() => onQty(item.cid, -1)}><Ico.Minus s={12}/></button>
-                  <span style={{ fontSize:13, fontWeight:700 }}>{item.qty}</span>
-                  <button className="qty-btn" style={{ width:26, height:26, background:"#4A6741", color:"#fff" }} onClick={() => onQty(item.cid, 1)}><Ico.Plus s={12}/></button>
-                </div>
+              ))}
+              <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between", fontWeight: 800, color: "#4A6741" }}>
+                <span>Subtotal</span>
+                <span>{fmt(activeOrder.total_amount)}</span>
               </div>
             </div>
-            <button onClick={() => onRemove(item.cid)} style={{ background:"none", border:"none", color:"#C0B8AE" }}><Ico.X s={15}/></button>
           </div>
-        ))}</div>}
+        )}
+
+        {cart.length === 0 ? (
+          !activeOrder && (
+            <div style={{ textAlign:"center", padding:"52px 0", color:"#B0A496" }}>
+              <div style={{ fontSize:46, marginBottom:12 }}>🛒</div>
+              <p style={{ fontSize:15, fontWeight:600 }}>Your basket is empty</p>
+            </div>
+          )
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {cart.map(item => (
+              <div key={item.cid} className="cart-item">
+                <img src={Config.getFullImagePath(item.image)} alt={item.name} style={{ width:54, height:54, borderRadius:12, objectFit:"cover" }} />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#1C1C1C" }}>{item.name}</div>
+                  {isProductOnPromo(item, selectedShop) && (
+                    <div style={{ display: "inline-flex", color: "#059669", fontSize: 10, fontWeight: 700, marginTop: 1 }}>
+                      • {selectedShop?.global_bogo_text || "Buy 1 Get 1 Applied"}
+                    </div>
+                  )}
+                  <div style={{ fontSize:11, color:"#9A9083", marginBottom:4 }}>{item.custom}</div>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <span style={{ fontSize:14, fontWeight:700, color:"#4A6741" }}>{fmt(item.price * item.qty)}</span>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <button className="qty-btn" style={{ width:26, height:26, background:"#EDE8DF" }} onClick={() => onQty(item.cid, -1)}><Ico.Minus s={12}/></button>
+                      <span style={{ fontSize:13, fontWeight:700 }}>{item.qty}</span>
+                      <button className="qty-btn" style={{ width:26, height:26, background:"#4A6741", color:"#fff" }} onClick={() => onQty(item.cid, 1)}><Ico.Plus s={12}/></button>
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => onRemove(item.cid)} style={{ background:"none", border:"none", color:"#C0B8AE" }}><Ico.X s={15}/></button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       {cart.length > 0 && (
         <div style={{ padding:"16px 18px 28px", borderTop:"1px solid #EDE8DF", background:"#fff" }}>
@@ -533,7 +618,13 @@ function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar, sele
               <span style={{ fontSize:24, fontWeight:800, color:"#4A6741" }}>{fmt(final_total)}</span>
             </div>
           </div>
-          <button onClick={onCheckout} style={{ width:"100%", height:54, borderRadius:100, background:"#4A6741", color:"#fff", fontSize:15, fontWeight:700, border:"none" }}>Place Order ☕</button>
+          <button 
+            disabled={loading}
+            onClick={onCheckout} 
+            style={{ width:"100%", height:54, borderRadius:100, background:loading ? "#9A9083" : "#4A6741", color:"#fff", fontSize:15, fontWeight:700, border:"none", cursor: loading ? "not-allowed" : "pointer" }}
+          >
+            {loading ? "Processing..." : "Place Order ☕"}
+          </button>
         </div>
       )}
     </div>
@@ -557,26 +648,223 @@ const CoffeeMenuApp = () => {
     const params = new URLSearchParams(window.location.search);
     const br = params.get('br') || params.get('branch');
     const biz = params.get('biz');
-    if (br && biz) return { id: parseInt(br), business_id: parseInt(biz) };
+    if (br && biz) {
+      const obj = { id: parseInt(br), business_id: parseInt(biz) };
+      localStorage.setItem('coffee_pos_shop', JSON.stringify(obj));
+      return obj;
+    }
     const saved = localStorage.getItem('coffee_pos_shop');
     return saved ? JSON.parse(saved) : null;
   });
 
   const [selectedTable, setSelectedTable] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('tbl') || params.get('table') || localStorage.getItem('coffee_pos_table') || "Web";
+    const tbl = params.get('tbl') || params.get('table');
+    if (tbl) {
+      localStorage.setItem('coffee_pos_table', tbl);
+      return tbl;
+    }
+    return localStorage.getItem('coffee_pos_table') || "Web";
   });
 
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [cat, setCat] = useState("all");
+  const [activeOrder, setActiveOrder] = useState(null); // Existing bill for table
   const [q, setQ] = useState("");
   const searchInputRef = React.useRef(null);
-  const [cart, setCart] = useState(() => {
+  const [cart, setCart] = useState([]);
+  const [transactionId, setTransactionId] = useState(() => Math.random().toString(36).slice(2));
+
+  // Initialize cart from storage on mount
+  useEffect(() => {
+    // SECURITY: If the last order was a success, force a clean slate
+    const lastSuccess = localStorage.getItem('last_order_success');
+    if (lastSuccess === 'true') {
+      console.log("Detected previous successful order. Forcing hard clear.");
+      localStorage.removeItem('coffee_pos_cart');
+      localStorage.removeItem('last_order_success');
+      setCart([]);
+      return;
+    }
+
     const s = localStorage.getItem('coffee_pos_cart');
-    return s ? JSON.parse(s) : [];
-  });
+    if (s) {
+      try {
+        const saved = JSON.parse(s);
+        setCart(Array.isArray(saved) ? saved : []);
+      } catch (e) {
+        setCart([]);
+      }
+    }
+  }, []);
+
+  const bizId = selectedShop?.business_id;
+
+  const [member, setMember] = useState(getGuestProfile());
+  const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
+  const [isRegisterModalVisible, setIsRegisterModalVisible] = useState(false);
+  const [isEditProfileVisible, setIsEditProfileVisible] = useState(false);
+  const [loginValue, setLoginValue] = useState("");
+  const [otpValue, setOtpValue] = useState("");
+  const [isOtpStep, setIsOtpStep] = useState(false);
+  const [regName, setRegName] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  const handleLinkMember = async () => {
+    if (!loginValue) return message.warning("Please enter Phone or Card ID");
+    setLoginLoading(true);
+    try {
+      const res = await request(`customer/send-otp`, "post", { loginValue, business_id: bizId });
+      if (res && res.success) {
+        setIsOtpStep(true);
+        message.success(res.message);
+      } else {
+        message.error(res?.message || "Member not found or error occurred.");
+      }
+    } catch (e) {
+      message.error("Connection failed.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpValue) return message.warning("Please enter verification code");
+    setLoginLoading(true);
+    try {
+      const res = await request(`customer/verify-otp`, "post", { loginValue, otp: otpValue, business_id: bizId });
+      if (res && res.success && res.data) {
+        setGuestProfile(res.data);
+        setMember(res.data);
+        setIsLoginModalVisible(false);
+        setIsOtpStep(false);
+        setOtpValue("");
+        message.success(`Welcome back, ${res.data.name}!`);
+      } else {
+        message.error(res?.message || "Invalid or expired code.");
+      }
+    } catch (e) {
+      message.error("Verification failed.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (credentialResponse) => {
+    setLoginLoading(true);
+    try {
+      const payload = credentialResponse.isCustom 
+        ? { isCustom: true, profile: credentialResponse.profile, business_id: bizId }
+        : { token: credentialResponse.credential, business_id: bizId };
+
+      const res = await request(`customer/google-login`, "post", payload);
+      if (res && res.success && res.data) {
+        setGuestProfile(res.data);
+        setMember(res.data);
+        setIsLoginModalVisible(false);
+        message.success(`Logged in with Google as ${res.data.name}`);
+      } else {
+        message.error(res?.message || "Google login failed.");
+      }
+    } catch (e) {
+      message.error("Google authentication failed.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleRedeemReward = async (gift) => {
+    if (!member) return message.warning("Please login first");
+    if (member.points < gift.cost) return message.error("Not enough stars");
+
+    Modal.confirm({
+      title: 'Redeem Reward',
+      content: `Are you sure you want to spend ${gift.cost} stars for ${gift.name}?`,
+      okText: 'Yes, Redeem',
+      cancelText: 'Cancel',
+      centered: true,
+      onOk: async () => {
+        try {
+          const res = await request(`customer/redeem`, "post", {
+            customer_id: member.id,
+            business_id: bizId,
+            reward_name: gift.name,
+            stars_cost: gift.cost
+          });
+          if (res && res.success) {
+            message.success(res.message);
+            // Refresh member data
+            const detailRes = await request(`customer/detail/${member.id}`, "get");
+            if (detailRes && detailRes.success) {
+              setGuestProfile(detailRes.data);
+              setMember(detailRes.data);
+            }
+          } else {
+            message.error(res?.message || "Redeem failed");
+          }
+        } catch (e) {
+          message.error("Connection failed");
+        }
+      }
+    });
+  };
+
+  const handleRegister = async () => {
+    if (!regName || !regPhone) return message.warning("Please fill all fields");
+    setLoginLoading(true);
+    try {
+      const res = await request("customer/public-create", "post", {
+        name: regName,
+        phone: regPhone,
+        email: regEmail,
+        business_id: selectedShop.business_id
+      });
+      if (res && res.success) {
+        setGuestProfile(res.data);
+        setMember(res.data);
+        setIsRegisterModalVisible(false);
+        message.success("Registered successfully!");
+      }
+    } catch (e) { } finally { setLoginLoading(false); }
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!regName || !regEmail) {
+      message.error("Please fill in name and email");
+      return;
+    }
+    setLoginLoading(true);
+    try {
+      const res = await request("customer/public-update", "put", {
+        id: member.id,
+        name: regName,
+        email: regEmail
+      });
+      if (res && res.success) {
+        const updatedMember = { ...member, name: regName, email: regEmail };
+        setMember(updatedMember);
+        localStorage.setItem("pos_customer", JSON.stringify(updatedMember));
+        message.success("Profile updated!");
+        setIsEditProfileVisible(false);
+      }
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to update profile");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogoutMember = () => {
+    localStorage.removeItem("guest_profile");
+    setMember(null);
+    message.info("Logged out from membership");
+  };
+
   const [starred, setStarred] = useState(() => {
     const s = localStorage.getItem('coffee_pos_starred_ids');
     return s ? new Set(JSON.parse(s)) : new Set();
@@ -585,7 +873,9 @@ const CoffeeMenuApp = () => {
   const [orderId, setOrderId] = useState(() => localStorage.getItem('last_order_id'));
   const [orderStatus, setOrderStatus] = useState(null);
   const [orderHistory, setOrderHistory] = useState([]);
-
+  const [selectedHistoryOrder, setSelectedHistoryOrder] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+    
   useEffect(() => {
     let interval;
     if (orderId) {
@@ -604,23 +894,51 @@ const CoffeeMenuApp = () => {
   }, [orderId]);
 
   const fetchHistory = async () => {
-    const profile = getProfile() || getGuestProfile();
+    const profile = member || getGuestProfile();
+    if (profile?.id) {
+      setHistoryLoading(true);
+      try {
+        const res = await request(`order-web/customer/${profile.id}?limit=10&business_id=${selectedShop.business_id}`, "get");
+        if (res?.list) setOrderHistory(res.list);
+      } catch (e) { } finally { setHistoryLoading(false); }
+    }
+  };
+
+  const showOrderDetail = async (order) => {
+    setLoading(true);
+    try {
+      const res = await request(`order-web/${order.id}`, "get");
+      if (res?.order) {
+        setSelectedHistoryOrder(res);
+      }
+    } catch (e) { } finally { setLoading(false); }
+  };
+
+  const fetchProfile = async () => {
+    const profile = member || getGuestProfile();
     if (profile?.id) {
       try {
-        const res = await request("order", "get", { user_id: profile.id });
-        if (res?.list) setOrderHistory(res.list);
+        const res = await request(`customer/detail/${profile.id}`, "get");
+        if (res?.success && res.data) {
+          setGuestProfile(res.data);
+          setMember(res.data);
+        }
       } catch (e) { }
     }
   };
 
-
   const [modalProd, setModalProd] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isPlacingOrder = useRef(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [view, setView] = useState("home");
   const [tab, setTab] = useState("home");
 
   useEffect(() => {
-    if (tab === 'profile') fetchHistory();
+    if (tab === 'profile') {
+      fetchHistory();
+      fetchProfile();
+    }
   }, [tab]);
 
 
@@ -630,8 +948,8 @@ const CoffeeMenuApp = () => {
         setLoading(true);
         try {
           const [cRes, pRes] = await Promise.all([
-            request("category", "get"), 
-            request("product", "get", { branch_id: selectedShop.id })
+            request("category", "get", { business_id: selectedShop.business_id }), 
+            request("product", "get", { business_id: selectedShop.business_id, branch_id: selectedShop.id })
           ]);
           if (cRes?.list) setCategories([{ id: "all", name: "All" }, ...cRes.list]);
           if (pRes?.list) {
@@ -662,10 +980,41 @@ const CoffeeMenuApp = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    localStorage.setItem('coffee_pos_cart', JSON.stringify(cart));
-    localStorage.setItem('coffee_pos_table', selectedTable);
-    if (selectedShop) localStorage.setItem('coffee_pos_shop', JSON.stringify(selectedShop));
+    // SAFETY: If table changes or is new session, ensure cart is clean if it was from another session
+    const savedTable = localStorage.getItem('coffee_pos_table');
+    if (selectedTable && savedTable && selectedTable !== savedTable) {
+      console.log("Table context changed. Clearing stale cart.");
+      setCart([]);
+      localStorage.removeItem('coffee_pos_cart');
+    }
+    
+    // Prevent saving empty cart back to storage IF we just cleared it during checkout
+    if (!isPlacingOrder.current) {
+      localStorage.setItem('coffee_pos_cart', JSON.stringify(cart));
+      localStorage.setItem('coffee_pos_table', selectedTable || "");
+      if (selectedShop) localStorage.setItem('coffee_pos_shop', JSON.stringify(selectedShop));
+    }
   }, [cart, selectedTable, selectedShop]);
+
+  const fetchActive = useCallback(async () => {
+    if (!selectedShop?.id || !selectedTable || selectedTable === "Web") return;
+    try {
+      const res = await request(`order-web/active?branch_id=${selectedShop.id}&table_no=${selectedTable}`, "get");
+      if (res && res.order) {
+        setActiveOrder(res.order);
+      } else {
+        setActiveOrder(null);
+      }
+    } catch (err) {
+      console.error("Failed to fetch active order:", err);
+    }
+  }, [selectedShop?.id, selectedTable]);
+
+  useEffect(() => {
+    fetchActive();
+    const interval = setInterval(fetchActive, 10000);
+    return () => clearInterval(interval);
+  }, [fetchActive]);
 
   const products = useMemo(() => menuItems.filter(p => {
     const productName = p.name || "";
@@ -681,24 +1030,82 @@ const CoffeeMenuApp = () => {
   const toggleStar = (p) => setStarred(prev => { const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; });
 
   const handleCheckout = async () => {
-    if (cart.length === 0) return;
+    if (loading || cart.length === 0) return;
+    if (selectedTable === "Web") {
+      message.warning("Please scan the QR code on your table to place an order.");
+      return;
+    }
+    
     setLoading(true);
+    isPlacingOrder.current = true;
     try {
-      const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+      // Try to get GPS but don't block if fails
+      let lat = null, lng = null;
+      try {
+        const pos = await new Promise((res, rej) => {
+          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 });
+        });
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+      } catch (err) {
+        console.warn("GPS access denied or timed out. Proceeding without coordinates.");
+      }
+
       const sub = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+      const profile = member || getGuestProfile();
+      
+      // Explicitly map fresh items from current cart state
+      const itemsToSend = cart.map(i => ({ 
+        product_id: i.id, 
+        qty: i.qty, 
+        price: i.price, 
+        note: i.custom 
+      }));
+
       const data = {
-        business_id: selectedShop.business_id, branch_id: selectedShop.id, table_no: selectedTable,
-        sub_total: sub, total_amount: sub, payment_method: "Unpaid (Web QR)", order_type: "dine_in",
-        lat: pos.coords.latitude, lng: pos.coords.longitude,
-        cart_items: cart.map(i => ({ product_id: i.id, qty: i.qty, price: i.price, note: i.custom }))
+        business_id: selectedShop.business_id, 
+        branch_id: selectedShop.id, 
+        table_no: selectedTable,
+        customer_id: profile?.id || null, 
+        sub_total: sub, 
+        total_amount: sub, 
+        payment_method: "Unpaid (Web QR)", 
+        order_type: "dine_in",
+        lat, 
+        lng,
+        cart_items: itemsToSend
       };
+
       const res = await request("order-web", "post", data);
       if (res?.success) {
-        localStorage.setItem('last_order_id', res.order_id);
+        // SUCCESS: Aggressively clear everything
+        localStorage.setItem('last_order_success', 'true'); // Flag for hard clear on reload/back
+        localStorage.removeItem('coffee_pos_cart');
+        setCart([]);
+        setTransactionId(Math.random().toString(36).slice(2)); // Change transaction ID
         setOrderId(res.order_id);
-        setCart([]); setCartOpen(false); setTab("status"); message.success(t.order_success_msg);
+        localStorage.setItem('last_order_id', res.order_id);
+        setCartOpen(false); 
+        setTab("status"); 
+        message.success(t.order_success_msg);
+        fetchHistory(); 
+        fetchActive(); 
+        
+        // HARD RESET: Reload to ensure clean slate for next order
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        isPlacingOrder.current = false;
+        message.error(res?.message || t.order_failed_msg);
       }
-    } catch { message.error("GPS Verification Required"); } finally { setLoading(false); }
+    } catch (err) {
+      isPlacingOrder.current = false;
+      console.error("Checkout Error:", err);
+      message.error(t.order_failed_msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!selectedShop?.id) return <div className="app-container" style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:40, textAlign:"center" }}><div><h2 className="brand" style={{ fontSize:32, marginBottom:16 }}>Please Scan QR</h2><p>Please scan the QR code on your table to browse the menu.</p></div></div>;
@@ -879,20 +1286,20 @@ const CoffeeMenuApp = () => {
                   <>
                     <div style={{ textAlign: "center", marginBottom: 40 }}>
                        <div style={{ display:"inline-flex", background:"#FEF3C7", color:"#92400E", padding:"6px 20px", borderRadius:100, fontSize:12, fontWeight:800, marginBottom:10 }}>
-                          {orderStatus === 'cooking' ? 'PREPARING' : 'ORDER RECEIVED'}
+                          {['preparing', 'cooking'].includes(orderStatus) ? 'PREPARING' : orderStatus === 'served' ? 'SERVED' : 'ORDER RECEIVED'}
                        </div>
                        <h2 className="brand" style={{ fontSize: 28, color: "#1C1C1C" }}>Order Tracking</h2>
-                       <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Order #{orderId || 'N/A'}</p>
+                       <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Order #{orderId || activeOrder?.order_no || activeOrder?.id || 'N/A'}</p>
                     </div>
 
                     <div style={{ padding: "0 20px" }}>
                       {[
                         { label: "Order Received", icon: "☕", key: 'pending', desc: "We've got your order.", ani: "ani-steam" },
-                        { label: "Preparing", icon: "👨‍🍳", key: 'cooking', desc: "Crafting your espresso.", ani: "ani-cook" },
+                        { label: "Preparing", icon: "👨‍🍳", key: 'preparing', desc: "Crafting your espresso.", ani: "ani-cook" },
                         { label: "Ready to Serve", icon: "🛍️", key: 'served', desc: "Enjoy your drink!", ani: "ani-celebrate" }
                       ].map((step, i, arr) => {
                         const statusOrder = ['pending', 'preparing', 'cooking', 'ready', 'served'];
-                        let s = orderStatus || 'pending';
+                        let s = orderStatus || activeOrder?.kitchen_status?.toLowerCase() || 'pending';
                         if (s === 'received') s = 'pending';
                         const currentIdxRaw = statusOrder.indexOf(s);
                         let currentStepIdx = 0;
@@ -932,14 +1339,148 @@ const CoffeeMenuApp = () => {
             </div>
           ) : tab === 'profile' ? (
             <div className="fade-in">
-              <div style={{ padding: "60px 20px" }}>
-                <div style={{ background: "#fff", borderRadius: 24, padding: 24, textAlign: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-                  <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#F5F0E8", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
-                    {(getProfile()?.firstname || getGuestProfile()?.firstname || "G").charAt(0).toUpperCase()}
+              <div style={{ padding: "40px 20px" }}>
+                {member?.id ? (
+                  /* PREMIUM DIGITAL MEMBER CARD */
+                  <div style={{ 
+                    position: "relative",
+                    background: member.tier_id >= 3 ? "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)" : 
+                                member.tier_id === 2 ? "linear-gradient(135deg, #757F9A, #D7DDE8)" : 
+                                "linear-gradient(135deg, #134E5E, #71B280)",
+                    borderRadius: 24, 
+                    padding: 24, 
+                    color: member.tier_id >= 2 ? "#1C1C1C" : "#fff",
+                    boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+                    marginBottom: 32,
+                    overflow: "hidden"
+                  }}>
+                    {/* Glossy Overlay */}
+                    <div style={{ position: "absolute", top: "-50%", left: "-50%", width: "200%", height: "200%", background: "radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%)", pointerEvents: "none" }} />
+                    
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", zIndex: 1 }}>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, opacity: 0.8, textTransform: "uppercase" }}>{member.tier_name} MEMBER</div>
+                        <h2 style={{ fontSize: 24, fontWeight: 800, marginTop: 4 }}>{member.name}</h2>
+                        <button 
+                          onClick={() => {
+                            setRegName(member.name);
+                            setRegPhone(member.phone);
+                            setRegEmail(member.email || '');
+                            setIsEditProfileVisible(true);
+                          }}
+                          style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "4px 12px", borderRadius: 100, fontSize: 10, fontWeight: 700, marginTop: 4, cursor: "pointer" }}
+                        >
+                          EDIT PROFILE
+                        </button>
+                      </div>
+                      <div style={{ background: "#fff", padding: 8, borderRadius: 12, boxShadow: "0 4px 10px rgba(0,0,0,0.1)" }}>
+                        <div style={{ width: 60, height: 60, background: "#eee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8 }}>
+                           {/* Simplified QR Placeholder */}
+                           <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:2 }}>
+                              {[...Array(16)].map((_, i) => <div key={i} style={{ width:8, height:8, background: Math.random() > 0.5 ? "#000" : "#fff" }} />)}
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 40, display: "flex", justifyContent: "space-between", alignItems: "flex-end", position: "relative", zIndex: 1 }}>
+                      <div>
+                        <div style={{ fontSize: 10, opacity: 0.8 }}>MEMBER ID</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>{member.card_number || (member.id ? `AUR-${member.id.toString().padStart(4, '0')}` : "GUEST")}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <span className="brand" style={{ fontSize: 16, fontWeight: 800 }}>AURORA</span>
+                      </div>
+                    </div>
                   </div>
-                  <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1C1C1C" }}>{getProfile()?.firstname || getGuestProfile()?.firstname || "Guest Customer"}</h2>
-                  <p style={{ fontSize: 12, color: "#9A9083", fontWeight: 700, textTransform: "uppercase", marginTop: 4 }}>Table {selectedTable}</p>
-                </div>
+                ) : (
+                  <div style={{ background: "#fff", borderRadius: 24, padding: 32, textAlign: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", marginBottom: 32 }}>
+                    <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#F5F0E8", color: "#C0B8AE", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
+                      <Ico.User />
+                    </div>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1C1C1C" }}>Guest Customer</h2>
+                    <p style={{ fontSize: 12, color: "#9A9083", fontWeight: 700, textTransform: "uppercase", marginTop: 4 }}>
+                      Table {selectedTable}
+                    </p>
+                    <div style={{ marginTop: 20, display: "flex", gap: 10, justifyContent: "center" }}>
+                      <button onClick={() => setIsLoginModalVisible(true)} style={{ background: "#fff", color: "#4A6741", border: "1.5px solid #4A6741", padding: "8px 20px", borderRadius: 100, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Link Account</button>
+                      <button onClick={() => setIsRegisterModalVisible(true)} style={{ background: "#4A6741", color: "#fff", border: "none", padding: "8px 20px", borderRadius: 100, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Join Now</button>
+                    </div>
+                  </div>
+                )}
+
+                {member && (
+                  <div style={{ marginBottom: 32 }}>
+                    {member.next_tier ? (
+                      <>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "#9A9083" }}>NEXT TIER: {member.next_tier.name}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "#4A6741" }}>{member.next_tier.min_points - member.points} stars to go</span>
+                        </div>
+                        <div style={{ height: 8, background: "#F5F0E8", borderRadius: 100, overflow: "hidden" }}>
+                          <div style={{ 
+                            height: "100%", 
+                            background: "#C8952A", 
+                            width: `${Math.min(100, (member.points / member.next_tier.min_points) * 100)}%`,
+                            transition: "width 1s ease-out"
+                          }} />
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ textAlign: "center", color: "#C8952A", fontWeight: 800, fontSize: 12, marginBottom: 20 }}>👑 ULTIMATE TIER REACHED</div>
+                    )}
+
+                    <div style={{ marginTop: 24, padding: "16px 0", borderTop: "1.5px solid #F5F0E8", borderBottom: "1.5px solid #F5F0E8", display: "flex", justifyContent: "center", gap: 32 }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "#1C1C1C" }}>{member.points || 0}</div>
+                        <div style={{ fontSize: 11, color: "#9A9083", fontWeight: 700 }}>STARS</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "#1C1C1C" }}>{fmt(member.wallet_balance || 0)}</div>
+                        <div style={{ fontSize: 11, color: "#9A9083", fontWeight: 700 }}>WALLET</div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 24 }}>
+                      <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>REWARDS EXCHANGE</h4>
+                      <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8, msOverflowStyle: "none", scrollbarWidth: "none" }}>
+                        {[
+                          { name: "Free Espresso", cost: 10, img: "☕" },
+                          { name: "Aurora Mug", cost: 50, img: "🏺" },
+                          { name: "$5 Voucher", cost: 100, img: "🎟️" }
+                        ].map(gift => (
+                          <div key={gift.name} style={{ flexShrink: 0, width: 120, background: "#fff", padding: 12, borderRadius: 16, border: "1px solid #EDE8DF", textAlign: "center" }}>
+                            <div style={{ fontSize: 24, marginBottom: 8 }}>{gift.img}</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#1C1C1C", marginBottom: 4 }}>{gift.name}</div>
+                            <button 
+                              disabled={!member || member.points < gift.cost}
+                              onClick={() => handleRedeemReward(gift)}
+                              style={{ width: "100%", padding: "4px 0", borderRadius: 8, border: "none", background: (member && member.points >= gift.cost) ? "#4A6741" : "#EDE8DF", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}
+                            >
+                              {gift.cost} Stars
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {member?.id ? (
+                      <button 
+                        onClick={handleLogoutMember}
+                        style={{ marginTop: 24, background: "#FEF2F2", border: "none", width: "100%", height: 48, borderRadius: 12, fontSize: 13, color: "#E8534A", fontWeight: 700, cursor: "pointer" }}
+                      >
+                        Logout Membership
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => setIsRegisterModalVisible(true)}
+                        style={{ marginTop: 24, background: "#4A6741", border: "none", width: "100%", height: 48, borderRadius: 12, fontSize: 13, color: "#fff", fontWeight: 700, cursor: "pointer" }}
+                      >
+                        Join Loyalty Program
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 <div style={{ marginTop: 32 }}>
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1C1C1C", marginBottom: 16 }}>Order History</h3>
@@ -948,7 +1489,7 @@ const CoffeeMenuApp = () => {
                       <div style={{ padding: 40, textAlign: "center", color: "#B0A496", background: "#fff", borderRadius: 18, border: "1px dashed #EDE8DF" }}>No history found</div>
                     ) : (
                       orderHistory.map(o => (
-                        <div key={o.id} style={{ background: "#fff", padding: 18, borderRadius: 18, border: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div key={o.id} onClick={() => showOrderDetail(o)} style={{ background: "#fff", padding: 18, borderRadius: 18, border: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700 }}>Order #{o.order_no || o.id}</div>
                             <div style={{ fontSize: 11, color: "#9A9083" }}>{new Date(o.created_at).toLocaleDateString()}</div>
@@ -975,7 +1516,12 @@ const CoffeeMenuApp = () => {
         {/* Sidebar Desktop */}
         {!isMobile && (
           <div className="sidebar">
-            <CartPanel cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeItem} onCheckout={handleCheckout} asSidebar selectedShop={selectedShop} />
+            <CartPanel 
+              cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} 
+              onRemove={removeItem} onCheckout={handleCheckout} asSidebar 
+              selectedShop={selectedShop} loading={loading} 
+              activeOrder={activeOrder}
+            />
           </div>
         )}
       </div>
@@ -1007,13 +1553,233 @@ const CoffeeMenuApp = () => {
             <div className="drag-handle" />
             <CartPanel 
               cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeItem} onCheckout={handleCheckout} 
-              selectedShop={selectedShop}
+              selectedShop={selectedShop} loading={loading}
+              activeOrder={activeOrder}
             />
           </div>
         </div>
       )}
-    </div>
-  );
+      {/* Order Detail Modal */}
+      {selectedHistoryOrder && (
+        <div className="overlay fade-in" onClick={() => setSelectedHistoryOrder(null)}>
+          <div className="modal-sheet center-modal slide-up" onClick={e => e.stopPropagation()} style={{ padding: 24, maxWidth: 400 }}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+               <h3 style={{ fontSize: 18, fontWeight: 800 }}>Order Receipt</h3>
+               <p style={{ fontSize: 12, color: "#9A9083" }}>Order #{selectedHistoryOrder.order.order_no || selectedHistoryOrder.order.id}</p>
+            </div>
+            
+            <div style={{ borderTop: "1px dashed #EDE8DF", borderBottom: "1px dashed #EDE8DF", padding: "16px 0", marginBottom: 20 }}>
+               {selectedHistoryOrder.details.map((item, idx) => (
+                 <div key={idx} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13 }}>
+                   <div style={{ color: "#4B5563" }}>
+                      <span style={{ fontWeight: 700 }}>{item.qty}x</span> {item.product_name}
+                      {item.note && <div style={{ fontSize: 10, color: "#9CA3AF" }}>{item.note}</div>}
+                   </div>
+                   <div style={{ fontWeight: 600 }}>{fmt(item.price * item.qty)}</div>
+                 </div>
+               ))}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
+               <span style={{ fontWeight: 700, fontSize: 16 }}>Total Amount</span>
+               <span style={{ fontWeight: 800, fontSize: 18, color: "#4A6741" }}>{fmt(selectedHistoryOrder.order.total_amount)}</span>
+            </div>
+
+            <button onClick={() => setSelectedHistoryOrder(null)} style={{ width: "100%", height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Close</button>
+          </div>
+        </div>
+      )}
+      {isLoginModalVisible && (
+        <div className="overlay fade-in" onClick={() => { setIsLoginModalVisible(false); setIsOtpStep(false); }}>
+          <div className="modal-sheet center-modal slide-up" onClick={e => e.stopPropagation()} style={{ padding: 24 }}>
+            {!isOtpStep ? (
+              <>
+                <div style={{ textAlign: "center", marginBottom: 24 }}>
+                  <div style={{ width: 60, height: 60, background: "#F5F0E8", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                    <Ico.User />
+                  </div>
+                  <h3 style={{ fontSize: 20, fontWeight: 800 }}>Member Login</h3>
+                  <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Enter your Phone number or Card ID to receive a verification code.</p>
+                </div>
+                
+                <div style={{ marginBottom: 24 }}>
+                  <input 
+                    type="text" 
+                    className="search-inp" 
+                    placeholder="Phone or Card ID" 
+                    style={{ paddingLeft: 16 }}
+                    value={loginValue}
+                    onChange={e => setLoginValue(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleLinkMember()}
+                  />
+                </div>
+
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button onClick={() => setIsLoginModalVisible(false)} style={{ flex: 1, height: 48, borderRadius: 12, border: "1.5px solid #EDE8DF", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                  <button 
+                    onClick={handleLinkMember} 
+                    disabled={loginLoading}
+                    style={{ flex: 1, height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer", opacity: loginLoading ? 0.7 : 1 }}
+                  >
+                    {loginLoading ? "Sending..." : "Send Code"}
+                  </button>
+                </div>
+
+                <div style={{ margin: "24px 0", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ flex: 1, height: 1, background: "#EDE8DF" }} />
+                  <span style={{ fontSize: 12, color: "#9A9083", fontWeight: 700 }}>OR</span>
+                  <div style={{ flex: 1, height: 1, background: "#EDE8DF" }} />
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                   <GoogleOAuthProvider clientId="222467462843-3mc4kb1636gcpugur0cgmb4mbdgfpbfl.apps.googleusercontent.com">
+                      <CustomGoogleButton 
+                        onSuccess={handleGoogleLogin} 
+                        loading={loginLoading}
+                        bizId={bizId}
+                      />
+                   </GoogleOAuthProvider>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ textAlign: "center", marginBottom: 24 }}>
+                  <div style={{ width: 60, height: 60, background: "#E6FFFA", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                    <Ico.Lock />
+                  </div>
+                  <h3 style={{ fontSize: 20, fontWeight: 800 }}>Verify Code</h3>
+                  <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>We've sent a 6-digit code to your email. Please enter it below.</p>
+                </div>
+                
+                <div style={{ marginBottom: 24 }}>
+                  <input 
+                    type="text" 
+                    className="search-inp" 
+                    placeholder="000000" 
+                    maxLength={6}
+                    style={{ paddingLeft: 16, textAlign: "center", fontSize: 24, letterSpacing: 8, fontWeight: 800 }}
+                    value={otpValue}
+                    onChange={e => setOtpValue(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <button 
+                    onClick={handleVerifyOtp} 
+                    disabled={loginLoading}
+                    style={{ height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer", opacity: loginLoading ? 0.7 : 1 }}
+                  >
+                    {loginLoading ? "Verifying..." : "Verify & Login"}
+                  </button>
+                  <button onClick={() => setIsOtpStep(false)} style={{ height: 48, borderRadius: 12, border: "none", background: "transparent", color: "#9A9083", fontWeight: 700, cursor: "pointer" }}>Back</button>
+                </div>
+              </>
+            )}
+            
+            <div style={{ marginTop: 16, textAlign: "center" }}>
+               <Text type="secondary" style={{ fontSize: 12 }}>Don't have an account? </Text>
+               <button onClick={() => { setIsLoginModalVisible(false); setIsRegisterModalVisible(true); setIsOtpStep(false); }} style={{ background: "none", border: "none", color: "#4A6741", fontWeight: 700, cursor: "pointer", padding: 0 }}>Join Now</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Register Modal */}
+      {isRegisterModalVisible && (
+        <div className="overlay fade-in" onClick={() => setIsRegisterModalVisible(false)}>
+          <div className="modal-sheet center-modal slide-up" onClick={e => e.stopPropagation()} style={{ padding: 24 }}>
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ width: 60, height: 60, background: "#FEF3C7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <Ico.Star f={true} s={28} style={{ color: "#C8952A" }} />
+              </div>
+              <h3 style={{ fontSize: 20, fontWeight: 800 }}>Join Loyalty Program</h3>
+              <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Earn stars, get discounts, and enjoy exclusive perks!</p>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+              <input 
+                type="text" 
+                className="search-inp" 
+                placeholder="Full Name" 
+                style={{ paddingLeft: 16 }}
+                value={regName}
+                onChange={e => setRegName(e.target.value)}
+              />
+              <input 
+                type="tel" 
+                className="search-inp" 
+                placeholder="Phone Number" 
+                style={{ paddingLeft: 16 }}
+                value={regPhone}
+                onChange={e => setRegPhone(e.target.value)}
+              />
+              <input 
+                type="email" 
+                className="search-inp" 
+                placeholder="Email Address (Optional)" 
+                style={{ paddingLeft: 16 }}
+                value={regEmail}
+                onChange={e => setRegEmail(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button onClick={() => setIsRegisterModalVisible(false)} style={{ flex: 1, height: 48, borderRadius: 12, border: "1.5px solid #EDE8DF", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button 
+                onClick={handleRegister} 
+                disabled={loginLoading}
+                style={{ flex: 1, height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer", opacity: loginLoading ? 0.7 : 1 }}
+              >
+                {loginLoading ? "Creating..." : "Join & Save"}
+              </button>
+            </div>
+            <div style={{ marginTop: 16, textAlign: "center" }}>
+               <Text type="secondary" style={{ fontSize: 12 }}>Already a member? </Text>
+               <button onClick={() => { setIsRegisterModalVisible(false); setIsLoginModalVisible(true); }} style={{ background: "none", border: "none", color: "#4A6741", fontWeight: 700, cursor: "pointer", padding: 0 }}>Link Account</button>
+            </div>
+          </div>
+        </div>
+      )}
+        {/* EDIT PROFILE MODAL */}
+        {isEditProfileVisible && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div style={{ background: "#fff", width: "100%", maxWidth: 400, borderRadius: 32, padding: 32, textAlign: "center", position: "relative" }}>
+               <div style={{ marginBottom: 24 }}>
+                 <h3 style={{ fontSize: 20, fontWeight: 800 }}>Edit Your Profile</h3>
+                 <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Update your contact information</p>
+               </div>
+               
+               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+                 <div style={{ textAlign: "left" }}>
+                   <label style={{ fontSize: 11, fontWeight: 800, color: "#9A9083", marginLeft: 16 }}>FULL NAME</label>
+                   <input type="text" className="search-inp" value={regName} onChange={e => setRegName(e.target.value)} style={{ paddingLeft: 16, marginTop: 4 }} />
+                 </div>
+                 <div style={{ textAlign: "left" }}>
+                   <label style={{ fontSize: 11, fontWeight: 800, color: "#9A9083", marginLeft: 16 }}>EMAIL ADDRESS</label>
+                   <input type="email" className="search-inp" value={regEmail} onChange={e => setRegEmail(e.target.value)} style={{ paddingLeft: 16, marginTop: 4 }} />
+                 </div>
+                 <div style={{ textAlign: "left" }}>
+                   <label style={{ fontSize: 11, fontWeight: 800, color: "#9A9083", marginLeft: 16 }}>PHONE (Read-only)</label>
+                   <input type="text" className="search-inp" value={regPhone} disabled style={{ paddingLeft: 16, marginTop: 4, background: "#f9f9f9" }} />
+                 </div>
+               </div>
+
+               <div style={{ display: "flex", gap: 12 }}>
+                 <button onClick={() => setIsEditProfileVisible(false)} style={{ flex: 1, height: 48, borderRadius: 12, border: "1.5px solid #EDE8DF", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                 <button 
+                   onClick={handleUpdateProfile}
+                   disabled={loginLoading}
+                   style={{ flex: 1, height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer", opacity: loginLoading ? 0.7 : 1 }}
+                 >
+                   {loginLoading ? "Saving..." : "Save Changes"}
+                 </button>
+               </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
 };
 
 export default CoffeeMenuApp;

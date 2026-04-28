@@ -7,19 +7,12 @@ import ImgUser from "../../assets/profile.png";
 import { Tooltip } from "antd";
 import { MdOutlineMarkEmailUnread, MdRestaurantMenu, MdCompareArrows } from "react-icons/md";
 import { IoMdNotificationsOutline } from "react-icons/io";
-import { CoffeeOutlined, LockOutlined, MenuOutlined, PartitionOutlined, UnlockOutlined } from "@ant-design/icons";
-import {
-  getPermission,
-  getProfile, // Keep getProfile from profile.store.js for initial load if needed
-  setAcccessToken,
-  setPermission, // Keep setPermission from profile.store.js
-} from "../../store/profile.store";
-import { useProfileStore } from "../../store/profileStore"; // Import the new store
-import { request } from "../../util/helper";
-import { useUIStore } from "../../store/uiStore";
-import { configStore } from "../../store/configStore";
-import { FaShop } from "react-icons/fa6";
-import {
+import { 
+  CoffeeOutlined, 
+  LockOutlined, 
+  MenuOutlined, 
+  PartitionOutlined, 
+  UnlockOutlined,
   PieChartOutlined,
   DesktopOutlined,
   FileOutlined,
@@ -41,7 +34,23 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   AppstoreOutlined,
+  DeleteOutlined,
+  ThunderboltOutlined,
+  GiftOutlined,
+  FireOutlined,
+  LineChartOutlined
 } from "@ant-design/icons";
+import {
+  getPermission,
+  getProfile, // Keep getProfile from profile.store.js for initial load if needed
+  setAcccessToken,
+  setPermission, // Keep setPermission from profile.store.js
+} from "../../store/profile.store";
+import { useProfileStore } from "../../store/profileStore"; // Import the new store
+import { request } from "../../util/helper";
+import { useUIStore } from "../../store/uiStore";
+import { configStore } from "../../store/configStore";
+import { FaShop } from "react-icons/fa6";
 import { twMerge } from 'tailwind-merge';
 import { clsx } from 'clsx';
 function cn(...inputs) { return twMerge(clsx(inputs)); }
@@ -69,14 +78,24 @@ const MENU_STRUCTURE = [
         icon: <MdRestaurantMenu />,
       },
       {
-        key: "kds",
-        labelKey: "kds",
-        icon: <CoffeeOutlined />,
+        key: "membership/search",
+        labelKey: "loyalty_portal",
+        icon: <TrophyOutlined />,
       },
       {
         key: "order",
         labelKey: "order_detail",
         icon: <FaHistory />,
+      },
+      {
+        key: "marketing/dashboard",
+        labelKey: "marketing_label",
+        icon: <GiftOutlined />,
+      },
+      {
+        key: "kds",
+        labelKey: "kds_label",
+        icon: <FireOutlined />,
       },
     ]
   },
@@ -96,6 +115,8 @@ const MENU_STRUCTURE = [
           { key: "recipe", labelKey: "recipe", icon: <SolutionOutlined /> },
           { key: "stock", labelKey: "stock", icon: <FileProtectOutlined /> },
           { key: "stock-transfer", labelKey: "stock_transfer", icon: <MdCompareArrows /> },
+          { key: "waste", labelKey: "waste_label", icon: <DeleteOutlined /> },
+          { key: "inventory/forecast", labelKey: "forecast_label", icon: <ThunderboltOutlined /> },
         ]
       },
     ]
@@ -125,6 +146,11 @@ const MENU_STRUCTURE = [
         labelKey: "category",
         icon: <SolutionOutlined />,
       },
+      {
+        key: "menu-board",
+        labelKey: "menu_board_label",
+        icon: <DesktopOutlined />,
+      },
     ]
   },
 
@@ -138,6 +164,7 @@ const MENU_STRUCTURE = [
         icon: <UsergroupAddOutlined />,
         children: [
           { key: "user", labelKey: "user", icon: <UserOutlined /> },
+          { key: "employee/performance", labelKey: "performance_label", icon: <LineChartOutlined /> },
           { key: "role", labelKey: "roles", icon: <SafetyCertificateOutlined /> },
           { key: "permission", labelKey: "permission", icon: <UnlockOutlined /> },
           { key: "plans", labelKey: "plans", icon: <CreditCardOutlined /> },

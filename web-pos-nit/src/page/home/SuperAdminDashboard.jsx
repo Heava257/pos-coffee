@@ -9,7 +9,9 @@ import {
   CheckCircleOutlined,
   GlobalOutlined,
   HistoryOutlined,
-  CrownOutlined
+  CrownOutlined,
+  MailOutlined,
+  ExclamationCircleOutlined
 } from "@ant-design/icons";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -27,7 +29,8 @@ const SuperAdminDashboard = () => {
     bizStats: {},
     newestBusinesses: [],
     planDist: [],
-    recentUsers: []
+    recentUsers: [],
+    smtpHealth: { summary: { healthy: 0, pending: 0, failed: 0 } }
   });
 
   useEffect(() => {
@@ -39,7 +42,12 @@ const SuperAdminDashboard = () => {
     try {
       const res = await request("admin-dashboard", "get");
       if (res && res.success) {
-        setData(res);
+        // Fetch SMTP Health separately
+        const smtpRes = await request("business/smtp-health", "get");
+        setData({
+          ...res,
+          smtpHealth: smtpRes || { summary: { healthy: 0, pending: 0, failed: 0 } }
+        });
       }
     } catch (error) {
       console.error("Failed to fetch admin stats", error);
@@ -157,14 +165,19 @@ const SuperAdminDashboard = () => {
             </div>
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <div className="admin-stat-card" style={{ background: 'linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)', border: 'none' }}>
+            <div className="admin-stat-card" style={{ 
+              background: data.smtpHealth?.summary?.failed > 0 ? 'linear-gradient(135deg, #fff 0%, #fff1f0 100%)' : 'linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)', 
+              border: data.smtpHealth?.summary?.failed > 0 ? '1px solid #ffccc7' : 'none' 
+            }}>
               <Statistic 
-                title={<span style={{ color: 'rgba(255,255,255,0.7)' }}>Platform Health</span>} 
-                value="Optimal" 
-                prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />} 
-                valueStyle={{ color: '#fff', fontWeight: 900 }}
+                title={<span style={{ color: data.smtpHealth?.summary?.failed > 0 ? '#ff4d4f' : 'rgba(255,255,255,0.7)' }}>Email System Health</span>} 
+                value={`${data.smtpHealth?.summary?.healthy || 0}/${data.smtpHealth?.summary?.total || 0}`} 
+                prefix={data.smtpHealth?.summary?.failed > 0 ? <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> : <MailOutlined style={{ color: '#52c41a' }} />} 
+                valueStyle={{ color: data.smtpHealth?.summary?.failed > 0 ? '#ff4d4f' : '#fff', fontWeight: 900 }}
               />
-              <div style={{ marginTop: 8, fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>All systems operational</div>
+              <div style={{ marginTop: 8, fontSize: 12, color: data.smtpHealth?.summary?.failed > 0 ? '#ff4d4f' : 'rgba(255,255,255,0.8)' }}>
+                {data.smtpHealth?.summary?.healthy || 0} Stores Configured
+              </div>
             </div>
           </Col>
         </Row>

@@ -39,7 +39,9 @@ exports.create = async (req, res) => {
             plan_id,
             plan_type,
             package_id,
-            active_modules // Array of strings like ['POS', 'Ordering']
+            active_modules, // Array of strings like ['POS', 'Ordering']
+            smtp_user,
+            smtp_pass
         } = req.body;
 
         const modulesStr = Array.isArray(active_modules) ? active_modules.join(",") : (active_modules || "POS");
@@ -50,8 +52,8 @@ exports.create = async (req, res) => {
 
             // 1. Create Business
             const [business] = await conn.query(
-                "INSERT INTO businesses (name, owner_name, email, phone, plan_id, plan_type, package_id, active_modules) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                [business_name, owner_name, email, phone, plan_id || 1, plan_type || 'basic', package_id || null, modulesStr]
+                "INSERT INTO businesses (name, owner_name, email, phone, plan_id, plan_type, package_id, active_modules, smtp_user, smtp_pass) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [business_name, owner_name, email, phone, plan_id || 1, plan_type || 'basic', package_id || null, modulesStr, smtp_user || null, smtp_pass || null]
             );
             const business_id = business.insertId;
 
@@ -170,7 +172,7 @@ exports.updateStatus = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
-        const { id, name, phone, owner_name, package_id, active_modules, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active } = req.body;
+        const { id, name, phone, owner_name, package_id, active_modules, smtp_user, smtp_pass, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active } = req.body;
         
         // Detailed logging to identify why package_id is null
         console.log("DEBUG_UPDATE_BIZ:", { id, name, package_id, active_modules_raw: active_modules });
@@ -188,8 +190,8 @@ exports.update = async (req, res) => {
             
             // 1. Update business details
             const [updateResult] = await conn.query(
-                "UPDATE businesses SET name = ?, phone = ?, owner_name = ?, package_id = ?, active_modules = ?, promo_title = ?, promo_subtitle = ?, promo_image = ?, promo_discount = ?, promo_is_active = ? WHERE id = ?",
-                [name, phone, owner_name, pkgId, modulesStr, promo_title || null, promo_subtitle || null, promo_image || null, promo_discount || null, promo_is_active || 0, id]
+                "UPDATE businesses SET name = ?, phone = ?, owner_name = ?, package_id = ?, active_modules = ?, smtp_user = ?, smtp_pass = ?, promo_title = ?, promo_subtitle = ?, promo_image = ?, promo_discount = ?, promo_is_active = ? WHERE id = ?",
+                [name, phone, owner_name, pkgId, modulesStr, smtp_user || null, smtp_pass || null, promo_title || null, promo_subtitle || null, promo_image || null, promo_discount || null, promo_is_active || 0, id]
             );
             
             console.log("UPDATE_SQL_RESULT:", updateResult.info);
@@ -365,5 +367,48 @@ exports.getPublicConfig = async (req, res) => {
         res.json({ config });
     } catch (error) {
         logError("business.getPublicConfig", error, res);
+    }
+};
+
+exports.getSMTPHealth = async (req, res) => {
+    try {
+        if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
+        
+        const [businesses] = await db.query("SELECT id, name, smtp_user, smtp_pass FROM businesses");
+        
+        let healthy = 0;
+        let pending = 0;
+        let failed = 0;
+        const details = [];
+
+        for (const biz of businesses) {
+            const hasUser = !!biz.smtp_user;
+            const hasPass = !!biz.smtp_pass;
+            
+            let status = "missing";
+            if (hasUser && hasPass) {
+                status = "configured";
+                healthy++;
+            } else if (hasUser || hasPass) {
+                status = "incomplete";
+                pending++;
+            } else {
+                failed++;
+            }
+
+            details.push({
+                id: biz.id,
+                name: biz.name,
+                status,
+                email: biz.smtp_user || "Not set"
+            });
+        }
+
+        res.json({
+            summary: { healthy, pending, failed, total: businesses.length },
+            details
+        });
+    } catch (error) {
+        logError("business.getSMTPHealth", error, res);
     }
 };

@@ -105,3 +105,37 @@ exports.remove = async (req, res) => {
     logError("employee.remove", error, res);
   }
 };
+exports.getPerformance = async (req, res) => {
+  try {
+    const { business_id, branch_id } = req;
+    const { from_date, to_date } = req.query;
+
+    const sql = `
+      SELECT 
+        u.id as user_id,
+        u.name as staff_name,
+        COUNT(DISTINCT o.id) as total_orders,
+        SUM(od.qty) as total_items,
+        SUM(o.total_amount) as total_sales,
+        SUM(od.qty) * 0.05 as commission_earned
+      FROM users u
+      JOIN orders o ON u.id = o.user_id
+      JOIN order_details od ON o.id = od.order_id
+      WHERE o.business_id = ? 
+      ${branch_id ? 'AND o.branch_id = ?' : ''}
+      ${from_date && to_date ? 'AND DATE(o.created_at) BETWEEN ? AND ?' : ''}
+      AND o.status != 'cancelled'
+      GROUP BY u.id
+      ORDER BY total_sales DESC
+    `;
+
+    const params = [business_id];
+    if (branch_id) params.push(branch_id);
+    if (from_date && to_date) params.push(from_date, to_date);
+
+    const [list] = await db.query(sql, params);
+    res.json({ list });
+  } catch (error) {
+    logError("employee.getPerformance", error, res);
+  }
+};

@@ -5,15 +5,29 @@ exports.getList = async (req, res) => {
         const { branch_id } = req.query;
         const { business_id } = req;
 
-        let sql = "SELECT * FROM branch_tables WHERE business_id = ?";
+        let sql = `
+            SELECT 
+                t.*,
+                o.id as active_order_id,
+                o.status as order_status,
+                o.guest_count,
+                o.total_amount as active_total
+            FROM branch_tables t
+            LEFT JOIN (
+                SELECT * FROM orders 
+                WHERE status = 'unpaid' 
+                AND id IN (SELECT MAX(id) FROM orders WHERE status = 'unpaid' GROUP BY table_no, branch_id)
+            ) o ON t.table_name = o.table_no AND t.branch_id = o.branch_id
+            WHERE t.business_id = ?
+        `;
         let params = [business_id];
 
         if (branch_id) {
-            sql += " AND branch_id = ?";
+            sql += " AND t.branch_id = ?";
             params.push(branch_id);
         }
 
-        sql += " ORDER BY id DESC";
+        sql += " ORDER BY t.id DESC";
         const [list] = await db.query(sql, params);
         res.json({ list });
     } catch (error) {

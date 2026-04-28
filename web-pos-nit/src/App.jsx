@@ -34,6 +34,10 @@ import BusinessPage from "./page/business/BusinessPage";
 // import SmartProductEntry from "./page/product/ProductPage";
 // import ChatPage from "./component/chat/ChatPage";
 import RawMaterialPage from "./page/raw_material/RawMaterialPage";
+import WastePage from "./page/inventory/WastePage";
+import IngredientForecastPage from "./page/inventory/IngredientForecastPage";
+import MarketingDashboard from "./page/marketing/MarketingDashboard";
+import EmployeePerformancePage from "./page/employee/EmployeePerformancePage";
 import PurchasePage from "./page/purchase/PurchasePage";
 import StockPage from "./page/stock/StockPage";
 import MyPlanPage from "./page/plans/MyPlanPage";
@@ -42,6 +46,10 @@ import TablePage from "./page/table/TablePage";
 import SettingsPage from "./page/settings/SettingsPage";
 import KdsPage from "./page/pos/KdsPage";
 import RecipePage from "./page/recipe/RecipePage";
+import DigitalReceiptPage from "./page/pos/DigitalReceiptPage";
+import CustomerPortalPage from "./page/pos/CustomerPortalPage";
+import LoyaltySearchPage from "./page/pos/LoyaltySearchPage";
+import DigitalMenuBoard from "./page/pos/DigitalMenuBoard";
 import ModuleConfigPage from "./page/modular_package/ModuleConfigPage";
 import SystemModulePage from "./page/modular_package/SystemModulePage";
 import StockTransferPage from "./page/stock/StockTransferPage";
@@ -74,6 +82,10 @@ function App() {
         <Routes >
           <Route path="/customer" element={<CoffeeMenuApp />} />
           <Route path="/customer/menu" element={<CoffeeMenuApp />} />
+          <Route path="/receipt/:id" element={<DigitalReceiptPage />} />
+          <Route path="/membership/:id" element={<CustomerPortalPage />} />
+          <Route path="/membership/search" element={<LoyaltySearchPage />} />
+          <Route path="/menu-board" element={<DigitalMenuBoard />} />
           <Route path="/scan" element={<ScanPage />} />
 
           <Route element={<MainLayout />}>
@@ -96,6 +108,8 @@ function App() {
             <Route path="/my-plan" element={<MyPlanPage />} />
             <Route path="/payment/result" element={<PaymentResultPage />} />
             <Route path="/order" element={<OrderPage />} />
+            <Route path="/marketing/dashboard" element={<MarketingDashboard />} />
+            <Route path="/employee/performance" element={<EmployeePerformancePage />} />
             <Route path="/supplier" element={<SupplierPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
@@ -110,6 +124,8 @@ function App() {
             <Route path="/stock" element={<StockPage />} />
             <Route path="/stock-transfer" element={<StockTransferPage />} />
             <Route path="/recipe" element={<RecipePage />} />
+            <Route path="/waste" element={<WastePage />} />
+            <Route path="/inventory/forecast" element={<IngredientForecastPage />} />
             <Route path="/kds" element={<KdsPage />} />
             <Route path="*" element={<Navigate to="/customer" replace />} />
           </Route>

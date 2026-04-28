@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { request } from "../../util/helper";
 import { useNavigate } from "react-router-dom";
-import { Card, Row, Col, Typography, Select, Table, Badge, Spin, Button, Space, DatePicker, Divider, Tooltip as AntTooltip, Tag } from "antd";
+import { Card, Row, Col, Typography, Select, Table, Badge, Spin, Button, Space, DatePicker, Divider, Tooltip as AntTooltip, Tag, Modal } from "antd";
 import {
   MoreOutlined,
   SearchOutlined,
@@ -11,7 +11,11 @@ import {
   ArrowDownOutlined,
   InfoCircleOutlined,
   CalendarOutlined,
-  WarningOutlined
+  WarningOutlined,
+  DollarOutlined,
+  TrophyOutlined,
+  TeamOutlined,
+  ShoppingCartOutlined
 } from "@ant-design/icons";
 import {
   LineChart,
@@ -32,6 +36,16 @@ import SuperAdminDashboard from "./SuperAdminDashboard";
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
+const COLORS = {
+  darkGreen: "#1e4a2d",
+  midGreen: "#2d6a42",
+  accentGreen: "#3a7d52",
+  gold: "#c0a060",
+  textPrimary: "#1a1a1a",
+  textSecondary: "#64748b",
+  bgLight: "#f8fafc",
+};
+
 function HomePage() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
@@ -47,12 +61,33 @@ function HomePage() {
   const [rangeSummary, setRangeSummary] = useState({ total_sale: 0, total_expense: 0, net_profit: 0, order_count: 0 });
   const [salesData, setSalesData] = useState([]);
   const [transactionData, setTransactionData] = useState([]);
+  const [briefingVisible, setBriefingVisible] = useState(false);
+  const [briefingData, setBriefingData] = useState(null);
 
   useEffect(() => {
     if (!isPlatformAdmin) {
       fetchAllData();
+      checkMorningBriefing();
     }
   }, [dates, isPlatformAdmin]);
+
+  const checkMorningBriefing = async () => {
+    const today = dayjs().format("YYYY-MM-DD");
+    const lastShown = localStorage.getItem("last_briefing_shown");
+    
+    if (lastShown !== today) {
+      try {
+        const res = await request("dashboard/morning-briefing", "get");
+        if (res && res.success) {
+          setBriefingData(res.data);
+          setBriefingVisible(true);
+          localStorage.setItem("last_briefing_shown", today);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
 
   if (isPlatformAdmin) {
     return <SuperAdminDashboard />;
@@ -326,6 +361,120 @@ function HomePage() {
           />
         </Card>
       </Spin>
+
+      {/* AI EXECUTIVE MORNING BRIEFING MODAL */}
+      <Modal
+        title={null}
+        open={briefingVisible}
+        onCancel={() => setBriefingVisible(false)}
+        footer={null}
+        centered
+        width={500}
+        styles={{ content: { borderRadius: 30, padding: 0, overflow: 'hidden', border: 'none' } }}
+      >
+        <div style={{ 
+          padding: '40px 30px', 
+          background: `linear-gradient(135deg, #1e4a2d 0%, #112919 100%)`, 
+          color: '#fff',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Decorative elements */}
+          <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(192,160,96,0.1)' }} />
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 10 }}>
+            <div style={{ background: 'rgba(192,160,96,0.2)', padding: 10, borderRadius: 12 }}>
+              <TrendingUp size={24} color="#c0a060" />
+            </div>
+            <Typography.Title level={3} style={{ margin: 0, color: '#fff', fontWeight: 800 }}>
+              {translations[lang].morning_briefing}
+            </Typography.Title>
+          </div>
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+            {translations[lang].morning_briefing_desc}
+          </Text>
+        </div>
+
+        <div style={{ padding: '30px', background: '#fff' }}>
+          <Row gutter={[16, 16]}>
+            <Col span={12}>
+              <div style={{ background: '#f8fafc', padding: 20, borderRadius: 20, border: '1px solid #edf2f7' }}>
+                <Text type="secondary" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 5 }}>
+                  {translations[lang].yesterday_revenue}
+                </Text>
+                <Title level={4} style={{ margin: 0, color: '#1e4a2d', fontWeight: 900 }}>
+                  {formatCurrency(briefingData?.revenue || 0)}
+                </Title>
+              </div>
+            </Col>
+            <Col span={12}>
+              <div style={{ background: '#f6ffed', padding: 20, borderRadius: 20, border: '1px solid #d9f7be' }}>
+                <Text type="secondary" style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 5 }}>
+                  {translations[lang].yesterday_profit}
+                </Text>
+                <Title level={4} style={{ margin: 0, color: '#52c41a', fontWeight: 900 }}>
+                  {formatCurrency(briefingData?.profit || 0)}
+                </Title>
+              </div>
+            </Col>
+
+            <Col span={24}>
+              <Divider style={{ margin: '10px 0' }} />
+            </Col>
+
+            <Col span={24}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 15, padding: '5px 0' }}>
+                <div style={{ background: '#fff7e6', padding: 8, borderRadius: 10 }}><ShoppingBag size={18} color="#fa8c16" /></div>
+                <div style={{ flex: 1 }}>
+                  <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>{translations[lang].best_selling_item}</Text>
+                  <div style={{ fontWeight: 700, color: '#1e4a2d' }}>{briefingData?.top_item || "N/A"}</div>
+                </div>
+                <Tag color="orange" style={{ borderRadius: 10 }}>{briefingData?.top_item_qty || 0} items</Tag>
+              </div>
+            </Col>
+
+            <Col span={24}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 15, padding: '5px 0' }}>
+                <div style={{ background: '#f0f5ff', padding: 8, borderRadius: 10 }}><TrendingUp size={18} color="#2f54eb" /></div>
+                <div style={{ flex: 1 }}>
+                  <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>{translations[lang].top_performer}</Text>
+                  <div style={{ fontWeight: 700, color: '#1e4a2d' }}>{briefingData?.top_staff || "N/A"}</div>
+                </div>
+                <Tag color="blue" style={{ borderRadius: 10 }}>Champion 🏆</Tag>
+              </div>
+            </Col>
+
+            <Col span={24}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 15, padding: '5px 0' }}>
+                <div style={{ background: '#f9f0ff', padding: 8, borderRadius: 10 }}><Wallet size={18} color="#722ed1" /></div>
+                <div style={{ flex: 1 }}>
+                  <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>{translations[lang].new_vips}</Text>
+                  <div style={{ fontWeight: 700, color: '#1e4a2d' }}>{briefingData?.new_vips || 0} Members</div>
+                </div>
+                <Tag color="purple" style={{ borderRadius: 10 }}>Growing 🚀</Tag>
+              </div>
+            </Col>
+          </Row>
+
+          <Button 
+            type="primary" 
+            block 
+            size="large" 
+            onClick={() => setBriefingVisible(false)}
+            style={{ 
+              height: 55, 
+              borderRadius: 18, 
+              background: COLORS.darkGreen, 
+              marginTop: 30,
+              fontSize: 16,
+              fontWeight: 800,
+              boxShadow: '0 8px 20px rgba(30,74,45,0.2)'
+            }}
+          >
+            {translations[lang].done_btn}
+          </Button>
+        </div>
+      </Modal>
 
       <style jsx global>{`
         .dash-card {

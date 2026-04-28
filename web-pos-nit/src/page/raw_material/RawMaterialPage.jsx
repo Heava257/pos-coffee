@@ -91,6 +91,8 @@ function RawMaterialPage() {
         params.append("min_stock", items.min_stock || 0);
         params.append("par_level", items.par_level || 0);
         params.append("status", items.status);
+        params.append("purchase_unit", items.purchase_unit || "");
+        params.append("conversion_rate", items.conversion_rate || 1);
         params.append("id", form.getFieldValue("id"));
 
         if (items.image_default) {
@@ -372,7 +374,7 @@ function RawMaterialPage() {
  
                             <Form.Item
                                 name="unit"
-                                label={t.unit}
+                                label={<span style={{ color: "#1e4a2d", fontWeight: 800 }}>{t.base_unit_label}</span>}
                                 rules={[{ required: true, message: t.unit + " is required" }]}
                             >
                                 <Select
@@ -392,6 +394,34 @@ function RawMaterialPage() {
                                     showSearch
                                 />
                             </Form.Item>
+
+                            <div style={{ background: "#f0f7ff", padding: 15, borderRadius: 15, marginBottom: 20, border: "1px dashed #3498db" }}>
+                                <Form.Item
+                                    name="purchase_unit"
+                                    label={<b style={{ color: "#2980b9" }}>{t.purchase_unit_label}</b>}
+                                >
+                                    <Select
+                                        size="large"
+                                        placeholder="Select bulk unit"
+                                        options={[
+                                            { label: "📦 កេស (case)", value: "case" },
+                                            { label: "🎁 យួរ/កញ្ចប់ (pack)", value: "pack" },
+                                            { label: "💰 បាវ (bag)", value: "bag" },
+                                            { label: "📦 ប្រអប់ (box)", value: "box" },
+                                            { label: "🔘 គ្រាប់ (pcs)", value: "pcs" },
+                                        ]}
+                                    />
+                                </Form.Item>
+
+                                <Form.Item
+                                    name="conversion_rate"
+                                    label={<b style={{ color: "#2980b9" }}>{t.conversion_rate_label}</b>}
+                                    extra={<span style={{ fontSize: 11, color: "#7f8c8d" }}>{t.conversion_hint}</span>}
+                                    initialValue={1}
+                                >
+                                    <InputNumber size="large" style={{ width: "100%" }} min={1} />
+                                </Form.Item>
+                            </div>
  
                             <Form.Item name="status" label={t.status} initialValue={1}>
                                 <Select

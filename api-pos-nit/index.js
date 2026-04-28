@@ -197,6 +197,15 @@ app.listen(PORT, async () => {
     if (!err.message.includes("Duplicate")) console.log("Migration (branch_products.min_stock_alert) skipped:", err.message);
   }
 
+  // ✅ Migration: Add Google OAuth columns to customers table
+  try {
+    await db.query("ALTER TABLE customers ADD COLUMN google_id VARCHAR(255) NULL AFTER email");
+    await db.query("ALTER TABLE customers ADD COLUMN profile_image VARCHAR(500) NULL AFTER google_id");
+    console.log("Migration: Added Google OAuth columns to 'customers' table");
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) console.log("Migration (customers Google columns) skipped:", err.message);
+  }
+
   // Migration Fix: Add missing categories once
   try {
     const bizId = 5;

@@ -144,7 +144,9 @@ const BusinessPage = () => {
                     phone: values.phone,
                     owner_name: values.owner_name,
                     package_id: values.package_id,
-                    active_modules: values.active_modules
+                    active_modules: values.active_modules,
+                    smtp_user: values.smtp_user,
+                    smtp_pass: values.smtp_pass
                 });
             } else {
                 res = await request("business", "post", values);
@@ -337,7 +339,9 @@ const BusinessPage = () => {
                                     email: record.email,
                                     phone: record.phone,
                                     package_id: record.package_id,
-                                    active_modules: record.active_modules?.split(',')
+                                    active_modules: record.active_modules?.split(','),
+                                    smtp_user: record.smtp_user,
+                                    smtp_pass: record.smtp_pass
                                 });
                             }}
                             style={{ color: '#1890ff' }}
@@ -577,6 +581,7 @@ const BusinessPage = () => {
                 footer={null}
                 width={700}
                 centered
+                bodyStyle={{ maxHeight: '70vh', overflowY: 'auto', padding: '24px 32px' }}
             >
                 <Divider style={{ margin: '12px 0 24px 0' }} />
                 <Form form={form} layout="vertical" onFinish={isRenewal ? handleUpdatePlan : onFinish}>
@@ -721,7 +726,33 @@ const BusinessPage = () => {
                                                 </Row>
                                             </Checkbox.Group>
                                         </Form.Item>
-                            </Col>
+                             </Col>
+                        )}
+
+                        {!isRenewal && (
+                             <Col span={24} style={{ marginTop: 24, padding: '24px', background: '#f6ffed', borderRadius: '16px', border: '1.5px dashed #b7eb8f' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                                    <MailOutlined style={{ fontSize: 20, color: '#52c41a' }} />
+                                    <Text strong style={{ color: '#1e4a2d', fontSize: '14px' }}>
+                                        MARKETING & EMAIL CONFIGURATION (GMAIL SMTP)
+                                    </Text>
+                                </div>
+                                <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: '12px' }}>
+                                    កំណត់ Email ម្ចាស់ហាងផ្ទាល់ ដើម្បីឱ្យអតិថិជនទទួលបាន Promotion ពីឈ្មោះហាងលោកអ្នក។
+                                </Text>
+                                <Row gutter={16}>
+                                    <Col span={12}>
+                                        <Form.Item name="smtp_user" label="Gmail Address (Email អ្នកផ្ញើ)">
+                                            <Input prefix={<MailOutlined />} placeholder="owner@gmail.com" size="large" />
+                                        </Form.Item>
+                                    </Col>
+                                    <Col span={12}>
+                                        <Form.Item name="smtp_pass" label="App Password (១៦ ខ្ទង់)">
+                                            <Input.Password prefix={<SafetyCertificateOutlined />} placeholder="xxxx xxxx xxxx xxxx" size="large" />
+                                        </Form.Item>
+                                    </Col>
+                                </Row>
+                             </Col>
                         )}
                     </Row>
 

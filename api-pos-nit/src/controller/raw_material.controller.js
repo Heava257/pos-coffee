@@ -81,3 +81,49 @@ exports.remove = async (req, res) => {
         logError("raw_material.remove", error, res);
     }
 };
+
+exports.getForecast = async (req, res) => {
+    try {
+        const { business_id, branch_id } = req;
+        
+        // 1. Calculate Average Consumption from last 7 days of sales
+        // Formula: Sum(Order Qty * Recipe Qty) / 7
+        const [stats] = await db.query(`
+            SELECT 
+                rm.id as raw_material_id,
+                rm.name,
+                rm.unit,
+                rm.qty as current_stock,
+                rm.min_stock,
+                rm.par_level,
+                SUM(od.qty * rd.qty) as total_consumed_7d
+            FROM orders o
+            JOIN order_details od ON o.id = od.order_id
+            JOIN recipe_detail rd ON od.product_id = rd.product_id
+            JOIN raw_material rm ON rd.raw_material_id = rm.id
+            WHERE o.business_id = ? 
+              AND o.branch_id = ? 
+              AND o.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+              AND o.status != 'cancelled'
+            GROUP BY rm.id
+        `, [business_id, branch_id]);
+
+        const forecast = stats.map(item => {
+            const avgDaily = item.total_consumed_7d / 7;
+            const next7dUsage = avgDaily * 7;
+            const suggestedPurchase = Math.max(0, (next7dUsage + item.min_stock) - item.current_stock);
+            
+            return {
+                ...item,
+                avg_daily_usage: avgDaily.toFixed(2),
+                expected_7d_usage: next7dUsage.toFixed(2),
+                suggested_purchase: suggestedPurchase.toFixed(2),
+                status: item.current_stock < next7dUsage ? 'high_risk' : (item.current_stock < (next7dUsage * 1.5) ? 'warning' : 'safe')
+            };
+        });
+
+        res.json({ list: forecast });
+    } catch (error) {
+        logError("raw_material.getForecast", error, res);
+    }
+};

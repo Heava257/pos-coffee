@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Button,
     Form,
@@ -40,7 +41,11 @@ import {
     MdExtension,
     MdSchedule,
     MdCategory,
-    MdAnalytics
+    MdAnalytics,
+    MdDeleteSweep,
+    MdAccountBalanceWallet,
+    MdShoppingCartCheckout,
+    MdInfo
 } from "react-icons/md";
 import { 
     BarChart, Bar, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, 
@@ -74,6 +79,7 @@ const SHADOWS = {
 };
 
 const StockPage = () => {
+    const navigate = useNavigate();
     const { lang } = useLanguage();
     const t = translations[lang];
     const [form] = Form.useForm();
@@ -82,6 +88,7 @@ const StockPage = () => {
         logs: [],
         products: [],
         rawMaterials: [],
+        expenses: [],
         visibleModal: false,
         loading: false,
     });
@@ -102,7 +109,20 @@ const StockPage = () => {
     useEffect(() => {
         getLogs();
         getItems();
+        getExpenses();
     }, [filters]);
+
+    const getExpenses = async () => {
+        try {
+            const today = dayjs().format("YYYY-MM-DD");
+            const res = await request("expense", "get", { from_date: today, to_date: today });
+            if (res && res.list) {
+                setState(p => ({ ...p, expenses: res.list }));
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     const getLogs = async () => {
         setState((pre) => ({ ...pre, loading: true }));
@@ -327,6 +347,122 @@ const StockPage = () => {
             hourlyTrend: hourlyData.filter(d => d.rawHour >= 6 && d.rawHour <= 22),
             categoryMix: categoryData
         };
+    };
+
+    const calculateWastageInsights = () => {
+        const wasteLogs = state.logs.filter(l => (l.type === 'waste' || l.type === 'adjustment') && l.qty_changed < 0);
+        
+        let totalLossValue = 0;
+        const reasonMap = {};
+        const itemMap = {};
+
+        wasteLogs.forEach(l => {
+            const cost = l.unit_cost || l.price * 0.4 || 1;
+            const lossAmount = Math.abs(l.qty_changed) * cost;
+            totalLossValue += lossAmount;
+
+            // Reason Analysis
+            const reason = l.reason || "Other";
+            if (!reasonMap[reason]) reasonMap[reason] = { name: reason, value: 0 };
+            reasonMap[reason].value += lossAmount;
+
+            // Item Analysis
+            if (!itemMap[l.item_id]) itemMap[l.item_id] = { name: l.item_name || "Unknown", value: 0, qty: 0 };
+            itemMap[l.item_id].value += lossAmount;
+            itemMap[l.item_id].qty += Math.abs(l.qty_changed);
+        });
+
+        const topItems = Object.values(itemMap).sort((a, b) => b.value - a.value).slice(0, 5);
+        const reasonMix = Object.values(reasonMap).sort((a, b) => b.value - a.value);
+
+        return {
+            totalLoss: totalLossValue,
+            reasonMix,
+            topItems
+        };
+    };
+
+    const calculateFinancialSnapshot = () => {
+        const today = dayjs().format("YYYY-MM-DD");
+        const sales = state.logs.filter(l => l.type === 'sale' && dayjs(l.created_at).format("YYYY-MM-DD") === today);
+        
+        let netSales = 0;
+        let totalCOGS = 0;
+        
+        sales.forEach(l => {
+            const revenue = l.total_amount || (Math.abs(l.qty_changed) * (l.price || 0));
+            const cost = Math.abs(l.qty_changed) * (l.unit_cost || (l.price * 0.4) || 0.5);
+            netSales += revenue;
+            totalCOGS += cost;
+        });
+
+        const totalExpenses = state.expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+        const grossProfit = netSales - totalCOGS;
+        const netProfit = grossProfit - totalExpenses;
+        const margin = netSales > 0 ? (netProfit / netSales) * 100 : 0;
+
+        return {
+            netSales,
+            totalCOGS,
+            totalExpenses,
+            grossProfit,
+            netProfit,
+            margin
+        };
+    };
+
+    const calculateItemForecast = (id, type) => {
+        const logs = state.logs.filter(l => l.item_id === id && l.item_type === type && l.type === 'sale');
+        if (logs.length === 0) return { avgDaily: 0, daysLeft: 999 };
+
+        const totalQty = logs.reduce((sum, l) => sum + Math.abs(l.qty_changed), 0);
+        const days = new Set(logs.map(l => dayjs(l.created_at).format("YYYY-MM-DD")));
+        const avgDaily = totalQty / days.size;
+        
+        return {
+            avgDaily,
+            daysCount: days.size
+        };
+    };
+
+    const calculateReorderRecommendations = () => {
+        const recommendations = [];
+        
+        // Combine products and raw materials for checking
+        const allItems = [
+            ...state.products.map(p => ({ ...p, type: 'product', current_qty: p.stock_qty || 0 })),
+            ...state.rawMaterials.map(rm => ({ ...rm, type: 'raw_material', current_qty: rm.qty || 0 }))
+        ];
+
+        allItems.forEach(item => {
+            const consumption = calculateItemForecast(item.id, item.type);
+            const avgDaily = consumption.avgDaily;
+            
+            if (avgDaily > 0) {
+                const daysLeft = item.current_qty / avgDaily;
+                
+                // If it will run out in less than 7 days, recommend reorder
+                if (daysLeft < 7) {
+                    const recommendedQty = Math.ceil((avgDaily * 7) - item.current_qty);
+                    recommendations.push({
+                        ...item,
+                        daysLeft: daysLeft.toFixed(1),
+                        recommendedQty: recommendedQty > 0 ? recommendedQty : 0,
+                        riskLevel: daysLeft < 2 ? 'High' : daysLeft < 5 ? 'Medium' : 'Low'
+                    });
+                }
+            } else if (item.current_qty <= (item.min_stock || 5)) {
+                // Also recommend if below min_stock even if no recent sales
+                recommendations.push({
+                    ...item,
+                    daysLeft: 'N/A',
+                    recommendedQty: (item.par_level || 20) - item.current_qty,
+                    riskLevel: 'Medium'
+                });
+            }
+        });
+
+        return recommendations.sort((a, b) => a.daysLeft - b.daysLeft);
     };
 
     const quickAdjust = (item) => {
@@ -1114,6 +1250,261 @@ const StockPage = () => {
                                                 </div>
                                             </Card>
                                         </Col>
+                                    </Row>
+                                </div>
+                            )
+                        })()
+                    },
+                    {
+                        key: "6",
+                        label: (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px' }}>
+                                <MdDeleteSweep size={20} />
+                                <span style={{ fontWeight: 700 }}>{t.wastage_intelligence_title}</span>
+                            </span>
+                        ),
+                        children: (() => {
+                            const waste = calculateWastageInsights();
+                            return (
+                                <div style={{ padding: '10px' }}>
+                                    <Row gutter={[20, 20]} style={{ marginBottom: 20 }}>
+                                        <Col xs={24} sm={12} lg={8}>
+                                            <Card bordered={false} style={{ borderRadius: 24, boxShadow: SHADOWS.soft, background: '#fee2e2', border: '1px solid #fecaca' }}>
+                                                <div style={{ fontSize: 13, color: '#991b1b', fontWeight: 600 }}>{t.total_loss_value}</div>
+                                                <div style={{ fontSize: 32, fontWeight: 900, color: '#b91c1c' }}>${waste.totalLoss.toFixed(2)}</div>
+                                                <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 700, marginTop: 4 }}>
+                                                    <MdWarning style={{ marginRight: 4 }} /> {t.cost_impact_label}
+                                                </div>
+                                            </Card>
+                                        </Col>
+                                    </Row>
+
+                                    <Row gutter={[20, 20]}>
+                                        <Col xs={24} lg={12}>
+                                            <Card title={<span style={{ fontWeight: 800 }}>{t.waste_reason_mix}</span>} bordered={false} style={{ borderRadius: 24, boxShadow: SHADOWS.soft }}>
+                                                <div style={{ height: 300, width: '100%' }}>
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <PieChart>
+                                                            <Pie
+                                                                data={waste.reasonMix}
+                                                                cx="50%"
+                                                                cy="50%"
+                                                                innerRadius={60}
+                                                                outerRadius={80}
+                                                                paddingAngle={5}
+                                                                dataKey="value"
+                                                            >
+                                                                {waste.reasonMix.map((entry, index) => (
+                                                                    <Cell key={`cell-${index}`} fill={['#f43f5e', '#fb923c', '#facc15', '#94a3b8'][index % 4]} />
+                                                                ))}
+                                                            </Pie>
+                                                            <ChartTooltip />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                                <div style={{ marginTop: 10 }}>
+                                                    {waste.reasonMix.map((r, i) => (
+                                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                                                            <span style={{ fontWeight: 600, color: '#64748b' }}>
+                                                                <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: ['#f43f5e', '#fb923c', '#facc15', '#94a3b8'][i % 4], marginRight: 8 }}></span>
+                                                                {r.name}
+                                                            </span>
+                                                            <span style={{ fontWeight: 800 }}>${r.value.toFixed(2)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </Card>
+                                        </Col>
+
+                                        <Col xs={24} lg={12}>
+                                            <Card title={<span style={{ fontWeight: 800 }}>{t.top_wasted_items}</span>} bordered={false} style={{ borderRadius: 24, boxShadow: SHADOWS.soft }}>
+                                                {waste.topItems.map((item, idx) => (
+                                                    <div key={idx} style={{ 
+                                                        padding: '15px', 
+                                                        background: '#f8fafc', 
+                                                        borderRadius: 16, 
+                                                        marginBottom: 10,
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center'
+                                                    }}>
+                                                        <div>
+                                                            <div style={{ fontWeight: 800, fontSize: 15 }}>{item.name}</div>
+                                                            <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>{item.qty} {t.items} {t.lost}</div>
+                                                        </div>
+                                                        <div style={{ textAlign: 'right' }}>
+                                                            <div style={{ color: '#ef4444', fontWeight: 900, fontSize: 16 }}>-${item.value.toFixed(2)}</div>
+                                                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>{t.total_loss_value}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {waste.topItems.length === 0 && <Empty description="No wastage recorded today" />}
+                                            </Card>
+                                        </Col>
+                                    </Row>
+                                </div>
+                            )
+                        })()
+                    },
+                    {
+                        key: "7",
+                        label: (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px' }}>
+                                <MdAccountBalanceWallet size={20} />
+                                <span style={{ fontWeight: 700 }}>{t.net_profit_intelligence_title}</span>
+                            </span>
+                        ),
+                        children: (() => {
+                            const fin = calculateFinancialSnapshot();
+                            return (
+                                <div style={{ padding: '10px' }}>
+                                    <Row gutter={[20, 20]} style={{ marginBottom: 20 }}>
+                                        <Col xs={24} sm={8}>
+                                            <Card bordered={false} style={{ borderRadius: 24, boxShadow: SHADOWS.soft, background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' }}>
+                                                <div style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>{t.gross_profit_label}</div>
+                                                <div style={{ fontSize: 32, fontWeight: 900, color: '#15803d' }}>${fin.grossProfit.toFixed(2)}</div>
+                                            </Card>
+                                        </Col>
+                                        <Col xs={24} sm={8}>
+                                            <Card bordered={false} style={{ borderRadius: 24, boxShadow: SHADOWS.soft, background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)' }}>
+                                                <div style={{ fontSize: 13, color: '#9f1239', fontWeight: 600 }}>{t.total_expenses_label}</div>
+                                                <div style={{ fontSize: 32, fontWeight: 900, color: '#be123c' }}>${fin.totalExpenses.toFixed(2)}</div>
+                                            </Card>
+                                        </Col>
+                                        <Col xs={24} sm={8}>
+                                            <Card bordered={false} style={{ borderRadius: 24, boxShadow: SHADOWS.soft, background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', border: `2px solid ${COLORS.primary}20` }}>
+                                                <div style={{ fontSize: 13, color: '#075985', fontWeight: 600 }}>{t.net_profit_label}</div>
+                                                <div style={{ fontSize: 32, fontWeight: 900, color: COLORS.primary }}>${fin.netProfit.toFixed(2)}</div>
+                                                <Tag color={fin.margin > 20 ? 'success' : 'warning'} style={{ borderRadius: 10, fontWeight: 800 }}>
+                                                    {t.operating_margin}: {fin.margin.toFixed(1)}%
+                                                </Tag>
+                                            </Card>
+                                        </Col>
+                                    </Row>
+
+                                    <Row gutter={[20, 20]}>
+                                        <Col xs={24} lg={16}>
+                                            <Card title={<span style={{ fontWeight: 800 }}>{t.p_and_l_summary}</span>} bordered={false} style={{ borderRadius: 24, boxShadow: SHADOWS.soft }}>
+                                                <div style={{ padding: '10px 0' }}>
+                                                    {[
+                                                        { label: t.net_sales_label, val: fin.netSales, color: COLORS.secondary },
+                                                        { label: t.cogs_label, val: -fin.totalCOGS, color: '#f97316' },
+                                                        { label: t.total_expenses_label, val: -fin.totalExpenses, color: '#ef4444' },
+                                                        { label: t.net_profit_label, val: fin.netProfit, color: COLORS.primary, bold: true, border: true }
+                                                    ].map((item, i) => (
+                                                        <div key={i} style={{ 
+                                                            display: 'flex', 
+                                                            justifyContent: 'space-between', 
+                                                            padding: '12px 0',
+                                                            borderTop: item.border ? '2px dashed #e2e8f0' : 'none',
+                                                            marginTop: item.border ? 10 : 0
+                                                        }}>
+                                                            <span style={{ fontWeight: 700, color: '#475569' }}>{item.label}</span>
+                                                            <span style={{ fontWeight: 900, color: item.color, fontSize: item.bold ? 18 : 14 }}>
+                                                                {item.val < 0 ? `-$${Math.abs(item.val).toFixed(2)}` : `$${item.val.toFixed(2)}`}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </Card>
+                                        </Col>
+                                        <Col xs={24} lg={8}>
+                                            <Card title={<span style={{ fontWeight: 800 }}>{t.profit_breakdown}</span>} bordered={false} style={{ borderRadius: 24, boxShadow: SHADOWS.soft }}>
+                                                <div style={{ height: 250 }}>
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <PieChart>
+                                                            <Pie
+                                                                data={[
+                                                                    { name: t.cogs_label, value: fin.totalCOGS },
+                                                                    { name: t.total_expenses_label, value: fin.totalExpenses },
+                                                                    { name: t.net_profit_label, value: Math.max(0, fin.netProfit) }
+                                                                ]}
+                                                                cx="50%"
+                                                                cy="50%"
+                                                                innerRadius={50}
+                                                                outerRadius={70}
+                                                                paddingAngle={5}
+                                                                dataKey="value"
+                                                            >
+                                                                <Cell fill="#f97316" />
+                                                                <Cell fill="#ef4444" />
+                                                                <Cell fill={COLORS.primary} />
+                                                            </Pie>
+                                                            <ChartTooltip />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                                <div style={{ textAlign: 'center', fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+                                                    {t.financial_health_msg}
+                                                </div>
+                                            </Card>
+                                        </Col>
+                                    </Row>
+                                </div>
+                            )
+                        })()
+                    },
+                    {
+                        key: "8",
+                        label: (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px' }}>
+                                <MdShoppingCartCheckout size={20} />
+                                <span style={{ fontWeight: 700 }}>{t.reorder_intelligence_title}</span>
+                            </span>
+                        ),
+                        children: (() => {
+                            const recs = calculateReorderRecommendations();
+                            return (
+                                <div style={{ padding: '10px' }}>
+                                    <div style={{ marginBottom: 20, background: '#f0f9ff', padding: '15px 20px', borderRadius: 20, border: '1px solid #bae6fd', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <div style={{ background: '#0369a1', color: 'white', padding: 8, borderRadius: 10 }}><MdInfo /></div>
+                                        <div style={{ fontSize: 14, color: '#0369a1', fontWeight: 600 }}>{t.reorder_hint}</div>
+                                    </div>
+
+                                    <Row gutter={[20, 20]}>
+                                        {recs.map((item, idx) => (
+                                            <Col key={idx} xs={24} md={12} lg={8}>
+                                                <Card bordered={false} style={{ borderRadius: 24, boxShadow: SHADOWS.soft, border: item.riskLevel === 'High' ? '2px solid #fee2e2' : '1px solid #f1f5f9' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 }}>
+                                                        <div>
+                                                            <Tag color={item.riskLevel === 'High' ? 'error' : item.riskLevel === 'Medium' ? 'warning' : 'processing'} style={{ borderRadius: 8, fontWeight: 800, marginBottom: 8 }}>
+                                                                {item.riskLevel === 'High' ? 'CRITICAL' : item.riskLevel === 'Medium' ? 'LOW STOCK' : 'PLANNING'}
+                                                            </Tag>
+                                                            <div style={{ fontWeight: 800, fontSize: 18 }}>{item.name}</div>
+                                                            <div style={{ fontSize: 12, color: '#64748b' }}>{t.days_until_out_of_stock}: <b style={{ color: item.riskLevel === 'High' ? '#ef4444' : '#0f172a' }}>{item.daysLeft} {t.days_label || 'Days'}</b></div>
+                                                        </div>
+                                                        <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: 12, textAlign: 'right' }}>
+                                                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>{t.current_stock}</div>
+                                                            <div style={{ fontWeight: 900, fontSize: 16 }}>{item.current_qty}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: 20, marginBottom: 20 }}>
+                                                        <div style={{ fontSize: 12, color: '#166534', fontWeight: 700, marginBottom: 4 }}>{t.recommended_order_qty}</div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                            <span style={{ fontSize: 24, fontWeight: 900, color: '#15803d' }}>+{item.recommendedQty}</span>
+                                                            <span style={{ fontSize: 14, color: '#15803d', fontWeight: 600 }}>{item.unit || item.purchase_unit}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <Button 
+                                                        type="primary" 
+                                                        block 
+                                                        size="large" 
+                                                        style={{ borderRadius: 15, fontWeight: 800, height: 45, background: COLORS.secondary }}
+                                                        icon={<MdShoppingCartCheckout />}
+                                                        onClick={() => navigate("/purchase")}
+                                                    >
+                                                        {t.create_po_now}
+                                                    </Button>
+                                                </Card>
+                                            </Col>
+                                        ))}
+                                        {recs.length === 0 && (
+                                            <Col span={24}>
+                                                <Empty description="All stock levels are healthy! No reorders needed." />
+                                            </Col>
+                                        )}
                                     </Row>
                                 </div>
                             )

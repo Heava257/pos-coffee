@@ -4,7 +4,9 @@ const { getCache, setCache, clearCache } = require("../util/redisClient");
 // 1. Get List of Categories (Filtered by Business Activation)
 exports.getList = async (req, res) => {
   try {
-    const { business_id } = req;
+    const business_id = req.business_id || req.query.business_id;
+    if (!business_id) return res.json({ list: [] });
+    
     const cacheKey = `categories_biz_${business_id}`;
 
     /*

@@ -23,6 +23,7 @@
     "express": "^4.19.2",
     "express-rate-limit": "^7.5.1",
     "express-validator": "^7.2.1",
+    "google-auth-library": "^10.6.2",
     "helmet": "^8.1.0",
     "image-extensions": "^1.1.0",
     "ioredis": "^5.10.1",
@@ -31,8 +32,10 @@
     "multer-storage-cloudinary": "^4.0.0",
     "mysql2": "^3.11.0",
     "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.6",
     "pdfkit": "^0.17.2",
     "rate-limit-redis": "^4.3.1",
+    "resend": "^6.12.2",
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {

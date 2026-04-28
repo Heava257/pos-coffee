@@ -12,14 +12,16 @@ export const request = (url = "", method = "get", data = {}) => {
   const isCustomerPath = window.location.pathname.includes("/customer");
   const access_token = isCustomerPath ? getGuestToken() : getAcccessToken();
 
-  // Skip requests that require auth if token is missing (except login/register)
+  // Skip requests that require auth if token is missing (except login/register and public menu)
+  const isPublicMenu = isCustomerPath && (url.includes("category") || url.includes("product"));
   const isAuthRoute =
     url.includes("auth/login") ||
     url.includes("auth/register") ||
     url.includes("auth/register-owner") ||
     url.includes("auth/guest-access") ||
     url.includes("order-web") ||
-    url.includes("business/public-config");
+    url.includes("business/public-config") ||
+    isPublicMenu;
     
   if (!isAuthRoute && (!access_token || access_token === "null" || access_token === "undefined")) {
     return Promise.resolve(false);

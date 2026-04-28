@@ -58,6 +58,8 @@ import {
   PushpinOutlined,
   TagOutlined,
   SyncOutlined,
+  SoundOutlined,
+  PlusCircleFilled,
 } from "@ant-design/icons";
 import { FiSettings } from "react-icons/fi";
 import { useUIStore } from "../../store/uiStore";
@@ -390,7 +392,7 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
                 {product.name}
               </div>
               <div style={{ fontSize: 10, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 600 }}>{product.category_name}</div>
-              
+
               {/* options badges row */}
               {(productSizes.length > 0 || productMoods.length > 0) && (
                 <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
@@ -455,16 +457,16 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
           alignItems: "center",
           justifyContent: "center",
           cursor: isOOS ? "not-allowed" : "pointer",
-          boxShadow: hovered && !isOOS 
-            ? `0 4px 12px ${COLORS.darkGreen}33` 
+          boxShadow: hovered && !isOOS
+            ? `0 4px 12px ${COLORS.darkGreen}33`
             : "0 2px 6px rgba(0,0,0,0.05)",
           transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           transform: hovered && !isOOS ? "scale(1.1)" : "scale(1)",
           zIndex: 3
         }}
       >
-        <PlusOutlined style={{ 
-          fontSize: 15, 
+        <PlusOutlined style={{
+          fontSize: 15,
           transition: "transform 0.4s ease",
           transform: hovered ? "rotate(90deg)" : "rotate(0deg)"
         }} />
@@ -528,7 +530,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
             const price = productSizes.length > 0
               ? Math.min(...productSizes.map(s => Number(s.price || 0)))
               : basePrice;
-            
+
             // Global Discount Logic
             let dPercent = 0;
             const dScope = selectedShop?.discount_scope || 'all';
@@ -703,16 +705,23 @@ const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, 
             gap: 16
           }}>
             {tables.map(table => {
-              // Check if table is occupied in heldOrders
-              const activeOrder = heldOrders.find(o => String(o.tableNo) === String(table.table_name));
-              const isOccupied = !!activeOrder;
+              // Check if table is occupied in heldOrders (local draft)
+              const localDraft = heldOrders.find(o => String(o.tableNo) === String(table.table_name));
+              // Check if table is occupied in Database (server active order)
+              const serverOrderId = table.active_order_id;
+
+              const isOccupied = !!localDraft || !!serverOrderId;
+              const guestNum = localDraft ? localDraft.guestCount : (table.guest_count || 0);
 
               return (
                 <div
                   key={table.id}
                   onClick={() => {
-                    if (isOccupied) {
-                      onResume(activeOrder);
+                    if (localDraft) {
+                      onResume(localDraft);
+                    } else if (serverOrderId) {
+                      // Pass both table name and server order ID to trigger a fetch
+                      onSelect(table.table_name, serverOrderId);
                     } else {
                       onSelect(table.table_name);
                     }
@@ -745,10 +754,16 @@ const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, 
                   <div style={{ fontWeight: 800, fontSize: 15, color: COLORS.textPrimary }}>{table.table_name}</div>
 
                   {isOccupied ? (
-                    <>
-                      <div style={{ fontSize: 13, fontWeight: 900, color: COLORS.redBadge, marginTop: 4 }}>${(activeOrder.objSummary?.total || 0).toFixed(2)}</div>
-                      <Tag color="volcano" style={{ fontSize: 9, borderRadius: 10, margin: '6px 0 0' }}>{t.occupied_status}</Tag>
-                    </>
+                    <div style={{ marginTop: 4 }}>
+                      <Tag color="error" style={{ borderRadius: 6, fontSize: 10, margin: 0, fontWeight: 700 }}>
+                        {guestNum > 0 ? `${guestNum} 👤` : 'OCCUPIED'}
+                      </Tag>
+                      {table.active_total > 0 && (
+                        <div style={{ fontSize: 11, fontWeight: 800, color: COLORS.redBadge, marginTop: 4 }}>
+                          ${Number(table.active_total).toFixed(2)}
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <>
                       <div style={{ fontSize: 11, color: COLORS.textSecondary, marginTop: 4 }}>{t.free_status}</div>
@@ -1107,7 +1122,7 @@ function PosPage() {
         if (isPermission("Table Management")) {
           getPendingOrders();
         }
-      }, 30000);
+      }, 5000); // Poll every 5 seconds for better responsiveness
       return () => clearInterval(iv);
     }
   }, [userId]);
@@ -1191,6 +1206,7 @@ function PosPage() {
         const res = await request("shift/open", "post", data);
         if (res && res.success) {
           message.success(res.message);
+          handleClearCart(true, true); // Force hard clear of everything (cart, table, etc)
           checkShiftStatus();
         } else {
           message.warning(res.message);
@@ -1227,7 +1243,8 @@ function PosPage() {
 
   const getPendingOrders = async () => {
     try {
-      const res = await request("order-pending", "get");
+      const bId = branchInfo?.id || profile?.branch_id;
+      const res = await request("order-pending", "get", { branch_id: bId });
       if (res && res.list) {
         setPendingOrders(res.list);
         setPendingCount(res.list.length);
@@ -1340,12 +1357,12 @@ function PosPage() {
       if (res && !res.error) {
         const products = res.list || [];
         const fullProducts = resFull?.list || products; // Fallback to current if full fails
-        setState((p) => ({ 
-          ...p, 
-          list: products, 
+        setState((p) => ({
+          ...p,
+          list: products,
           fullList: fullProducts, // New state to hold everything for counts
-          total: products.length, 
-          loading: false 
+          total: products.length,
+          loading: false
         }));
       } else {
         setState((p) => ({ ...p, loading: false }));
@@ -1428,7 +1445,7 @@ function PosPage() {
       tax: 0,
     }));
   }, [state.cart_list]);
-  
+
   const getCartPayload = useCallback((cartList = state.cart_list) => {
     return cartList.map((item) => {
       const qty = Number(item.cart_qty) || Number(item.qty) || 1;
@@ -1439,6 +1456,7 @@ function PosPage() {
         qty: qty,
         price: unitPrice,
         note: item.note || "",
+        server_item_id: item.server_item_id, // 🚀 CRITICAL: Track existing server items
         options: {
           size: item.size,
           sugar: item.sugar,
@@ -1669,7 +1687,7 @@ function PosPage() {
     pageStyle: `@page { size: 40mm 30mm !important; margin: 0 !important; } @media print { body { -webkit-print-color-adjust: exact; margin: 0 !important; } }`,
   });
 
-  const handleHoldOrder = (directCart = null, skipPrint = false) => {
+  const handleHoldOrder = (directCart = null, skipPrint = false, extraPayload = {}) => {
     const cartToSave = directCart || state.cart_list;
     if (cartToSave.length === 0) {
       if (!directCart) message.warning("Cart is empty");
@@ -1688,17 +1706,25 @@ function PosPage() {
     // Mark items as printed/processed
     const labeledCart = cartToSave.map(item => ({ ...item, printed: true }));
 
-    // 1. Local Save (Keep as fallback/backup)
-    holdOrder({
-      id: draftIdToUpdate,
-      cart_list: labeledCart,
-      customerName,
-      tableNo,
-      guestCount,
-      orderType,
-      objSummary,
-      currentOrderId,
-    });
+    // 1. Local Save (ONLY if NOT synced to server yet)
+    if (!currentOrderId) {
+      holdOrder({
+        id: draftIdToUpdate,
+        cart_list: labeledCart,
+        customerName,
+        tableNo,
+        guestCount,
+        orderType,
+        objSummary,
+        currentOrderId,
+      });
+    } else {
+      // If it's on server, make sure we REMOVE any local draft to avoid duplication in briefcase
+      if (draftIdToUpdate) {
+        removeHeldOrder(draftIdToUpdate);
+        setCurrentDraftId(null);
+      }
+    }
 
     // 2. Server Sync for KDS (Essential for Restaurant mode)
     const syncWithServer = async () => {
@@ -1717,15 +1743,27 @@ function PosPage() {
           payment_method: objSummary.payment_method || 'Unpaid',
           status: 'unpaid', // Drafts are unpaid
           shift_id: currentShift?.id,
-          order_id: currentOrderId // If exists, update
+          order_id: currentOrderId, // If exists, update
+          ...extraPayload
         };
 
         const endpoint = currentOrderId ? "order/update" : "order";
         const method = currentOrderId ? "put" : "post";
-        
+
         const res = await request(endpoint, method, payload);
-        if (res && res.order_id && !currentOrderId) {
-           setCurrentOrderId(res.order_id);
+        if (res && !res.error) {
+          if (res.order_id) {
+            setCurrentOrderId(res.order_id);
+          }
+
+          // 🔥 CRITICAL: Update the local cart with the server_item_ids returned from backend
+          // This prevents duplicate items on subsequent saves.
+          if (res.details && res.details.length > 0) {
+            handleResumeServerOrder({ id: res.order_id, ...payload }, res.details);
+          }
+
+          // IMPORTANT: Refresh the pending list after sync to clear any auto-cleared web orders
+          getPendingOrders();
         }
       } catch (err) {
         console.error("KDS Server Sync failed:", err);
@@ -1746,6 +1784,47 @@ function PosPage() {
         handlePrintLabel();
       }, 500);
     }
+  };
+
+  // RESUME ORDER FROM SERVER (e.g. Web Order already merged or unpaid bill from another terminal)
+  const handleResumeServerOrder = (serverOrder, details) => {
+    if (!serverOrder || !details) return;
+
+    // Map server items to POS cart format
+    const resumedCart = details.map(item => {
+      // Find the base product from our master list (state.list)
+      const baseProduct = state.list.find(p => p.id === item.product_id) || {};
+
+      const optionNote = item.note || "";
+      const uniqueId = `${item.product_id}-${optionNote}-${item.id}`; // Add item ID to avoid collisions
+
+      return {
+        ...baseProduct,
+        id: item.product_id,
+        unique_id: uniqueId,
+        display_name: `${item.product_name} [${optionNote}]`,
+        unit_price: Number(item.price),
+        price: Number(item.price),
+        cart_qty: Number(item.qty),
+        note: optionNote,
+        server_item_id: item.id, // Track that this is already on server
+        isSentToKitchen: item.kitchen_status !== 'pending' && item.kitchen_status !== null // If it's already preparing/ready/served, mark as sent
+      };
+    });
+
+    setState((prev) => ({
+      ...prev,
+      cart_list: resumedCart
+    }));
+
+    setTableNo(serverOrder.table_no || "");
+    setCustomerName(serverOrder.customer_name || "");
+    setGuestCount(serverOrder.guest_count || 1);
+    setOrderType(serverOrder.order_type || "dine_in");
+    setCurrentOrderId(serverOrder.id);
+    setCurrentDraftId(null); // It's a real order, not a local draft
+
+    message.success(`Resumed bill for Table ${serverOrder.table_no}`);
   };
 
   const handleResumeHeldOrder = (order) => {
@@ -1826,8 +1905,9 @@ function PosPage() {
       sub_total: 0, total_qty: 0, save_discount: 0,
       tax: 0, total: 0, total_paid: 0,
       customer_id: null, payment_method: null,
+      order_no: null, order_date: null,
     }));
-    
+
     // Clear table/customer if we are checking out OR just saving a draft to serve next guest
     if (isCheckout || isSave) {
       setCustomerName("");
@@ -1836,7 +1916,7 @@ function PosPage() {
       setCurrentOrderId(null);
       setCurrentDraftId(null);
     }
-    
+
     setCashReceivedUSD(0);
     setCashReceivedKHR(0);
     setCashPaymentModalVisible(false);
@@ -1846,12 +1926,42 @@ function PosPage() {
 
   const kitchenItems = state.cart_list.filter(item => !item.isSentToKitchen);
 
-  const handleSelectPendingOrder = useCallback(async (order) => {
+  const handleSendToKitchen = async () => {
+    if (!currentOrderId) {
+      // Must save to server first to get an ID
+      message.loading("Saving order to server first...");
+      await handleHoldOrder(state.cart_list, true); // Silent save
+    }
+
+    // Now send to kitchen via dedicated endpoint
+    try {
+      const res = await request("order-send-to-kitchen", "put", {
+        order_id: currentOrderId || state.currentOrderId // Ensure we have the ID
+      });
+
+      if (res && !res.error) {
+        message.success("Notification sent to kitchen!");
+
+        // Mark all current items as sent locally
+        setState(prev => ({
+          ...prev,
+          cart_list: prev.cart_list.map(item => ({ ...item, isSentToKitchen: true }))
+        }));
+
+        // Print kitchen ticket if needed
+        handlePrintKitchen(tableNo);
+      }
+    } catch (e) {
+      message.error("Failed to notify kitchen");
+    }
+  };
+
+  const processPendingOrder = useCallback(async (order, isMerge = false) => {
     setState((p) => ({ ...p, loading: true }));
     try {
       const res = await request(`order/${order.id}`, "get");
       if (res && res.details) {
-        const cart = res.details.map((d) => ({
+        const newItems = res.details.map((d) => ({
           id: d.product_id,
           name: d.product_name,
           unit_price: d.price,
@@ -1859,53 +1969,113 @@ function PosPage() {
           image: d.image,
           note: d.note || "",
           display_name: d.product_name + (d.note ? ` [${d.note}]` : ""),
-          unique_id: `${d.product_id}-${d.note || ""}`
+          // Include order.id in unique_id for web orders to prevent merging separate orders together
+          unique_id: `web-${order.id}-${d.product_id}-${d.note || ""}`,
+          isSentToKitchen: true // Web orders are already in KDS
         }));
 
-        setState((p) => ({
-          ...p,
-          cart_list: cart,
-          loading: false,
-        }));
-        
-        // Restore table/customer context
+        if (isMerge) {
+          // Find existing draft for this table
+          const existingDraft = heldOrders.find(h => String(h.tableNo) === String(order.table_no));
+
+          // Use current cart if it matches this table, or load the draft
+          let baseCart = (String(tableNo) === String(order.table_no)) ? [...state.cart_list] : (existingDraft?.cart_list || []);
+
+          // Merge logic: Since unique_id now includes order.id, web orders won't merge with each other
+          // but we still handle the check for safety.
+          const mergedCart = [...baseCart];
+          newItems.forEach(newItem => {
+            const index = mergedCart.findIndex(item => item.unique_id === newItem.unique_id);
+            if (index !== -1) {
+              mergedCart[index].cart_qty += newItem.cart_qty;
+            } else {
+              mergedCart.push(newItem);
+            }
+          });
+
+          setState((p) => ({
+            ...p,
+            cart_list: mergedCart,
+            loading: false,
+          }));
+
+          // Update this new order's status so it disappears from Pending
+          await request(`order-kitchen-status`, "put", { id: order.id, kitchen_status: 'preparing' });
+          getPendingOrders();
+          message.success(`Items added to Table ${order.table_no}`);
+        } else {
+          // Standard Load (Overwrite)
+          setState((p) => ({
+            ...p,
+            cart_list: newItems,
+            loading: false,
+          }));
+          setCurrentOrderId(order.id);
+          // Update status so it disappears from Pending badge
+          await request(`order-kitchen-status`, "put", { id: order.id, kitchen_status: 'preparing' });
+          getPendingOrders();
+          message.info(`Loaded order for ${order.table_no ? "Table " + order.table_no : "Guest"}`);
+        }
+
         setTableNo(order.table_no || "");
         setCustomerName(order.customer_name || "");
         if (order.guest_count) setGuestCount(order.guest_count);
-        setCurrentOrderId(order.id);
-        setCurrentDraftId(null); // Pending orders from DB aren't local drafts
         setOrderType(order.order_type || 'dine_in');
         setPendingOrdersVisible(false);
-        message.info(`Loaded order for ${order.table_no ? "Table " + order.table_no : "Guest"}`);
       } else {
         setState((p) => ({ ...p, loading: false }));
         message.warning("Could not load order details.");
       }
     } catch (error) {
-      console.error("Error loading pending order:", error);
+      console.error("Error processing pending order:", error);
       setState((p) => ({ ...p, loading: false }));
     }
-  }, []);
+  }, [state.cart_list, tableNo, heldOrders, getPendingOrders]);
+
+  const handleSelectPendingOrder = useCallback(async (order) => {
+    const isTableOccupied = heldOrders.some(h => String(h.tableNo) === String(order.table_no));
+
+    // If table is occupied, ask to MERGE instead of overwrite
+    if (isTableOccupied) {
+      Modal.confirm({
+        title: <span style={{ color: COLORS.darkGreen, fontWeight: 'bold' }}>Merging Order / បន្ថែមមុខម្ហូបទៅតុចាស់</span>,
+        icon: <PlusCircleFilled style={{ color: COLORS.darkGreen }} />,
+        content: (
+          <div style={{ marginTop: 10 }}>
+            <p>Table <b>{order.table_no}</b> is already active. Do you want to <b>ADD</b> these new items to the existing order?</p>
+            <p style={{ fontSize: 13, color: '#666', borderTop: '1px solid #eee', paddingTop: 10 }}>តុលេខ <b>{order.table_no}</b> កំពុងមានអតិថិជនអង្គុយ។ តើអ្នកចង់បន្ថែមមុខម្ហូបថ្មីទាំងនេះ ទៅក្នុងតុដែលមានស្រាប់មែនទេ?</p>
+          </div>
+        ),
+        okText: "Yes, Merge (បន្ថែមបញ្ចូល)",
+        cancelText: "No, New (បើកតុថ្មី)",
+        okButtonProps: { style: { background: COLORS.darkGreen, borderRadius: 8 } },
+        cancelButtonProps: { style: { borderRadius: 8 } },
+        onOk: async () => {
+          await processPendingOrder(order, true); // Merge mode
+        },
+        onCancel: async () => {
+          await processPendingOrder(order, false); // Overwrite/New mode
+        }
+      });
+    } else {
+      await processPendingOrder(order, false);
+    }
+  }, [heldOrders, processPendingOrder]);
 
   const triggerAutoPrintWorkflow = useCallback((skipLabel = false) => {
     const pSettings = getPrinterSettings();
-    if (!pSettings.auto_print) {
-      handleClearCart(true); // Still clear if not auto printing
-      return;
+    
+    // Set print type to trigger the useEffect workflow
+    if (pSettings.auto_print) {
+      setState(prev => ({
+        ...prev,
+        printType: 'checkout'
+      }));
     }
 
-    // Move data to print snapshots before clearing cart
-    setState(prev => ({
-      ...prev,
-      printCart: [...prev.cart_list],
-      printSummary: {
-        ...objSummary,
-        order_type: orderType,
-        order_date: new Date().toISOString()
-      },
-      printType: 'checkout'
-    }));
-  }, [handleClearCart, objSummary, orderType]);
+    // IMMEDIATELY clear everything for the UI to prevent any data leakage or duplication
+    handleClearCart(true);
+  }, [handleClearCart]);
 
 
   const executePrintKitchen = useReactToPrint({
@@ -1928,10 +2098,10 @@ function PosPage() {
     if (lastPrintedTypeRef.current === state.printType) return;
 
     const pSettings = getPrinterSettings();
-    
+
     if (state.printType === 'checkout') {
       lastPrintedTypeRef.current = 'checkout';
-      
+
       const runWorkflow = async () => {
         // 1. Determine the order
         const tasks = [];
@@ -1951,7 +2121,7 @@ function PosPage() {
           } else if (task === 'invoice') {
             handlePrintInvoice();
           }
-          
+
           // Wait if there is a next task
           if (i < tasks.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 1500));
@@ -1961,8 +2131,7 @@ function PosPage() {
         // 3. Cleanup
         setTimeout(() => {
           setState(prev => ({ ...prev, printType: null }));
-          handleClearCart(true);
-        }, 1000);
+        }, 500);
       };
 
       runWorkflow();
@@ -1981,7 +2150,7 @@ function PosPage() {
 
   const handlePrintKitchen = useCallback((selectedTable = null) => {
     const finalTable = selectedTable || tableNo;
-    
+
     if (kitchenItems.length === 0) {
       message.warning("No new items to send / គ្មានមុខម្ហូបថ្មីសម្រាប់ផ្ញើទេ");
       return;
@@ -2008,7 +2177,7 @@ function PosPage() {
 
     // 2. Sync to Server and Local Drafts (ALWAYS HAPPENS)
     // skipPrint=true because we handle printing separately below
-    handleHoldOrder(updatedItems, true);
+    handleHoldOrder(updatedItems, true, { kitchen_status: 'preparing' });
 
     // 3. Trigger Physical Print ONLY if enabled in settings
     const pSettings = getPrinterSettings();
@@ -2176,6 +2345,10 @@ function PosPage() {
         if (!isBankPayment) {
           // Trigger print workflow for all order types at checkout 
           triggerAutoPrintWorkflow(false);
+        } else {
+          // For bank payments, we clear the UI now so the user can start a new order
+          // The actual printing will be triggered when the QR modal is closed
+          handleClearCart(true);
         }
       } else {
         message.error(`Order failed! ${res?.message || res?.error || ""}`);
@@ -2806,9 +2979,9 @@ function PosPage() {
                       whiteSpace: "nowrap"
                     }}
                   >
-                    {cat.name} 
-                    <span style={{ 
-                      fontSize: 11, 
+                    {cat.name}
+                    <span style={{
+                      fontSize: 11,
                       opacity: 0.8,
                       background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(30,74,45,0.05)",
                       padding: "1px 6px",
@@ -2913,13 +3086,7 @@ function PosPage() {
                   <Button
                     size="small"
                     icon={<PrinterOutlined />}
-                    onClick={() => {
-                      if (kitchenItems.length > 0) {
-                        handlePrintKitchen();
-                      } else {
-                        message.info("No new items to send / គ្មានមុខម្ហូបថ្មីសម្រាប់ផ្ញើទេ");
-                      }
-                    }}
+                    onClick={handleSendToKitchen}
                     disabled={state.cart_list.length === 0 || kitchenItems.length === 0}
                     style={{
                       borderRadius: 8,
@@ -2937,7 +3104,7 @@ function PosPage() {
                     size="small"
                     icon={<PushpinOutlined />}
                     onClick={() => {
-                      handleHoldOrder(state.cart_list, true); // Save SILENTLY (no print)
+                      handleHoldOrder(state.cart_list, true, { kitchen_status: 'preparing' }); // Save SILENTLY (no print) and CLEAR from pending
                       handleClearCart(false, true); // Clear screen for next guest but KEEP draft
                       message.success(tableNo ? `Tab for Table ${tableNo} saved / រក្សាទុកតុលេខ ${tableNo} រួចរាល់` : "Draft saved!");
                     }}
@@ -3028,12 +3195,26 @@ function PosPage() {
           <TableSelectorModal
             visible={tableModalVisible}
             onCancel={() => setTableModalVisible(false)}
-            onSelect={(val) => {
+            onSelect={async (val, serverOrderId) => {
               setTableNo(val);
               setCurrentDraftId(null);
               setTableModalVisible(false);
-              message.success(`Table ${val} assigned to this order`);
-              
+
+              if (serverOrderId) {
+                // If table is occupied on server, fetch the active bill
+                try {
+                  const res = await request(`order/${serverOrderId}`, "get");
+                  if (res && res.order) {
+                    handleResumeServerOrder(res.order, res.details);
+                  }
+                } catch (e) {
+                  console.error("Failed to resume server order:", e);
+                  message.error("Could not load table bill from server");
+                }
+              } else {
+                message.success(`Table ${val} assigned to this order`);
+              }
+
               // If we were waiting for a table to print kitchen, trigger it now
               if (isKitchenPending) {
                 setIsKitchenPending(false);
@@ -3061,7 +3242,9 @@ function PosPage() {
               padding: "0 18px",
               scrollbarWidth: "thin",
               scrollbarColor: `${COLORS.softBorder} transparent`,
-              background: '#fff'
+              background: '#fff',
+              display: "flex",
+              flexDirection: "column"
             }}
           >
             <div style={{ padding: "16px 0 8px" }}>
@@ -3175,22 +3358,52 @@ function PosPage() {
 
             {/* Action Row */}
             <div style={{ display: 'flex', gap: 8 }}>
-              <Popconfirm
-                title="Clear current cart?"
-                description="This will remove all items from the screen."
-                onConfirm={() => handleClearCart(false)}
-                okText="Yes, Clear"
-                cancelText="No"
-                okButtonProps={{ danger: true }}
+              <Button
+                danger
+                ghost
+                icon={<DeleteOutlined />}
+                style={{ height: 44, borderRadius: 10, flexShrink: 0, fontWeight: 800, padding: '0 15px' }}
+                title={t.clear_cart}
+                onClick={() => {
+                  if (currentOrderId) {
+                    Modal.confirm({
+                      title: "Cancel this active order?",
+                      content: "This bill exists on the server. Do you want to VOID it completely or just clear your screen?",
+                      okText: "VOID Order (Server)",
+                      cancelText: "Clear Screen Only",
+                      okButtonProps: { danger: true },
+                      onOk: async () => {
+                        try {
+                          const res = await request(`order-status`, "put", {
+                            order_id: currentOrderId,
+                            status: "cancelled"
+                          });
+                          if (res && !res.error) {
+                            message.success("Order VOIDED and table cleared");
+                            handleClearCart(false, true);
+                          }
+                        } catch (e) {
+                          message.error("Failed to void order");
+                        }
+                      },
+                      onCancel: () => {
+                        handleClearCart(false, true);
+                        message.info("Screen cleared, bill remains on server");
+                      }
+                    });
+                  } else {
+                    Modal.confirm({
+                      title: "Clear current cart?",
+                      content: "This will remove all items from the screen.",
+                      onOk: () => handleClearCart(false),
+                      okText: "Yes, Clear",
+                      cancelText: "No"
+                    });
+                  }
+                }}
               >
-                <Button
-                  danger
-                  ghost
-                  icon={<DeleteOutlined />}
-                  style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }}
-                  title={t.clear_cart}
-                />
-              </Popconfirm>
+                VOID
+              </Button>
 
               <button
                 disabled={isDisabled || state.cart_list.length === 0 || !objSummary.payment_method}
@@ -3391,11 +3604,11 @@ function PosPage() {
                     const mLabel = typeof m === 'object' ? (m.label || m.value) : m;
                     const mValue = typeof m === 'object' ? (m.value || m.label) : m;
                     return (
-                      <Radio.Button 
-                        key={mValue} 
-                        value={mValue} 
-                        style={{ 
-                          borderRadius: 8, 
+                      <Radio.Button
+                        key={mValue}
+                        value={mValue}
+                        style={{
+                          borderRadius: 8,
                           margin: '2px',
                           borderColor: tempOptions.mood === mValue ? COLORS.darkGreen : '#d9d9d9',
                           background: tempOptions.mood === mValue ? COLORS.darkGreen : '#fff',
@@ -3762,9 +3975,9 @@ function PosPage() {
       <Modal
         title={
           <div style={{ textAlign: 'center', padding: '15px 0' }}>
-            <div style={{ 
-              background: `${COLORS.darkGreen}10`, 
-              width: 50, height: 50, borderRadius: 15, 
+            <div style={{
+              background: `${COLORS.darkGreen}10`,
+              width: 50, height: 50, borderRadius: 15,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 10px', color: COLORS.darkGreen
             }}>
@@ -3789,7 +4002,7 @@ function PosPage() {
                 <Typography.Title level={5} style={{ marginBottom: 20, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b' }}>
                   {t.shift_report_summary}
                 </Typography.Title>
-                
+
                 <Space direction="vertical" size={16} style={{ width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Text style={{ color: '#64748b' }}>{t.opening_cash_label}</Text>
@@ -3807,13 +4020,13 @@ function PosPage() {
                     <Text type="danger">{t.total_expenses_label}</Text>
                     <Text strong type="danger">-${shiftSummary?.total_expense_usd?.toFixed(2)}</Text>
                   </div>
-                  
+
                   <Divider style={{ margin: '8px 0' }} />
-                  
-                  <div style={{ 
-                    background: COLORS.darkGreen, 
-                    padding: '16px 20px', 
-                    borderRadius: 15, 
+
+                  <div style={{
+                    background: COLORS.darkGreen,
+                    padding: '16px 20px',
+                    borderRadius: 15,
                     color: '#fff',
                     boxShadow: '0 4px 12px rgba(30,74,45,0.2)'
                   }}>
@@ -3863,10 +4076,10 @@ function PosPage() {
 
                 {/* Variance Live Feedback */}
                 {actualCashUSD !== null && (
-                  <div style={{ 
+                  <div style={{
                     marginTop: 5,
-                    padding: '15px 20px', 
-                    borderRadius: 15, 
+                    padding: '15px 20px',
+                    borderRadius: 15,
                     background: '#fff',
                     border: '2px dashed #e2e8f0',
                     display: 'flex',
@@ -3879,11 +4092,11 @@ function PosPage() {
                         const totalActual = (actualCashUSD || 0) + ((actualCashKHR || 0) / (shiftSummary?.exchange_rate || exchangeRate));
                         const variance = totalActual - (shiftSummary?.expected_cash_usd || 0);
                         const isSafe = Math.abs(variance) < 0.01;
-                        
+
                         return (
-                          <div style={{ 
-                            fontSize: 22, 
-                            fontWeight: 900, 
+                          <div style={{
+                            fontSize: 22,
+                            fontWeight: 900,
                             color: isSafe ? COLORS.darkGreen : (variance > 0 ? '#10b981' : '#ef4444')
                           }}>
                             {variance > 0 ? '+' : ''}{variance.toFixed(2)}$
@@ -3891,8 +4104,8 @@ function PosPage() {
                         );
                       })()}
                     </div>
-                    <div style={{ 
-                      width: 40, height: 40, borderRadius: 12, 
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 12,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: '#f1f5f9', color: '#64748b'
                     }}>
@@ -3902,10 +4115,10 @@ function PosPage() {
                 )}
 
                 <Form.Item name="remark" label={<span style={{ fontWeight: 700, marginTop: 20, display: 'block' }}>{t.remark_reason}</span>}>
-                  <Input.TextArea 
-                    placeholder={t.closing_note_placeholder} 
-                    rows={3} 
-                    style={{ borderRadius: 12 }} 
+                  <Input.TextArea
+                    placeholder={t.closing_note_placeholder}
+                    rows={3}
+                    style={{ borderRadius: 12 }}
                   />
                 </Form.Item>
 
@@ -3914,11 +4127,11 @@ function PosPage() {
                   htmlType="submit"
                   block
                   size="large"
-                  style={{ 
-                    height: 55, 
-                    borderRadius: 15, 
-                    background: COLORS.darkGreen, 
-                    fontSize: 16, 
+                  style={{
+                    height: 55,
+                    borderRadius: 15,
+                    background: COLORS.darkGreen,
+                    fontSize: 16,
                     fontWeight: 800,
                     boxShadow: '0 8px 20px rgba(30,74,45,0.2)',
                     marginTop: 10
@@ -3936,9 +4149,9 @@ function PosPage() {
       <Modal
         title={
           <div style={{ textAlign: 'center', padding: '15px 0' }}>
-            <div style={{ 
-              background: `${COLORS.darkGreen}10`, 
-              width: 50, height: 50, borderRadius: 15, 
+            <div style={{
+              background: `${COLORS.darkGreen}10`,
+              width: 50, height: 50, borderRadius: 15,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 10px', color: COLORS.darkGreen
             }}>
@@ -3996,11 +4209,11 @@ function PosPage() {
             htmlType="submit"
             block
             size="large"
-            style={{ 
-              height: 55, 
-              borderRadius: 15, 
-              background: COLORS.darkGreen, 
-              fontSize: 16, 
+            style={{
+              height: 55,
+              borderRadius: 15,
+              background: COLORS.darkGreen,
+              fontSize: 16,
               fontWeight: 800,
               boxShadow: '0 8px 20px rgba(30,74,45,0.2)'
             }}

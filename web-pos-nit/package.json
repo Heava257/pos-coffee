@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.4.0",
+    "@react-oauth/google": "^0.13.5",
     "antd": "^5.24.4",
     "axios": "^1.7.5",
     "baseline-browser-mapping": "^2.10.0",

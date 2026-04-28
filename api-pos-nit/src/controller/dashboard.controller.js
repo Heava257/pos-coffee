@@ -254,4 +254,60 @@ exports.getAdminDashboard = async (req, res) => {
   } catch (error) {
     logError("Dashboard.getAdminDashboard", error, res);
   }
-};
+};
+exports.getMorningBriefing = async (req, res) => {
+  try {
+    const { business_id } = req;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    const [sales] = await db.query(`
+      SELECT COALESCE(SUM(total_amount), 0) as revenue, COUNT(id) as orders 
+      FROM orders WHERE business_id = ? AND DATE(created_at) = ?
+    `, [business_id, yesterdayStr]);
+
+    const [expenses] = await db.query(`
+      SELECT COALESCE(SUM(amount), 0) as total FROM expense 
+      WHERE business_id = ? AND DATE(expense_date) = ?
+    `, [business_id, yesterdayStr]);
+
+    const [topItem] = await db.query(`
+      SELECT p.name, SUM(od.qty) as qty
+      FROM order_details od
+      JOIN products p ON od.product_id = p.id
+      JOIN orders o ON od.order_id = o.id
+      WHERE o.business_id = ? AND DATE(o.created_at) = ?
+      GROUP BY od.product_id, p.name
+      ORDER BY qty DESC LIMIT 1
+    `, [business_id, yesterdayStr]);
+
+    const [topStaff] = await db.query(`
+      SELECT u.name, COUNT(o.id) as orders
+      FROM orders o
+      JOIN users u ON o.user_id = u.id
+      WHERE o.business_id = ? AND DATE(o.created_at) = ?
+      GROUP BY u.id, u.name
+      ORDER BY orders DESC LIMIT 1
+    `, [business_id, yesterdayStr]);
+
+    const [newVIPs] = await db.query(`
+      SELECT COUNT(id) as count FROM customers 
+      WHERE business_id = ? AND DATE(created_at) = ?
+    `, [business_id, yesterdayStr]);
+
+    res.json({
+      success: true,
+      data: {
+        revenue: Number(sales[0]?.revenue || 0),
+        profit: Number(sales[0]?.revenue || 0) - Number(expenses[0]?.total || 0),
+        top_item: topItem[0]?.name || "None",
+        top_item_qty: topItem[0]?.qty || 0,
+        top_staff: topStaff[0]?.name || "None",
+        new_vips: newVIPs[0]?.count || 0
+      }
+    });
+  } catch (error) {
+    logError("Dashboard.getMorningBriefing", error, res);
+  }
+};
