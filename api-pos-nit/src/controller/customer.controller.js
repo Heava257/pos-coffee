@@ -262,14 +262,13 @@ exports.sendPromoEmail = async (req, res) => {
       host: 'smtp.gmail.com',
       port: 587,
       secure: false, // STARTTLS
+      family: 4, // 🚀 FORCE IPv4 (Fix ENETUNREACH on Railway)
       auth: {
         user: smtpUser,
         pass: smtpPass
       },
       tls: {
         rejectUnauthorized: false,
-        // Force IPv4 if possible by using a custom lookup or similar, 
-        // but STARTTLS on 587 is generally more compatible.
         minVersion: 'TLSv1.2'
       },
       connectionTimeout: 15000,
@@ -346,6 +345,7 @@ exports.sendOTP = async (req, res) => {
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
+      family: 4, // 🚀 FORCE IPv4
       auth: { user: smtpUser, pass: smtpPass },
       tls: { rejectUnauthorized: false }
     });
@@ -431,6 +431,7 @@ exports.redeemReward = async (req, res) => {
         host: 'smtp.gmail.com',
         port: 587,
         secure: false,
+        family: 4, // 🚀 FORCE IPv4
         auth: { user: smtpUser, pass: smtpPass },
         tls: { rejectUnauthorized: false }
       });
