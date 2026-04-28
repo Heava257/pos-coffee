@@ -308,11 +308,37 @@ function ProductCard({ p, onOpen, starred, onStar, selectedShop }) {
           <div style={{ display: "flex", flexDirection: "column" }}>
             {getDiscountPercent(p, selectedShop) > 0 && (
               <span style={{ fontSize: 11, color: "#BBB3A8", textDecoration: "line-through", marginBottom: -2 }}>
-                {fmt(p.price)}
+                {(() => {
+                  let displayPrice = p.price;
+                  if (p.sizes) {
+                    try {
+                      const sizes = typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes;
+                      if (Array.isArray(sizes) && sizes.length > 0) {
+                        displayPrice = Math.min(...sizes.map(s => parseFloat(s.price)));
+                      }
+                    } catch (e) {}
+                  }
+                  return fmt(displayPrice);
+                })()}
               </span>
             )}
             <div style={{ fontSize: 18, fontWeight: 900, color: "#4A6741" }}>
-              {fmt(p.price * (1 - getDiscountPercent(p, selectedShop) / 100))}
+              {(() => {
+                let displayPrice = p.price;
+                if (p.sizes) {
+                  try {
+                    const sizes = typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes;
+                    if (Array.isArray(sizes) && sizes.length > 0) {
+                      // Find minimum price among sizes
+                      displayPrice = Math.min(...sizes.map(s => parseFloat(s.price)));
+                    }
+                  } catch (e) {}
+                }
+                return fmt(displayPrice * (1 - getDiscountPercent(p, selectedShop) / 100));
+              })()}
+              {p.sizes && JSON.parse(p.sizes).length > 0 && (
+                <span style={{ fontSize: 10, marginLeft: 4, opacity: 0.6 }}>Starting</span>
+              )}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(200, 149, 42, 0.08)", padding: "4px 10px", borderRadius: 100 }}>
