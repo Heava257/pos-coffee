@@ -259,14 +259,22 @@ exports.sendPromoEmail = async (req, res) => {
     }
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // STARTTLS
       auth: {
         user: smtpUser,
         pass: smtpPass
       },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000,
-      socketTimeout: 10000
+      tls: {
+        rejectUnauthorized: false,
+        // Force IPv4 if possible by using a custom lookup or similar, 
+        // but STARTTLS on 587 is generally more compatible.
+        minVersion: 'TLSv1.2'
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 15000
     });
 
     const shopLink = `${platform_url || "https://pos-coffee-web-production.up.railway.app"}/customer/menu?biz=${business_id}`; 
@@ -335,8 +343,11 @@ exports.sendOTP = async (req, res) => {
     const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: smtpUser, pass: smtpPass }
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: { user: smtpUser, pass: smtpPass },
+      tls: { rejectUnauthorized: false }
     });
 
     await transporter.sendMail({
@@ -417,8 +428,11 @@ exports.redeemReward = async (req, res) => {
     if (customer.email && smtpUser && smtpPass) {
       const nodemailer = require('nodemailer');
       const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user: smtpUser, pass: smtpPass }
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: { user: smtpUser, pass: smtpPass },
+        tls: { rejectUnauthorized: false }
       });
 
       await transporter.sendMail({
