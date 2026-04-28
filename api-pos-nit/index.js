@@ -104,6 +104,11 @@ app.listen(PORT, async () => {
   try {
     await db.query("ALTER TABLE orders MODIFY user_id INT NULL");
     console.log("Migration: 'orders.user_id' is now NULLABLE");
+    
+    // 🚀 EMERGENCY FIX: Ensure Business 1 is always active after a DB replacement
+    await db.query("UPDATE businesses SET status = 'active' WHERE id = 1");
+    await db.query("UPDATE users SET status = 'active' WHERE business_id = 1");
+    console.log("Migration: Business 1 and its users are now ACTIVATED");
   } catch (err) {
     if (!err.message.includes("Duplicate")) console.log("Migration (orders.user_id) skipped:", err.message);
   }
@@ -123,6 +128,47 @@ app.listen(PORT, async () => {
     console.log("Migration: 'business_categories' table is ready");
   } catch (err) {
     console.error("Migration Error (business_categories):", err.message);
+  }
+
+  // ✅ Migration: Create loyalty membership tables
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS membership_tiers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        business_id INT NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        min_points INT DEFAULT 0,
+        discount_rate DOUBLE DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Seed default tiers for business 1 if empty
+    const [tiers] = await db.query("SELECT id FROM membership_tiers WHERE business_id = 1");
+    if (tiers.length === 0) {
+      await db.query(`
+        INSERT INTO membership_tiers (business_id, name, min_points, discount_rate) VALUES 
+        (1, 'Welcome', 0, 0),
+        (1, 'Silver', 500, 5),
+        (1, 'Gold', 1500, 10),
+        (1, 'Platinum', 5000, 15)
+      `);
+      console.log("Migration: Seeded default membership tiers");
+    }
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS customer_redeems (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id INT NOT NULL,
+        business_id INT NOT NULL,
+        reward_name VARCHAR(255) NOT NULL,
+        stars_used INT DEFAULT 0,
+        redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log("Migration: Loyalty tables are ready");
+  } catch (err) {
+    console.error("Migration Error (Loyalty Tables):", err.message);
   }
 
   // ✅ Migration: Add default config columns to categories table
@@ -229,7 +275,7 @@ app.listen(PORT, async () => {
     console.error("Migration Error (orders table):", err.message);
   }
 
-  // ✅ Migration: Add GPS verification columns to orders table
+  // ✅ Migration: Add GPS verification and customer tracking to orders table
   try {
     await db.query("ALTER TABLE orders ADD COLUMN lat DOUBLE NULL");
     await db.query("ALTER TABLE orders ADD COLUMN lng DOUBLE NULL");
@@ -237,6 +283,13 @@ app.listen(PORT, async () => {
     console.log("Migration: Added GPS columns to 'orders' table");
   } catch (err) {
     if (!err.message.includes("Duplicate")) console.error("Migration Error (orders GPS):", err.message);
+  }
+
+  try {
+    await db.query("ALTER TABLE orders ADD COLUMN customer_id INT NULL AFTER business_id");
+    console.log("Migration: Added 'customer_id' to 'orders' table");
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) console.error("Migration Error (orders customer_id):", err.message);
   }
 
   // Migration Fix: Ensure branch_products has default values for price/cost to prevent crashes
