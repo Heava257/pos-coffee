@@ -236,6 +236,10 @@ exports.sendPromoEmail = async (req, res) => {
     const { customer_id, promo_text } = req.body;
     const { business_id } = req;
 
+    if (!customer_id) {
+        return res.status(400).json({ success: false, message: "Missing customer ID" });
+    }
+
     // Fetch Customer and Business Info
     const [custData] = await db.query("SELECT * FROM customers WHERE id = ?", [customer_id]);
     const [bizData] = await db.query("SELECT name, smtp_user, smtp_pass FROM businesses WHERE id = ?", [business_id]);
@@ -248,7 +252,11 @@ exports.sendPromoEmail = async (req, res) => {
     const bizName = bizData[0]?.name || "Our Shop";
     const smtpUser = bizData[0]?.smtp_user || process.env.SMTP_USER;
     const rawSmtpPass = bizData[0]?.smtp_pass || process.env.SMTP_PASS;
-    const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : ""; // Clear all spaces
+    const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
+
+    if (!smtpUser || !smtpPass) {
+        return res.json({ success: false, message: "Email server (SMTP) not configured for this business." });
+    }
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -258,7 +266,7 @@ exports.sendPromoEmail = async (req, res) => {
       }
     });
 
-    const shopLink = `http://localhost:5173/customer/menu?biz=${business_id}`; 
+    const shopLink = `https://pos-coffee-web-production.up.railway.app/customer/menu?biz=${business_id}`; 
 
     const mailOptions = {
       from: `"${bizName}" <${smtpUser}>`,
@@ -293,7 +301,8 @@ exports.sendPromoEmail = async (req, res) => {
     res.json({ success: true, message: "Email sent successfully to " + customer.email });
 
   } catch (error) {
-    logError("customer.sendPromoEmail", error, res);
+    console.error("Email Error:", error);
+    res.status(500).json({ success: false, message: "Failed to send email: " + error.message });
   }
 };
 
