@@ -19,6 +19,7 @@ const MarketingDashboard = () => {
     const [allMembers, setAllMembers] = useState([]);
     const [stats, setStats] = useState({ total_members: 0, inactive_count: 0, recovery_rate: 0 });
     const [loading, setLoading] = useState(false);
+    const [sending, setSending] = useState(false); // 🚀 Add sending state
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [isPromoModalVisible, setIsPromoModalVisible] = useState(false);
 
@@ -232,21 +233,35 @@ const MarketingDashboard = () => {
             <Modal
                 title={<b>Win Back Campaign</b>}
                 open={isPromoModalVisible}
-                onCancel={() => setIsPromoModalVisible(false)}
+                onCancel={() => !sending && setIsPromoModalVisible(false)}
                 footer={[
-                    <Button key="cancel" onClick={() => setIsPromoModalVisible(false)}>Cancel</Button>,
-                    <Button key="send" type="primary" icon={<SendOutlined />} style={{ background: '#1e4a2d' }} onClick={async () => {
-                        const res = await request("customer/send-promo", "post", {
-                            customer_id: selectedCustomer?.id,
-                            promo_text: "Hey " + selectedCustomer?.name + ", we miss you! Come back today and enjoy 15% OFF on your favorite drink. ☕️"
-                        });
-                        if (res?.success) {
-                            message.success(res.message);
-                            setIsPromoModalVisible(false);
-                        } else {
-                            message.error(res?.message || "Failed to send email");
-                        }
-                    }}>
+                    <Button key="cancel" disabled={sending} onClick={() => setIsPromoModalVisible(false)}>Cancel</Button>,
+                    <Button 
+                        key="send" 
+                        type="primary" 
+                        icon={<SendOutlined />} 
+                        style={{ background: '#1e4a2d' }} 
+                        loading={sending} // 🔄 Show loading
+                        onClick={async () => {
+                            setSending(true);
+                            try {
+                                const res = await request("customer/send-promo", "post", {
+                                    customer_id: selectedCustomer?.id,
+                                    promo_text: "Hey " + selectedCustomer?.name + ", we miss you! Come back today and enjoy 15% OFF on your favorite drink. ☕️"
+                                });
+                                if (res?.success) {
+                                    message.success(res.message);
+                                    setIsPromoModalVisible(false);
+                                } else {
+                                    message.error(res?.message || "Failed to send email");
+                                }
+                            } catch (error) {
+                                message.error("Connection timeout or server error. Please try again.");
+                            } finally {
+                                setSending(false);
+                            }
+                        }}
+                    >
                         Send Promotion
                     </Button>
                 ]}

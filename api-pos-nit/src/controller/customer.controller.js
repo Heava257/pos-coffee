@@ -263,7 +263,10 @@ exports.sendPromoEmail = async (req, res) => {
       auth: {
         user: smtpUser,
         pass: smtpPass
-      }
+      },
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000,
+      socketTimeout: 10000
     });
 
     const shopLink = `https://pos-coffee-web-production.up.railway.app/customer/menu?biz=${business_id}`; 
@@ -298,11 +301,14 @@ exports.sendPromoEmail = async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
-    res.json({ success: true, message: "Email sent successfully to " + customer.email });
+    res.json({ success: true, message: "Promotion email sent successfully!" });
 
   } catch (error) {
     console.error("Email Error:", error);
-    res.status(500).json({ success: false, message: "Failed to send email: " + error.message });
+    res.json({ 
+        success: false, 
+        message: `Failed to send email: ${error.message}. Please check your Gmail App Password configuration in Business Settings.` 
+    });
   }
 };
 
