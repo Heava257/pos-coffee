@@ -265,6 +265,9 @@ exports.sendPromoEmail = async (req, res) => {
         return res.json({ success: false, message: "Email server (SMTP) not configured for this business." });
     }
 
+    const baseUrl = (platform_url || "https://pos-coffee-web-production.up.railway.app").replace(/\/$/, "");
+    const orderUrl = `${baseUrl}/customer/menu?biz=${business_id}${branch_id ? `&br=${branch_id}` : ''}`;
+
     // 🚀 USE BREVO API (HTTP) - Bypass Railway SMTP blocks
     try {
       const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
@@ -286,7 +289,7 @@ exports.sendPromoEmail = async (req, res) => {
               <p style="font-size: 12px; color: #8A8070; margin-top: 10px;">Use code: <b>WELCOMEBACK</b></p>
             </div>
             <div style="text-align: center; margin-top: 30px;">
-              <a href="${platform_url || "https://pos-coffee-web-production.up.railway.app"}/customer/menu?biz=${business_id}${branch_id ? `&br=${branch_id}` : ''}" style="background: #4A6741; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">Order Now</a>
+              <a href="${orderUrl}" style="background: #4A6741; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">Order Now</a>
             </div>
             <hr style="border: 0; border-top: 1px solid #eee; margin: 40px 0 20px;">
             <p style="font-size: 11px; color: #aaa; text-align: center; line-height: 1.5;">
