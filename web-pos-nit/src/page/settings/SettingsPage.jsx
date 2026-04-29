@@ -503,7 +503,7 @@ const SettingsPage = () => {
                                     <PrinterSettingsTab />
                                 )
                             },
-                            {
+                            (profile?.plan_id >= 5) && {
                                 key: "promo",
                                 label: <span><MobileOutlined /> {t.mobile_app_promo_tab}</span>,
                                 forceRender: true, // Ensure fields are registered

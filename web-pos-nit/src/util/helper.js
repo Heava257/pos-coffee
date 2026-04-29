@@ -97,7 +97,6 @@ export const request = (url = "", method = "get", data = {}) => {
       if (response) {
         var status = response.status;
         if (status == 401) {
-          // Clear session and redirect to login only on Unauthorized
           localStorage.removeItem("access_token");
           localStorage.removeItem("profile");
           if (window.location.pathname !== "/login") {
@@ -108,13 +107,14 @@ export const request = (url = "", method = "get", data = {}) => {
           message.error("Access Denied: You don't have permission for this action.");
         }
         setServerSatus(status);
-        // Important: Return the response data so caller can see { message: "..." }
-        return { ...response.data, error: true, status: status };
+        // 🚨 IMPORTANT: Use Promise.reject so the caller's .catch() or try/catch works
+        return Promise.reject({ ...response.data, error: true, status: status });
       } else if (err.code == "ERR_NETWORK") {
         setServerSatus("error");
+        return Promise.reject({ error: true, message: "Network Error: Please check your connection." });
       }
       console.log(">>>", err);
-      return { error: true, message: err.message || "Network Error" };
+      return Promise.reject({ error: true, message: err.message || "Something went wrong" });
     });
 };
 

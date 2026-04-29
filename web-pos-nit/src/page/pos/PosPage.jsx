@@ -950,7 +950,14 @@ function PosPage() {
   };
 
   const layoutType = getLayoutType();
-  const layoutConfig = LAYOUTS[layoutType] || LAYOUTS.coffee;
+  const baseLayout = LAYOUTS[layoutType] || LAYOUTS.coffee;
+  const layoutConfig = {
+    ...baseLayout,
+    hasTables: baseLayout.hasTables && Number(profile?.plan_id) > 4,
+    hasOrderTypes: baseLayout.hasOrderTypes && Number(profile?.plan_id) > 4,
+    hasDrafts: baseLayout.hasDrafts && Number(profile?.plan_id) > 4,
+    hasKitchen: baseLayout.hasKitchen && Number(profile?.plan_id) > 4,
+  };
   const isRetail = layoutConfig.hasSidebar;
   const primaryColor = layoutConfig.primaryColor || COLORS.darkGreen;
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -1009,7 +1016,7 @@ function PosPage() {
       console.error("Fetch tables error:", error);
     }
   };
-  const [orderType, setOrderType] = useState("dine_in");
+  const [orderType, setOrderType] = useState(Number(profile?.plan_id) <= 4 ? "take_away" : "dine_in");
   const [customerName, setCustomerName] = useState("");
   const [tableNo, setTableNo] = useState("");
   const [playBell] = useSound(BELL_SOUND_URL);
@@ -1964,6 +1971,7 @@ function PosPage() {
       if (res && res.details) {
         const newItems = res.details.map((d) => ({
           id: d.product_id,
+          server_item_id: d.id, // 🚀 FIX: Must include the database row ID
           name: d.product_name,
           unit_price: d.price,
           cart_qty: d.qty,
@@ -1972,7 +1980,9 @@ function PosPage() {
           display_name: d.product_name + (d.note ? ` [${d.note}]` : ""),
           // Include order.id in unique_id for web orders to prevent merging separate orders together
           unique_id: `web-${order.id}-${d.product_id}-${d.note || ""}`,
-          isSentToKitchen: true // Web orders are already in KDS
+          isSentToKitchen: true, // Web orders are already in KDS
+          kitchen_status: d.kitchen_status,
+          kitchen_batch_id: d.kitchen_batch_id
         }));
 
         if (isMerge) {
@@ -2001,7 +2011,6 @@ function PosPage() {
           }));
 
           // Update this new order's status so it disappears from Pending
-          await request(`order-kitchen-status`, "put", { id: order.id, kitchen_status: 'preparing' });
           getPendingOrders();
           message.success(`Items added to Table ${order.table_no}`);
         } else {
@@ -2013,7 +2022,6 @@ function PosPage() {
           }));
           setCurrentOrderId(order.id);
           // Update status so it disappears from Pending badge
-          await request(`order-kitchen-status`, "put", { id: order.id, kitchen_status: 'preparing' });
           getPendingOrders();
           message.info(`Loaded order for ${order.table_no ? "Table " + order.table_no : "Guest"}`);
         }
@@ -2757,7 +2765,7 @@ function PosPage() {
             </div>
 
             {/* Table Orders Button */}
-            {isPermission("Table Management") && (
+            {layoutConfig.hasTables && (
               <Badge count={pendingCount} size="small" offset={[-2, 2]} overflowCount={99}>
                 <button
                   onClick={() => setPendingOrdersVisible(true)}
@@ -3105,7 +3113,7 @@ function PosPage() {
                     size="small"
                     icon={<PushpinOutlined />}
                     onClick={() => {
-                      handleHoldOrder(state.cart_list, true, { kitchen_status: 'preparing' }); // Save SILENTLY (no print) and CLEAR from pending
+                      handleHoldOrder(state.cart_list, true, { kitchen_status: 'draft' }); // Save SILENTLY (no print) and CLEAR from pending
                       handleClearCart(false, true); // Clear screen for next guest but KEEP draft
                       message.success(tableNo ? `Tab for Table ${tableNo} saved / រក្សាទុកតុលេខ ${tableNo} រួចរាល់` : "Draft saved!");
                     }}
@@ -3130,6 +3138,18 @@ function PosPage() {
           {/* 2. Order Info (Customer/Table) */}
           {layoutConfig.hasOrderTypes && (
             <div style={{ padding: "16px 18px 12px", borderBottom: `1px solid #f8f9fa`, background: '#fff' }}>
+              {/* Identification Input */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 10, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 700 }}>CUSTOMER NAME / NOTE (ចំណាំ)</div>
+                <Input 
+                  placeholder="e.g. Blue Shirt, Guest at Corner..."
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  style={{ borderRadius: 10, border: `1px solid ${COLORS.softBorder}`, height: 40, fontWeight: 600 }}
+                  prefix={<UserOutlined style={{ color: COLORS.darkGreen }} />}
+                />
+              </div>
+              
               {/* Order Type Toggle */}
               <div style={{ display: "flex", background: "#f1f3f5", borderRadius: 12, padding: 4, gap: 4, marginBottom: 12 }}>
                 {[
@@ -3456,8 +3476,8 @@ function PosPage() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text strong style={{ fontSize: 16 }}>
-                  {order.tableNo ? `${t.table_label} ${order.tableNo}` : t.walk_in}
+                <Text strong style={{ fontSize: 17, color: order.customerName ? COLORS.darkGreen : COLORS.textPrimary }}>
+                  {order.customerName ? order.customerName : (order.tableNo ? `${t.table_label} ${order.tableNo}` : t.walk_in)}
                 </Text>
                 <Text type="secondary" style={{ fontSize: 11 }}>
                   {new Date(order.heldAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -3465,8 +3485,8 @@ function PosPage() {
               </div>
 
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>
-                  {order.customerName || t.guest} • {order.cart_list.length} Items
+                <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 600 }}>
+                  {order.tableNo && order.customerName ? `${t.table_label} ${order.tableNo} • ` : ""}{order.cart_list.length} Items
                 </div>
                 <div style={{ fontSize: 12, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                   {order.cart_list.slice(0, 3).map((it, i) => (

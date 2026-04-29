@@ -27,7 +27,9 @@ exports.create = async (req, res) => {
             payment_api_key,
             payment_receiver_name,
             payment_provider,
-            payment_api_url
+            payment_api_url,
+            province,
+            district
         } = req.body;
         const { business_id } = req;
 
@@ -42,8 +44,15 @@ exports.create = async (req, res) => {
         }
 
         const khqr_image = req.file?.filename || null;
-        const sql = "INSERT INTO branches (business_id, name, location, phone, khqr_image, payment_merchant_id, payment_api_key, payment_receiver_name, payment_provider, payment_api_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        const [data] = await db.query(sql, [business_id, name, location, phone, khqr_image, payment_merchant_id || null, payment_api_key || null, payment_receiver_name || null, payment_provider || 'KHQR', payment_api_url || null]);
+        const is_main = req.body.is_main === '1' || req.body.is_main === 1 ? '1' : '0';
+
+        // 🛡️ If this is set as main, unset any other main branches for this business
+        if (is_main === '1') {
+            await db.query("UPDATE branches SET is_main = '0' WHERE business_id = ?", [business_id]);
+        }
+
+        const sql = "INSERT INTO branches (business_id, name, province, district, location, phone, khqr_image, is_main, payment_merchant_id, payment_api_key, payment_receiver_name, payment_provider, payment_api_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        const [data] = await db.query(sql, [business_id, name, province || null, district || null, location, phone, khqr_image, is_main, payment_merchant_id || null, payment_api_key || null, payment_receiver_name || null, payment_provider || 'KHQR', payment_api_url || null]);
 
         res.json({
             success: true,
@@ -58,8 +67,14 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         const { business_id } = req;
-        const { id, name, location, phone, image_remove, payment_merchant_id, payment_api_key, payment_receiver_name, payment_provider, payment_api_url } = req.body;
+        const { id, name, province, district, location, phone, is_main, image_remove, payment_merchant_id, payment_api_key, payment_receiver_name, payment_provider, payment_api_url } = req.body;
         let khqr_image = req.file?.filename;
+        const isMainVal = is_main === '1' || is_main === 1 || is_main === true ? '1' : '0';
+
+        // 🛡️ If this is set as main, unset any other main branches for this business
+        if (isMainVal === '1') {
+            await db.query("UPDATE branches SET is_main = '0' WHERE business_id = ?", [business_id]);
+        }
 
         // Fetch current branch to handle image replacement
         const [current] = await db.query("SELECT khqr_image FROM branches WHERE id = ?", [id]);
@@ -77,8 +92,8 @@ exports.update = async (req, res) => {
             khqr_image = oldImage; // Keep existing if no change
         }
 
-        const sql = "UPDATE branches SET name = ?, location = ?, phone = ?, khqr_image = ?, payment_merchant_id = ?, payment_api_key = ?, payment_receiver_name = ?, payment_provider = ?, payment_api_url = ? WHERE id = ? AND business_id = ?";
-        await db.query(sql, [name, location, phone, khqr_image, payment_merchant_id || null, payment_api_key || null, payment_receiver_name || null, payment_provider || 'KHQR', payment_api_url || null, id, business_id]);
+        const sql = "UPDATE branches SET name = ?, province = ?, district = ?, location = ?, phone = ?, khqr_image = ?, is_main = ?, payment_merchant_id = ?, payment_api_key = ?, payment_receiver_name = ?, payment_provider = ?, payment_api_url = ? WHERE id = ? AND business_id = ?";
+        await db.query(sql, [name, province || null, district || null, location, phone, khqr_image, isMainVal, payment_merchant_id || null, payment_api_key || null, payment_receiver_name || null, payment_provider || 'KHQR', payment_api_url || null, id, business_id]);
 
         res.json({ message: "Branch updated successfully!" });
     } catch (error) {

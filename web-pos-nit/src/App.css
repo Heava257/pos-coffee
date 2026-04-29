@@ -851,3 +851,34 @@ body {
     width: 80mm !important;
   }
 }
+/* Plan Badge Styles */
+.plan-badge-btn {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.plan-badge-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+  filter: brightness(1.1);
+}
+
+.core-gradient {
+  background: linear-gradient(135deg, #1e4a2d 0%, #347a4c 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.emerald-gradient {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #b8860b 0%, #f1c40f 50%, #daa520 100%) !important;
+  color: #1e4a2d !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.gold-gradient .anticon {
+  color: #1e4a2d !important;
+}

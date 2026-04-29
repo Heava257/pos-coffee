@@ -2,7 +2,7 @@ const mysql = require('mysql2/promise');
 
 async function migrate() {
     const db = await mysql.createConnection({
-        host: 'localhost', user: 'root', password: '', database: 'coffee_saas'
+        host: 'localhost', user: 'dev_user', password: '88889999', database: 'coffee_saas'
     });
 
     try {
@@ -26,9 +26,9 @@ async function migrate() {
         await db.query("DELETE FROM subscription_plans");
         await db.query(`
             INSERT INTO subscription_plans (name, max_branches, max_staff, max_products, price) VALUES 
-            ('Free Plan', 1, 2, 50, 0.00),
-            ('Pro Plan', 5, 20, 500, 29.00),
-            ('Enterprise', 999, 999, 9999, 99.00)
+            ('Small (Starter)', 1, 2, 50, 0.00),
+            ('Medium (Professional)', 5, 10, 500, 30.00),
+            ('Large (Enterprise)', 999, 999, 9999, 800.00)
         `);
 
         // 3. Update businesses table to use plan_id

@@ -304,7 +304,7 @@ function OrderPage() {
         user_id: user_id,
         // For staff, strictly filter by current shift ID if open. 
         // If no shift open, hide orders (send -1 as ID)
-        shift_id: currentShift?.id || (canSeeAllReports ? "" : -1)
+        shift_id: canSeeAllReports ? "" : (currentShift?.id || -1)
       };
 
       // Standardized API endpoint to match backend route
@@ -360,6 +360,7 @@ function OrderPage() {
       const data = {
         ...values,
         expense_date: formatDateServer(dayjs()), // Today
+        shift_id: currentShift?.id
       };
       const res = await request("expense", "post", data);
       if (res && res.success) {
@@ -427,7 +428,7 @@ function OrderPage() {
       getShiftHistory(); 
       getBranchInfo();
     }
-  }, [profileUserId, filter.user_id, filter.from_date, filter.to_date]);
+  }, [profileUserId, filter.user_id, filter.from_date, filter.to_date, currentShift?.id]);
 
   const handleSearch = () => {
     getList();
@@ -918,7 +919,7 @@ function OrderPage() {
                 {
                   title: t.order_details,
                   dataIndex: "order_no",
-                  width: 200,
+                  width: 160,
                   render: (val, record) => (
                     <div>
                       <Tag
@@ -931,35 +932,64 @@ function OrderPage() {
                       >
                         {val || `#${record.id}`}
                       </Tag>
-                      <div style={{ fontSize: 12, color: '#8b5cf6' }}>
-                        {formatDateClient(record.created_at, "MMM DD, YYYY")}
+                      <div style={{ fontSize: 11, color: '#64748b' }}>
+                        {formatDateClient(record.created_at, "MMM DD, YYYY HH:mm")}
                       </div>
                     </div>
                   )
                 },
                 {
+                  title: t.staff,
+                  dataIndex: "staff_name",
+                  width: 120,
+                  render: (val) => (
+                    <Space>
+                      <Avatar size="small" icon={<UserOutlined />} style={{ background: '#1e4a2d' }} />
+                      <Text style={{ fontSize: 13, fontWeight: 500 }}>{val || 'System'}</Text>
+                    </Space>
+                  )
+                },
+                {
+                  title: "Shift",
+                  dataIndex: "shift_id",
+                  width: 80,
+                  render: (val) => val ? (
+                    <Tag color="cyan" style={{ borderRadius: 4, fontWeight: 'bold' }}>
+                      #{val}
+                    </Tag>
+                  ) : "-"
+                },
+                {
                   title: t.product,
                   dataIndex: "product_names",
-                  width: 300,
+                  width: 250,
                   render: (val, record) => (
                     <div>
-                      <div style={{ fontSize: 12, color: '#6b7280' }}>
-                        {val?.length > 50 ? `${val.substring(0, 50)}...` : val}
+                      <div style={{ fontSize: 12, color: '#1e293b', fontWeight: 500 }}>
+                        {val?.length > 60 ? `${val.substring(0, 60)}...` : val}
                       </div>
-                      <Badge
-                        count={`${record.total_quantity || 0} ${t.items}`}
-                        style={{ backgroundColor: '#f0f9ff', color: '#0369a1', marginTop: 4 }}
-                      />
+                      <div style={{ marginTop: 4 }}>
+                        <Badge
+                          count={`${record.total_quantity || 0} ${t.items}`}
+                          style={{
+                            backgroundColor: '#f1f5f9',
+                            color: '#64748b',
+                            boxShadow: 'none',
+                            fontSize: 10,
+                            fontWeight: 600
+                          }}
+                        />
+                      </div>
                     </div>
                   )
                 },
                 {
                   title: t.amount,
                   dataIndex: "total_amount",
-                  align: "right",
-                  width: 120,
-                  render: val => (
-                    <Text strong style={{ fontSize: 16, color: '#2d3748' }}>
+                  width: 140,
+                  align: 'right',
+                  render: (val) => (
+                    <Text style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>
                       ${Number(val || 0).toFixed(2)}
                     </Text>
                   )
@@ -973,49 +1003,64 @@ function OrderPage() {
                   )
                 },
                 {
+                  title: t.action,
+                  width: 180,
                   render: (_, rec) => (
                     <Space>
-                      {(rec.payment_method !== "Cash" && rec.status !== "Cancel") && (
-                        <Button style={{ color: '#10b981' }} icon={<ShoppingCartOutlined />} onClick={() => {
-                          setQrData({ orderNo: rec.order_no || `#${rec.id}`, total: rec.total_amount });
-                          setQrModalVisible(true);
-                        }} />
-                      )}
-                      <Button style={{ color: '#eb2f96' }} icon={<TagOutlined />} onClick={async () => {
-                        setState(p => ({ ...p, loading: true }));
-                        try {
-                          const res = await request(`order/${rec.id}`, "get");
-                          if (res && res.details) {
-                            setOrderDetail(res.details);
-                            setCurrentOrder({ ...rec, ...res }); // Merge record with full order data
-                            setTimeout(() => {
-                              handlePrintLabel();
+                      <Tooltip title={t.view_details}>
+                        <Button 
+                          shape="circle"
+                          icon={<EyeOutlined />} 
+                          onClick={() => getOrderDetail(rec)}
+                          style={{ color: '#1890ff', borderColor: '#1890ff' }}
+                        />
+                      </Tooltip>
+                      <Tooltip title="Print Label">
+                        <Button 
+                          shape="circle"
+                          icon={<TagOutlined />} 
+                          onClick={async () => {
+                            setState(p => ({ ...p, loading: true }));
+                            try {
+                              const res = await request(`order/${rec.id}`, "get");
+                              if (res && res.details) {
+                                setOrderDetail(res.details);
+                                setCurrentOrder({ ...rec, ...res });
+                                setTimeout(() => {
+                                  handlePrintLabel();
+                                  setState(p => ({ ...p, loading: false }));
+                                }, 500);
+                              }
+                            } catch (error) {
                               setState(p => ({ ...p, loading: false }));
-                            }, 1000);
-                          }
-                        } catch (error) {
-                          console.error("Print Label Error:", error);
-                          setState(p => ({ ...p, loading: false }));
-                        }
-                      }} />
-                      <Button style={{ color: '#722ed1' }} icon={<FileTextOutlined />} onClick={async () => {
-                        setState(p => ({ ...p, loading: true }));
-                        try {
-                          const res = await request(`order/${rec.id}`, "get");
-                          if (res && res.details) {
-                            setOrderDetail(res.details);
-                            setCurrentOrder({ ...rec, ...res });
-                            setTimeout(() => {
-                              handlePrintInvoice();
+                            }
+                          }}
+                          style={{ color: '#eb2f96', borderColor: '#eb2f96' }}
+                        />
+                      </Tooltip>
+                      <Tooltip title="Print Invoice">
+                        <Button 
+                          shape="circle"
+                          icon={<FileTextOutlined />} 
+                          onClick={async () => {
+                            setState(p => ({ ...p, loading: true }));
+                            try {
+                              const res = await request(`order/${rec.id}`, "get");
+                              if (res && res.details) {
+                                setOrderDetail(res.details);
+                                setCurrentOrder({ ...rec, ...res });
+                                setTimeout(() => {
+                                  handlePrintInvoice();
+                                  setState(p => ({ ...p, loading: false }));
+                                }, 500);
+                              }
+                            } catch (error) {
                               setState(p => ({ ...p, loading: false }));
-                            }, 1000);
-                          }
-                        } catch (error) {
-                          console.error("Print Invoice Error:", error);
-                          setState(p => ({ ...p, loading: false }));
-                        }
-                      }} />
-                      <Button type="link" icon={<EyeOutlined />} onClick={() => getOrderDetail(rec)} />
+                            }
+                          }}
+                          style={{ color: '#722ed1', borderColor: '#722ed1' }}
+                        />
+                      </Tooltip>
                     </Space>
                   )
                 }

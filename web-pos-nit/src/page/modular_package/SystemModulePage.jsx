@@ -9,7 +9,10 @@ import {
     EditOutlined,
     AppstoreOutlined,
     DeleteOutlined,
-    SafetyCertificateOutlined
+    SafetyCertificateOutlined,
+    ShopOutlined,
+    GlobalOutlined,
+    CoffeeOutlined
 } from "@ant-design/icons";
 import { Checkbox, Divider, Tooltip } from "antd";
 import { request } from "../../util/helper";
@@ -102,22 +105,39 @@ const SystemModulePage = () => {
             title: "Module Details",
             dataIndex: "name",
             key: "name",
-            render: (text, record) => (
-                <Space size="middle">
-                    <div style={{
-                        width: 45, height: 45, borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #1e4a2d 0%, #3a5a40 100%)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
-                    }}>
-                        <AppstoreOutlined style={{ fontSize: '22px' }} />
-                    </div>
-                    <div>
-                        <Text strong style={{ fontSize: '15px', color: '#1e4a2d' }}>{text}</Text>
-                        <br />
-                        <Text type="secondary" style={{ fontSize: '11px' }}>Code: {record.code}</Text>
-                    </div>
-                </Space>
-            )
+            render: (text, record) => {
+                let icon = <AppstoreOutlined style={{ fontSize: '22px' }} />;
+                let gradient = 'linear-gradient(135deg, #1e4a2d 0%, #3a5a40 100%)';
+                
+                const code = record.code?.toUpperCase();
+                if (code === 'POS') {
+                    icon = <ShopOutlined style={{ fontSize: '22px' }} />;
+                    gradient = 'linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)';
+                } else if (code === 'ORDERING') {
+                    icon = <GlobalOutlined style={{ fontSize: '22px' }} />;
+                    gradient = 'linear-gradient(135deg, #2d6a3e 0%, #40916c 100%)';
+                } else if (code === 'INVENTORY') {
+                    icon = <CoffeeOutlined style={{ fontSize: '22px' }} />;
+                    gradient = 'linear-gradient(135deg, #081c15 0%, #1b4332 100%)';
+                }
+
+                return (
+                    <Space size="middle">
+                        <div style={{
+                            width: 45, height: 45, borderRadius: '12px',
+                            background: gradient,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
+                        }}>
+                            {icon}
+                        </div>
+                        <div>
+                            <Text strong style={{ fontSize: '15px', color: '#1e4a2d' }}>{text}</Text>
+                            <br />
+                            <Text type="secondary" style={{ fontSize: '11px', fontWeight: 700, color: '#999' }}>CODE: {record.code?.toUpperCase()}</Text>
+                        </div>
+                    </Space>
+                )
+            }
         },
         {
             title: "Description",

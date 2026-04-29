@@ -21,6 +21,7 @@ import { Config } from "../../util/config";
 import { getProfile } from "../../store/profile.store";
 
 import { useLanguage, translations } from "../../store/language.store";
+import { CAMBODIA_GEO } from "../../util/cambodia_geo";
 
 const { Title, Text } = Typography;
 
@@ -29,6 +30,13 @@ const COLORS = {
     midGreen: "#2d6a42",
     textSecondary: "#6b7c6b",
 };
+
+const CAMBODIA_PROVINCES = [
+    "Phnom Penh", "Banteay Meanchey", "Battambang", "Kampong Cham", "Kampong Chhnang",
+    "Kampong Speu", "Kampong Thom", "Kampot", "Kandal", "Kep", "Koh Kong", "Kratie",
+    "Mondulkiri", "Oddar Meanchey", "Pailin", "Preah Sihanouk", "Preah Vihear", "Prey Veng",
+    "Pursat", "Ratanakiri", "Siem Reap", "Stung Treng", "Svay Rieng", "Takeo", "Tboung Khmum"
+];
 
 const BranchPage = () => {
     const { lang } = useLanguage();
@@ -64,6 +72,8 @@ const BranchPage = () => {
         try {
             const formData = new FormData();
             formData.append("name", values.name);
+            formData.append("province", values.province || "");
+            formData.append("district", values.district || "");
             formData.append("location", values.location || "");
             formData.append("phone", values.phone || "");
             formData.append("is_main", values.is_main ? "1" : "0");
@@ -102,6 +112,8 @@ const BranchPage = () => {
         setEditId(item.id);
         form.setFieldsValue({
             name: item.name,
+            province: item.province,
+            district: item.district,
             location: item.location,
             phone: item.phone,
             is_main: item.is_main === '1',
@@ -153,6 +165,17 @@ const BranchPage = () => {
                         {text} {record.is_main === '1' && <Tag color="gold" style={{ marginLeft: 8 }}>{t.main_headquarter}</Tag>}
                     </Text>
                     <Text type="secondary" style={{ fontSize: '12px' }}>ID: BR-{record.id.toString().padStart(3, '0')}</Text>
+                </Space>
+            )
+        },
+        {
+            title: t.province_city || "Province/City",
+            dataIndex: "province",
+            key: "province",
+            render: (text, record) => (
+                <Space direction="vertical" size={0}>
+                    <Tag color="blue" style={{ borderRadius: '6px' }}>{text || t.not_specified}</Tag>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>{record.district}</Text>
                 </Space>
             )
         },
@@ -327,6 +350,45 @@ const BranchPage = () => {
                         rules={[{ required: true, message: t.branch_name + " is required" }]}
                     >
                         <Input placeholder="e.g. Riverside Coffee, Terminal 2" size="large" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="province"
+                        label={t.province_city || "Province/City"}
+                        rules={[{ required: true, message: "Province is required" }]}
+                    >
+                        <Select
+                            showSearch
+                            placeholder="Select Province"
+                            size="large"
+                            options={Object.keys(CAMBODIA_GEO).map(p => ({ label: p, value: p }))}
+                            onChange={() => form.setFieldsValue({ district: undefined })}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        noStyle
+                        shouldUpdate={(prev, curr) => prev.province !== curr.province}
+                    >
+                        {({ getFieldValue }) => {
+                            const province = getFieldValue("province");
+                            const districts = province ? CAMBODIA_GEO[province] : [];
+                            return (
+                                <Form.Item
+                                    name="district"
+                                    label={t.district_khan || "District/Khan"}
+                                    rules={[{ required: true, message: "District is required" }]}
+                                >
+                                    <Select
+                                        showSearch
+                                        placeholder="Select District/Khan"
+                                        size="large"
+                                        disabled={!province}
+                                        options={districts.map(d => ({ label: d, value: d }))}
+                                    />
+                                </Form.Item>
+                            );
+                        }}
                     </Form.Item>
 
                     <Form.Item

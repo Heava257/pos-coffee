@@ -182,6 +182,58 @@ const SuperAdminDashboard = () => {
           </Col>
         </Row>
 
+        {/* Infrastructure Section */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <SafetyCertificateOutlined style={{ color: '#1e4a2d', fontSize: 18 }} />
+            <span style={{ fontWeight: 900, fontSize: 16, color: '#1e4a2d' }}>Infrastructure & Data Health</span>
+          </div>
+          <Row gutter={[20, 20]}>
+            <Col xs={24} sm={12} lg={6}>
+              <div className="admin-stat-card" style={{ borderLeft: '4px solid #1e4a2d' }}>
+                <Statistic 
+                  title="Database Storage" 
+                  value={data.systemHealth?.dbSize || 0} 
+                  suffix="MB"
+                  valueStyle={{ color: '#1e4a2d', fontWeight: 900 }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#6b7c6b' }}>Total data & indexes</div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <div className="admin-stat-card" style={{ borderLeft: '4px solid #c0a060' }}>
+                <Statistic 
+                  title="Global Order Volume" 
+                  value={data.systemHealth?.totalRows?.total_orders || 0} 
+                  valueStyle={{ color: '#1e4a2d', fontWeight: 900 }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#6b7c6b' }}>Aggregate transactions</div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <div className="admin-stat-card" style={{ borderLeft: '4px solid #1890ff' }}>
+                <Statistic 
+                  title="Global Product Catalog" 
+                  value={data.systemHealth?.totalRows?.total_products || 0} 
+                  valueStyle={{ color: '#1e4a2d', fontWeight: 900 }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#6b7c6b' }}>Items across all tenants</div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <div className="admin-stat-card" style={{ borderLeft: '4px solid #52c41a' }}>
+                <Statistic 
+                  title="System Uptime" 
+                  value="99.9" 
+                  suffix="%"
+                  valueStyle={{ color: '#52c41a', fontWeight: 900 }}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#6b7c6b' }}>Operational efficiency</div>
+              </div>
+            </Col>
+          </Row>
+        </div>
+
         {/* Charts Section */}
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
           <Col xs={24} lg={16}>
@@ -226,6 +278,79 @@ const SuperAdminDashboard = () => {
                     <Legend verticalAlign="bottom" height={36}/>
                   </PieChart>
                 </ResponsiveContainer>
+              </div>
+            </div>
+          </Col>
+        </Row>
+
+        {/* Activity & Performance Row */}
+        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+          <Col xs={24} lg={16}>
+            <div className="admin-main-card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                <HistoryOutlined style={{ color: '#1e4a2d', fontSize: 18 }} />
+                <span style={{ fontWeight: 900, fontSize: 16, color: '#1e4a2d' }}>Platform Pulse (Anonymous Activity)</span>
+              </div>
+              <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                {data.activityFeed?.map((item, index) => (
+                  <div key={index} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    padding: '12px 16px', 
+                    marginBottom: 8, 
+                    borderRadius: 12,
+                    background: '#f8faf8',
+                    border: '1px solid #edf2ed'
+                  }}>
+                    <div style={{ 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: 8, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      background: item.type === 'order' ? '#e6f7ff' : item.type === 'product' ? '#f6ffed' : '#fff7e6',
+                      marginRight: 12
+                    }}>
+                      {item.type === 'order' && <ShopOutlined style={{ color: '#1890ff' }} />}
+                      {item.type === 'product' && <DeploymentUnitOutlined style={{ color: '#52c41a' }} />}
+                      {item.type === 'staff' && <TeamOutlined style={{ color: '#fa8c16' }} />}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13 }}>
+                        <Text strong>{item.business_name}</Text> 
+                        {item.type === 'order' && " processed a new transaction"}
+                        {item.type === 'product' && ` added a new product: "${item.item_name}"`}
+                        {item.type === 'staff' && ` registered a new team member: "${item.item_name}"`}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#8c8c8c' }}>{moment(item.created_at).fromNow()}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Col>
+          <Col xs={24} lg={8}>
+            <div className="admin-main-card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                <CrownOutlined style={{ color: '#c0a060', fontSize: 18 }} />
+                <span style={{ fontWeight: 900, fontSize: 16, color: '#1e4a2d' }}>High-Volume Tenants (Today)</span>
+              </div>
+              <div style={{ padding: '0 8px' }}>
+                {data.topTenantsByVolume?.map((item, index) => (
+                  <div key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ fontWeight: 900, color: '#c0a060' }}>#{index + 1}</div>
+                      <Text strong style={{ fontSize: 14 }}>{item.name}</Text>
+                    </div>
+                    <Tag color="cyan" style={{ borderRadius: 6 }}>{item.order_count} Orders</Tag>
+                  </div>
+                ))}
+                {(!data.topTenantsByVolume || data.topTenantsByVolume.length === 0) && (
+                  <div style={{ textAlign: 'center', padding: '20px 0', color: '#8c8c8c' }}>
+                    No activity recorded today
+                  </div>
+                )}
               </div>
             </div>
           </Col>

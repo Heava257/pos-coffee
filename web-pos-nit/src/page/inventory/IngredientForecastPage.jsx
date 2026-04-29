@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Table, Card, Typography, Row, Col, Tag, Statistic, Empty, Spin, Button, Tooltip } from "antd";
+import { Table, Card, Typography, Row, Col, Tag, Statistic, Empty, Spin, Button, Tooltip, Divider } from "antd";
 import { 
-    RadarChart, 
-    Radar, 
-    PolarGrid, 
-    PolarAngleAxis, 
-    PolarRadiusAxis, 
     ResponsiveContainer,
     BarChart,
     Bar,
@@ -14,12 +9,15 @@ import {
     Tooltip as RechartsTooltip,
     CartesianGrid
 } from 'recharts';
-import { InfoCircleOutlined, ShoppingCartOutlined, ThunderboltOutlined, StockOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, ShoppingCartOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { request } from "../../util/helper";
+import { useLanguage, translations } from "../../store/language.store";
 
 const { Title, Text } = Typography;
 
 const IngredientForecastPage = () => {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -36,22 +34,22 @@ const IngredientForecastPage = () => {
 
     const columns = [
         {
-            title: "Ingredient",
+            title: t.ingredient || "Ingredient",
             dataIndex: "name",
             render: (text) => <Text strong>{text}</Text>
         },
         {
-            title: "Avg Daily Usage",
+            title: t.avg_daily_usage,
             dataIndex: "avg_daily_usage",
             render: (val, row) => `${val} ${row.unit}`
         },
         {
-            title: "Next 7 Days (Expected)",
+            title: t.next_7_days_expected,
             dataIndex: "expected_7d_usage",
             render: (val, row) => <Text type="secondary">{val} {row.unit}</Text>
         },
         {
-            title: "Current Stock",
+            title: t.current_stock,
             dataIndex: "current_stock",
             render: (val, row) => (
                 <Tag color={val < row.expected_7d_usage ? "red" : "green"}>
@@ -60,12 +58,12 @@ const IngredientForecastPage = () => {
             )
         },
         {
-            title: "Suggested Purchase",
+            title: t.suggested_purchase,
             dataIndex: "suggested_purchase",
             render: (val, row) => (
                 val > 0 ? 
                 <Text strong style={{ color: '#c0a060' }}>+ {val} {row.unit}</Text> : 
-                <Text type="success">Sufficient ✅</Text>
+                <Text type="success">{t.sufficient} ✅</Text>
             )
         }
     ];
@@ -82,8 +80,8 @@ const IngredientForecastPage = () => {
         <div style={{ padding: 24 }}>
             <Row gutter={24} style={{ marginBottom: 24 }}>
                 <Col span={16}>
-                    <Title level={2}>AI Ingredient Forecasting 🔮</Title>
-                    <Text type="secondary">Based on your sales from the last 7 days, here is what you need for next week.</Text>
+                    <Title level={2}>{t.forecast_title} 🔮</Title>
+                    <Text type="secondary">{t.forecast_subtitle}</Text>
                 </Col>
                 <Col span={8} style={{ textAlign: "right" }}>
                     <Button 
@@ -92,14 +90,14 @@ const IngredientForecastPage = () => {
                         onClick={() => window.print()}
                         style={{ background: '#1e4a2d', borderRadius: 10, height: 45 }}
                     >
-                        Export Purchase List
+                        {t.export_purchase_list}
                     </Button>
                 </Col>
             </Row>
 
             <Row gutter={24} style={{ marginBottom: 24 }}>
                 <Col span={18}>
-                    <Card title="Supply vs. Demand Analysis" style={{ borderRadius: 20 }}>
+                    <Card title={t.supply_demand_analysis} style={{ borderRadius: 20 }}>
                         <div style={{ height: 300 }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={chartData}>
@@ -107,8 +105,8 @@ const IngredientForecastPage = () => {
                                     <XAxis dataKey="name" />
                                     <YAxis />
                                     <RechartsTooltip />
-                                    <Bar dataKey="usage" name="Expected Usage (7d)" fill="#1e4a2d" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="stock" name="Current Stock" fill="#c0a060" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="usage" name={t.expected_usage_7d} fill="#1e4a2d" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="stock" name={t.current_stock} fill="#c0a060" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -117,18 +115,21 @@ const IngredientForecastPage = () => {
                 <Col span={6}>
                     <Card style={{ borderRadius: 20, background: '#1e4a2d', color: '#fff', height: '100%' }}>
                         <Statistic 
-                            title={<span style={{ color: '#fff', opacity: 0.8 }}>Forecast Confidence</span>}
+                            title={<span style={{ color: '#fff', opacity: 0.8 }}>{t.forecast_confidence}</span>}
                             value={94}
                             suffix="%"
                             valueStyle={{ color: '#fff', fontSize: 32, fontWeight: 800 }}
                             prefix={<ThunderboltOutlined />}
                         />
                         <div style={{ marginTop: 20, opacity: 0.9, fontSize: 13 }}>
-                            Our AI analyzed <b>{list.length}</b> ingredients and <b>7 days</b> of transactional history to generate this report.
+                            {lang === 'kh' 
+                                ? `AI របស់យើងបានវិភាគគ្រឿងផ្សំចំនួន ${list.length} និងប្រវត្តិនៃការលក់ ៧ ថ្ងៃ ដើម្បីបង្កើតរបាយការណ៍នេះ។`
+                                : `Our AI analyzed ${list.length} ingredients and 7 days of transactional history to generate this report.`
+                            }
                         </div>
                         <Divider style={{ background: 'rgba(255,255,255,0.1)' }} />
                         <div style={{ fontSize: 12 }}>
-                            <InfoCircleOutlined /> Recommendation: Consider purchasing items marked in <b>Gold</b> before Monday.
+                            <InfoCircleOutlined /> {t.forecast_recommendation}
                         </div>
                     </Card>
                 </Col>
@@ -140,7 +141,7 @@ const IngredientForecastPage = () => {
                     dataSource={list} 
                     rowKey="raw_material_id"
                     pagination={false}
-                    locale={{ emptyText: <Empty description="No enough sales data yet to generate forecast." /> }}
+                    locale={{ emptyText: <Empty description={t.no_forecast_data} /> }}
                 />
             </Card>
         </div>
@@ -148,4 +149,3 @@ const IngredientForecastPage = () => {
 };
 
 export default IngredientForecastPage;
-import { Divider } from "antd";

@@ -41,7 +41,9 @@ exports.create = async (req, res) => {
             package_id,
             active_modules, // Array of strings like ['POS', 'Ordering']
             smtp_user,
-            smtp_pass
+            smtp_pass,
+            province,
+            district
         } = req.body;
 
         const modulesStr = Array.isArray(active_modules) ? active_modules.join(",") : (active_modules || "POS");
@@ -52,68 +54,92 @@ exports.create = async (req, res) => {
 
             // 1. Create Business
             const [business] = await conn.query(
-                "INSERT INTO businesses (name, owner_name, email, phone, plan_id, plan_type, package_id, active_modules, smtp_user, smtp_pass) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [business_name, owner_name, email, phone, plan_id || 1, plan_type || 'basic', package_id || null, modulesStr, smtp_user || null, smtp_pass || null]
+                "INSERT INTO businesses (name, province, district, owner_name, email, phone, plan_id, plan_type, package_id, active_modules, smtp_user, smtp_pass) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [business_name, province || null, district || null, owner_name, email, phone, plan_id || 1, plan_type || 'basic', package_id || null, modulesStr, smtp_user || null, smtp_pass || null]
             );
             const business_id = business.insertId;
 
-            // 2. Create Main Branch
+            // 2. Create Main Branch (Use IGNORE to prevent duplicates)
             const [branch] = await conn.query(
-                "INSERT INTO branches (business_id, name, is_main) VALUES (?, ?, ?)",
-                [business_id, "Main Branch", '1']
+                "INSERT IGNORE INTO branches (business_id, name, province, district, is_main) VALUES (?, ?, ?, ?, ?)",
+                [business_id, "Main Branch", province || null, district || null, '1']
             );
-            const branch_id = branch.insertId;
-
-            // 3. Setup Default Roles for this business
             
-            // 3.1 Owner Role (Full Access)
-            const [role_res] = await conn.query(
-                "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
-                [business_id, "Owner", "owner"]
-            );
-            const role_id = role_res.insertId;
-
-            // Link permissions: Use Modular Package if selected, otherwise use plan-based defaults
-            if (package_id) {
-                await conn.query(`
-                    INSERT INTO role_permissions (role_id, permission_id)
-                    SELECT ?, permission_id FROM package_permissions WHERE package_id = ?
-                `, [role_id, package_id]);
-            } else {
-                await conn.query(`
-                    INSERT INTO role_permissions (role_id, permission_id)
-                    SELECT ?, id FROM permissions WHERE min_plan_id <= ?
-                `, [role_id, plan_id || 1]);
+            // Fetch the branch_id (either newly inserted or existing)
+            let branch_id = branch.insertId;
+            if (branch_id === 0) {
+                const [existingBranch] = await conn.query("SELECT id FROM branches WHERE business_id = ? AND is_main = '1' LIMIT 1", [business_id]);
+                branch_id = existingBranch[0].id;
             }
 
-            // 3.2 Manager Role (Operations + Reports)
+            // 3. Setup Default Roles for this business (Use IGNORE)
+            
+            // 3.1 Owner Role
+            const [role_res] = await conn.query(
+                "INSERT IGNORE INTO roles (business_id, name, code) VALUES (?, ?, ?)",
+                [business_id, "Owner", "owner"]
+            );
+            
+            let role_id = role_res.insertId;
+            if (role_id === 0) {
+                const [existingRole] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'owner' LIMIT 1", [business_id]);
+                role_id = existingRole[0].id;
+            }
+            
+            // 🛡️ NEW LOGIC: Grant all actions (CUD), but restrict View (GetList) by Plan
+            await conn.query(`
+                INSERT INTO role_permissions (role_id, permission_id, can_view, can_create, can_edit, can_delete)
+                SELECT ?, id, (min_plan_id <= ?), 1, 1, 1 FROM permissions
+                ON DUPLICATE KEY UPDATE 
+                can_view = VALUES(can_view), 
+                can_create = 1, 
+                can_edit = 1, 
+                can_delete = 1
+            `, [role_id, plan_id || 1]);
+
+            // 3.2 Manager Role
             const [managerRes] = await conn.query(
-                "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
+                "INSERT IGNORE INTO roles (business_id, name, code) VALUES (?, ?, ?)",
                 [business_id, "Manager", "manager"]
             );
-            await conn.query(`
-                INSERT INTO role_permissions (role_id, permission_id)
-                SELECT ?, id FROM permissions 
-                WHERE min_plan_id <= ? AND route_key IN ('/invoices', '/order', '/category', '/product', '/stock', '/supplier', '/purchase', '/report_Sale_Summary', '/profile', '/table', '/expense')
-            `, [managerRes.insertId, plan_id || 1]);
+            let manager_role_id = managerRes.insertId;
+            if (manager_role_id === 0) {
+                const [existingRole] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'manager' LIMIT 1", [business_id]);
+                manager_role_id = existingRole[0].id;
+            }
 
-            // 3.3 Sale Role (POS Operations)
+            await conn.query(`
+                INSERT INTO role_permissions (role_id, permission_id, can_view, can_create, can_edit, can_delete)
+                SELECT ?, id, (min_plan_id <= ?), 1, 1, 1 FROM permissions 
+                WHERE route_key IN ('/invoices', '/order', '/category', '/product', '/stock', '/supplier', '/purchase', '/report_Sale_Summary', '/profile', '/table', '/expense')
+                ON DUPLICATE KEY UPDATE can_view = VALUES(can_view), can_create = 1, can_edit = 1, can_delete = 1
+            `, [manager_role_id, plan_id || 1]);
+
+            // 3.3 Sale Role
             const [saleRes] = await conn.query(
-                "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
+                "INSERT IGNORE INTO roles (business_id, name, code) VALUES (?, ?, ?)",
                 [business_id, "Sale", "sale"]
             );
+            let sale_role_id = saleRes.insertId;
+            if (sale_role_id === 0) {
+                const [existingRole] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'sale' LIMIT 1", [business_id]);
+                sale_role_id = existingRole[0].id;
+            }
+
             await conn.query(`
-                INSERT INTO role_permissions (role_id, permission_id)
-                SELECT ?, id FROM permissions 
-                WHERE min_plan_id <= ? AND route_key IN ('/invoices', '/order', '/category', '/product', '/table', '/profile')
-            `, [saleRes.insertId, plan_id || 1]);
+                INSERT INTO role_permissions (role_id, permission_id, can_view, can_create, can_edit, can_delete)
+                SELECT ?, id, (min_plan_id <= ?), 1, 1, 1 FROM permissions 
+                WHERE route_key IN ('/invoices', '/order', '/category', '/product', '/table', '/profile')
+                ON DUPLICATE KEY UPDATE can_view = VALUES(can_view), can_create = 1, can_edit = 1, can_delete = 1
+            `, [sale_role_id, plan_id || 1]);
 
 
             // 4. Create Owner Account
             const hashedPassword = bcrypt.hashSync(password, 10);
+            const verifyToken = require('crypto').randomBytes(32).toString('hex');
             await conn.query(
-                "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                [business_id, branch_id, role_id, owner_name, email, hashedPassword, 'active', 1]
+                "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [business_id, branch_id, role_id, owner_name, email, hashedPassword, 'active', 1, verifyToken]
             );
 
             // 5. Create Initial Subscription Record (30 days for new ones, or based on plan)
@@ -127,24 +153,34 @@ exports.create = async (req, res) => {
                 [business_id, plan_id || 1, plan_type || 'basic', startDate, formattedEndDate, 'active']
             );
 
-            // 6. Enable global categories based on industry package (blueprint)
+            // 6. Categories initialization removed: System Admin will manually enable them later via Business Ecosystem
+            /*
             if (package_id) {
                 await conn.query(`
-                    INSERT INTO business_categories (business_id, category_id, is_active)
-                    SELECT ?, c.id, 1 
+                    INSERT IGNORE INTO business_categories (business_id, category_id, is_active)
+                    SELECT DISTINCT ?, c.id, 1 
                     FROM categories c
                     JOIN modular_packages mp ON c.industry_code = mp.industry_code
                     WHERE mp.id = ? AND c.business_id = 1
                 `, [business_id, package_id]);
             } else {
-                // Fallback: Enable all global categories if no specific package is selected
                 await conn.query(`
-                    INSERT INTO business_categories (business_id, category_id, is_active)
-                    SELECT ?, id, 1 FROM categories WHERE business_id = 1
+                    INSERT IGNORE INTO business_categories (business_id, category_id, is_active)
+                    SELECT DISTINCT ?, id, 1 FROM categories WHERE business_id = 1
                 `, [business_id]);
             }
+            */
 
             await conn.commit();
+            
+            // 🚀 Send Welcome Email to the new owner
+            try {
+                const { sendWelcomeEmail } = require("../util/email");
+                sendWelcomeEmail(email, business_name, owner_name, verifyToken);
+            } catch (emailErr) {
+                console.error("Welcome Email background fail:", emailErr.message);
+            }
+
             res.json({ success: true, message: "Business and Owner created with 30-day active period!" });
         } catch (err) {
             await conn.rollback();
@@ -178,17 +214,33 @@ exports.updateStatus = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
-        const { id, name, phone, owner_name, package_id, active_modules, smtp_user, smtp_pass, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active } = req.body;
+        const { 
+            id, 
+            name, 
+            business_name, 
+            email, // Add this
+            province, 
+            district, 
+            phone, 
+            owner_name, 
+            plan_id, 
+            plan_type,
+            package_id, 
+            active_modules, 
+            smtp_user, 
+            smtp_pass, 
+            promo_title, 
+            promo_subtitle, 
+            promo_image, 
+            promo_discount, 
+            promo_is_active 
+        } = req.body;
         
-        // Detailed logging to identify why package_id is null
-        console.log("DEBUG_UPDATE_BIZ:", { id, name, package_id, active_modules_raw: active_modules });
+        const finalName = name || business_name;
+        const modulesStr = Array.isArray(active_modules) ? active_modules.join(",") : (active_modules || "POS");
+        const pkgId = (package_id && package_id !== "" && package_id !== "null") ? Number(package_id) : null;
 
         if (!id) return res.status(400).json({ message: "Business ID is required" });
-
-        const modulesStr = Array.isArray(active_modules) ? active_modules.join(",") : (active_modules || "POS");
-        
-        // Ensure package_id is a valid number or null
-        const pkgId = (package_id && package_id !== "" && package_id !== "null") ? Number(package_id) : null;
 
         const conn = await db.getConnection();
         try {
@@ -196,16 +248,26 @@ exports.update = async (req, res) => {
             
             // 1. Update business details
             const [updateResult] = await conn.query(
-                "UPDATE businesses SET name = ?, phone = ?, owner_name = ?, package_id = ?, active_modules = ?, smtp_user = ?, smtp_pass = ?, promo_title = ?, promo_subtitle = ?, promo_image = ?, promo_discount = ?, promo_is_active = ? WHERE id = ?",
-                [name, phone, owner_name, pkgId, modulesStr, smtp_user || null, smtp_pass || null, promo_title || null, promo_subtitle || null, promo_image || null, promo_discount || null, promo_is_active || 0, id]
+                `UPDATE businesses SET 
+                    name = ?, email = ?, province = ?, district = ?, phone = ?, owner_name = ?, 
+                    plan_id = ?, plan_type = ?, package_id = ?, active_modules = ?, 
+                    smtp_user = ?, smtp_pass = ?, promo_title = ?, promo_subtitle = ?, 
+                    promo_image = ?, promo_discount = ?, promo_is_active = ? 
+                 WHERE id = ?`,
+                [
+                    finalName, email || null, province || null, district || null, phone, owner_name, 
+                    plan_id || 1, plan_type || 'standard', pkgId, modulesStr, 
+                    smtp_user || null, smtp_pass || null, promo_title || null, promo_subtitle || null, 
+                    promo_image || null, promo_discount || null, promo_is_active || 0, id
+                ]
             );
             
             console.log("UPDATE_SQL_RESULT:", updateResult.info);
             
-            // 2. Update owner user name (Super Admin of this business)
+            // 2. Update owner user name and email (Super Admin of this business)
             await conn.query(
-                "UPDATE users SET name = ? WHERE business_id = ? AND is_super_admin = 1",
-                [owner_name, id]
+                "UPDATE users SET name = ?, email = ? WHERE business_id = ? AND is_super_admin = 1",
+                [owner_name, email, id]
             );
 
             // 3. Sync permissions for the owner role if the package changed
@@ -268,18 +330,16 @@ exports.updatePlan = async (req, res) => {
             const [ownerRoles] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'owner'", [business_id]);
             if (ownerRoles.length > 0) {
                 const ownerRoleId = ownerRoles[0].id;
-                // Add only new permissions without deleting existing overrides
-                if (package_id) {
-                    await conn.query(`
-                        INSERT IGNORE INTO role_permissions (role_id, permission_id)
-                        SELECT ?, permission_id FROM package_permissions WHERE package_id = ?
-                    `, [ownerRoleId, package_id]);
-                } else {
-                    await conn.query(`
-                        INSERT IGNORE INTO role_permissions (role_id, permission_id)
-                        SELECT ?, id FROM permissions WHERE min_plan_id <= ?
-                    `, [ownerRoleId, plan_id]);
-                }
+                // 🛡️ REFRESH PERMISSIONS: Update can_view based on new plan, keep Action rights (CUD) as 1
+                await conn.query(`
+                    INSERT INTO role_permissions (role_id, permission_id, can_view, can_create, can_edit, can_delete)
+                    SELECT ?, id, (min_plan_id <= ?), 1, 1, 1 FROM permissions
+                    ON DUPLICATE KEY UPDATE 
+                    can_view = VALUES(can_view), 
+                    can_create = 1, 
+                    can_edit = 1, 
+                    can_delete = 1
+                `, [ownerRoleId, plan_id]);
             }
 
             await conn.commit();

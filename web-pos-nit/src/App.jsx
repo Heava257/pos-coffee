@@ -5,6 +5,7 @@ import HomePage from "./page/home/HomePage";
 import LogingPage from "./page/auth/LogingPage";
 import RegisterPage from "./page/auth/RegisterPage";
 import ScanPage from "./page/auth/ScanPage";
+import VerifyEmailPage from "./page/auth/VerifyEmailPage";
 
 import MainLayout from "./component/layout/MainLayout";
 import MainLayoutAuth from "./component/layout/MainLayoutAuth";
@@ -92,7 +93,7 @@ function App() {
             <Route path="/dashboard" element={<HomePage />} />
             <Route path="/invoices" element={<PosPage />} />
             <Route path="/table" element={<TablePage />} />
-            <Route path="/category" element={getProfile()?.business_id === 1 ? <GlobalCategoryPage /> : <CategoryPage />} />
+            <Route path="/category" element={<GlobalCategoryPage />} />
             <Route path="/shop_managment" element={<BranchPage />} />
             <Route path="/expense" element={<ExpensePage />} />
             {/* <Route path="/total_due" element={<SmartProductEntry />} /> */}
@@ -132,6 +133,7 @@ function App() {
 
           <Route path="/login" element={<LogingPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/" element={<RootRedirect />} />
         </Routes>
       </BrowserRouter>

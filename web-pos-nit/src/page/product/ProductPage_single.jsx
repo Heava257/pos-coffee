@@ -48,8 +48,6 @@ const COLORS = {
 // ─── Dynamic Category Options (Data-Driven, Not Hardcoded) ─────────────────
 // ─── Dynamic Category Options (Data-Driven, Not Hardcoded) ─────────────────
 const CategoryOptions = ({ selectedCategory, t }) => {
-  // Parse the default config if it exists on the selected category
-  // Supports both JSON array and comma-separated strings
   const parseBlueprint = (val) => {
     if (!val) return null;
     if (Array.isArray(val)) return val;
@@ -57,7 +55,6 @@ const CategoryOptions = ({ selectedCategory, t }) => {
       const parsed = JSON.parse(val);
       return Array.isArray(parsed) ? parsed : [parsed];
     } catch {
-      // Handle comma-separated string
       return val.split(',').map(s => s.trim()).filter(Boolean);
     }
   };
@@ -69,188 +66,275 @@ const CategoryOptions = ({ selectedCategory, t }) => {
   const isPharmacy = selectedCategory?.industry_code === 'pharmacy';
   const isRestaurant = selectedCategory?.industry_code === 'restaurant' || selectedCategory?.industry_code === 'coffee_cafe';
 
-  // If category has no special configuration, hide this panel
   const hasConfig = defaultMoods?.length > 0 || defaultSizes?.length > 0 || defaultAddons?.length > 0;
   if (!selectedCategory || !hasConfig) return null;
 
   return (
     <div style={{
-      background: isPharmacy ? "#f0f7ff" : "#f0f7f2",
+      background: isPharmacy ? "#f0f7ff" : "#ffffff",
       padding: "24px",
-      borderRadius: "16px",
+      borderRadius: "20px",
       marginBottom: "20px",
-      border: `1px solid ${isPharmacy ? "#d6e4ff" : "#d9e6dc"}`,
-      boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)"
+      border: `1px solid ${isPharmacy ? "#d6e4ff" : "#f0f0f0"}`,
+      boxShadow: "0 4px 20px rgba(0,0,0,0.03)"
     }}>
       <div style={{
         fontWeight: 800,
-        marginBottom: 20,
+        marginBottom: 24,
         color: isPharmacy ? "#0958d9" : COLORS.darkGreen,
-        fontSize: 17,
+        fontSize: 18,
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        borderBottom: `2px solid ${isPharmacy ? "#d6e4ff" : "#d9e6dc"}`,
-        paddingBottom: 10
+        gap: 12,
+        borderBottom: `2px solid ${isPharmacy ? "#e6f4ff" : "#f6fbf8"}`,
+        paddingBottom: 12
       }}>
-        {isPharmacy ? <span style={{ fontSize: 22 }}>📋</span> : <span style={{ fontSize: 22 }}>🍳</span>}
-        {selectedCategory?.name || selectedCategory?.label} {isPharmacy ? "Blueprint" : (isRestaurant ? t.cooking_options_title : (typeof t?.customize_coffee === 'string' ? t.customize_coffee : "Customization"))}
+        <div style={{
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          background: isPharmacy ? "#e6f4ff" : "#e6f0e9",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 20
+        }}>
+          {isPharmacy ? "💊" : "☕"}
+        </div>
+        <div>
+          <div style={{ fontSize: 16, lineHeight: 1 }}>{selectedCategory?.name || selectedCategory?.label}</div>
+          <div style={{ fontSize: 11, fontWeight: 500, color: COLORS.textSecondary, marginTop: 4 }}>
+            {isPharmacy ? "MEDICAL BLUEPRINT" : t.cooking_options_title}
+          </div>
+        </div>
       </div>
 
-      {/* Moods/Instructions Section */}
+      {/* Moods Section - Enhanced UI */}
       {defaultMoods && defaultMoods.length > 0 && (
-        <>
-          <div style={{ fontWeight: 700, marginBottom: 10, color: COLORS.textPrimary, fontSize: 14 }}>
-            {isPharmacy ? t.dosage_instructions_label : (isRestaurant ? t.taste_instructions_label : `🔥❄️ ${t.mood || "Temperature"}`)}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontWeight: 800, marginBottom: 12, color: COLORS.textPrimary, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            {isPharmacy ? t.dosage_instructions_label : (isRestaurant ? t.taste_instructions_label : t.mood || "Temperature Options")}
           </div>
-          <Form.Item name="moods" label={false} style={{ marginBottom: 16 }}>
-            <Checkbox.Group
-              options={defaultMoods.map(m => {
-                const label = typeof m === 'object' ? (m.label || m.value) : m;
-                const value = typeof m === 'object' ? (m.value || m.label) : m;
-                return { label, value };
-              })}
-            />
+          <Form.Item name="moods" noStyle>
+            <Checkbox.Group style={{ width: '100%' }}>
+              <Row gutter={[12, 12]}>
+                {defaultMoods.map((m, idx) => {
+                  const label = typeof m === 'object' ? (m.label || m.value) : m;
+                  const value = typeof m === 'object' ? (m.value || m.label) : m;
+                  
+                  // Simple icon logic based on common labels
+                  let icon = "🔘";
+                  if (label.toLowerCase().includes("hot")) icon = "🔥";
+                  if (label.toLowerCase().includes("ice")) icon = "❄️";
+                  if (label.toLowerCase().includes("frap")) icon = "🥤";
+                  if (label.toLowerCase().includes("sweet")) icon = "🍯";
+                  if (label.toLowerCase().includes("spicy")) icon = "🌶️";
+
+                  return (
+                    <Col span={12} key={idx}>
+                      <Checkbox value={value} className="custom-mood-checkbox">
+                        <div style={{
+                          padding: '10px 12px',
+                          border: '1px solid #eee',
+                          borderRadius: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          background: '#fafafa',
+                          width: '100%',
+                          minWidth: 120
+                        }}>
+                          <span style={{ fontSize: 18 }}>{icon}</span>
+                          <span style={{ fontWeight: 600, fontSize: 14 }}>{label}</span>
+                        </div>
+                      </Checkbox>
+                    </Col>
+                  );
+                })}
+              </Row>
+            </Checkbox.Group>
           </Form.Item>
-        </>
+        </div>
       )}
 
-      {/* Sizes Section */}
+      {/* Sizes Section - Much Wider Price Inputs */}
       {defaultSizes && defaultSizes.length > 0 && (
-        <>
-          <div style={{ margin: '20px 0', borderTop: `1px dashed ${isPharmacy ? "#d6e4ff" : "#d9e6dc"}` }} />
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ margin: '24px 0', borderTop: `1px dashed ${isPharmacy ? "#d6e4ff" : "#eee"}` }} />
           <Form.List name="sizes">
             {(fields, { add, remove }) => (
               <>
-                <div style={{ fontWeight: 800, marginBottom: 4, color: isPharmacy ? "#0958d9" : COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>{isPharmacy ? "📦" : (isRestaurant ? "🍽️" : "☕")}</span> {isPharmacy ? t.packaging_units_label : (isRestaurant ? t.portions_sizes_label : (typeof t?.sizes === 'string' ? t.sizes : "Sizes"))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ fontWeight: 800, color: COLORS.textPrimary, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {isPharmacy ? t.packaging_units_label : (isRestaurant ? t.portions_sizes_label : t.sizes || "Pricing by Size")}
+                  </div>
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={() => add()}
+                    icon={<MdAdd />}
+                    style={{ borderRadius: 8, background: COLORS.midGreen }}
+                  >
+                    {t.add}
+                  </Button>
                 </div>
-                <div style={{ fontSize: 11, color: COLORS.textSecondary, marginBottom: 12, fontStyle: 'italic' }}>
-                  {isPharmacy ? "Define unit types and their specific pricing" : (t.price_per_size_msg || "Price per size overrides the base price")}
-                </div>
+                
+                {fields.length === 0 && (
+                  <div style={{ padding: '20px', textAlign: 'center', background: '#f9f9f9', borderRadius: 12, border: '1px dashed #ddd', marginBottom: 16 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>{t.price_per_size_msg || "No size-specific prices defined yet."}</Text>
+                  </div>
+                )}
+
                 {fields.map(({ key, name, ...restField }) => (
-                  <div key={key} style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: 'center' }}>
+                  <div key={key} style={{ 
+                    background: '#fcfcfc', 
+                    padding: '16px', 
+                    borderRadius: '16px', 
+                    border: '1px solid #f0f0f0', 
+                    marginBottom: 12,
+                    position: 'relative',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.01)'
+                  }}>
+                    <Row gutter={12} align="middle">
+                      <Col span={12}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textSecondary, marginBottom: 4, textTransform: 'uppercase' }}>
+                          {isPharmacy ? "Unit Type" : "Size"}
+                        </div>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'label']}
+                          rules={[{ required: true, message: '' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Select
+                            size="large"
+                            placeholder="Select"
+                            options={defaultSizes.map(s => ({
+                              label: typeof s === 'object' ? (s.label || s.value) : s,
+                              value: typeof s === 'object' ? (s.value || s.label) : s
+                            }))}
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={9}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textSecondary, marginBottom: 4, textTransform: 'uppercase' }}>
+                          {t.price} ($)
+                        </div>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'price']}
+                          rules={[{ required: true, message: '' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber
+                            size="large"
+                            placeholder="0.00"
+                            style={{ width: '100%', fontWeight: 800, color: COLORS.darkGreen }}
+                            min={0}
+                            step={0.1}
+                            precision={2}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={3}>
+                        <div style={{ height: 20 }} /> {/* Spacer */}
+                        <Button
+                          danger
+                          type="text"
+                          onClick={() => remove(name)}
+                          icon={<MdDelete style={{ fontSize: 20 }} />}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
+                        />
+                      </Col>
+                    </Row>
+                  </div>
+                ))}
+              </>
+            )}
+          </Form.List>
+        </div>
+      )}
+
+      {/* Add-ons Section - Enhanced List */}
+      {defaultAddons && defaultAddons.length > 0 && (
+        <div>
+          <div style={{ margin: '24px 0', borderTop: `1px dashed ${isPharmacy ? "#d6e4ff" : "#eee"}` }} />
+          <Form.List name="addons">
+            {(fields, { add, remove }) => (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ fontWeight: 800, color: COLORS.textPrimary, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {isPharmacy ? "Notes/Warnings" : t.addons || "Extra Options"}
+                  </div>
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={() => add()}
+                    icon={<MdAdd />}
+                    style={{ borderRadius: 8, background: COLORS.midGreen }}
+                  >
+                    {t.add}
+                  </Button>
+                </div>
+
+                {fields.map(({ key, name, ...restField }) => (
+                  <div key={key} style={{ 
+                    background: '#fff', 
+                    padding: '12px', 
+                    borderRadius: '12px', 
+                    border: '1px solid #f0f0f0', 
+                    marginBottom: 10,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10
+                  }}>
                     <Form.Item
                       {...restField}
                       name={[name, 'label']}
-                      rules={[{ required: true, message: 'Required' }]}
+                      rules={[{ required: true, message: '' }]}
                       style={{ marginBottom: 0, flex: 2 }}
                     >
                       <Select
                         size="large"
-                        placeholder={isPharmacy ? "Select Unit" : (isRestaurant ? t.portions_sizes_label : "Size")}
-                        options={defaultSizes.map(s => {
-                          const label = typeof s === 'object' ? (s.label || s.value) : s;
-                          const value = typeof s === 'object' ? (s.value || s.label) : s;
-                          return { label, value };
-                        })}
+                        placeholder="Select Option"
+                        options={defaultAddons.map(a => ({
+                          label: typeof a === 'object' ? (a.label || a.value) : a,
+                          value: typeof a === 'object' ? (a.value || a.label) : a
+                        }))}
                         style={{ width: '100%' }}
                       />
                     </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'price']}
-                      rules={[{ required: true, message: 'Required' }]}
-                      style={{ marginBottom: 0, flex: 1 }}
-                    >
-                      <InputNumber
-                        size="large"
-                        placeholder={t.price}
-                        style={{ width: '100%' }}
-                        min={0}
-                        step={0.1}
-                        precision={2}
-                      />
-                    </Form.Item>
+                    {!isPharmacy && (
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'price']}
+                        rules={[{ required: true, message: '' }]}
+                        style={{ marginBottom: 0, width: 100 }}
+                      >
+                        <InputNumber
+                          size="large"
+                          placeholder="Price"
+                          style={{ width: '100%', fontWeight: 700 }}
+                          min={0}
+                          step={0.1}
+                          precision={2}
+                        />
+                      </Form.Item>
+                    )}
                     <Button
                       danger
                       type="text"
                       onClick={() => remove(name)}
-                      icon={<MdDelete style={{ fontSize: 20 }} />}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      icon={<MdDelete style={{ fontSize: 18 }} />}
+                      style={{ padding: 0 }}
                     />
                   </div>
                 ))}
-                <Button
-                  type="dashed"
-                  onClick={() => add()}
-                  icon={<MdAdd />}
-                  block
-                  style={{ marginBottom: 20, borderRadius: 10, height: 40, borderColor: isPharmacy ? "#4096ff" : COLORS.midGreen, color: isPharmacy ? "#4096ff" : COLORS.midGreen }}
-                >
-                  {isPharmacy ? "+ Add Packaging Unit" : (isRestaurant ? `+ ${t.portions_sizes_label}` : (t.add_size || "+ Add Size"))}
-                </Button>
               </>
             )}
           </Form.List>
-        </>
-      )}
-
-      {/* Add-ons/Warnings Section */}
-      {defaultAddons && defaultAddons.length > 0 && (
-        <Form.List name="addons">
-          {(fields, { add, remove }) => (
-            <>
-              <div style={{ margin: '20px 0', borderTop: `1px dashed ${isPharmacy ? "#d6e4ff" : "#d9e6dc"}` }} />
-              <div style={{ fontWeight: 800, marginBottom: 12, color: isPharmacy ? "#d46b08" : COLORS.darkGreen, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>{isPharmacy ? "⚠️" : (isRestaurant ? "🥗" : "➕")}</span> {isPharmacy ? "Warnings / Special Notes" : (isRestaurant ? t.side_dishes_extras_label : (typeof t?.addons === 'string' ? t.addons : "Add-ons"))}
-              </div>
-              {fields.map(({ key, name, ...restField }) => (
-                <div key={key} style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: 'center' }}>
-                  <Form.Item
-                    {...restField}
-                    name={[name, 'label']}
-                    rules={[{ required: true, message: 'Required' }]}
-                    style={{ marginBottom: 0, flex: 2 }}
-                  >
-                    <Select
-                      size="large"
-                      placeholder={isPharmacy ? "Select Warning" : (isRestaurant ? t.side_dishes_extras_label : "Add-on")}
-                      options={defaultAddons.map(a => {
-                        const label = typeof a === 'object' ? (a.label || a.value) : a;
-                        const value = typeof a === 'object' ? (a.value || a.label) : a;
-                        return { label, value };
-                      })}
-                      style={{ width: '100%' }}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    {...restField}
-                    name={[name, 'price']}
-                    rules={[{ required: true, message: 'Required' }]}
-                    style={{ marginBottom: 0, flex: 1 }}
-                    hidden={isPharmacy}
-                  >
-                    <InputNumber
-                      size="large"
-                      placeholder="Price"
-                      style={{ width: '100%' }}
-                      min={0}
-                      step={0.1}
-                      precision={2}
-                    />
-                  </Form.Item>
-                  <Button
-                    danger
-                    type="text"
-                    onClick={() => remove(name)}
-                    icon={<MdDelete style={{ fontSize: 20 }} />}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  />
-                </div>
-              ))}
-              <Button
-                type="dashed"
-                onClick={() => add()}
-                icon={<MdAdd />}
-                block
-                style={{ borderRadius: 10, height: 40, borderColor: isPharmacy ? "#ffa940" : COLORS.midGreen, color: isPharmacy ? "#ffa940" : COLORS.midGreen }}
-              >
-                {isPharmacy ? "+ Add Warning" : (isRestaurant ? `+ ${t.side_dishes_extras_label}` : (t.add_addon || "+ Add Addon"))}
-              </Button>
-            </>
-          )}
-        </Form.List>
+        </div>
       )}
     </div>
   );
@@ -592,12 +676,12 @@ function ProductPage() {
         <Form layout="vertical" onFinish={onFinish} form={form}>
           <Form.Item name="id" hidden><Input /></Form.Item>
           <Row gutter={20}>
-            {/* Column 1: Core Product Info (SPAN 6) */}
-            <Col span={6}>
+            {/* Column 1: Core Product Info (SPAN 7) */}
+            <Col span={7}>
               <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
-                <div style={{ fontWeight: 700, marginBottom: 20, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ background: '#e6f0e9', padding: '6px', borderRadius: '8px' }}>📦</span>
-                  {t.basic_details_title}
+                <div style={{ fontWeight: 700, marginBottom: 24, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 12 }}>
+                  <span style={{ background: '#e6f0e9', padding: '8px', borderRadius: '10px', fontSize: 18 }}>📦</span>
+                  <span style={{ fontSize: 15 }}>{t.basic_details_title}</span>
                 </div>
 
                 <Form.Item
@@ -632,7 +716,7 @@ function ProductPage() {
                   label={t.product_name}
                   rules={[{ required: true, message: t.product_name }]}
                 >
-                  <Input size="large" placeholder={t.product_name} />
+                  <Input size="large" placeholder={t.product_name} style={{ fontWeight: 600 }} />
                 </Form.Item>
 
                 <Form.Item name={"barcode"} label={t.barcode}>
@@ -650,14 +734,26 @@ function ProductPage() {
                     size="large" 
                     min={0} 
                     step={0.01} 
-                    style={{ width: '100%' }} 
+                    style={{ width: '100%', fontWeight: 700 }} 
                     placeholder={hasSizes ? "Sizes override this" : "2.50"} 
                     disabled={hasSizes}
                     value={hasSizes ? 0 : undefined}
                   />
                   {hasSizes && (
-                    <div style={{ color: '#fa8c16', fontSize: 11, marginTop: 4, fontWeight: 600 }}>
-                      ⚠️ ប្រើតម្លៃតាមទំហំ (Sizes) ជំនួសវិញ
+                    <div style={{ 
+                      background: '#fff7e6', 
+                      padding: '8px 12px', 
+                      borderRadius: '8px', 
+                      border: '1px solid #ffe7ba',
+                      color: '#d46b08', 
+                      fontSize: 11, 
+                      marginTop: 8, 
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}>
+                      <span>⚠️</span> ប្រើតម្លៃតាមទំហំ (Sizes) ជំនួសវិញ
                     </div>
                   )}
                 </Form.Item>
@@ -672,20 +768,18 @@ function ProductPage() {
               </div>
             </Col>
 
-            {/* Column 2: Blueprint Customization (SPAN 6) */}
-            <Col span={selectedCategory ? 6 : 0}>
-              <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
-                <CategoryOptions selectedCategory={selectedCategory} t={t} />
-              </div>
+            {/* Column 2: Blueprint Customization (SPAN 9) */}
+            <Col span={selectedCategory ? 9 : 0}>
+              <CategoryOptions selectedCategory={selectedCategory} t={t} />
             </Col>
 
-            {/* Column 3: Medical Specifications (SPAN 6 - Pharmacy Only) */}
+            {/* Column 3: Medical Specifications (SPAN 8 - Pharmacy Only) */}
             {selectedCategory?.industry_code === 'pharmacy' && (
-              <Col span={6}>
+              <Col span={8}>
                 <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 20, color: '#0958d9', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ background: '#e6f4ff', padding: '6px', borderRadius: '8px' }}>💊</span>
-                    {t.medical_specs_title}
+                  <div style={{ fontWeight: 700, marginBottom: 24, color: '#0958d9', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #e6f4ff', paddingBottom: 12 }}>
+                    <span style={{ background: '#e6f4ff', padding: '8px', borderRadius: '10px', fontSize: 18 }}>💊</span>
+                    <span style={{ fontSize: 15 }}>{t.medical_specs_title}</span>
                   </div>
 
                   <Form.Item name="generic_name" label={t.generic_name_label}>
@@ -700,8 +794,8 @@ function ProductPage() {
                     <DatePicker size="large" style={{ width: '100%' }} format="DD/MM/YYYY" />
                   </Form.Item>
 
-                  <div style={{ background: '#f0f7ff', padding: 16, borderRadius: 12, marginTop: 20, border: '1px solid #d6e4ff' }}>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
+                  <div style={{ background: '#f0f7ff', padding: 20, borderRadius: 16, marginTop: 24, border: '1px solid #d6e4ff' }}>
+                    <Text type="secondary" style={{ fontSize: 12, lineHeight: 1.6 }}>
                       💡 <strong>{t.note}:</strong> {t.medical_note}
                     </Text>
                   </div>
@@ -710,28 +804,23 @@ function ProductPage() {
             )}
 
             {/* Column 4: Inventory & Media (SPAN Dynamic) */}
-            <Col span={selectedCategory?.industry_code === 'pharmacy' ? 6 : (selectedCategory ? 12 : 18)}>
+            <Col span={selectedCategory?.industry_code === 'pharmacy' ? 0 : (selectedCategory ? 8 : 17)}>
               <div className="form-section-premium" style={{ height: '100%', minHeight: 500 }}>
-                <div style={{ fontWeight: 700, marginBottom: 20, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ background: '#e6f0e9', padding: '6px', borderRadius: '8px' }}>📊</span>
-                  {t.inventory_media_title}
+                <div style={{ fontWeight: 700, marginBottom: 24, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 12 }}>
+                  <span style={{ background: '#e6f0e9', padding: '8px', borderRadius: '10px', fontSize: 18 }}>📊</span>
+                  <span style={{ fontSize: 15 }}>{t.inventory_media_title}</span>
                 </div>
 
-                <Row gutter={12}>
-                  <Col span={12}>
+                <Row gutter={16}>
+                  <Col span={24}>
                     <Form.Item name={"qty"} label={t.quantity}>
-                      <InputNumber size="large" placeholder={t.quantity} style={{ width: "100%" }} />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item name={"discount"} label={t.discount} hidden>
-                      <InputNumber size="large" placeholder={t.discount} style={{ width: "100%" }} />
+                      <InputNumber size="large" placeholder={t.quantity} style={{ width: "100%", fontWeight: 700 }} />
                     </Form.Item>
                   </Col>
                 </Row>
 
                 <Form.Item name={"description"} label={t.description}>
-                  <Input.TextArea size="large" rows={4} placeholder={t.enter_description} />
+                  <Input.TextArea size="large" rows={4} placeholder={t.enter_description} style={{ borderRadius: 12 }} />
                 </Form.Item>
 
                 <Form.Item name={"image_default"} label={t.image}>
@@ -742,8 +831,12 @@ function ProductPage() {
                     fileList={imageDefault}
                     onPreview={handlePreview}
                     onChange={handleChangeImageDefault}
+                    className="premium-upload"
                   >
-                    <div>+{t.upload}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <MdAdd size={24} />
+                      <div style={{ marginTop: 8, fontSize: 12, fontWeight: 600 }}>{t.upload}</div>
+                    </div>
                   </Upload>
                 </Form.Item>
               </div>

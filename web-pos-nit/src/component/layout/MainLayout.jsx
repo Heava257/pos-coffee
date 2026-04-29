@@ -38,7 +38,8 @@ import {
   ThunderboltOutlined,
   GiftOutlined,
   FireOutlined,
-  LineChartOutlined
+  LineChartOutlined,
+  StarOutlined
 } from "@ant-design/icons";
 import {
   getPermission,
@@ -78,24 +79,31 @@ const MENU_STRUCTURE = [
         icon: <MdRestaurantMenu />,
       },
       {
-        key: "membership/search",
-        labelKey: "loyalty_portal",
-        icon: <TrophyOutlined />,
-      },
-      {
         key: "order",
         labelKey: "order_detail",
         icon: <FaHistory />,
       },
+      {
+        key: "kds",
+        labelKey: "kds_label",
+        icon: <FireOutlined />,
+      },
+    ]
+  },
+
+  {
+    type: 'group',
+    labelKey: 'menu_group_marketing',
+    children: [
       {
         key: "marketing/dashboard",
         labelKey: "marketing_label",
         icon: <GiftOutlined />,
       },
       {
-        key: "kds",
-        labelKey: "kds_label",
-        icon: <FireOutlined />,
+        key: "membership/search",
+        labelKey: "loyalty_portal",
+        icon: <TrophyOutlined />,
       },
     ]
   },
@@ -168,6 +176,7 @@ const MENU_STRUCTURE = [
           { key: "role", labelKey: "roles", icon: <SafetyCertificateOutlined /> },
           { key: "permission", labelKey: "permission", icon: <UnlockOutlined /> },
           { key: "plans", labelKey: "plans", icon: <CreditCardOutlined /> },
+          { key: "system-modules", labelKey: "system_modules", icon: <AppstoreOutlined /> },
         ],
       },
       {
@@ -437,7 +446,14 @@ const MainLayout = () => {
     // Recursive filtering function
     const filterMenuItems = (menuList) => {
       // Get active modules from profile (default to POS for old accounts)
-      const activeModules = profile?.active_modules ? profile.active_modules.split(',') : ['POS'];
+      const isLargePlan = profile?.plan_name?.toLowerCase().includes('large') || profile?.plan_name?.toLowerCase().includes('enterprise');
+      const isMediumPlan = profile?.plan_name?.toLowerCase().includes('medium') || profile?.plan_name?.toLowerCase().includes('professional');
+      const isSmallPlan = profile?.plan_name?.toLowerCase().includes('small') || profile?.plan_name?.toLowerCase().includes('starter');
+
+      const activeModules = profile?.active_modules ? profile.active_modules.toUpperCase().split(',').map(m => m.trim()) : ['POS'];
+      const hasInventory = activeModules.includes('INVENTORY') || isLargePlan;
+      const hasOrdering = activeModules.includes('ORDERING') || isLargePlan;
+      const hasCRM = activeModules.includes('CRM') || activeModules.includes('LOYALTY') || isLargePlan;
 
       return menuList.map(item => {
         const newItem = { ...item };
@@ -446,7 +462,29 @@ const MainLayout = () => {
         const isAdmin = profile?.role_name?.toUpperCase().includes("ADMIN") || profile?.role_code === "admin";
         const canSeeAllReports = isOwner || isAdmin;
 
-        // Translate label
+        // --- Module Based Filtering ---
+        // 1. Inventory Group (Visible for Medium and Large)
+        if (newItem.labelKey === 'menu_group_inventory' && !hasInventory) return null;
+        
+        // 2. Marketing & CRM Group
+        if (newItem.labelKey === 'menu_group_marketing' && !hasCRM) return null;
+
+        // 3. Ordering / Digital Menu Features
+        const orderingKeys = ['marketing/dashboard', 'kds', 'menu-board', 'marketing_label'];
+        if (orderingKeys.includes(newItem.key) && !hasOrdering) return null;
+        
+        // Specific restriction: Digital Menu Board (TV) is Enterprise only
+        if (newItem.key === 'menu-board' && isMediumPlan) return null;
+
+        // 3. CRM / Loyalty Features
+        if (newItem.key === "membership/search" && !hasCRM) return null;
+
+        // 4. Force Restriction for Small/Starter Plans (Business logic)
+        const premiumGroups = ['menu_group_inventory', 'menu_group_admin']; // Admin group has sub-items that might be premium
+        if (isSmallPlan && (newItem.key === 'marketing/dashboard' || newItem.key === 'membership/search')) {
+           // Even if modules are checked, Small plan might still restrict some high-end automation
+           // return null; // Uncomment if you want strict plan-based restriction
+        }
         if (newItem.labelKey) {
           newItem.label = t[newItem.labelKey];
         }
@@ -457,9 +495,14 @@ const MainLayout = () => {
         }
 
         if (newItem.key === "kds" && !isHospitality) return null;
-        if (newItem.key === "table" && !isHospitality) return null;
-        if (newItem.key === "business" && profile?.business_id !== 1) return null;
+        if (newItem.key === "table" && (!isHospitality || isSmallPlan)) return null;
         if (newItem.key === "my-plan" && profile?.business_id === 1) return null;
+
+        // Plan 5 (Legacy Logic) - Keeping it as fallback but prioritizing activeModules
+        const advancedInventoryKeys = ["recipe", "raw_material", "stock-transfer", "waste", "inventory/forecast"];
+        if (advancedInventoryKeys.includes(newItem.key) && (!hasInventory || isMediumPlan)) {
+          return null;
+        }
 
         // Hide full reports / analytics for staff (keep only my shift)
         if (newItem.key === "reports" && !canSeeAllReports) return null;
@@ -471,8 +514,9 @@ const MainLayout = () => {
           return null;
         }
 
-        // 2. Platform Admin Exceptions
-        if (newItem.key === "business" || newItem.key === "service-blueprints") {
+        // 2. Platform Admin Exceptions (Critical Security)
+        const platformAdminModules = ["plans", "business", "service-blueprints", "system-modules", "permission", "role"];
+        if (platformAdminModules.includes(newItem.key)) {
           return profile?.business_id === 1 ? newItem : null;
         }
 
@@ -802,28 +846,34 @@ const MainLayout = () => {
                   <Button
                     type="primary"
                     size="middle"
-                    icon={<CrownOutlined />}
+                    icon={
+                      (profile?.plan_name?.toLowerCase().includes('enterprise') || Number(profile?.plan_id) >= 6) ? <CrownOutlined /> : 
+                      (profile?.plan_name?.toLowerCase().includes('pro') || Number(profile?.plan_id) === 5) ? <StarOutlined /> : 
+                      <ShopOutlined />
+                    }
                     onClick={() => navigate('/my-plan')}
                     className={cn(
-                      "premium-upgrade-btn",
-                      profile?.plan_id >= 3 && "gold-gradient",
-                      profile?.plan_id === 2 && "emerald-gradient"
+                      "plan-badge-btn",
+                      (profile?.plan_name?.toLowerCase().includes('enterprise') || Number(profile?.plan_id) >= 6) && "gold-gradient",
+                      (profile?.plan_name?.toLowerCase().includes('pro') || Number(profile?.plan_id) === 5) && "emerald-gradient",
+                      (!profile?.plan_name?.toLowerCase().includes('enterprise') && !profile?.plan_name?.toLowerCase().includes('pro')) && "core-gradient"
                     )}
                     style={{
                       borderRadius: '12px',
                       border: 'none',
                       boxShadow: '0 4px 10px rgba(0, 0, 0, 0.08)',
-                      fontWeight: 700,
-                      fontSize: '11px',
-                      height: '38px',
-                      padding: '0 16px',
-                      background: '#1e4a2d',
+                      fontWeight: 800,
+                      fontSize: '10px',
+                      letterSpacing: '0.5px',
+                      height: '34px',
+                      padding: '0 14px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px'
+                      gap: '6px',
+                      textTransform: 'uppercase'
                     }}
                   >
-                    {profile?.plan_id === 1 ? t.upgrade : (profile?.plan_id === 2 ? t.pro_label : t.premium_label)}
+                    {profile?.plan_name || (Number(profile?.plan_id) === 4 ? "CORE POS" : `PLAN: ${profile?.plan_id}`)}
                   </Button>
                 )}
 

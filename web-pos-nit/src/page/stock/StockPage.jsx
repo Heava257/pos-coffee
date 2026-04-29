@@ -52,6 +52,7 @@ import {
     Cell, PieChart, Pie
 } from 'recharts';
 import { useLanguage, translations } from "../../store/language.store";
+import { useProfileStore } from "../../store/profileStore";
 import MainPage from "../../component/layout/MainPage";
 import { formatDateClient, request } from "../../util/helper";
 import dayjs from "dayjs";
@@ -81,6 +82,7 @@ const SHADOWS = {
 const StockPage = () => {
     const navigate = useNavigate();
     const { lang } = useLanguage();
+    const { profile } = useProfileStore();
     const t = translations[lang];
     const [form] = Form.useForm();
     const [searchTerm, setSearchTerm] = useState("");
@@ -658,23 +660,25 @@ const StockPage = () => {
                             />
                         </Card>
                     </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                        <Card bordered={false} style={{ 
-                            background: COLORS.secondary, 
-                            borderRadius: 20, 
-                            boxShadow: SHADOWS.premium,
-                            position: 'relative',
-                            overflow: 'hidden'
-                        }}>
-                            <MdHistory size={80} style={{ position: 'absolute', right: -10, top: -10, color: 'rgba(255,255,255,0.1)' }} />
-                            <Statistic 
-                                title={<span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 700 }}>{t.raw_materials_ledger}</span>}
-                                value={state.rawMaterials.length}
-                                valueStyle={{ color: '#fff', fontWeight: 900, fontSize: 32 }}
-                                prefix={<MdOutlineRotateLeft size={20} style={{ marginRight: 8 }} />}
-                            />
-                        </Card>
-                    </Col>
+                    {Number(profile?.plan_id) > 5 && (
+                        <Col xs={24} sm={12} lg={6}>
+                            <Card bordered={false} style={{ 
+                                background: COLORS.secondary, 
+                                borderRadius: 20, 
+                                boxShadow: SHADOWS.premium,
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
+                                <MdHistory size={80} style={{ position: 'absolute', right: -10, top: -10, color: 'rgba(255,255,255,0.1)' }} />
+                                <Statistic 
+                                    title={<span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 700 }}>{t.raw_materials_ledger}</span>}
+                                    value={state.rawMaterials.length}
+                                    valueStyle={{ color: '#fff', fontWeight: 900, fontSize: 32 }}
+                                    prefix={<MdOutlineRotateLeft size={20} style={{ marginRight: 8 }} />}
+                                />
+                            </Card>
+                        </Col>
+                    )}
                     <Col xs={24} sm={12} lg={6}>
                         <Card bordered={false} style={{ 
                             background: lowStockProducts > 0 ? COLORS.danger : COLORS.accent, 
@@ -692,7 +696,7 @@ const StockPage = () => {
                             />
                         </Card>
                     </Col>
-                    <Col xs={24} sm={12} lg={6}>
+                    <Col xs={24} sm={12} lg={Number(profile?.plan_id) > 5 ? 6 : 12}>
                         <Card bordered={false} style={{ 
                             background: lowStockMaterials > 0 ? COLORS.warning : COLORS.accent, 
                             borderRadius: 20, 
@@ -702,8 +706,8 @@ const StockPage = () => {
                         }}>
                             <MdTrendingDown size={80} style={{ position: 'absolute', right: -10, top: -10, color: 'rgba(0,0,0,0.05)' }} />
                             <Statistic 
-                                title={<span style={{ color: lowStockMaterials > 0 ? '#fff' : COLORS.secondary, fontSize: 13, fontWeight: 700 }}>{t.ingredient_alerts}</span>}
-                                value={lowStockMaterials}
+                                title={<span style={{ color: lowStockMaterials > 0 ? '#fff' : COLORS.secondary, fontSize: 13, fontWeight: 700 }}>{Number(profile?.plan_id) > 5 ? t.ingredient_alerts : t.stock_alerts_general || "STOCK ALERTS"}</span>}
+                                value={lowStockMaterials + lowStockProducts}
                                 valueStyle={{ color: lowStockMaterials > 0 ? '#fff' : COLORS.secondary, fontWeight: 900, fontSize: 32 }}
                                 suffix={<span style={{ fontSize: 14, marginLeft: 8 }}>{t.items_low}</span>}
                             />
@@ -779,7 +783,7 @@ const StockPage = () => {
                                             onChange={(v) => setFilters(f => ({ ...f, item_type: v }))}
                                         >
                                             <Option value="product">☕ {t.product}</Option>
-                                            <Option value="raw_material">🌿 {t.raw_material}</Option>
+                                            {Number(profile?.plan_id) > 5 && <Option value="raw_material">🌿 {t.raw_material}</Option>}
                                         </Select>
                                         <Select
                                             placeholder={t.transaction}
@@ -861,14 +865,16 @@ const StockPage = () => {
                                             >
                                                 {t.audit_product_title || "Audit Products"}
                                             </Button>
-                                            <Button 
-                                                size="large" 
-                                                icon={<MdOutlineRotateLeft />}
-                                                style={{ height: 55, padding: '0 40px', borderRadius: 15, fontWeight: 700 }}
-                                                onClick={() => startAudit('raw_material')}
-                                            >
-                                                {t.audit_material_title || "Audit Raw Materials"}
-                                            </Button>
+                                            {Number(profile?.plan_id) > 5 && (
+                                                <Button 
+                                                    size="large" 
+                                                    icon={<MdOutlineRotateLeft />}
+                                                    style={{ height: 55, padding: '0 40px', borderRadius: 15, fontWeight: 700 }}
+                                                    onClick={() => startAudit('raw_material')}
+                                                >
+                                                    {t.audit_material_title || "Audit Raw Materials"}
+                                                </Button>
+                                            )}
                                         </Space>
                                     </div>
                                 ) : (
@@ -1510,7 +1516,14 @@ const StockPage = () => {
                             )
                         })()
                     }
-                ]}
+                ].filter(item => {
+                    // Plan Restrictions:
+                    // Plan <= 5 (Web Ordering / Basic) can only see Ledger (1) and Physical Audit (2)
+                    if (Number(profile?.plan_id) <= 5) {
+                        return ["1", "2"].includes(item.key);
+                    }
+                    return true;
+                })}
             />
 
             <style>{`
@@ -1541,10 +1554,10 @@ const StockPage = () => {
                 <Form layout="vertical" form={form} onFinish={onFinish}>
                     <Row gutter={16}>
                         <Col span={12}>
-                            <Form.Item name="item_type" label={<span style={{ fontWeight: 700, fontSize: 13 }}>{t.inventory_item_type || "ITEM TYPE"}</span>} rules={[{ required: true }]}>
+                            <Form.Item name="item_type" label={<span style={{ fontWeight: 700, fontSize: 13 }}>{t.inventory_item_type || "ITEM TYPE"}</span>} rules={[{ required: true }]} initialValue={Number(profile?.plan_id) <= 5 ? "product" : undefined}>
                                 <Select placeholder={t.select_item_type || "Pick level"} size="large" style={{ borderRadius: 10 }} onChange={() => form.setFieldValue("item_id", undefined)}>
                                     <Option value="product">☕ {t.finished_product_opt || "Finished Product"}</Option>
-                                    <Option value="raw_material">🌿 {t.raw_material_opt || "Raw Ingredient"}</Option>
+                                    {Number(profile?.plan_id) > 5 && <Option value="raw_material">🌿 {t.raw_material_opt || "Raw Ingredient"}</Option>}
                                 </Select>
                             </Form.Item>
                         </Col>

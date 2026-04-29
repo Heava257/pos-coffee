@@ -3,10 +3,13 @@ import { Table, Button, Modal, Form, Input, Select, InputNumber, Space, Card, Ta
 import { DeleteOutlined, PlusOutlined, WarningOutlined, HistoryOutlined } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import dayjs from "dayjs";
+import { useLanguage, translations } from "../../store/language.store";
 
 const { Title, Text } = Typography;
 
 const WastePage = () => {
+    const { lang } = useLanguage();
+    const t = translations[lang];
     const [list, setList] = useState([]);
     const [products, setProducts] = useState([]);
     const [rawMaterials, setRawMaterials] = useState([]);
@@ -44,33 +47,39 @@ const WastePage = () => {
 
     const columns = [
         {
-            title: "Date",
+            title: t.date,
             dataIndex: "created_at",
             render: (text) => dayjs(text).format("DD MMM YYYY, HH:mm"),
         },
         {
-            title: "Item Name",
+            title: t.item_name,
             render: (row) => row.product_name || row.rm_name,
         },
         {
-            title: "Type",
+            title: t.type,
             render: (row) => (
                 <Tag color={row.product_id ? "blue" : "orange"}>
-                    {row.product_id ? "Product" : "Raw Material"}
+                    {row.product_id ? t.finished_product : t.raw_material_ingredient}
                 </Tag>
             ),
         },
         {
-            title: "Qty",
+            title: t.qty,
             dataIndex: "qty",
             render: (qty) => <Text strong type="danger">{qty}</Text>
         },
         {
-            title: "Reason",
+            title: t.reason,
             dataIndex: "reason",
+            render: (r) => {
+                if (r === "Expired") return t.expired;
+                if (r === "Damaged") return t.damaged;
+                if (r === "Wrong Recipe") return t.wrong_recipe;
+                return r;
+            }
         },
         {
-            title: "Staff",
+            title: t.staff,
             dataIndex: "staff_name",
         }
     ];
@@ -79,8 +88,8 @@ const WastePage = () => {
         <div style={{ padding: 24 }}>
             <Row gutter={24} style={{ marginBottom: 24 }}>
                 <Col span={16}>
-                    <Title level={2}>Waste & Damage Tracking 📉</Title>
-                    <Text type="secondary">Monitor and record inventory loss to protect your profit margins.</Text>
+                    <Title level={2}>{t.waste_title} 📉</Title>
+                    <Text type="secondary">{t.waste_subtitle}</Text>
                 </Col>
                 <Col span={8} style={{ textAlign: "right" }}>
                     <Button 
@@ -90,7 +99,7 @@ const WastePage = () => {
                         onClick={() => setIsModalOpen(true)}
                         style={{ borderRadius: 10, background: "#1e4a2d", height: 45 }}
                     >
-                        Record Waste
+                        {t.record_waste}
                     </Button>
                 </Col>
             </Row>
@@ -101,7 +110,7 @@ const WastePage = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <WarningOutlined style={{ fontSize: 24, color: '#e74c3c' }} />
                             <div>
-                                <div style={{ fontSize: 12, color: 'gray' }}>Total Items Wasted</div>
+                                <div style={{ fontSize: 12, color: 'gray' }}>{t.total_items_wasted}</div>
                                 <div style={{ fontSize: 20, fontWeight: 800 }}>{list.length}</div>
                             </div>
                         </div>
@@ -120,32 +129,32 @@ const WastePage = () => {
             </Card>
 
             <Modal
-                title={<b>Record New Waste / Damage</b>}
+                title={<b>{t.record_new_waste}</b>}
                 open={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
                 onOk={() => form.submit()}
-                okText="Record Now"
+                okText={t.record_now}
                 okButtonProps={{ style: { background: "#1e4a2d" } }}
                 centered
             >
                 <Form form={form} layout="vertical" onFinish={onFinish} style={{ marginTop: 20 }}>
-                    <Form.Item label="Select Item Type" name="type" initialValue="product">
+                    <Form.Item label={t.select_item_type} name="type" initialValue="product">
                         <Select onChange={() => { form.setFieldsValue({ product_id: null, raw_material_id: null }) }}>
-                            <Select.Option value="product">Finished Product</Select.Option>
-                            <Select.Option value="rm">Raw Material / Ingredient</Select.Option>
+                            <Select.Option value="product">{t.finished_product}</Select.Option>
+                            <Select.Option value="rm">{t.raw_material_ingredient}</Select.Option>
                         </Select>
                     </Form.Item>
 
                     <Form.Item noStyle shouldUpdate={(p, c) => p.type !== c.type}>
                         {({ getFieldValue }) => (
                             getFieldValue("type") === "product" ? (
-                                <Form.Item label="Product" name="product_id" rules={[{ required: true }]}>
+                                <Form.Item label={t.product} name="product_id" rules={[{ required: true }]}>
                                     <Select showSearch optionFilterProp="children">
                                         {products.map(p => <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>)}
                                     </Select>
                                 </Form.Item>
                             ) : (
-                                <Form.Item label="Raw Material" name="raw_material_id" rules={[{ required: true }]}>
+                                <Form.Item label={t.raw_material} name="raw_material_id" rules={[{ required: true }]}>
                                     <Select showSearch optionFilterProp="children">
                                         {rawMaterials.map(rm => <Select.Option key={rm.id} value={rm.id}>{rm.name}</Select.Option>)}
                                     </Select>
@@ -154,16 +163,16 @@ const WastePage = () => {
                         )}
                     </Form.Item>
 
-                    <Form.Item label="Quantity" name="qty" rules={[{ required: true }]}>
+                    <Form.Item label={t.qty} name="qty" rules={[{ required: true }]}>
                         <InputNumber style={{ width: "100%" }} min={0.1} />
                     </Form.Item>
 
-                    <Form.Item label="Reason" name="reason" rules={[{ required: true }]}>
-                        <Select placeholder="Select a reason">
-                            <Select.Option value="Expired">Expired / ហួសកំណត់</Select.Option>
-                            <Select.Option value="Damaged">Damaged / បែកបាក់-ខូចខាត</Select.Option>
-                            <Select.Option value="Wrong Recipe">Wrong Recipe / ឆុងខុសបច្ចេកទេស</Select.Option>
-                            <Select.Option value="Other">Other / ផ្សេងៗ</Select.Option>
+                    <Form.Item label={t.reason} name="reason" rules={[{ required: true }]}>
+                        <Select placeholder={t.reason}>
+                            <Select.Option value="Expired">{t.expired}</Select.Option>
+                            <Select.Option value="Damaged">{t.damaged}</Select.Option>
+                            <Select.Option value="Wrong Recipe">{t.wrong_recipe}</Select.Option>
+                            <Select.Option value="Other">{t.other}</Select.Option>
                         </Select>
                     </Form.Item>
                 </Form>

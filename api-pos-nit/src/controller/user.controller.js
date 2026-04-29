@@ -4,23 +4,30 @@ const bcrypt = require("bcrypt");
 exports.getList = async (req, res) => {
     try {
         const { business_id } = req;
-        const { target_business_id } = req.query;
+        const { target_business_id, branch_id } = req.query;
         
         // Super Admin can see any business's users
         const bizId = (business_id === 1 && target_business_id) ? target_business_id : business_id;
 
         // 1. Fetch User List with Role and Branch names
-        const sqlUsers = `
+        let sqlUsers = `
             SELECT u.id, u.name, u.email as username, u.tel, u.address, u.image as profile_image,
                    u.status, u.is_super_admin, r.name as role_name, b.name as branch_name,
-                   u.role_id, u.branch_id, u.created_at as create_at
+                   u.role_id, u.branch_id, u.created_at as create_at, u.business_id
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN branches b ON u.branch_id = b.id
             WHERE u.business_id = ?
-            ORDER BY u.id ASC
         `;
-        const [list] = await db.query(sqlUsers, [bizId]);
+        let params = [bizId];
+
+        if (branch_id) {
+            sqlUsers += " AND u.branch_id = ?";
+            params.push(branch_id);
+        }
+
+        sqlUsers += " ORDER BY u.id ASC";
+        const [list] = await db.query(sqlUsers, params);
 
         // 2. Fetch Detailed Subscription Info
         const sqlSub = `

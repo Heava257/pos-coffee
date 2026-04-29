@@ -46,3 +46,63 @@ h3 {
   font-size: 16px;
   font-weight: 600;
 }
+
+/* Custom Selectable Cards for Moods */
+.custom-mood-checkbox {
+  width: 100%;
+}
+
+.custom-mood-checkbox .ant-checkbox {
+  display: none; /* Hide standard square */
+}
+
+.custom-mood-checkbox > span:last-child {
+  padding: 0 !important;
+  width: 100%;
+}
+
+.custom-mood-checkbox .ant-checkbox-wrapper {
+  width: 100%;
+}
+
+.custom-mood-checkbox-checked > div {
+  border-color: #2d6a42 !important;
+  background-color: #e6f0e9 !important;
+  box-shadow: 0 4px 12px rgba(45, 106, 66, 0.1);
+}
+
+.custom-mood-checkbox-checked > div span {
+  color: #1e4a2d !important;
+}
+
+/* Ant Design override for Checked state in our custom layout */
+.ant-checkbox-wrapper-checked .custom-mood-checkbox > div,
+.ant-checkbox-group-item-checked .custom-mood-checkbox div {
+  border-color: #2d6a42 !important;
+  background-color: #e6f0e9 !important;
+  box-shadow: 0 4px 12px rgba(45, 106, 66, 0.1);
+}
+
+.ant-checkbox-wrapper:hover .custom-mood-checkbox div {
+  border-color: #2d6a42;
+}
+
+/* Enhance price inputs visibility */
+.ant-input-number-focused {
+  border-color: #2d6a42 !important;
+  box-shadow: 0 0 0 2px rgba(45, 106, 66, 0.1) !important;
+}
+
+.ant-input-number-lg input {
+  height: 48px !important;
+  font-size: 16px !important;
+}
+
+.premium-table .ant-table-thead > tr > th {
+  background: #f6fbf8 !important;
+  color: #1e4a2d !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}

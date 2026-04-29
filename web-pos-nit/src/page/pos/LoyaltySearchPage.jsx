@@ -42,7 +42,7 @@ const LoyaltySearchPage = () => {
 
   const handleSearch = () => {
     if (!searchValue) {
-      message.warning("Please enter a card number or phone!");
+      message.warning(t.please_enter_card_phone);
       return;
     }
     navigate(`/membership/${searchValue}`);
@@ -54,7 +54,7 @@ const LoyaltySearchPage = () => {
         <Title level={2} style={{ color: "#1e4a2d", fontWeight: 800 }}>
           {t.loyalty_portal}
         </Title>
-        <Text type="secondary">Search and manage your VIP members easily</Text>
+        <Text type="secondary">{t.loyalty_subtitle}</Text>
       </div>
 
       <Card 
@@ -66,14 +66,14 @@ const LoyaltySearchPage = () => {
         }}
       >
         <div style={{ marginBottom: 30 }}>
-          <Title level={4}>Find a Member</Title>
-          <Text type="secondary">Enter membership card number or phone number below</Text>
+          <Title level={4}>{t.find_member}</Title>
+          <Text type="secondary">{t.enter_card_phone}</Text>
         </div>
 
         <Space.Compact style={{ width: '100%', marginBottom: 40 }}>
           <Input 
             size="large" 
-            placeholder="Search by Card ID or Phone..." 
+            placeholder={t.search_placeholder} 
             prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
@@ -92,7 +92,7 @@ const LoyaltySearchPage = () => {
               fontWeight: 700
             }}
           >
-            Search
+            {t.search}
           </Button>
         </Space.Compact>
 
@@ -100,7 +100,7 @@ const LoyaltySearchPage = () => {
           <Col span={8}>
             <div style={{ textAlign: 'center', padding: 20, background: '#f8fafc', borderRadius: 15 }}>
               <UsergroupAddOutlined style={{ fontSize: 32, color: '#1e4a2d', marginBottom: 10 }} />
-              <div style={{ fontWeight: 700 }}>Total Members</div>
+              <div style={{ fontWeight: 700 }}>{t.total_loyalty}</div>
               <div style={{ fontSize: 20, color: '#1e4a2d', fontWeight: 800 }}>
                 {loading ? "..." : stats.total_members}
               </div>
@@ -109,22 +109,22 @@ const LoyaltySearchPage = () => {
           <Col span={8}>
             <div style={{ textAlign: 'center', padding: 20, background: '#fff7e6', borderRadius: 15 }}>
               <StarFilled style={{ fontSize: 32, color: '#faad14', marginBottom: 10 }} />
-              <div style={{ fontWeight: 700 }}>Active Tiers</div>
-              <div style={{ fontSize: 20, color: '#faad14', fontWeight: 800 }}>3 Levels</div>
+              <div style={{ fontWeight: 700 }}>{t.active_tiers}</div>
+              <div style={{ fontSize: 20, color: '#faad14', fontWeight: 800 }}>3 {t.levels}</div>
             </div>
           </Col>
           <Col span={8}>
             <div style={{ textAlign: 'center', padding: 20, background: '#f0f5ff', borderRadius: 15 }}>
               <CreditCardOutlined style={{ fontSize: 32, color: '#2f54eb', marginBottom: 10 }} />
-              <div style={{ fontWeight: 700 }}>Prepaid Wallet</div>
-              <div style={{ fontSize: 20, color: '#2f54eb', fontWeight: 800 }}>Active</div>
+              <div style={{ fontWeight: 700 }}>{t.prepaid_wallet}</div>
+              <div style={{ fontSize: 20, color: '#2f54eb', fontWeight: 800 }}>{t.active}</div>
             </div>
           </Col>
         </Row>
       </Card>
 
       <div style={{ marginTop: 40, textAlign: 'center' }}>
-         <Empty description="No recent searches" />
+         <Empty description={t.no_recent_searches} />
       </div>
     </div>
   );

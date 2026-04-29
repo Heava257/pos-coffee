@@ -68,7 +68,6 @@ const storage = new CloudinaryStorage({
     allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'avif'],
     public_id: (req, file) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      const nameWithoutExt = file.originalname.split('.').slice(0, -1).join('.');
       return `img-${uniqueSuffix}`;
     }
   },

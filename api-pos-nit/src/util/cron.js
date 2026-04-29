@@ -80,6 +80,43 @@ const startSubscriptionCron = () => {
     });
 
     console.log("[CRON] Subscription expiry scheduler started. Runs daily at 00:05 AM.");
+
+    // STEP 4: Expiry Email Reminders (7-3-1 Rule)
+    // Runs every day at 08:00 AM (server time)
+    cron.schedule("0 8 * * *", async () => {
+        console.log("[CRON] Running expiry email reminders at", new Date().toISOString());
+        
+        try {
+            // Find businesses with subscriptions expiring in exactly 7, 3, 1, or 0 days
+            const [reminders] = await db.query(`
+                SELECT 
+                    b.id as business_id, 
+                    b.name as business_name, 
+                    u.email as owner_email,
+                    DATEDIFF(s.end_date, CURDATE()) as days_left
+                FROM subscriptions s
+                JOIN businesses b ON s.business_id = b.id
+                JOIN users u ON b.id = u.business_id AND u.role_id IN (SELECT id FROM roles WHERE code = 'owner')
+                WHERE s.status = 'active'
+                  AND DATEDIFF(s.end_date, CURDATE()) IN (7, 3, 1, 0)
+            `);
+
+            if (reminders.length === 0) {
+                console.log("[CRON] No expiry reminders to send today.");
+                return;
+            }
+
+            const { sendExpiryReminder } = require("./email");
+            for (const item of reminders) {
+                await sendExpiryReminder(item.owner_email, item.business_name, item.days_left);
+            }
+            
+            console.log(`[CRON] Sent ${reminders.length} expiry reminder emails.`);
+        } catch (error) {
+            console.error("[CRON ERROR] Expiry email reminders failed:", error.message);
+        }
+    });
+    console.log("[CRON] Expiry email reminders scheduler started. Runs daily at 08:00 AM.");
 };
 
 module.exports = { startSubscriptionCron };

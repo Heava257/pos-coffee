@@ -54,8 +54,7 @@ function UserPage() {
   const [activeTab, setActiveTab] = useState("all"); // Add active tab state
   const [filter, setFilter] = useState({
     txt_search: "",
-    category_id: "",
-    brand: "",
+    branch_id: "", // Add branch filter state
   });
   const [state, setState] = useState({
     list: [],
@@ -83,12 +82,12 @@ function UserPage() {
 
   useEffect(() => {
     if (userId) getList();
-  }, [userId]);
+  }, [userId, filter.branch_id]); // Re-fetch when branch filter changes
 
   // Fetch user list with summary and sub info
   const getList = async () => {
     setState(pre => ({ ...pre, loading: true }));
-    const res = await request("user", "get");
+    const res = await request("user", "get", { branch_id: filter.branch_id });
     if (res && !res.error) {
       setState((pre) => ({
         ...pre,
@@ -446,6 +445,14 @@ function UserPage() {
           </Col>
           <Col xs={24} md={12} style={{ textAlign: 'right', marginTop: '10px' }}>
             <Space>
+              <Select
+                placeholder={t.all_branches || "All Branches"}
+                allowClear
+                style={{ width: 200 }}
+                value={filter.branch_id || undefined}
+                onChange={(v) => setFilter(p => ({ ...p, branch_id: v }))}
+                options={[{ label: t.all_branches || "All Branches", value: "" }, ...state.branches]}
+              />
               <Input.Search
                 placeholder={t.search}
                 onSearch={handleSearch}

@@ -15,7 +15,9 @@ import {
     Space,
     Badge,
     Divider,
-    Select
+    Select,
+    DatePicker,
+    Tooltip
 } from "antd";
 import {
     CreditCardOutlined,
@@ -200,6 +202,10 @@ const PlanPage = () => {
         }
     ];
 
+    const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+    const [editingSubscription, setEditingSubscription] = useState(null);
+    const [subForm] = Form.useForm();
+
     const subColumns = [
         {
             title: "Business / Owner",
@@ -245,8 +251,53 @@ const PlanPage = () => {
                     {(status || 'ACTIVE').toUpperCase()}
                 </Tag>
             )
+        },
+        {
+            title: "Action",
+            key: "action",
+            align: 'center',
+            render: (_, record) => (
+                <Button
+                    type="primary"
+                    ghost
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => handleEditSubscription(record)}
+                >
+                    Modify
+                </Button>
+            )
         }
     ];
+
+    const handleEditSubscription = (record) => {
+        setEditingSubscription(record);
+        subForm.setFieldsValue({
+            business_id: record.business_id,
+            plan_id: plans.find(p => p.name === record.plan_name)?.id,
+            end_date: record.end_date ? dayjs(record.end_date) : null,
+            status: record.sub_status || 'active'
+        });
+        setIsSubModalOpen(true);
+    };
+
+    const handleSaveSubscription = async () => {
+        try {
+            const values = await subForm.validateFields();
+            const res = await request("system-subscriptions", "put", {
+                ...values,
+                business_id: editingSubscription.business_id,
+                end_date: values.end_date ? values.end_date.format("YYYY-MM-DD") : null
+            });
+            if (res && res.success) {
+                message.success("Subscription updated successfully!");
+                setIsSubModalOpen(false);
+                fetchSubscriptions();
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     return (
         <div style={{ padding: "0 20px" }}>
@@ -443,6 +494,49 @@ const PlanPage = () => {
                             </Form.Item>
                         </Col>
                     </Row>
+                </Form>
+            </Modal>
+
+            {/* Manual Subscription Override Modal */}
+            <Modal
+                title={
+                    <span>
+                        <EditOutlined style={{ marginRight: 8, color: '#1e4a2d' }} />
+                        Manual Subscription Override: <Text type="warning">{editingSubscription?.business_name}</Text>
+                    </span>
+                }
+                open={isSubModalOpen}
+                onOk={handleSaveSubscription}
+                onCancel={() => setIsSubModalOpen(false)}
+                okText="Update Subscription"
+                width={450}
+            >
+                <Form form={subForm} layout="vertical">
+                    <Form.Item name="plan_id" label="Assigned Plan" rules={[{ required: true }]}>
+                        <Select placeholder="Select Plan">
+                            {plans.map(p => (
+                                <Select.Option key={p.id} value={p.id}>
+                                    {p.name} (${p.price}/{p.billing_cycle})
+                                </Select.Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item name="end_date" label="Expiry Date" tooltip="Set to empty for Lifetime access">
+                        <DatePicker style={{ width: '100%' }} format="DD MMM YYYY" />
+                    </Form.Item>
+
+                    <Form.Item name="status" label="Account Status" rules={[{ required: true }]}>
+                        <Select>
+                            <Select.Option value="active">Active (Full Access)</Select.Option>
+                            <Select.Option value="expired">Expired (Restricted)</Select.Option>
+                            <Select.Option value="suspended">Suspended (Locked)</Select.Option>
+                        </Select>
+                    </Form.Item>
+
+                    <div style={{ padding: '12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8, fontSize: '12px' }}>
+                        <Text type="warning" strong>Note:</Text> Manual changes here will override automatic billing cycles. The customer's role permissions will be synchronized to the new plan tier automatically.
+                    </div>
                 </Form>
             </Modal>
         </div>

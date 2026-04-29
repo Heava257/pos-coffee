@@ -23,9 +23,21 @@ exports.logError = async (controller, error, res) => {
 
   // 2. Return friendly response to client
   if (res && !res.headersSent) {
+    let friendlyMessage = error?.message || "Something went wrong! Please try again later.";
+    
+    // 🛡️ TRANSLATE TECHNICAL ERRORS
+    if (error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062) {
+      const match = error.sqlMessage?.match(/'([^']*)'/);
+      const value = match ? match[1] : "";
+      friendlyMessage = `Duplicate Entry: '${value}' already exists in our system. Please use a different value.`;
+    } else if (error?.code === 'ER_ROW_IS_REFERENCED_2' || error?.errno === 1451) {
+      friendlyMessage = "Cannot delete this item because it is being used by other records.";
+    }
+
     res.status(500).json({
-      error: "Internal Server Error",
-      message: error?.message || "Something went wrong! Please try again later.",
+      error: "Internal Error",
+      message: friendlyMessage,
+      technical: error?.message || null,
       sqlMessage: error?.sqlMessage || null,
       controller: controller
     });

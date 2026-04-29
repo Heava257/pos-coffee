@@ -31,44 +31,62 @@ exports.register = async (req, res) => {
       );
       const business_id = business.insertId;
 
-      // B. Create Main Branch
+      // B. Create Main Branch (Safe insert)
       const [branch] = await conn.query(
-        "INSERT INTO branches (business_id, name, is_main) VALUES (?, ?, ?)",
+        "INSERT IGNORE INTO branches (business_id, name, is_main) VALUES (?, ?, ?)",
         [business_id, "Main Branch", '1']
       );
-      const branch_id = branch.insertId;
+      let branch_id = branch.insertId;
+      if (branch_id === 0) {
+        const [existing] = await conn.query("SELECT id FROM branches WHERE business_id = ? AND is_main = '1' LIMIT 1", [business_id]);
+        branch_id = existing[0].id;
+      }
 
       // D. Setup Default Roles for the new business
       
-      // 1. Owner Role (Full Access)
+      // 1. Owner Role
       const [ownerRes] = await conn.query(
-        "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
+        "INSERT IGNORE INTO roles (business_id, name, code) VALUES (?, ?, ?)",
         [business_id, "Owner", "owner"]
       );
-      const owner_role_id = ownerRes.insertId;
-      await conn.query("INSERT INTO role_permissions (role_id, permission_id) SELECT ?, id FROM permissions", [owner_role_id]);
+      let owner_role_id = ownerRes.insertId;
+      if (owner_role_id === 0) {
+        const [existing] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'owner' LIMIT 1", [business_id]);
+        owner_role_id = existing[0].id;
+      }
+      await conn.query("INSERT IGNORE INTO role_permissions (role_id, permission_id) SELECT ?, id FROM permissions", [owner_role_id]);
 
-      // 2. Manager Role (Operations + Reports)
+      // 2. Manager Role
       const [managerRes] = await conn.query(
-        "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
+        "INSERT IGNORE INTO roles (business_id, name, code) VALUES (?, ?, ?)",
         [business_id, "Manager", "manager"]
       );
+      let manager_role_id = managerRes.insertId;
+      if (manager_role_id === 0) {
+        const [existing] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'manager' LIMIT 1", [business_id]);
+        manager_role_id = existing[0].id;
+      }
       await conn.query(`
-        INSERT INTO role_permissions (role_id, permission_id)
+        INSERT IGNORE INTO role_permissions (role_id, permission_id)
         SELECT ?, id FROM permissions 
         WHERE route_key IN ('/invoices', '/order', '/category', '/product', '/stock', '/supplier', '/purchase', '/report_Sale_Summary', '/profile', '/table', '/expense')
-      `, [managerRes.insertId]);
+      `, [manager_role_id]);
 
-      // 3. Sale Role (POS Operations)
+      // 3. Sale Role
       const [saleRes] = await conn.query(
-        "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)",
+        "INSERT IGNORE INTO roles (business_id, name, code) VALUES (?, ?, ?)",
         [business_id, "Sale", "sale"]
       );
+      let sale_role_id = saleRes.insertId;
+      if (sale_role_id === 0) {
+        const [existing] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'sale' LIMIT 1", [business_id]);
+        sale_role_id = existing[0].id;
+      }
       await conn.query(`
-        INSERT INTO role_permissions (role_id, permission_id)
+        INSERT IGNORE INTO role_permissions (role_id, permission_id)
         SELECT ?, id FROM permissions 
         WHERE route_key IN ('/invoices', '/order', '/category', '/product', '/table', '/profile')
-      `, [saleRes.insertId]);
+      `, [sale_role_id]);
 
       // C. Create Owner Account (Linked to Owner Role)
       const hashedPassword = bcrypt.hashSync(password, 10);
@@ -104,7 +122,7 @@ exports.login = async (req, res) => {
         SELECT u.*, 
                r.name as role_name, r.code as role_code,
                b.name as business_name, b.status as business_status, b.logo as business_logo,
-               b.active_modules, b.plan_type,
+               b.active_modules, b.plan_type, b.plan_id as plan_id,
                p.name as plan_name, p.max_branches, p.max_staff, p.max_products,
                mp.ui_layout as business_layout
         FROM users u
@@ -122,6 +140,15 @@ exports.login = async (req, res) => {
     }
 
     const user = users[0];
+    
+    // Check Email Verification (Strict Mode)
+    if (user.is_verified === 0) {
+      return res.status(403).json({ 
+        message: "Your email is not verified yet!", 
+        unverified: true,
+        email: user.email 
+      });
+    }
 
     // Check Business Status
     if (user.business_status !== 'active') {
@@ -159,6 +186,7 @@ exports.login = async (req, res) => {
       profile_image: user.image,
       active_modules: user.active_modules, // Comma-separated string like 'POS,Inventory'
       plan_type: user.plan_type,
+      plan_id: user.plan_id,
       business_layout: user.business_layout
     };
 
@@ -219,11 +247,13 @@ exports.getProfile = async (req, res) => {
   try {
     const [fullUser] = await db.query(`
       SELECT u.*, r.name as role_name, r.code as role_code, 
-             b.name as business_name, b.active_modules, b.plan_type,
+             b.name as business_name, b.active_modules, b.plan_type, b.plan_id,
+             sp.name as plan_name,
              br.name as branch_name, mp.ui_layout as business_layout
       FROM users u
       INNER JOIN roles r ON u.role_id = r.id
       INNER JOIN businesses b ON u.business_id = b.id
+      LEFT JOIN subscription_plans sp ON b.plan_id = sp.id
       LEFT JOIN branches br ON u.branch_id = br.id
       LEFT JOIN modular_packages mp ON b.package_id = mp.id
       WHERE u.id = ?
@@ -283,11 +313,13 @@ exports.updateProfile = async (req, res) => {
     const [updatedUser] = await db.query(`
       SELECT 
         u.id, u.name, u.email, u.image as profile_image, u.branch_id, u.business_id, u.role_id,
-        b.name as business_name, b.logo as business_logo, b.active_modules, b.plan_type,
+        b.name as business_name, b.logo as business_logo, b.active_modules, b.plan_type, b.plan_id,
+        sp.name as plan_name,
         r.name as role_name, r.code as role_code, br.name as branch_name,
         mp.ui_layout as business_layout
       FROM users u
       JOIN businesses b ON u.business_id = b.id
+      LEFT JOIN subscription_plans sp ON b.plan_id = sp.id
       JOIN roles r ON u.role_id = r.id
       LEFT JOIN branches br ON u.branch_id = br.id
       LEFT JOIN modular_packages mp ON b.package_id = mp.id
@@ -307,4 +339,33 @@ exports.updateProfile = async (req, res) => {
   } catch (error) {
     logError("auth.updateProfile", error, res);
   }
+};
+
+exports.verifyEmail = async (req, res) => {
+    try {
+        const { token, email } = req.body;
+        if (!token || !email) {
+            return res.status(400).json({ message: "Missing token or email" });
+        }
+
+        // 1. Find user with this token and email
+        const [users] = await db.query(
+            "SELECT id FROM users WHERE email = ? AND verify_token = ?",
+            [email, token]
+        );
+
+        if (users.length === 0) {
+            return res.status(400).json({ message: "Invalid or expired verification link!" });
+        }
+
+        // 2. Mark as verified and clear token
+        await db.query(
+            "UPDATE users SET is_verified = 1, verify_token = NULL WHERE id = ?",
+            [users[0].id]
+        );
+
+        res.json({ success: true, message: "Email verified successfully! You can now log in." });
+    } catch (error) {
+        logError("auth.verifyEmail", error, res);
+    }
 };

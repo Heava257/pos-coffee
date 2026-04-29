@@ -1,12 +1,17 @@
 const { db, logError } = require("../util/helper");
 
 // Helper: Deduct Stock
-const deductStock = async (conn, productId, qtyMultiplier, business_id, branch_id) => {
+const deductStock = async (conn, productId, qtyMultiplier, business_id, branch_id, plan_id = 0) => {
     try {
-        const [recipe] = await conn.query(
-            "SELECT raw_material_id, qty as quantity, waste_factor FROM recipe_detail WHERE product_id = ? AND business_id = ?",
-            [productId, business_id]
-        );
+        // 🚀 PLAN-BASED LOGIC: Only check for recipes if plan is Advanced (ID >= 6)
+        let recipe = [];
+        if (plan_id >= 6) {
+            const [rows] = await conn.query(
+                "SELECT raw_material_id, qty as quantity, waste_factor FROM recipe_detail WHERE product_id = ? AND business_id = ?",
+                [productId, business_id]
+            );
+            recipe = rows;
+        }
 
         if (recipe.length > 0) {
             for (const ingredient of recipe) {
@@ -14,7 +19,7 @@ const deductStock = async (conn, productId, qtyMultiplier, business_id, branch_i
                 await conn.query("UPDATE raw_material SET qty = qty - ? WHERE id = ?", [deductQty, ingredient.raw_material_id]);
             }
         } else {
-            // Default: Deduct from branch_products if no recipe exists
+            // Default: Deduct from branch_products if no recipe exists or plan is not advanced
             await conn.query(
                 "UPDATE branch_products SET stock_qty = stock_qty - ? WHERE product_id = ? AND branch_id = ?",
                 [qtyMultiplier, productId, branch_id]
@@ -66,7 +71,7 @@ exports.create = async (req, res) => {
                 console.log(`[Auto-Merge] Found existing unpaid order ${existingOrders[0].id} for table ${table_no}. Redirecting to additive update...`);
                 req.body.order_id = existingOrders[0].id;
                 req.body.is_additive = true; // 🚀 IMPORTANT: Don't delete existing items!
-                await conn.release(); 
+                await conn.release();
                 return exports.update(req, res);
             }
         }
@@ -82,7 +87,7 @@ exports.create = async (req, res) => {
             payment_method,
             order_type,
             order_status,
-            'pending',
+            req.body.kitchen_status || 'pending',
             Number(guest_count) || 1
         ];
 
@@ -126,15 +131,22 @@ exports.create = async (req, res) => {
             const itemQty = Number(item.qty) || 1;
             await conn.query(
                 "INSERT INTO order_details (order_id, product_id, qty, price, note, kitchen_batch_id, kitchen_status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                [order_id, item.product_id, itemQty, itemPrice, item.note || "", batchId, 'preparing']
+                [order_id, item.product_id, itemQty, itemPrice, item.note || "", batchId, req.body.kitchen_status || 'preparing']
             );
 
             // 2. 🚀 AUTOMATED STOCK DEDUCTION (Recipe, Add-on, Size, & Waste Aware)
             const deductStock = async (productId, qtyMultiplier, itemName, sizeLabel = null) => {
-                const [recipe] = await conn.query(
-                    "SELECT raw_material_id, qty as quantity, waste_factor FROM recipe_detail WHERE product_id = ? AND business_id = ? AND (size_label = ? OR size_label IS NULL OR size_label = '')",
-                    [productId, business_id, sizeLabel]
-                );
+                // 🚀 PLAN-BASED LOGIC: Only check for recipes if plan is Advanced (ID >= 6)
+                const isAdvancedPlan = (req.plan_id >= 6);
+
+                let recipe = [];
+                if (isAdvancedPlan) {
+                    const [recipeRows] = await conn.query(
+                        "SELECT raw_material_id, qty as quantity, waste_factor FROM recipe_detail WHERE product_id = ? AND business_id = ? AND (size_label = ? OR size_label IS NULL OR size_label = '')",
+                        [productId, business_id, sizeLabel]
+                    );
+                    recipe = recipeRows;
+                }
 
                 if (recipe.length > 0) {
                     // A. RECIPE-BASED DEDUCTION (e.g. Coffee Beans, Milk)
@@ -324,10 +336,12 @@ exports.getList = async (req, res) => {
             business_id,
             ...(branch_id ? [branch_id] : []),
             ...(user_id ? [user_id] : []),
+            ...(shift_id ? [shift_id] : []),
             ...(from_date && to_date ? [from_date, to_date] : []),
             business_id,
             ...(branch_id ? [branch_id] : []),
             ...(user_id ? [user_id] : []),
+            ...(shift_id ? [shift_id] : []),
             ...(from_date && to_date ? [from_date, to_date] : [])
         ];
 
@@ -343,6 +357,7 @@ exports.getList = async (req, res) => {
                  WHERE o2.business_id = ? 
                  ${branch_id ? 'AND o2.branch_id = ?' : ''} 
                  ${user_id ? 'AND o2.user_id = ?' : ''}
+                 ${shift_id ? 'AND o2.shift_id = ?' : ''}
                  AND o2.status != 'cancelled'
                  ${from_date && to_date ? 'AND DATE(o2.created_at) BETWEEN ? AND ?' : ''}
                 ) as total_qty
@@ -350,6 +365,7 @@ exports.getList = async (req, res) => {
              WHERE o.business_id = ? 
              ${branch_id ? 'AND o.branch_id = ?' : ''} 
              ${user_id ? 'AND o.user_id = ?' : ''}
+             ${shift_id ? 'AND o.shift_id = ?' : ''}
              AND o.status != 'cancelled'
              ${from_date && to_date ? 'AND DATE(o.created_at) BETWEEN ? AND ?' : ''}`,
             summaryParams
@@ -359,6 +375,7 @@ exports.getList = async (req, res) => {
         const expenseParams = [
             business_id,
             ...(branch_id ? [branch_id] : []),
+            ...(shift_id ? [shift_id] : []),
             ...(from_date && to_date ? [from_date, to_date] : [])
         ];
         const [expenses] = await db.query(
@@ -368,6 +385,7 @@ exports.getList = async (req, res) => {
              FROM expense
              WHERE business_id = ? 
              ${branch_id ? 'AND branch_id = ?' : ''} 
+             ${shift_id ? 'AND shift_id = ?' : ''} 
              ${from_date && to_date ? 'AND DATE(expense_date) BETWEEN ? AND ?' : ''}`,
             expenseParams
         );
@@ -380,12 +398,13 @@ exports.getList = async (req, res) => {
              JOIN orders o ON od.order_id = o.id
              WHERE o.business_id = ? 
              ${branch_id ? 'AND o.branch_id = ?' : ''} 
+             ${shift_id ? 'AND o.shift_id = ?' : ''} 
              ${from_date && to_date ? 'AND DATE(o.created_at) BETWEEN ? AND ?' : ''}
              AND o.status != 'cancelled'
              GROUP BY p.id
              ORDER BY total_qty DESC
              LIMIT 5`,
-            expenseParams // Same params as expenses (business_id, branch_id, date range)
+            expenseParams // Same params as expenses (business_id, branch_id, shift, date range)
         );
 
         res.json({
@@ -458,7 +477,7 @@ exports.getPendingOrders = async (req, res) => {
         const { business_id } = req;
         const branch_id = req.query.branch_id || req.branch_id;
         const [list] = await db.query(
-            "SELECT id, table_no, status, kitchen_status, order_type, total_amount, created_at FROM orders WHERE business_id = ? AND branch_id = ? AND status = 'unpaid' AND order_type = 'dine_in' AND kitchen_status = 'pending' ORDER BY id DESC",
+            "SELECT id, table_no, status, kitchen_status, order_type, total_amount, created_at FROM orders WHERE business_id = ? AND branch_id = ? AND status = 'unpaid' AND order_type = 'dine_in' AND kitchen_status = 'pending' AND table_no IS NOT NULL AND table_no != '' ORDER BY id DESC",
             [business_id, branch_id]
         );
         res.json({ list });
@@ -486,6 +505,8 @@ exports.getKDSOrders = async (req, res) => {
         const { business_id, branch_id } = req;
         const { is_history } = req.query;
 
+        const isHistory = (is_history === '1' || is_history === 1 || is_history === 'true');
+
         let sql = `
             SELECT 
                 o.id as order_id,
@@ -503,18 +524,16 @@ exports.getKDSOrders = async (req, res) => {
             WHERE o.business_id = ? AND o.branch_id = ? 
             AND o.status != 'cancelled'
             AND DATE(o.created_at) = CURDATE()
-            AND od.kitchen_status NOT IN ('pending', 'cancelled') 
-            AND od.kitchen_status IS NOT NULL
-            GROUP BY o.id, od.kitchen_batch_id, od.kitchen_status, u.name
         `;
 
-        if (is_history === '1' || is_history === 1 || is_history === 'true') {
-            sql += " AND o.kitchen_status = 'served' ";
+        if (isHistory) {
+            sql += " AND od.kitchen_status = 'served' ";
         } else {
-            sql += " AND (o.kitchen_status IS NULL OR o.kitchen_status != 'served') ";
+            sql += " AND od.kitchen_status IN ('preparing', 'ready') ";
         }
 
-        sql += " ORDER BY o.id ASC, od.kitchen_batch_id ASC";
+        sql += " GROUP BY o.id, od.kitchen_batch_id, od.kitchen_status, u.name ";
+        sql += " ORDER BY o.id ASC, od.kitchen_batch_id ASC ";
 
         const [list] = await db.query(sql, [business_id, branch_id]);
         res.json({ list });
@@ -530,6 +549,7 @@ exports.updateKitchenStatus = async (req, res) => {
         const { business_id } = req;
         const finalId = id || order_id;
 
+        // 1. Update specific items in this batch
         let sql = "UPDATE order_details SET kitchen_status = ? WHERE order_id = ?";
         let params = [kitchen_status, finalId];
 
@@ -540,12 +560,19 @@ exports.updateKitchenStatus = async (req, res) => {
 
         await db.query(sql, params);
 
-        // SYNC: Also update the main order kitchen_status to reflect the progress
-        // We'll set it to the provided status for now to keep tracking working
-        await db.query(
-            "UPDATE orders SET kitchen_status = ? WHERE id = ?",
-            [kitchen_status, finalId]
-        );
+        // 2. Sync Global Order Status ONLY IF ALL items are served
+        if (kitchen_status === 'served') {
+            const [remaining] = await db.query(
+                "SELECT id FROM order_details WHERE order_id = ? AND kitchen_status != 'served'",
+                [finalId]
+            );
+            if (remaining.length === 0) {
+                await db.query("UPDATE orders SET kitchen_status = 'served' WHERE id = ?", [finalId]);
+            }
+        } else {
+            // Just update main status to reflect progress (preparing/ready)
+            await db.query("UPDATE orders SET kitchen_status = ? WHERE id = ?", [kitchen_status, finalId]);
+        }
 
         res.json({ success: true, message: "Kitchen status updated" });
     } catch (error) {
@@ -601,7 +628,7 @@ exports.createWebOrder = async (req, res) => {
             );
             if (existingOrders.length > 0) {
                 // REDIRECT TO ADDITIVE UPDATE
-                await connection.commit(); 
+                await connection.commit();
                 connection.release();
                 // Force kitchen_status back to pending so POS staff sees the new items
                 req.body.kitchen_status = 'pending';
@@ -648,7 +675,7 @@ exports.createWebOrder = async (req, res) => {
         for (const item of cart_items) {
             await connection.query(
                 "INSERT INTO order_details (order_id, product_id, qty, price, note, kitchen_batch_id, kitchen_status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                [orderId, item.product_id, item.qty, item.price, item.note, batchId, 'preparing']
+                [orderId, item.product_id, item.qty, item.price, item.note, batchId, req.body.kitchen_status || 'preparing']
             );
         }
 
@@ -727,12 +754,13 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        
+
         // Extract context (Support both authenticated and public routes)
         const business_id = req.business_id || req.body.business_id;
         const branch_id = req.branch_id || req.body.branch_id;
+        const plan_id = req.plan_id || 0;
         const user_id = req.user_id || null;
-        
+
         const {
             order_id: body_order_id,
             customer_name,
@@ -809,7 +837,7 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
         if (is_additive) {
             // --- ADDITIVE MODE: Merge logic ---
             const [existingInDB] = await conn.query("SELECT * FROM order_details WHERE order_id = ?", [order_id]);
-            
+
             const batchId = `B${Date.now()}`;
             for (const item of cart_items) {
                 // If the item already has a server_item_id, it's already in the database.
@@ -819,7 +847,7 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
                 const qtyToAdd = Number(item.qty || item.cart_qty) || 0;
                 const itemPrice = Number(item.price) || 0;
                 const itemNote = item.note || "";
-                
+
                 // ALWAYS Insert new row for mobile additive updates to prevent KDS confusion
                 // Each 'Place Order' click on mobile creates a fresh batch of items
                 await conn.query(
@@ -827,14 +855,14 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
                     [order_id, item.product_id, qtyToAdd, itemPrice, itemNote, batchId, 'preparing']
                 );
                 // Deduct stock for the new entry
-                await deductStock(conn, item.product_id, qtyToAdd, business_id, branch_id);
+                await deductStock(conn, item.product_id, qtyToAdd, business_id, branch_id, plan_id);
             }
 
             // Recalculate whole order totals to be 100% sure
             const [finalDetails] = await conn.query("SELECT qty, price FROM order_details WHERE order_id = ?", [order_id]);
             let totalSub = 0;
             finalDetails.forEach(d => totalSub += (Number(d.qty) * Number(d.price)));
-            
+
             await conn.query(
                 "UPDATE orders SET sub_total = ?, total_amount = ? WHERE id = ?",
                 [totalSub, totalSub, order_id]
@@ -843,10 +871,10 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
         } else {
             // --- FULL SYNC MODE (Standard POS) ---
             // We want to update existing items and insert new ones without losing kitchen status
-            
+
             // 1. Get all current items in DB to compare
             const [existingItems] = await conn.query("SELECT * FROM order_details WHERE order_id = ?", [order_id]);
-            
+
             // 2. Process incoming cart items
             const processedIds = [];
             const batchId = `B${Date.now()}`;
@@ -854,7 +882,7 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
                 const qty = Number(item.qty || item.cart_qty) || 0;
                 const price = Number(item.price) || 0;
                 const note = item.note || "";
-                
+
                 // Try to find if this item already exists in DB
                 // Priority 1: Match by server_item_id
                 // Priority 2: Match by product_id and note (for robustness)
@@ -863,9 +891,9 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
                     existing = existingItems.find(row => row.id === item.server_item_id);
                 } else {
                     // Try to match an item that hasn't been "claimed" yet by another incoming item
-                    existing = existingItems.find(row => 
-                        row.product_id === item.product_id && 
-                        row.note === note && 
+                    existing = existingItems.find(row =>
+                        row.product_id === item.product_id &&
+                        (row.note === note || (!row.note && !note)) &&
                         !processedIds.includes(row.id)
                     );
                 }
@@ -878,12 +906,15 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
                     );
                     processedIds.push(existing.id);
                 } else {
-                    // INSERT new item
+                    // INSERT new item - Default to 'pending' if it's a new item during update
+                    // or 'preparing' if it's the very first save.
+                    // For POS safety, let's use 'preparing' ONLY if the main order is already being prepared
+                    const newStatus = kitchen_status || 'pending';
                     await conn.query(
                         "INSERT INTO order_details (order_id, product_id, qty, price, note, kitchen_batch_id, kitchen_status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        [order_id, item.product_id, qty, price, note, batchId, 'preparing']
+                        [order_id, item.product_id, qty, price, note, batchId, newStatus]
                     );
-                    await deductStock(conn, item.product_id, qty, business_id, branch_id);
+                    await deductStock(conn, item.product_id, qty, business_id, branch_id, plan_id);
                 }
             }
 
@@ -891,7 +922,7 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
             const idsToDelete = existingItems
                 .filter(row => !processedIds.includes(row.id))
                 .map(row => row.id);
-                
+
             if (idsToDelete.length > 0) {
                 await conn.query("DELETE FROM order_details WHERE id IN (?)", [idsToDelete]);
             }

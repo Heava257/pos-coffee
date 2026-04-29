@@ -231,3 +231,66 @@ exports.getBillingHistory = async (req, res) => {
         logError("plan.getBillingHistory", error, res);
     }
 };
+
+exports.updateSystemSubscription = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        const { business_id, plan_id, end_date, status } = req.body;
+        if (!business_id) return res.status(400).json({ success: false, message: "Business ID is required" });
+
+        await conn.beginTransaction();
+
+        // 1. Update business table
+        if (plan_id) {
+            await conn.query("UPDATE businesses SET plan_id = ? WHERE id = ?", [plan_id, business_id]);
+        }
+
+        // 2. Find and update active subscription or create new if not exists
+        const [activeSub] = await conn.query(
+            "SELECT id FROM subscriptions WHERE business_id = ? AND status = 'active' ORDER BY id DESC LIMIT 1",
+            [business_id]
+        );
+
+        if (activeSub.length > 0) {
+            // Update existing active sub
+            await conn.query(
+                "UPDATE subscriptions SET plan_id = ?, end_date = ?, status = ? WHERE id = ?",
+                [plan_id, end_date || null, status || 'active', activeSub[0].id]
+            );
+        } else {
+            // Create new sub if no active one found
+            await conn.query(
+                "INSERT INTO subscriptions (business_id, plan_id, start_date, end_date, status, tran_id) VALUES (?, ?, NOW(), ?, ?, ?)",
+                [business_id, plan_id, end_date || null, status || 'active', `ADMIN-MANUAL-${Date.now()}`]
+            );
+        }
+
+        // 3. Sync permissions for Owner if plan changed
+        if (plan_id) {
+            const [ownerRoles] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'owner'", [business_id]);
+            if (ownerRoles.length > 0) {
+                const ownerRoleId = ownerRoles[0].id;
+                // Grant new tier permissions
+                await conn.query(`
+                    INSERT IGNORE INTO role_permissions (role_id, permission_id)
+                    SELECT ?, id FROM permissions WHERE min_plan_id <= ?
+                `, [ownerRoleId, plan_id]);
+                
+                // Revoke permissions if plan downgraded (optional, but safer for business model)
+                await conn.query(`
+                    DELETE FROM role_permissions 
+                    WHERE role_id = ? AND permission_id IN (SELECT id FROM permissions WHERE min_plan_id > ?)
+                `, [ownerRoleId, plan_id]);
+            }
+        }
+
+        await conn.commit();
+        res.json({ success: true, message: "Subscription updated successfully by Admin" });
+
+    } catch (error) {
+        await conn.rollback();
+        logError("plan.updateSystemSubscription", error, res);
+    } finally {
+        conn.release();
+    }
+};

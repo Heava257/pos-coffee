@@ -431,7 +431,9 @@ app.listen(PORT, async () => {
     console.error("Migration Error (favorites table):", err.message);
   }
 
-  // Seeder: Add 25 products seeds (5 per new category)
+  /* 
+  // 🚀 SEEDER DEACTIVATED: Data already seeded. 
+  // Running this on every boot causes instability and nodemon loops.
   try {
     const bizId = 5;
     const [branches] = await db.query("SELECT id FROM branches WHERE business_id = ? LIMIT 1", [bizId]);
@@ -491,13 +493,14 @@ app.listen(PORT, async () => {
         );
         console.log(`Seeder: Added product '${p.name}'`);
       } else {
-        // Update image if it's currently generic or placeholder
         await db.query("UPDATE products SET image = ? WHERE id = ?", [p.img, exists[0].id]);
-        console.log(`Seeder: Updated image for product '${p.name}'`);
+        // console.log(`Seeder: Verified image for product '${p.name}'`);
       }
     }
   } catch (err) {
     console.error("Seeder Error:", err.message);
   }
+  */
 });
 
+// Force restart for environment variables

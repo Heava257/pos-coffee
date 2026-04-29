@@ -25,4 +25,5 @@ module.exports = (app) => {
     app.put("/api/order-kitchen-status", authMiddleware("order"), updateKitchenStatus);
     app.put("/api/order-send-to-kitchen", authMiddleware("order"), require("../controller/order.controller").sendOrderToKitchen);
     app.put("/api/order", authMiddleware("order"), require("../controller/order.controller").update);
+    app.put("/api/order/update", authMiddleware("order"), require("../controller/order.controller").update);
 };

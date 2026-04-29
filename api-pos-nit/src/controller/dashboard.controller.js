@@ -5,14 +5,9 @@ exports.getList = async (req, res) => {
     const { business_id, branch_id, user_id } = req;
     let { from_date, to_date, branch_id: query_branch_id } = req.query;
 
-    // Check if user is Super Admin or Owner to allow seeing all branches
     const [user] = await db.query("SELECT is_super_admin FROM users WHERE id = ?", [user_id]);
     const isOwner = user.length > 0 && user[0].is_super_admin === 1;
 
-    // Scoping: 
-    // 1. If query_branch_id is provided, use it (explicit filter).
-    // 2. Default to session branch_id to ensure branch-level data isolation.
-    // 3. To see all branches, query_branch_id should be 'all' or specific.
     let target_branch_id = branch_id; 
     if (query_branch_id) {
       if (query_branch_id === 'all' && (isOwner || business_id === 1)) {
@@ -30,7 +25,6 @@ exports.getList = async (req, res) => {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // 1. Top Sale Query
     const topSaleQuery = `
       SELECT 
         p.name AS product_name,
@@ -49,7 +43,6 @@ exports.getList = async (req, res) => {
     `;
     const [Top_Sale] = await db.query(topSaleQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
-    // 2. Today Summary (Income vs Expense)
     const [todaySale] = await db.query(`
       SELECT COALESCE(SUM(total_amount), 0) as total FROM orders 
       WHERE business_id = ? ${target_branch_id ? 'AND branch_id = ?' : ''} AND DATE(created_at) = ?
@@ -60,7 +53,6 @@ exports.getList = async (req, res) => {
       WHERE business_id = ? ${target_branch_id ? 'AND branch_id = ?' : ''} AND DATE(expense_date) = ?
     `, [business_id, ...(target_branch_id ? [target_branch_id] : []), today]);
 
-    // 3. Stock Status
     const [prodStats] = await db.query(`
       SELECT 
         COUNT(DISTINCT p.id) as total_items,
@@ -97,7 +89,6 @@ exports.getList = async (req, res) => {
       ORDER BY qty ASC LIMIT 5
     `, [business_id, ...(target_branch_id ? [target_branch_id] : [])]);
 
-    // 3.1 Expiry Alerts (Next 30 days)
     const [expiryAlerts] = await db.query(`
         SELECT DISTINCT rm.name, sl.expiry_date, sl.batch_no, rm.qty
         FROM stock_logs sl
@@ -117,7 +108,6 @@ exports.getList = async (req, res) => {
     };
     const combinedLowList = [...lowProdList, ...lowMatList].sort((a, b) => a.qty - b.qty).slice(0, 5);
 
-    // 4. Expense Query (Range)
     const expenseQuery = `
       SELECT 
         COALESCE(SUM(amount), 0) AS total, 
@@ -129,7 +119,6 @@ exports.getList = async (req, res) => {
     `;
     const [expanse] = await db.query(expenseQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
-    // 5. Sales data (Range)
     const saleQuery = `
       SELECT 
         COALESCE(SUM(total_amount), 0) AS total_amount, 
@@ -141,7 +130,6 @@ exports.getList = async (req, res) => {
     `;
     const [sale] = await db.query(saleQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
-    // 6. Sales summary by month
     const saleSummaryQuery = `
       SELECT 
         DATE_FORMAT(created_at, '%M') AS title, 
@@ -155,7 +143,6 @@ exports.getList = async (req, res) => {
     `;
     const [Sale_Summary_By_Month] = await db.query(saleSummaryQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
-    // 7. Expense summary by month
     const expenseSummaryQuery = `
       SELECT 
         DATE_FORMAT(expense_date, '%M') AS title, 
@@ -169,7 +156,6 @@ exports.getList = async (req, res) => {
     `;
     const [Expense_Summary_By_Month] = await db.query(expenseSummaryQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
-    // 8. Recent Orders
     const recentOrdersQuery = `
       SELECT o.id, o.total_amount, o.created_at, b.name as branch_name
       FROM orders o JOIN branches b ON o.branch_id = b.id
@@ -250,11 +236,72 @@ exports.getAdminDashboard = async (req, res) => {
       LIMIT 10
     `);
 
-    res.json({ bizStats, newestBusinesses, planDist, recentUsers, success: true });
+    const [dbSizeRes] = await db.query(`
+      SELECT SUM(data_length + index_length) / 1024 / 1024 AS size_mb 
+      FROM information_schema.TABLES 
+      WHERE table_schema = DATABASE()
+    `);
+
+    const [totalRowsRes] = await db.query(`
+      SELECT 
+        (SELECT COUNT(*) FROM orders) as total_orders,
+        (SELECT COUNT(*) FROM products) as total_products,
+        (SELECT COUNT(*) FROM users) as total_users
+    `);
+
+    // 6. Anonymous Activity Feed (Privacy-focused)
+    const [recentOrders] = await db.query(`
+      SELECT 'order' as type, b.name as business_name, o.created_at
+      FROM orders o JOIN businesses b ON o.business_id = b.id
+      ORDER BY o.id DESC LIMIT 5
+    `);
+
+    const [recentProducts] = await db.query(`
+      SELECT 'product' as type, b.name as business_name, p.created_at, p.name as item_name
+      FROM products p JOIN businesses b ON p.business_id = b.id
+      ORDER BY p.id DESC LIMIT 5
+    `);
+
+    const [recentStaff] = await db.query(`
+      SELECT 'staff' as type, b.name as business_name, u.created_at, u.name as item_name
+      FROM users u JOIN businesses b ON u.business_id = b.id
+      WHERE u.business_id != 1
+      ORDER BY u.id DESC LIMIT 5
+    `);
+
+    // Top tenants by volume (Order count, not revenue)
+    const [topVolRes] = await db.query(`
+      SELECT b.name, COUNT(o.id) as order_count
+      FROM orders o
+      JOIN businesses b ON o.business_id = b.id
+      WHERE DATE(o.created_at) = CURDATE()
+      GROUP BY b.id
+      ORDER BY order_count DESC
+      LIMIT 5
+    `);
+
+    const activityFeed = [...recentOrders, ...recentProducts, ...recentStaff]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 10);
+
+    res.json({ 
+      bizStats, 
+      newestBusinesses, 
+      planDist, 
+      recentUsers, 
+      success: true,
+      systemHealth: {
+        dbSize: parseFloat(dbSizeRes[0].size_mb).toFixed(2),
+        totalRows: totalRowsRes[0]
+      },
+      activityFeed,
+      topTenantsByVolume: topVolRes
+    });
   } catch (error) {
     logError("Dashboard.getAdminDashboard", error, res);
   }
 };
+
 exports.getMorningBriefing = async (req, res) => {
   try {
     const { business_id } = req;
