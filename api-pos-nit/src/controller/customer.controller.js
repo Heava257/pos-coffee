@@ -265,8 +265,10 @@ exports.sendPromoEmail = async (req, res) => {
     const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
     
     // 📧 Sender Email must be verified in Brevo
-    // If it's the platform's fallback, use SENDER_EMAIL. If it's custom, use their smtp_user.
+    // Priority: Custom Business SMTP > Platform SENDER_EMAIL > Platform SMTP_USER
     const senderEmail = isCustomSmtp ? smtpUser : (process.env.SENDER_EMAIL || smtpUser);
+    
+    console.log("DEBUG: Sending marketing email from:", senderEmail);
 
     if (!smtpUser || !smtpPass) {
         return res.json({ success: false, message: "Email system is currently unavailable. Please check platform configuration." });
@@ -350,6 +352,8 @@ exports.sendOTP = async (req, res) => {
     const rawSmtpPass = isCustomSmtp ? bizData[0].smtp_pass : process.env.SMTP_PASS;
     const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
     const senderEmail = isCustomSmtp ? smtpUser : (process.env.SENDER_EMAIL || smtpUser);
+
+    console.log("DEBUG: Sending OTP email from:", senderEmail);
 
     if (!smtpUser || !smtpPass) {
         return res.json({ success: false, message: "OTP system is currently unavailable." });
