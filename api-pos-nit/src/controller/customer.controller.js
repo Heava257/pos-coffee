@@ -257,12 +257,19 @@ exports.sendPromoEmail = async (req, res) => {
 
     const customer = custData[0];
     const bizName = bizData[0]?.name || "Our Shop";
-    const smtpUser = bizData[0]?.smtp_user || process.env.SMTP_USER;
-    const rawSmtpPass = bizData[0]?.smtp_pass || process.env.SMTP_PASS;
+    
+    // 🛡️ DYNAMIC SMTP LOGIC
+    const isCustomSmtp = bizData[0]?.smtp_user && bizData[0]?.smtp_pass;
+    const smtpUser = isCustomSmtp ? bizData[0].smtp_user : process.env.SMTP_USER;
+    const rawSmtpPass = isCustomSmtp ? bizData[0].smtp_pass : process.env.SMTP_PASS;
     const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
+    
+    // 📧 Sender Email must be verified in Brevo
+    // If it's the platform's fallback, use SENDER_EMAIL. If it's custom, use their smtp_user.
+    const senderEmail = isCustomSmtp ? smtpUser : (process.env.SENDER_EMAIL || smtpUser);
 
     if (!smtpUser || !smtpPass) {
-        return res.json({ success: false, message: "Email server (SMTP) not configured for this business." });
+        return res.json({ success: false, message: "Email system is currently unavailable. Please check platform configuration." });
     }
 
     const baseUrl = (platform_url || "https://pos-coffee-web-production.up.railway.app").replace(/\/$/, "");
@@ -271,7 +278,7 @@ exports.sendPromoEmail = async (req, res) => {
     // 🚀 USE BREVO API (HTTP) - Bypass Railway SMTP blocks
     try {
       const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
-        sender: { name: branchName || bizName, email: smtpUser },
+        sender: { name: branchName || bizName, email: senderEmail },
         to: [{ email: customer.email, name: customer.name }],
         subject: `Special Offer from ${branchName || bizName}! ☕`,
         htmlContent: `
@@ -336,12 +343,20 @@ exports.sendOTP = async (req, res) => {
 
     const [bizData] = await db.query("SELECT name, smtp_user, smtp_pass FROM businesses WHERE id = ?", [business_id]);
     const bizName = bizData[0]?.name || "Our Shop";
-    const smtpUser = bizData[0]?.smtp_user || process.env.SMTP_USER;
-    const rawSmtpPass = bizData[0]?.smtp_pass || process.env.SMTP_PASS;
+    
+    // 🛡️ DYNAMIC SMTP LOGIC
+    const isCustomSmtp = bizData[0]?.smtp_user && bizData[0]?.smtp_pass;
+    const smtpUser = isCustomSmtp ? bizData[0].smtp_user : process.env.SMTP_USER;
+    const rawSmtpPass = isCustomSmtp ? bizData[0].smtp_pass : process.env.SMTP_PASS;
     const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
+    const senderEmail = isCustomSmtp ? smtpUser : (process.env.SENDER_EMAIL || smtpUser);
+
+    if (!smtpUser || !smtpPass) {
+        return res.json({ success: false, message: "OTP system is currently unavailable." });
+    }
 
     await axios.post('https://api.brevo.com/v3/smtp/email', {
-      sender: { name: bizName, email: smtpUser },
+      sender: { name: bizName, email: senderEmail },
       to: [{ email: customer.email }],
       subject: `Your Verification Code: ${otp}`,
       htmlContent: `
@@ -413,9 +428,13 @@ exports.redeemReward = async (req, res) => {
     // 4. Fetch SMTP for confirmation email
     const [bizData] = await conn.query("SELECT name, smtp_user, smtp_pass FROM businesses WHERE id = ?", [business_id]);
     const bizName = bizData[0]?.name || "Our Shop";
-    const smtpUser = bizData[0]?.smtp_user || process.env.SMTP_USER;
-    const rawSmtpPass = bizData[0]?.smtp_pass || process.env.SMTP_PASS;
+    
+    // 🛡️ DYNAMIC SMTP LOGIC
+    const isCustomSmtp = bizData[0]?.smtp_user && bizData[0]?.smtp_pass;
+    const smtpUser = isCustomSmtp ? bizData[0].smtp_user : process.env.SMTP_USER;
+    const rawSmtpPass = isCustomSmtp ? bizData[0].smtp_pass : process.env.SMTP_PASS;
     const smtpPass = rawSmtpPass ? rawSmtpPass.replace(/\s/g, "") : "";
+    const senderEmail = isCustomSmtp ? smtpUser : (process.env.SENDER_EMAIL || smtpUser);
 
     let branchName = "";
     if (branch_id) {
@@ -427,7 +446,7 @@ exports.redeemReward = async (req, res) => {
       // 🚀 USE BREVO API (HTTP)
       try {
         await axios.post('https://api.brevo.com/v3/smtp/email', {
-          sender: { name: branchName || bizName, email: smtpUser },
+          sender: { name: branchName || bizName, email: senderEmail },
           to: [{ email: customer.email, name: customer.name }],
           subject: `Reward Redeemed at ${branchName || bizName}`,
           htmlContent: `
