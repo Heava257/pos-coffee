@@ -42,7 +42,7 @@ exports.create = async (req, res) => {
 
         // Format: [FrontendURL]/scan?biz=[business_id]&branch=[branch_id]&table=[table_name]
         // Try to get frontend URL from Referer/Origin or use a fallback for local testing
-        let frontendUrl = "http://localhost:5173";
+        let frontendUrl = process.env.CLIENT_URL || "https://pos-coffee-web-production.up.railway.app";
         if (req.headers.origin) {
             frontendUrl = req.headers.origin;
         } else if (req.headers.referer) {

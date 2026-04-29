@@ -32,7 +32,7 @@ exports.sendExpiryReminder = async (to, businessName, daysLeft) => {
                 <p>This is a reminder that the subscription for your business <strong>${businessName}</strong> ${daysLeft === 0 ? 'has expired today' : `will expire in <strong>${daysLeft} days</strong>`}.</p>
                 <p>To avoid any service interruption or being downgraded to the Free Plan, please renew your subscription as soon as possible.</p>
                 <div style="margin: 30px 0;">
-                    <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/my-plan" 
+                    <a href="${process.env.CLIENT_URL || 'https://pos-coffee-web-production.up.railway.app'}/my-plan" 
                        style="background: #1e4a2d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
                        Renew Subscription Now
                     </a>
@@ -61,7 +61,7 @@ exports.sendExpiryReminder = async (to, businessName, daysLeft) => {
 exports.sendWelcomeEmail = async (to, businessName, ownerName, verifyToken) => {
     try {
         const subject = `Welcome to Coffee POS Platform - Please Verify Your Email`;
-        const verifyLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${verifyToken}&email=${to}`;
+        const verifyLink = `${process.env.CLIENT_URL || 'https://pos-coffee-web-production.up.railway.app'}/verify-email?token=${verifyToken}&email=${to}`;
         
         const html = `
             <div style="font-family: sans-serif; padding: 20px; color: #333;">
