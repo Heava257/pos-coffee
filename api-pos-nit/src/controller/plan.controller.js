@@ -327,7 +327,7 @@ exports.sendManualReminder = async (req, res) => {
         const result = await sendExpiryReminder(email, business_name, days > 0 ? days : 0);
         
         if (result) {
-            res.json({ success: true, message: \`Reminder email successfully sent to \${email}!\` });
+            res.json({ success: true, message: `Reminder email successfully sent to ${email}!` });
         } else {
             res.status(500).json({ message: "Failed to send email. Please check SMTP configuration." });
         }
