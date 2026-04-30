@@ -351,18 +351,7 @@ exports.verifyEmail = async (req, res) => {
         }
 
         const [users] = await db.query(
-            `SELECT u.*, 
-                   r.name as role_name, r.code as role_code,
-                   b.name as business_name, b.status as business_status, b.logo as business_logo,
-                   b.active_modules, b.plan_type, b.plan_id as plan_id,
-                   p.name as plan_name, p.max_branches, p.max_staff, p.max_products,
-                   mp.ui_layout as business_layout
-            FROM users u
-            INNER JOIN roles r ON u.role_id = r.id
-            INNER JOIN businesses b ON u.business_id = b.id
-            LEFT JOIN subscription_plans p ON b.plan_id = p.id
-            LEFT JOIN modular_packages mp ON b.package_id = mp.id
-            WHERE u.email = ? AND u.verify_token = ?`,
+            "SELECT id FROM users WHERE email = ? AND verify_token = ?",
             [email, token]
         );
 
@@ -375,11 +364,9 @@ exports.verifyEmail = async (req, res) => {
             [users[0].id]
         );
 
-        const loginData = await generateLoginResponse(users[0]);
         res.json({ 
             success: true, 
-            message: "Email verified successfully! You are now logged in.",
-            ...loginData
+            message: "Email verified successfully! You can now login to your account."
         });
     } catch (error) {
         logError("auth.verifyEmail", error, res);

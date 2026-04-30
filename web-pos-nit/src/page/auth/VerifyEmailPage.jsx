@@ -38,22 +38,8 @@ const VerifyEmailPage = () => {
             setStatus('success');
             setMsg(res.message || "Email verified successfully!");
             
-            // 🚀 SEAMLESS LOGIN: Store credentials and redirect
-            if (res.access_token && res.profile) {
-                localStorage.setItem("access_token", res.access_token);
-                localStorage.setItem("profile", JSON.stringify(res.profile));
-                localStorage.setItem("permission", JSON.stringify(res.permission || []));
-                
-                message.success("Account activated! Redirecting to dashboard...");
-                setTimeout(() => {
-                    window.location.href = "/";
-                }, 1500);
-            } else {
-                // Fallback if token is somehow missing
-                setTimeout(() => {
-                    window.location.href = "/login";
-                }, 2000);
-            }
+            // Wait a moment then show success state, but do not auto-login
+            // to prevent token override conflicts in existing browser sessions.
         } catch (error) {
             setStatus('error');
             setMsg(error.message || "Verification failed. Link may be expired.");
@@ -88,18 +74,12 @@ const VerifyEmailPage = () => {
                     <Result
                         status="success"
                         title="Verification Successful!"
-                        subTitle="Account activated! Redirecting you to the dashboard..."
-                        extra={
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
-                                <div>
-                                    <Spin size="small" style={{ marginRight: 8 }}/>
-                                    <span style={{ color: '#1e4a2d' }}>Loading your enterprise workspace...</span>
-                                </div>
-                                <Button type="link" onClick={() => window.location.href = "/"}>
-                                    Click here if you are not redirected automatically
-                                </Button>
-                            </div>
-                        }
+                        subTitle="Your email has been verified. You can now log into your account."
+                        extra={[
+                            <Button type="primary" key="login" size="large" onClick={() => navigate('/login')} style={{ background: '#1e4a2d' }}>
+                                Go to Login Page
+                            </Button>
+                        ]}
                     />
                 ) : (
                     <Result
