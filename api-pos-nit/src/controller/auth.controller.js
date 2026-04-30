@@ -115,131 +115,123 @@ exports.register = async (req, res) => {
 };
 
 // 2. Login (SaaS Context Injection)
-exports.login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const sql = `
-        SELECT u.*, 
-               r.name as role_name, r.code as role_code,
-               b.name as business_name, b.status as business_status, b.logo as business_logo,
-               b.active_modules, b.plan_type, b.plan_id as plan_id,
-               p.name as plan_name, p.max_branches, p.max_staff, p.max_products,
-               mp.ui_layout as business_layout
-        FROM users u
-        INNER JOIN roles r ON u.role_id = r.id
-        INNER JOIN businesses b ON u.business_id = b.id
-        LEFT JOIN subscription_plans p ON b.plan_id = p.id
-        LEFT JOIN modular_packages mp ON b.package_id = mp.id
-        WHERE u.email = ?
-    `;
-
-    const [users] = await db.query(sql, [email]);
-
-    if (users.length === 0) {
-      return res.status(401).json({ message: "Account not found or incorrect email!" });
-    }
-
-    const user = users[0];
-    
-    // Check Email Verification (Strict Mode)
-    if (user.is_verified === 0) {
-      return res.status(403).json({ 
-        message: "Your email is not verified yet!", 
-        unverified: true,
-        email: user.email 
-      });
-    }
-
-    // Check Business Status
-    if (user.business_status !== 'active') {
-      return res.status(403).json({ message: "Your business account is suspended!" });
-    }
-
-    // Check User Account Status
-    if (user.status !== 'active') {
-      return res.status(403).json({ message: "Your account has been deactivated. Please contact your administrator." });
-    }
-
-    // Verify Password
-    if (!bcrypt.compareSync(password, user.password)) {
-      return res.status(401).json({ message: "Password incorrect!" });
-    }
-
-    // Create Token with SaaS Context
+const generateLoginResponse = async (user) => {
     const payload = {
-      user_id: user.id,
-      business_id: user.business_id,
-      branch_id: user.branch_id,
-      role_id: user.role_id,
-      name: user.name,
-      email: user.email,
-      plan_name: user.plan_name,
-      plan_limits: {
-        branches: user.max_branches,
-        staff: user.max_staff,
-        products: user.max_products
-      },
-      business_name: user.business_name,
-      role_name: user.role_name,
-      role_code: user.role_code,
-      business_logo: user.business_logo,
-      profile_image: user.image,
-      active_modules: user.active_modules, // Comma-separated string like 'POS,Inventory'
-      plan_type: user.plan_type,
-      plan_id: user.plan_id,
-      business_layout: user.business_layout
+        user_id: user.id,
+        business_id: user.business_id,
+        branch_id: user.branch_id,
+        role_id: user.role_id,
+        name: user.name,
+        email: user.email,
+        plan_name: user.plan_name,
+        plan_limits: {
+            branches: user.max_branches,
+            staff: user.max_staff,
+            products: user.max_products
+        },
+        business_name: user.business_name,
+        role_name: user.role_name,
+        role_code: user.role_code,
+        business_logo: user.business_logo,
+        profile_image: user.image,
+        active_modules: user.active_modules,
+        plan_type: user.plan_type,
+        plan_id: user.plan_id,
+        business_layout: user.business_layout
     };
 
-    // Fetch Permissions for Backend/Frontend checks
-    // We filter permissions based on the business's current plan level (min_plan_id)
-    // 🚀 MODULE-DRIVEN PERMISSIONS: Only grant permissions if they are not bound to a module
-    // OR if they belong to an active module for this business.
     const activeModules = (user.active_modules || "POS").split(",").map(m => m.trim());
     
     const [rolePerms] = await db.query(`
-      SELECT DISTINCT p.route_key, p.name 
-      FROM permissions p
-      INNER JOIN role_permissions rp ON p.id = rp.permission_id
-      LEFT JOIN module_permissions mp ON p.id = mp.permission_id
-      LEFT JOIN system_modules sm ON mp.module_id = sm.id
-      WHERE rp.role_id = ?
-      ${user.business_id === 1 ? '' : 'AND p.min_plan_id <= (SELECT plan_id FROM businesses WHERE id = ?)'}
-      AND (
-        ? = 1 -- 👑 Super Admin Bypass
-        OR mp.module_id IS NULL -- Core Permission
-        OR sm.code IN (?) -- Belongs to active module
-      )
+        SELECT DISTINCT p.route_key, p.name 
+        FROM permissions p
+        INNER JOIN role_permissions rp ON p.id = rp.permission_id
+        LEFT JOIN module_permissions mp ON p.id = mp.permission_id
+        LEFT JOIN system_modules sm ON mp.module_id = sm.id
+        WHERE rp.role_id = ?
+        ${user.business_id === 1 ? '' : 'AND p.min_plan_id <= (SELECT plan_id FROM businesses WHERE id = ?)'}
+        AND (
+            ? = 1 -- 👑 Super Admin Bypass
+            OR mp.module_id IS NULL -- Core Permission
+            OR sm.code IN (?) -- Belongs to active module
+        )
     `, user.business_id === 1 
         ? [user.role_id, user.business_id, activeModules] 
         : [user.role_id, user.business_id, user.business_id, activeModules]
     );
 
-    const permissions = rolePerms;
-    payload.permissions = permissions.map(p => p.route_key.replace('/', '')); 
-
-    // Generate Token with permissions included
+    payload.permissions = rolePerms.map(p => p.route_key.replace('/', '')); 
     const accessToken = generateAccessToken(payload);
 
-    console.log(`Permissions granted to user ${user.email}:`, permissions.length);
-
-    // Fetch Branch Name for Profile
     if (user.branch_id) {
-      const [branch] = await db.query("SELECT name FROM branches WHERE id = ?", [user.branch_id]);
-      if (branch.length > 0) payload.branch_name = branch[0].name;
+        const [branch] = await db.query("SELECT name FROM branches WHERE id = ?", [user.branch_id]);
+        if (branch.length > 0) payload.branch_name = branch[0].name;
     }
 
-    res.json({
-      message: "Login successful",
-      access_token: accessToken,
-      profile: {
-        ...payload,
-        is_super_admin: user.is_super_admin
-      },
-      permission: permissions
-    });
-  } catch (error) {
-    logError("auth.login", error, res);
-  }
+    return {
+        access_token: accessToken,
+        profile: {
+            ...payload,
+            is_super_admin: user.role_code === 'super_admin' ? 1 : 0
+        },
+        permission: rolePerms
+    };
+};
+
+exports.login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const sql = `
+            SELECT u.*, 
+                   r.name as role_name, r.code as role_code,
+                   b.name as business_name, b.status as business_status, b.logo as business_logo,
+                   b.active_modules, b.plan_type, b.plan_id as plan_id,
+                   p.name as plan_name, p.max_branches, p.max_staff, p.max_products,
+                   mp.ui_layout as business_layout
+            FROM users u
+            INNER JOIN roles r ON u.role_id = r.id
+            INNER JOIN businesses b ON u.business_id = b.id
+            LEFT JOIN subscription_plans p ON b.plan_id = p.id
+            LEFT JOIN modular_packages mp ON b.package_id = mp.id
+            WHERE u.email = ?
+        `;
+
+        const [users] = await db.query(sql, [email]);
+
+        if (users.length === 0) {
+            return res.status(401).json({ message: "Account not found or incorrect email!" });
+        }
+
+        const user = users[0];
+        
+        if (user.is_verified === 0) {
+            return res.status(403).json({ 
+                message: "Your email is not verified yet!", 
+                unverified: true,
+                email: user.email 
+            });
+        }
+
+        if (user.business_status !== 'active') {
+            return res.status(403).json({ message: "Your business account is suspended!" });
+        }
+
+        if (user.status !== 'active') {
+            return res.status(403).json({ message: "Your account has been deactivated. Please contact your administrator." });
+        }
+
+        if (!bcrypt.compareSync(password, user.password)) {
+            return res.status(401).json({ message: "Password incorrect!" });
+        }
+
+        const loginData = await generateLoginResponse(user);
+        res.json({
+            message: "Login successful",
+            ...loginData
+        });
+    } catch (error) {
+        logError("auth.login", error, res);
+    }
 };
 
 // 3. User Profile (Synchronized with latest DB state)
@@ -348,9 +340,19 @@ exports.verifyEmail = async (req, res) => {
             return res.status(400).json({ message: "Missing token or email" });
         }
 
-        // 1. Find user with this token and email
         const [users] = await db.query(
-            "SELECT id FROM users WHERE email = ? AND verify_token = ?",
+            `SELECT u.*, 
+                   r.name as role_name, r.code as role_code,
+                   b.name as business_name, b.status as business_status, b.logo as business_logo,
+                   b.active_modules, b.plan_type, b.plan_id as plan_id,
+                   p.name as plan_name, p.max_branches, p.max_staff, p.max_products,
+                   mp.ui_layout as business_layout
+            FROM users u
+            INNER JOIN roles r ON u.role_id = r.id
+            INNER JOIN businesses b ON u.business_id = b.id
+            LEFT JOIN subscription_plans p ON b.plan_id = p.id
+            LEFT JOIN modular_packages mp ON b.package_id = mp.id
+            WHERE u.email = ? AND u.verify_token = ?`,
             [email, token]
         );
 
@@ -358,13 +360,17 @@ exports.verifyEmail = async (req, res) => {
             return res.status(400).json({ message: "Invalid or expired verification link!" });
         }
 
-        // 2. Mark as verified and clear token
         await db.query(
             "UPDATE users SET is_verified = 1, verify_token = NULL WHERE id = ?",
             [users[0].id]
         );
 
-        res.json({ success: true, message: "Email verified successfully! You can now log in." });
+        const loginData = await generateLoginResponse(users[0]);
+        res.json({ 
+            success: true, 
+            message: "Email verified successfully! You are now logged in.",
+            ...loginData
+        });
     } catch (error) {
         logError("auth.verifyEmail", error, res);
     }

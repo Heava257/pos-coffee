@@ -30,6 +30,19 @@ const VerifyEmailPage = () => {
             const res = await request("auth/verify-email", "post", { token, email });
             setStatus('success');
             setMsg(res.message || "Email verified successfully!");
+            
+            // 🚀 SEAMLESS LOGIN: Store credentials and redirect
+            if (res.access_token && res.profile) {
+                localStorage.setItem("access_token", res.access_token);
+                localStorage.setItem("profile", JSON.stringify(res.profile));
+                localStorage.setItem("permission", JSON.stringify(res.permission || []));
+                
+                message.success("Account activated! Redirecting to dashboard...");
+                setTimeout(() => {
+                    navigate("/");
+                    window.location.reload(); // Refresh to update layouts/sidebar
+                }, 2000);
+            }
         } catch (error) {
             setStatus('error');
             setMsg(error.message || "Verification failed. Link may be expired.");
