@@ -496,12 +496,15 @@ exports.remove = async (req, res) => {
         try {
             await conn.beginTransaction();
 
-            // 2. Check if business has sales data
-            const [orders] = await conn.query("SELECT id FROM orders WHERE business_id = ? LIMIT 1", [id]);
-            if (orders.length > 0) {
-                await conn.rollback();
-                return res.status(400).json({ message: "Cannot delete: This business already has sales data." });
-            }
+            // 2. Complete Wipe of Transactional Data (Orders, Stock, Expense, Customers)
+            await conn.query("DELETE FROM order_details WHERE order_id IN (SELECT id FROM orders WHERE business_id = ?)", [id]);
+            await conn.query("DELETE FROM orders WHERE business_id = ?", [id]);
+            
+            try {
+                await conn.query("DELETE FROM stock_logs WHERE business_id = ?", [id]);
+                await conn.query("DELETE FROM expense WHERE business_id = ?", [id]);
+                await conn.query("DELETE FROM customers WHERE business_id = ?", [id]);
+            } catch (e) {}
 
             // 3. Clean up related records manually to prevent foreign key errors
             await conn.query("DELETE FROM role_permissions WHERE role_id IN (SELECT id FROM roles WHERE business_id = ?)", [id]);
@@ -511,6 +514,8 @@ exports.remove = async (req, res) => {
             
             // Try deleting products and categories (wrap in try-catch in case of other constraints)
             try {
+                await conn.query("DELETE FROM recipe_detail WHERE business_id = ?", [id]);
+                await conn.query("DELETE FROM raw_material WHERE business_id = ?", [id]);
                 await conn.query("DELETE FROM branch_products WHERE product_id IN (SELECT id FROM products WHERE business_id = ?)", [id]);
                 await conn.query("DELETE FROM products WHERE business_id = ?", [id]);
                 await conn.query("DELETE FROM business_categories WHERE business_id = ?", [id]);

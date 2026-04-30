@@ -152,7 +152,7 @@ const BusinessPage = () => {
     const onClickDelete = (record) => {
         Modal.confirm({
             title: `Are you sure you want to delete ${record.name}?`,
-            content: 'This will permanently remove the business and all its setup data. If there is existing sales data, the deletion will be blocked by the system.',
+            content: 'WARNING: This will permanently remove the business and perform a COMPLETE WIPE of all associated data including users, branches, products, and ALL SALES/TRANSACTIONAL DATA. This action cannot be undone.',
             okText: 'Yes, Delete',
             okType: 'danger',
             cancelText: 'Cancel',
