@@ -110,6 +110,14 @@ app.listen(PORT, async () => {
     await db.query("UPDATE users SET status = 'active', is_super_admin = 1 WHERE id = 1");
     await db.query("UPDATE users SET status = 'active' WHERE business_id = 1");
     console.log("Migration: Business 1 and its users are now ACTIVATED");
+
+    // 🚀 EMERGENCY FIX 2: Ensure all existing users are marked as verified so they are not locked out
+    try {
+      await db.query("UPDATE users SET is_verified = 1 WHERE is_verified = 0 OR is_verified IS NULL");
+      console.log("Migration: All existing users marked as verified");
+    } catch (err) {
+      console.error("Migration Error (is_verified):", err.message);
+    }
   } catch (err) {
     if (!err.message.includes("Duplicate")) console.log("Migration (orders.user_id) skipped:", err.message);
   }

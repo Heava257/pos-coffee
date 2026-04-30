@@ -39,9 +39,8 @@ const VerifyEmailPage = () => {
                 
                 message.success("Account activated! Redirecting to dashboard...");
                 setTimeout(() => {
-                    navigate("/");
-                    window.location.reload(); // Refresh to update layouts/sidebar
-                }, 2000);
+                    window.location.href = "/";
+                }, 1500);
             }
         } catch (error) {
             setStatus('error');
