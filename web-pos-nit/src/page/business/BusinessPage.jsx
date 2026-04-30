@@ -24,7 +24,8 @@ import {
     EditOutlined,
     PlusCircleOutlined,
     LockOutlined,
-    InfoCircleOutlined
+    InfoCircleOutlined,
+    DeleteOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import CategoryManageTab from "../settings/CategoryManageTab";
@@ -148,6 +149,27 @@ const BusinessPage = () => {
         }
     };
 
+    const onClickDelete = (record) => {
+        Modal.confirm({
+            title: `Are you sure you want to delete ${record.name}?`,
+            content: 'This will permanently remove the business and all its setup data. If there is existing sales data, the deletion will be blocked by the system.',
+            okText: 'Yes, Delete',
+            okType: 'danger',
+            cancelText: 'Cancel',
+            onOk: async () => {
+                try {
+                    const res = await request("business", "delete", { id: record.id });
+                    if (res) {
+                        message.success("Business deleted successfully");
+                        getList();
+                    }
+                } catch (error) {
+                    message.error(error.message || "Failed to delete business. It may have existing sales data.");
+                }
+            }
+        });
+    };
+
     const columns = [
         {
             title: "Business / Enterprise",
@@ -226,6 +248,15 @@ const BusinessPage = () => {
                     >
                         {record.status === 'active' ? "Suspend" : "Activate"}
                     </Button>
+                    <Tooltip title="Delete Business">
+                        <Button 
+                            danger
+                            type="text"
+                            icon={<DeleteOutlined />} 
+                            onClick={() => onClickDelete(record)}
+                            disabled={record.id === 1}
+                        />
+                    </Tooltip>
                 </Space>
             )
         }

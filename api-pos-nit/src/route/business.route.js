@@ -10,4 +10,5 @@ module.exports = (app) => {
     app.put("/api/business", authMiddleware(), business.update);
     app.put("/api/business/status", authMiddleware(), business.updateStatus);
     app.put("/api/business/plan", authMiddleware(), business.updatePlan);
+    app.delete("/api/business", authMiddleware(), business.remove);
 };

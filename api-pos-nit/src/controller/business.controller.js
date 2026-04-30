@@ -478,3 +478,66 @@ exports.getSMTPHealth = async (req, res) => {
         logError("business.getSMTPHealth", error, res);
     }
 };
+
+exports.remove = async (req, res) => {
+    try {
+        if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden: Platform management only" });
+        
+        const { id } = req.body;
+        
+        if (!id) return res.status(400).json({ message: "Business ID is required" });
+        
+        // 1. Protection for Master Business
+        if (id == 1) {
+            return res.status(400).json({ message: "Action Forbidden: The Master System Business cannot be deleted." });
+        }
+
+        const conn = await db.getConnection();
+        try {
+            await conn.beginTransaction();
+
+            // 2. Check if business has sales data
+            const [orders] = await conn.query("SELECT id FROM orders WHERE business_id = ? LIMIT 1", [id]);
+            if (orders.length > 0) {
+                await conn.rollback();
+                return res.status(400).json({ message: "Cannot delete: This business already has sales data." });
+            }
+
+            // 3. Clean up related records manually to prevent foreign key errors
+            await conn.query("DELETE FROM role_permissions WHERE role_id IN (SELECT id FROM roles WHERE business_id = ?)", [id]);
+            await conn.query("DELETE FROM roles WHERE business_id = ?", [id]);
+            await conn.query("DELETE FROM users WHERE business_id = ?", [id]);
+            await conn.query("DELETE FROM branches WHERE business_id = ?", [id]);
+            
+            // Try deleting products and categories (wrap in try-catch in case of other constraints)
+            try {
+                await conn.query("DELETE FROM branch_products WHERE product_id IN (SELECT id FROM products WHERE business_id = ?)", [id]);
+                await conn.query("DELETE FROM products WHERE business_id = ?", [id]);
+                await conn.query("DELETE FROM business_categories WHERE business_id = ?", [id]);
+                await conn.query("DELETE FROM categories WHERE business_id = ?", [id]);
+            } catch (e) {
+                console.log("Minor cleanup issue (products/categories):", e.message);
+            }
+
+            await conn.query("DELETE FROM subscriptions WHERE business_id = ?", [id]);
+            
+            try {
+                await conn.query("DELETE FROM loyalty_rewards WHERE business_id = ?", [id]);
+                await conn.query("DELETE FROM loyalty_programs WHERE business_id = ?", [id]);
+            } catch (e) {}
+
+            // 4. Finally delete the business
+            await conn.query("DELETE FROM businesses WHERE id = ?", [id]);
+
+            await conn.commit();
+            res.json({ success: true, message: "Business deleted successfully" });
+        } catch (err) {
+            await conn.rollback();
+            throw err;
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        logError("business.remove", error, res);
+    }
+};
