@@ -90,9 +90,10 @@ exports.register = async (req, res) => {
 
       // C. Create Owner Account (Linked to Owner Role)
       const hashedPassword = bcrypt.hashSync(password, 10);
+      const verifyToken = require('crypto').randomBytes(32).toString('hex');
       await conn.query(
-        "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [business_id, branch_id, owner_role_id, owner_name, email, hashedPassword, 'active', 0]
+        "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [business_id, branch_id, owner_role_id, owner_name, email, hashedPassword, 'active', 0, verifyToken]
       );
 
       // E. Enable all global categories by default for new businesses
@@ -102,7 +103,16 @@ exports.register = async (req, res) => {
       `, [business_id]);
 
       await conn.commit();
-      res.json({ success: true, message: "Business Registered Successfully!" });
+      
+      // 🚀 Send Welcome Email
+      try {
+          const { sendWelcomeEmail } = require("../util/email");
+          sendWelcomeEmail(email, business_name, owner_name, verifyToken);
+      } catch (emailErr) {
+          console.error("Welcome Email background fail:", emailErr.message);
+      }
+
+      res.json({ success: true, message: "Business Registered Successfully! Please check your email to verify your account." });
     } catch (err) {
       await conn.rollback();
       throw err;

@@ -28,6 +28,13 @@ const VerifyEmailPage = () => {
     const handleVerify = async () => {
         try {
             const res = await request("auth/verify-email", "post", { token, email });
+            
+            if (!res || !res.success) {
+                setStatus('error');
+                setMsg(res?.message || "Verification failed. Link may be expired or invalid.");
+                return;
+            }
+
             setStatus('success');
             setMsg(res.message || "Email verified successfully!");
             
