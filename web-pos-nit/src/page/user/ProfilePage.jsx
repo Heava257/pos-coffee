@@ -56,6 +56,7 @@ const ProfilePage = () => {
         setProfileData(res.profile);
         form.setFieldsValue({
           name: res.profile.name,
+          email: res.profile.email,
         });
         if (res.profile.image && res.profile.image !== "null" && res.profile.image !== "undefined") {
           setPreviewUrl(Config.getFullImagePath(res.profile.image));
@@ -76,6 +77,9 @@ const ProfilePage = () => {
     try {
       const formData = new FormData();
       formData.append("name", values.name);
+      if (values.email) {
+        formData.append("email", values.email);
+      }
       if (values.password) {
         formData.append("password", values.password);
       }
@@ -99,6 +103,7 @@ const ProfilePage = () => {
         setProfileData(prev => ({
           ...prev,
           name: res.profile.name,
+          email: res.profile.email,
           image: res.profile.profile_image
         }));
 
@@ -272,13 +277,20 @@ const ProfilePage = () => {
                   <Col xs={24} md={12}>
                     <Form.Item
                       label={<Text strong>{t.email_address}</Text>}
+                      name="email"
+                      rules={[
+                        { required: true, message: "Please enter your email" },
+                        { type: "email", message: "Please enter a valid email" }
+                      ]}
                     >
                       <Input
                         prefix={<MailOutlined style={{ color: "#bfbfbf" }} />}
-                        value={profileData?.email}
-                        disabled
+                        disabled={currentUser?.is_super_admin !== 1}
                         size="large"
-                        style={{ borderRadius: "8px", background: "#f5f5f5" }}
+                        style={{
+                          borderRadius: "8px",
+                          background: currentUser?.is_super_admin !== 1 ? "#f5f5f5" : "#fff"
+                        }}
                       />
                     </Form.Item>
                   </Col>

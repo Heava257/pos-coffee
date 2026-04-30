@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Breadcrumb, Button, Dropdown, Input, Layout, Menu, Tag, theme, Drawer, Divider, Space } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import "./MainLayout.css";
+import packageJson from "../../../package.json";
 import logo from "../../assets/business_default_logo.png";
 import ImgUser from "../../assets/profile.png";
 import { Tooltip } from "antd";
@@ -1032,13 +1033,42 @@ const MainLayout = () => {
           style={{
             textAlign: 'center',
             background: "transparent",
-            color: "#6b7c6b",
-            padding: isMobile ? "12px" : "16px 24px",
-            fontSize: isMobile ? "12px" : "13px",
+            color: "#64748b",
+            padding: isMobile ? "12px 16px" : "16px 40px",
+            fontSize: isMobile ? "11px" : "12px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px"
           }}
         >
-          ©{new Date().getFullYear()}
-          <span className="khmer-text"> Created by Team IT ស្រុកស្រែ</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+             <span>©{new Date().getFullYear()}</span>
+             <span style={{ fontWeight: 600, color: "#1e4a2d" }}>Team IT ស្រុកស្រែ</span>
+             <span style={{ color: "#cbd5e1" }}>|</span>
+             <span>Coffee POS Platform</span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <div className="status-dot-blink" style={{ width: 8, height: 8, background: "#22c55e", borderRadius: "50%", boxShadow: "0 0 8px rgba(34, 197, 94, 0.5)" }}></div>
+              <span style={{ color: "#22c55e", fontWeight: 500, fontSize: "11px", letterSpacing: "0.5px" }}>SYSTEM ONLINE</span>
+            </div>
+            
+            <div style={{ 
+              background: "#f1f5f9", 
+              padding: "2px 8px", 
+              borderRadius: "4px", 
+              fontSize: "10px", 
+              fontWeight: 700, 
+              color: "#475569",
+              border: "1px solid #e2e8f0",
+              textTransform: "uppercase"
+            }}>
+              V{packageJson.version}-{import.meta.env.VITE_GIT_HASH || 'DEV'}
+            </div>
+          </div>
         </Footer>
       </Layout>
     </Layout>

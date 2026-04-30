@@ -6,6 +6,8 @@ import LogingPage from "./page/auth/LogingPage";
 import RegisterPage from "./page/auth/RegisterPage";
 import ScanPage from "./page/auth/ScanPage";
 import VerifyEmailPage from "./page/auth/VerifyEmailPage";
+import ForgotPasswordPage from "./page/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./page/auth/ResetPasswordPage";
 
 import MainLayout from "./component/layout/MainLayout";
 import MainLayoutAuth from "./component/layout/MainLayoutAuth";
@@ -132,6 +134,8 @@ function App() {
           </Route>
 
           <Route path="/login" element={<LogingPage />} />
+          <Route path="/forgot" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/" element={<RootRedirect />} />

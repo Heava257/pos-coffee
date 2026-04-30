@@ -133,18 +133,22 @@ exports.remove = async (req, res) => {
     }
 
     const { id } = req.body;
+    if (!id) return res.status(400).json({ message: "Category ID is required!" });
 
     // Check if category has products in ANY business
     const [products] = await db.query("SELECT id FROM products WHERE category_id = ? LIMIT 1", [id]);
     if (products.length > 0) {
-      return res.status(400).json({ message: "Cannot delete category being used by products!" });
+      return res.status(400).json({ message: "Cannot delete category being used by products! Please remove or reassign those products first." });
     }
 
     const sql = "DELETE FROM categories WHERE id = ? AND business_id = 1";
-    await db.query(sql, [id]);
+    const [result] = await db.query(sql, [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Category not found or already removed." });
+    }
 
     await clearCache("categories_biz_*");
-
     res.json({ message: "Global category removed successfully!" });
   } catch (error) {
     logError("category.remove", error, res);

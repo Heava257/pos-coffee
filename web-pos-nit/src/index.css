@@ -46,3 +46,14 @@ input, textarea {
 .ant-table-row:hover {
     background-color: #f8fafc !important;
 }
+
+/* Animations */
+@keyframes blink {
+    0% { opacity: 0.4; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0.4; transform: scale(0.9); }
+}
+
+.status-dot-blink {
+    animation: blink 2s infinite ease-in-out;
+}

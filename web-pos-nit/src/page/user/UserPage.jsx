@@ -565,7 +565,12 @@ function UserPage() {
                 label={<Text strong>{t.email}</Text>}
                 rules={[{ required: true, message: t.email + " " + t.required }]}
               >
-                <Input placeholder={t.email} size="large" />
+                <Input 
+                  placeholder={t.email} 
+                  size="large" 
+                  disabled={form.getFieldValue("id") && !isSuperAdmin}
+                  style={{ background: (form.getFieldValue("id") && !isSuperAdmin) ? "#f5f5f5" : "#fff" }}
+                />
               </Form.Item>
 
               {/* Tel */}

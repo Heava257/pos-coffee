@@ -3,7 +3,7 @@ import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space,
     Typography, Divider, Badge, Tooltip, Statistic,
-    Select, Checkbox, Tabs
+    Select, Checkbox, Tabs, Spin
 } from "antd";
 import {
     PlusOutlined,
@@ -94,7 +94,7 @@ const BusinessPage = () => {
             const [bRes, uRes, pRes, iRes] = await Promise.all([
                 request(`branch?target_business_id=${record.id}`, "get"),
                 request(`user?target_business_id=${record.id}`, "get"),
-                request(`product/getBusinessProducts?target_business_id=${record.id}`, "get"),
+                request(`product/business?target_business_id=${record.id}`, "get"),
                 request(`business/insights?id=${record.id}`, "get")
             ]);
             
@@ -464,7 +464,8 @@ const BusinessPage = () => {
                 width={1000}
                 centered
             >
-                <Tabs defaultActiveKey="branches" loading={detailLoading}>
+                <Spin spinning={detailLoading}>
+                <Tabs defaultActiveKey="branches">
                     <Tabs.TabPane 
                         tab={<span><ShopOutlined /> Branches</span>} 
                         key="branches"
@@ -544,6 +545,7 @@ const BusinessPage = () => {
                         </Row>
                     </Tabs.TabPane>
                 </Tabs>
+                </Spin>
                 <div style={{ marginTop: '16px', background: '#fff9ef', padding: '12px', borderRadius: '8px', border: '1px dashed #c0a060' }}>
                     <Text italic style={{ fontSize: '12px', color: '#c0a060' }}>
                         * Privacy Shield: Financial metrics and detailed revenue reports are restricted from this administrative view to maintain enterprise privacy.

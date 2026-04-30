@@ -1,9 +1,19 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { execSync } from 'child_process'
+
+// Get current git commit hash (short)
+let gitHash = 'development'
+try {
+  gitHash = execSync('git rev-parse --short HEAD').toString().trim()
+} catch (e) {
+  gitHash = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_GIT_HASH': JSON.stringify(gitHash),
+  },
   preview: {
     allowedHosts: true
   },

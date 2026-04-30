@@ -15,6 +15,10 @@ module.exports = (app) => {
   app.post("/api/auth/login", login);
   app.get("/api/auth/guest-access", guestAccess);
   app.post("/api/auth/verify-email", verifyEmail);
+  app.post("/api/auth/forgot-password", require("../controller/auth.controller").forgotPassword);
+  app.post("/api/auth/verify-otp", require("../controller/auth.controller").verifyOtp);
+  app.post("/api/auth/reset-password", require("../controller/auth.controller").resetPassword);
+  app.post("/api/auth/google-login", require("../controller/auth.controller").googleLogin);
 
   // Protected Routes
   app.get("/api/auth/profile", authMiddleware(), getProfile);

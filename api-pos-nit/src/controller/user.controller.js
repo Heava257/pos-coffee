@@ -88,9 +88,22 @@ exports.register = async (req, res) => {
                 return res.status(403).json({ message: "Action Forbidden: The Master Super Admin account cannot be deactivated." });
             }
 
+            // Check if user is super admin to allow email change
+            const isSuperAdmin = req.auth?.role_code === 'super_admin';
+
             // Update existing staff
-            let sql = "UPDATE users SET name=?, email=?, role_id=?, branch_id=?, is_super_admin=?, address=?, tel=?, status=?";
-            let params = [name, username, role_id, branch_id, is_super_admin || 0, address, tel, statusVal];
+            let sql = "UPDATE users SET name=?, role_id=?, branch_id=?, is_super_admin=?, address=?, tel=?, status=?";
+            let params = [name, role_id, branch_id, is_super_admin || 0, address, tel, statusVal];
+
+            if (username && isSuperAdmin) {
+                // Check if email already exists for another user
+                const [existing] = await db.query("SELECT id FROM users WHERE email = ? AND id != ?", [username, id]);
+                if (existing.length > 0) {
+                    return res.status(400).json({ message: "Email already in use by another account." });
+                }
+                sql += ", email=?";
+                params.push(username);
+            }
 
             if (image) {
                 sql += ", image=?";

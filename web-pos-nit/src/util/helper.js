@@ -20,10 +20,14 @@ export const request = (url = "", method = "get", data = {}) => {
     url.includes("auth/register-owner") ||
     url.includes("auth/guest-access") ||
     url.includes("auth/verify-email") ||
+    url.includes("auth/forgot-password") ||
+    url.includes("auth/verify-otp") ||
+    url.includes("auth/reset-password") ||
+    url.includes("auth/google-login") ||
     url.includes("order-web") ||
     url.includes("business/public-config") ||
     isPublicMenu;
-    
+
   if (!isAuthRoute && (!access_token || access_token === "null" || access_token === "undefined")) {
     return Promise.resolve(false);
   }
@@ -54,7 +58,7 @@ export const request = (url = "", method = "get", data = {}) => {
     config_req.headers.Authorization = "Bearer " + access_token;
   }
 
-  if (method.toLowerCase() === "get" || method.toLowerCase() === "delete") {
+  if (method.toLowerCase() === "get") {
     config_req.params = data;
   } else {
     config_req.data = data;
@@ -74,14 +78,14 @@ export const request = (url = "", method = "get", data = {}) => {
             method: "get",
             headers: { "Authorization": "Bearer " + access_token }
           });
-          
+
           if (response.data && response.data.profile) {
             const { setProfile, setPermission } = await import("../store/profile.store");
             // Update local storage
             setProfile(response.data.profile);
             setPermission(response.data.permission);
             // console.log("✅ Security session synchronized automatically.");
-            
+
             // Note: Menu/Sidebar should ideally listen to this change. 
             // In our current MainLayout, it depends on location.pathname.
             // We'll trigger a small state change or just reload once to be safe if no reactive store.
@@ -106,6 +110,8 @@ export const request = (url = "", method = "get", data = {}) => {
         }
         if (status == 403) {
           message.error(response.data.message || "Access Denied: You don't have permission for this action.");
+        } else if (status !== 401) {
+          message.error(response.data.message || "Operation failed. Please try again.");
         }
         setServerSatus(status);
         // 🚨 IMPORTANT: Use Promise.reject so the caller's .catch() or try/catch works
@@ -165,7 +171,7 @@ export const updateAddons = (itemId, addonValue, checked, availableAddons) => {
 export const getIconForCategory = (name) => {
   if (!name) return '🍽️';
   const lowerName = name.toLowerCase();
-  
+
   // Restaurant & Food (New)
   if (lowerName.includes('seafood') || lowerName.includes('គ្រឿងសមុទ្រ')) return '🦞';
   if (lowerName.includes('soup') || lowerName.includes('សម្ល')) return '🥣';
@@ -190,7 +196,7 @@ export const getIconForCategory = (name) => {
   if (lowerName.includes('milk')) return '🥛';
   if (lowerName.includes('snack')) return '🍪';
   if (lowerName.includes('rice')) return '🍚';
-  
+
   return '🍽️';
 };
 
@@ -199,7 +205,7 @@ export const getColorForCategory = (name) => {
   const lowerName = name.toLowerCase();
 
   // Restaurant & Food Colors
-  if (lowerName.includes('seafood') || lowerName.includes('គ្រឿងសមុទ្រ')) return '#13c2c2'; 
+  if (lowerName.includes('seafood') || lowerName.includes('គ្រឿងសមុទ្រ')) return '#13c2c2';
   if (lowerName.includes('soup') || lowerName.includes('សម្ល')) return '#1890ff';
   if (lowerName.includes('stir-fry') || lowerName.includes('ម្ហូបឆា')) return '#fa541c';
   if (lowerName.includes('roasted') || lowerName.includes('deep-fried') || lowerName.includes('បំពង')) return '#faad14';
@@ -209,7 +215,7 @@ export const getColorForCategory = (name) => {
 
   // Pharmacy Colors
   if (lowerName.includes('medicine') || lowerName.includes('ថ្នាំ')) return '#13c2c2';
-  if (lowerName.includes('antibiotics') || lowerName.includes('ថ្នាំផ្សះ')) return '#f5222d'; 
+  if (lowerName.includes('antibiotics') || lowerName.includes('ថ្នាំផ្សះ')) return '#f5222d';
   if (lowerName.includes('supplement') || lowerName.includes('vitamin')) return '#eb2f96';
   if (lowerName.includes('skincare') || lowerName.includes('care')) return '#faad14';
   if (lowerName.includes('medical') || lowerName.includes('equipment')) return '#0958d9';
@@ -221,7 +227,7 @@ export const getColorForCategory = (name) => {
   if (lowerName.includes('milk')) return '#2196F3';
   if (lowerName.includes('snack')) return '#FF9800';
   if (lowerName.includes('rice')) return '#E91E63';
-  
+
   return '#ff6b35';
 };
 

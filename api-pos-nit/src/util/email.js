@@ -1,16 +1,22 @@
-const axios = require("axios");
+const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
 dotenv.config();
 
-// Use Brevo API Key from environment
-const BREVO_API_KEY = (process.env.SMTP_PASS || "").replace(/\s/g, "");
+// Setup Nodemailer Transporter using Brevo SMTP
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
+    port: process.env.SMTP_PORT || 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+});
+
 const PLATFORM_SENDER_EMAIL = process.env.SENDER_EMAIL || "pongchiva257@gmail.com";
 
 /**
  * Send Subscription Expiry Reminder Email
- * @param {string} to - Recipient email
- * @param {string} businessName - Name of the business
- * @param {number} daysLeft - Number of days remaining
  */
 exports.sendExpiryReminder = async (to, businessName, daysLeft) => {
     try {
@@ -23,32 +29,28 @@ exports.sendExpiryReminder = async (to, businessName, daysLeft) => {
                 <h2 style="color: #1e4a2d;">Subscription Reminder</h2>
                 <p>Hello,</p>
                 <p>This is a reminder that the subscription for your business <strong>${businessName}</strong> ${daysLeft === 0 ? 'has expired today' : `will expire in <strong>${daysLeft} days</strong>`}.</p>
-                <p>To avoid any service interruption or being downgraded to the Free Plan, please renew your subscription as soon as possible.</p>
+                <p>To avoid any service interruption, please renew your subscription.</p>
                 <div style="margin: 30px 0;">
-                    <a href="${process.env.CLIENT_URL || 'https://pos-coffee-web-production.up.railway.app'}/my-plan" 
+                    <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/my-plan" 
                        style="background: #1e4a2d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
                        Renew Subscription Now
                     </a>
                 </div>
-                <p style="font-size: 12px; color: #666;">If you have already renewed, please ignore this email.</p>
-                <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;" />
                 <p style="font-size: 11px; color: #999;">Sent by Coffee POS Platform Admin</p>
             </div>
         `;
 
-        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
-            sender: { name: "Coffee POS Platform", email: PLATFORM_SENDER_EMAIL },
-            to: [{ email: to }],
+        const info = await transporter.sendMail({
+            from: `"Coffee POS Platform" <${PLATFORM_SENDER_EMAIL}>`,
+            to: to,
             subject: subject,
-            htmlContent: htmlContent
-        }, {
-            headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' }
+            html: htmlContent,
         });
 
-        console.log(`[EMAIL] Expiry reminder sent to ${to} (${daysLeft} days left). ID: ${response.data.messageId}`);
-        return response.data;
+        console.log(`[EMAIL] Expiry reminder sent to ${to}. ID: ${info.messageId}`);
+        return info;
     } catch (error) {
-        console.error("[EMAIL ERROR] Failed to send reminder:", error.response?.data || error.message);
+        console.error("[EMAIL ERROR] Failed to send reminder:", error.message);
         return null;
     }
 };
@@ -56,43 +58,69 @@ exports.sendExpiryReminder = async (to, businessName, daysLeft) => {
 exports.sendWelcomeEmail = async (to, businessName, ownerName, verifyToken) => {
     try {
         const subject = `Welcome to Coffee POS Platform - Please Verify Your Email`;
-        const verifyLink = `${process.env.CLIENT_URL || 'https://pos-coffee-web-production.up.railway.app'}/verify-email?token=${verifyToken}&email=${to}`;
+        const verifyLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${verifyToken}&email=${to}`;
         
         const htmlContent = `
             <div style="font-family: sans-serif; padding: 20px; color: #333;">
                 <h2 style="color: #1e4a2d;">Welcome to Coffee POS Platform!</h2>
                 <p>Hello <strong>${ownerName}</strong>,</p>
                 <p>Congratulations! Your business <strong>${businessName}</strong> has been successfully registered.</p>
-                <p>To activate your account and start using the platform, please verify your email address by clicking the button below:</p>
+                <p>Please verify your email address by clicking the button below:</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="${verifyLink}" style="background-color: #a4c9a8; color: #1e4a2d; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">Verify Email & Activate Account</a>
                 </div>
-
-                <p>Or copy and paste this link into your browser:</p>
-                <p><a href="${verifyLink}" style="color: #a4c9a8; word-break: break-all;">${verifyLink}</a></p>
-
-                <p style="margin-top: 20px;">
-                    Once verified, you will be <strong>automatically logged into your dashboard</strong> to start configuring your store.
-                </p>
-                
-                <hr style="border: none; border-top: 1px solid #3d6a4c; margin: 30px 0;" />
-                <p style="color: #8b9d8b; font-size: 12px;">Sent by Coffee POS Platform Admin</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+                <p style="color: #999; font-size: 12px;">Sent by Coffee POS Platform Admin</p>
             </div>
         `;
 
-        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
-            sender: { name: "Coffee POS Platform", email: PLATFORM_SENDER_EMAIL },
-            to: [{ email: to, name: ownerName }],
+        const info = await transporter.sendMail({
+            from: `"Coffee POS Platform" <${PLATFORM_SENDER_EMAIL}>`,
+            to: to,
             subject: subject,
-            htmlContent: htmlContent
-        }, {
-            headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' }
+            html: htmlContent,
         });
 
-        console.log(`[EMAIL] Welcome email sent to ${to}. ID: ${response.data.messageId}`);
-        return response.data;
+        console.log(`[EMAIL] Welcome email sent to ${to}. ID: ${info.messageId}`);
+        return info;
     } catch (error) {
-        console.error("[EMAIL ERROR] Failed to send welcome email:", error.response?.data || error.message);
+        console.error("[EMAIL ERROR] Failed to send welcome email:", error.message);
+        return null;
+    }
+};
+
+exports.sendPasswordResetEmail = async (to, name, otpCode) => {
+    try {
+        const subject = `Password Reset OTP - Coffee POS Platform`;
+        
+        const htmlContent = `
+            <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 12px; text-align: center;">
+                <h2 style="color: #1e4a2d;">Reset Your Password</h2>
+                <p style="text-align: left;">Hello <strong>${name}</strong>,</p>
+                <p style="text-align: left;">We received a request to reset your password for your Coffee POS Platform account.</p>
+                <p style="text-align: left;">Please use the 6-digit OTP code below to proceed with the password reset. <strong>This code will expire in 1 hour.</strong></p>
+                
+                <div style="background: #f8fcf9; border: 2px dashed #1e4a2d; border-radius: 12px; padding: 24px; margin: 30px 0; display: inline-block; min-width: 200px;">
+                    <span style="font-size: 36px; font-weight: 800; color: #1e4a2d; letter-spacing: 12px;">${otpCode}</span>
+                </div>
+
+                <p style="text-align: left;">If you didn't request a password reset, you can safely ignore this email.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+                <p style="color: #999; font-size: 12px;">Sent by Coffee POS Platform Admin</p>
+            </div>
+        `;
+
+        const info = await transporter.sendMail({
+            from: `"Coffee POS Support" <${PLATFORM_SENDER_EMAIL}>`,
+            to: to,
+            subject: subject,
+            html: htmlContent,
+        });
+
+        console.log(`[EMAIL] Password reset sent to ${to}. ID: ${info.messageId}`);
+        return info;
+    } catch (error) {
+        console.error("[EMAIL ERROR] Failed to send password reset:", error.message);
         return null;
     }
 };
