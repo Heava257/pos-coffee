@@ -423,14 +423,8 @@ const BusinessPage = () => {
                                         </Form.Item>
                                     </Col>
                                 </Row>
-                                <Form.Item name="active_modules" label="Active Features" rules={[{ required: true }]}>
-                                    <Checkbox.Group style={{ width: '100%', background: '#f9f9f9', padding: 16, borderRadius: 12 }}>
-                                        <Row gutter={[8,8]}>
-                                            <Col span={8}><Checkbox value="POS">Standard POS</Checkbox></Col>
-                                            <Col span={8}><Checkbox value="INVENTORY">Inventory Pro</Checkbox></Col>
-                                            <Col span={8}><Checkbox value="ORDERING">Digital Menu</Checkbox></Col>
-                                        </Row>
-                                    </Checkbox.Group>
+                                 <Form.Item name="active_modules" hidden>
+                                    <Input />
                                 </Form.Item>
                             </Col>
                         </Row>
