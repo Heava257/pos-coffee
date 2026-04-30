@@ -176,7 +176,6 @@ const MENU_STRUCTURE = [
           { key: "employee/performance", labelKey: "performance_label", icon: <LineChartOutlined /> },
           { key: "role", labelKey: "roles", icon: <SafetyCertificateOutlined /> },
           { key: "permission", labelKey: "permission", icon: <UnlockOutlined /> },
-          { key: "plans", labelKey: "plans", icon: <CreditCardOutlined /> },
         ],
       },
       {

@@ -57,9 +57,9 @@ function UserPage() {
     branch_id: "", // Add branch filter state
   });
   const [state, setState] = useState({
-    list: [],
     role: [],
     branches: [],
+    businesses: [], // Add businesses list for super admin
     summary: {
       total_staff: 0,
       super_admins: 0,
@@ -77,7 +77,8 @@ function UserPage() {
     },
     loading: false,
     visible: false,
-    filteredList: null
+    filteredList: null,
+    selected_business_id: profile?.business_id === 1 ? null : profile?.business_id // Track which business is being managed
   });
 
   useEffect(() => {
@@ -87,13 +88,18 @@ function UserPage() {
   // Fetch user list with summary and sub info
   const getList = async () => {
     setState(pre => ({ ...pre, loading: true }));
-    const res = await request("user", "get", { branch_id: filter.branch_id });
+    const params = { 
+      branch_id: filter.branch_id,
+      target_business_id: state.selected_business_id 
+    };
+    const res = await request("user", "get", params);
     if (res && !res.error) {
       setState((pre) => ({
         ...pre,
         list: res.list,
         role: res.role,
         branches: res.branches,
+        businesses: res.businesses || [],
         summary: res.summary || pre.summary,
         subscription: res.subscription || pre.subscription,
         loading: false
@@ -224,6 +230,7 @@ function UserPage() {
     if (items.password) params.append("password", items.password);
     params.append("role_id", items.role_id);
     params.append("is_super_admin", items.is_super_admin || 0);
+    params.append("business_id", items.business_id || profile.business_id); // Allow setting business_id
     params.append("address", items.address);
     params.append("tel", items.tel);
     params.append("branch_id", items.branch_id);
@@ -295,8 +302,15 @@ function UserPage() {
       title: t.contact_branch,
       render: (_, row) => (
         <Space direction="vertical" size={0}>
-          <Text style={{ fontSize: '13px' }}>{row.tel || t.no_data}</Text>
-          <Text type="secondary" style={{ fontSize: '11px' }}>{t.branch}: {row.branch_name || t.main_headquarter}</Text>
+          <Text style={{ fontSize: '13px' }}>{row.tel || "N/A"}</Text>
+          {profile?.business_id === 1 && row.business_name && (
+            <Tag color="orange" style={{ fontSize: '10px', margin: 0, borderRadius: '4px' }}>
+              {row.business_name}
+            </Tag>
+          )}
+          <Text type="secondary" style={{ fontSize: '11px' }}>
+            {t.branch}: {row.is_super_admin === 1 && !row.branch_id ? "Global Access" : (row.branch_name || t.main_headquarter)}
+          </Text>
         </Space>
       )
     },
@@ -316,17 +330,25 @@ function UserPage() {
       key: "action",
       title: t.management,
       align: "right",
-      render: (_, row) => (
-        <Space>
-          {(isOwner || !isSuperAdmin) && (
-            <>
-              <Button type="text" onClick={() => onClickEdit(row)} style={{ color: '#1e4a2d' }}>{t.edit}</Button>
-              <Button type="text" danger onClick={() => clickBtnDelete(row)}>{t.delete}</Button>
-            </>
-          )}
-          {isSuperAdmin && !isOwner && <Text type="secondary" italic>{t.view_only}</Text>}
-        </Space>
-      )
+      render: (_, row) => {
+        const isPlatformAdmin = profile?.business_id === 1;
+        const canEdit = isPlatformAdmin || isOwner || row.id === userId;
+
+        return (
+          <Space>
+            {canEdit ? (
+              <>
+                <Button type="text" onClick={() => onClickEdit(row)} style={{ color: '#1e4a2d' }}>{t.edit}</Button>
+                {row.id !== userId && (
+                   <Button type="text" danger onClick={() => clickBtnDelete(row)}>{t.delete}</Button>
+                )}
+              </>
+            ) : (
+              <Text type="secondary" italic>{t.view_only}</Text>
+            )}
+          </Space>
+        );
+      }
     }
   ];
 
@@ -335,7 +357,7 @@ function UserPage() {
       {/* Executive Header */}
       <div style={{ marginBottom: 24 }}>
         <Title level={2} style={{ color: '#1e4a2d', margin: 0 }}>
-          {isSuperAdmin ? (t.branch_management + " & " + t.access_status) : (t.staff + " & " + t.management)}
+          {isSuperAdmin ? (activeTab === 'superAdmins' ? "Platform Super Admins" : "Platform Staff & Access") : (t.staff + " & " + t.management)}
         </Title>
         <Text type="secondary">
           {isSuperAdmin
@@ -383,35 +405,81 @@ function UserPage() {
           </div>
         </Col>
 
-        {/* Subscription Detail Card */}
+        {/* Platform Intelligence / Subscription Detail Card */}
         <Col xs={24} lg={6}>
-          <Card
-            style={{
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)',
-              color: 'white',
-              border: 'none',
-              height: '100%'
-            }}
-          >
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ color: '#c0a060', fontWeight: 700 }}>{t.subscription}</Text>
-                <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>
-                  {state.subscription.sub_status?.toUpperCase() || t.active}
+          {profile?.business_id === 1 ? (
+            <Card
+              style={{
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
+                color: 'white',
+                border: 'none',
+                height: '100%',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
+              }}
+            >
+              <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: '#00d2ff', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Platform Control</Text>
+                  <Badge status="processing" color="#00d2ff" text={<span style={{ color: '#00d2ff', fontSize: '10px' }}>SYSTEM ONLINE</span>} />
                 </div>
-              </div>
-              <Title level={3} style={{ color: 'white', margin: 0 }}>{state.subscription.plan_name}</Title>
-              <div style={{ fontSize: '12px', opacity: 0.8 }}>
-                {t.expires}: {state.subscription.deadline && dayjs(state.subscription.deadline).isValid() ? dayjs(state.subscription.deadline).format("DD MMM YYYY") : t.main_headquarter}
-              </div>
-              <Divider style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '8px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                <span>{t.staff_nodes}:</span>
-                <span>{state.summary.total_staff} / {state.subscription.max_staff || "∞"}</span>
-              </div>
-            </Space>
-          </Card>
+                <div>
+                  <div style={{ fontSize: '12px', opacity: 0.8 }}>TOTAL BUSINESSES</div>
+                  <Title level={2} style={{ color: 'white', margin: 0, display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                    {state.businesses?.length || 0}
+                    <span style={{ fontSize: '14px', fontWeight: 400, opacity: 0.6 }}>Tenants</span>
+                  </Title>
+                </div>
+                <Divider style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <Button 
+                    size="small" 
+                    ghost 
+                    style={{ borderRadius: '6px', fontSize: '10px', borderColor: 'rgba(255,255,255,0.3)' }}
+                    onClick={() => window.location.href = '/business'}
+                  >
+                    Onboard
+                  </Button>
+                  <Button 
+                    size="small" 
+                    ghost 
+                    style={{ borderRadius: '6px', fontSize: '10px', borderColor: 'rgba(255,255,255,0.3)' }}
+                    onClick={() => window.location.href = '/system-modules'}
+                  >
+                    Registry
+                  </Button>
+                </div>
+              </Space>
+            </Card>
+          ) : (
+            <Card
+              style={{
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)',
+                color: 'white',
+                border: 'none',
+                height: '100%'
+              }}
+            >
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: '#c0a060', fontWeight: 700 }}>{t.subscription}</Text>
+                  <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>
+                    {state.subscription.sub_status?.toUpperCase() || t.active}
+                  </div>
+                </div>
+                <Title level={3} style={{ color: 'white', margin: 0 }}>{state.subscription.plan_name}</Title>
+                <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                  {t.expires}: {state.subscription.deadline && dayjs(state.subscription.deadline).isValid() ? dayjs(state.subscription.deadline).format("DD MMM YYYY") : t.main_headquarter}
+                </div>
+                <Divider style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '8px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                  <span>{t.staff_nodes}:</span>
+                  <span>{state.summary.total_staff} / {state.subscription.max_staff || "∞"}</span>
+                </div>
+              </Space>
+            </Card>
+          )}
         </Col>
       </Row>
 
@@ -425,14 +493,14 @@ function UserPage() {
                 onClick={() => setActiveTab('all')}
                 style={activeTab === 'all' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
               >
-                {t.all_staff}
+                Platform Team
               </Button>
               <Button
                 type={activeTab === 'superAdmins' ? 'primary' : 'text'}
                 onClick={() => setActiveTab('superAdmins')}
                 style={activeTab === 'superAdmins' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
               >
-                {t.executives}
+                Super Admin
               </Button>
               <Button
                 type={activeTab === 'admins' ? 'primary' : 'text'}
@@ -445,10 +513,24 @@ function UserPage() {
           </Col>
           <Col xs={24} md={12} style={{ textAlign: 'right', marginTop: '10px' }}>
             <Space>
+              {profile?.business_id === 1 && (
+                <Select
+                  placeholder="Select Business"
+                  allowClear
+                  style={{ width: 220 }}
+                  value={state.selected_business_id}
+                  onChange={(v) => {
+                    setState(p => ({ ...p, selected_business_id: v }));
+                    // Trigger getList after state update
+                    setTimeout(() => getList(), 0);
+                  }}
+                  options={state.businesses.map(b => ({ label: b.name, value: b.id }))}
+                />
+              )}
               <Select
                 placeholder={t.all_branches || "All Branches"}
                 allowClear
-                style={{ width: 200 }}
+                style={{ width: 180 }}
                 value={filter.branch_id || undefined}
                 onChange={(v) => setFilter(p => ({ ...p, branch_id: v }))}
                 options={[{ label: t.all_branches || "All Branches", value: "" }, ...state.branches]}
@@ -459,7 +541,7 @@ function UserPage() {
                 style={{ width: 250 }}
                 className="premium-search"
               />
-              {(isOwner || !isSuperAdmin) && (
+              {(isOwner || profile?.business_id === 1) && (
                 <Tooltip title={state.subscription.max_staff && state.summary.total_staff >= state.subscription.max_staff ? t.staff_limit_reached : ""}>
                   <Button
                     type="primary"
@@ -468,7 +550,7 @@ function UserPage() {
                     onClick={handleOpenModal}
                     style={{ background: '#1e4a2d', borderColor: '#1e4a2d', borderRadius: '12px', height: '40px' }}
                   >
-                    + {t.add_new}
+                    + {profile?.business_id === 1 ? "Add Platform User" : t.add_new}
                   </Button>
                 </Tooltip>
               )}
@@ -619,26 +701,57 @@ function UserPage() {
                 <Select placeholder={t.user_role} size="large" options={state?.role} />
               </Form.Item>
 
+              {profile?.business_id === 1 && (
+                 <Form.Item
+                  name="business_id"
+                  label={<Text strong>{t.business_label || "Business"}</Text>}
+                  rules={[{ required: true }]}
+                >
+                  <Select 
+                    placeholder="Select Business" 
+                    size="large" 
+                    options={state.businesses.map(b => ({ label: b.name, value: b.id }))} 
+                    onChange={async (biz_id) => {
+                       // Refresh roles and branches for the selected business
+                       const res = await request("user", "get", { target_business_id: biz_id });
+                       if (res && !res.error) {
+                          setState(p => ({ ...p, role: res.role, branches: res.branches }));
+                       }
+                    }}
+                  />
+                </Form.Item>
+              )}
+
               {/* Branch */}
               <Form.Item
                 name="branch_id"
                 label={<Text strong>{t.branch}</Text>}
-                rules={[{ required: true, message: t.branch + " " + t.required }]}
+                rules={[
+                  { 
+                    required: form.getFieldValue("is_super_admin") !== 1, 
+                    message: t.branch + " " + t.required 
+                  }
+                ]}
               >
-                <Select placeholder={t.branch} size="large" options={state?.branches} />
+                <Select 
+                  placeholder={t.branch} 
+                  size="large" 
+                  options={state?.branches} 
+                  allowClear={form.getFieldValue("is_super_admin") === 1}
+                />
               </Form.Item>
 
               {profile?.business_id === 1 && (
                 <Form.Item
                   name="is_super_admin"
-                  label={<Text strong>{t.executives}</Text>}
+                  label={<Text strong>System Role</Text>}
                 >
                   <Select
-                    placeholder={t.executives}
+                    placeholder="Select System Level"
                     size="large"
                     options={[
-                      { label: t.no, value: 0 },
-                      { label: t.yes, value: 1 }
+                      { label: "Normal Staff", value: 0 },
+                      { label: "Super Admin", value: 1 }
                     ]}
                   />
                 </Form.Item>

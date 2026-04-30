@@ -325,10 +325,14 @@ const ProfilePage = () => {
                       rules={[
                         ({ getFieldValue }) => ({
                           validator(_, value) {
-                            if (!value || getFieldValue('password') === value) {
-                              return Promise.resolve();
+                            const password = getFieldValue('password');
+                            if (password && !value) {
+                              return Promise.reject(new Error('Please confirm your new password'));
                             }
-                            return Promise.reject(new Error('Passwords do not match!'));
+                            if (value && password !== value) {
+                              return Promise.reject(new Error('Passwords do not match!'));
+                            }
+                            return Promise.resolve();
                           },
                         }),
                       ]}

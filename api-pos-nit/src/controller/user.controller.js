@@ -6,66 +6,74 @@ exports.getList = async (req, res) => {
         const { business_id } = req;
         const { target_business_id, branch_id } = req.query;
         
-        // Super Admin can see any business's users
-        const bizId = (business_id === 1 && target_business_id) ? target_business_id : business_id;
+        let bizId = business_id;
+        let isGlobalView = false;
 
-        // 1. Fetch User List with Role and Branch names
+        if (business_id === 1) {
+            if (target_business_id) {
+                bizId = target_business_id;
+            } else {
+                isGlobalView = true;
+            }
+        }
+
+        // 1. Fetch User List
         let sqlUsers = `
             SELECT u.id, u.name, u.email as username, u.tel, u.address, u.image as profile_image,
                    u.status, u.is_super_admin, r.name as role_name, b.name as branch_name,
-                   u.role_id, u.branch_id, u.created_at as create_at, u.business_id
+                   u.role_id, u.branch_id, u.created_at as create_at, u.business_id,
+                   biz.name as business_name
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN branches b ON u.branch_id = b.id
-            WHERE u.business_id = ?
+            LEFT JOIN businesses biz ON u.business_id = biz.id
         `;
-        let params = [bizId];
+        let params = [];
+
+        if (isGlobalView) {
+            // Platform Admin Global View: Show only Platform Team (Business 1) 
+            // and Platform-wide Super Admins.
+            // We exclude tenant owners (is_super_admin=1 but business_id > 1) 
+            // because they are managed in the Business Ecosystem page.
+            sqlUsers += " WHERE u.business_id = 1";
+        } else {
+            sqlUsers += " WHERE u.business_id = ?";
+            params.push(bizId);
+        }
 
         if (branch_id) {
             sqlUsers += " AND u.branch_id = ?";
             params.push(branch_id);
         }
 
-        sqlUsers += " ORDER BY u.id ASC";
+        sqlUsers += " ORDER BY u.is_super_admin DESC, u.id ASC";
         const [list] = await db.query(sqlUsers, params);
 
-        // 2. Fetch Detailed Subscription Info
-        const sqlSub = `
-            SELECT 
-                b.plan_id, p.name as plan_name, 
-                p.max_branches, p.max_staff, p.max_products,
-                s.end_date as deadline, s.status as sub_status
-            FROM businesses b
-            JOIN subscription_plans p ON b.plan_id = p.id
-            LEFT JOIN subscriptions s ON b.id = s.business_id AND s.status = 'active'
-            WHERE b.id = ?
-            LIMIT 1
-        `;
-        const [subInfo] = await db.query(sqlSub, [bizId]);
+        // 2. Fetch Meta Data
+        const [roles] = await db.query("SELECT id as value, name as label FROM roles WHERE business_id = ?", [bizId]);
+        const [branches] = await db.query("SELECT id as value, name as label FROM branches WHERE business_id = ?", [bizId]);
+        
+        let businesses = [];
+        if (business_id === 1) {
+            [businesses] = await db.query("SELECT id, name FROM businesses WHERE status = 'active' ORDER BY id ASC");
+        }
 
-        // 3. Calculate Statistics
+        // 3. Stats based on current list
         const totalStaff = list.length;
         const superAdmins = list.filter(u => u.is_super_admin === 1).length;
         const activeUsers = list.filter(u => u.status === 'active').length;
-        const regularStaff = totalStaff - superAdmins;
-
-        // 4. Fetch Meta Data for UI
-        const [roles] = await db.query("SELECT id as value, name as label FROM roles WHERE business_id = ?", [bizId]);
-        const [branches] = await db.query("SELECT id as value, name as label FROM branches WHERE business_id = ?", [bizId]);
-        const totalBranches = branches.length;
 
         res.json({
             list,
             role: roles,
             branches: branches,
+            businesses: businesses,
             summary: {
                 total_staff: totalStaff,
                 super_admins: superAdmins,
                 active_users: activeUsers,
-                regular_staff: regularStaff,
-                total_branches: totalBranches
-            },
-            subscription: subInfo[0] || { plan_name: "Free Plan", deadline: "Lifetime", sub_status: "active" }
+                total_branches: branches.length
+            }
         });
     } catch (error) {
         logError("user.getList", error, res);
@@ -74,10 +82,13 @@ exports.getList = async (req, res) => {
 
 exports.register = async (req, res) => {
     try {
-        const { business_id } = req;
+        const { business_id: session_biz_id } = req;
         const {
-            id, name, username, password, role_id, branch_id, is_super_admin, address, tel, is_active
+            id, name, username, password, role_id, branch_id, is_super_admin, address, tel, is_active, business_id
         } = req.body;
+
+        // Platform Admin can specify target business_id
+        const bizId = (session_biz_id === 1 && business_id) ? business_id : session_biz_id;
 
         const image = req.file?.path || req.file?.filename || null;
         const statusVal = (is_active === 1 || is_active === '1' || is_active === true) ? 'active' : 'inactive';
@@ -88,15 +99,13 @@ exports.register = async (req, res) => {
                 return res.status(403).json({ message: "Action Forbidden: The Master Super Admin account cannot be deactivated." });
             }
 
-            // Check if user is super admin to allow email change
-            const isSuperAdmin = req.auth?.role_code === 'super_admin';
+            const isPlatformAdmin = session_biz_id === 1;
 
             // Update existing staff
             let sql = "UPDATE users SET name=?, role_id=?, branch_id=?, is_super_admin=?, address=?, tel=?, status=?";
             let params = [name, role_id, branch_id, is_super_admin || 0, address, tel, statusVal];
 
-            if (username && isSuperAdmin) {
-                // Check if email already exists for another user
+            if (username && (isPlatformAdmin || req.auth?.role_code === 'owner')) {
                 const [existing] = await db.query("SELECT id FROM users WHERE email = ? AND id != ?", [username, id]);
                 if (existing.length > 0) {
                     return res.status(400).json({ message: "Email already in use by another account." });
@@ -116,14 +125,14 @@ exports.register = async (req, res) => {
             }
 
             sql += " WHERE id=? AND business_id=?";
-            params.push(id, business_id);
+            params.push(id, bizId);
 
             await db.query(sql, params);
             return res.json({ message: "User updated successfully" });
         } else {
             // Create new staff — check plan limits
             const { checkPlanLimit } = require("../util/helper");
-            const limitCheck = await checkPlanLimit(business_id, 'staff');
+            const limitCheck = await checkPlanLimit(bizId, 'staff');
             if (!limitCheck.allowed) {
                 return res.status(403).json({
                     message: limitCheck.message,
@@ -139,9 +148,9 @@ exports.register = async (req, res) => {
             await db.query(`
                 INSERT INTO users (business_id, branch_id, name, email, password, role_id, is_super_admin, address, tel, status, image) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [business_id, branch_id, name, username, hashedPassword, role_id, is_super_admin || 0, address, tel, statusVal, image]);
+            `, [bizId, branch_id, name, username, hashedPassword, role_id, is_super_admin || 0, address, tel, statusVal, image]);
 
-            return res.json({ message: "User created successfully! They can now login with their email and password." });
+            return res.json({ message: "User created successfully!" });
         }
     } catch (error) {
         logError("user.register", error, res);
