@@ -328,6 +328,7 @@ const BusinessPage = () => {
                 onOk={() => form.submit()}
                 width={visible === 'renew' ? 500 : 1000}
                 centered
+                destroyOnClose={true}
                 okText="Confirm Action"
             >
                 <Form layout="vertical" form={form} onFinish={onFinish}>
@@ -393,37 +394,33 @@ const BusinessPage = () => {
                             </Col>
                             <Col span={12}>
                                 <Divider orientation="left" style={{ marginTop: 0 }}><Text strong style={{ fontSize: 11 }}>CAPABILITIES & PLAN</Text></Divider>
-                                <Row gutter={16}>
-                                    <Col span={12}>
-                                        <Form.Item name="plan_id" label="Subscription Tier" rules={[{ required: true }]}>
-                                            <Select 
-                                                size="large" 
-                                                placeholder="Select Plan"
-                                                onChange={(val) => {
-                                                    const plan = plans.find(p => p.id === val);
-                                                    if (plan) {
-                                                        const planName = plan.name.toLowerCase();
-                                                        let modules = ['POS'];
-                                                        if (planName.includes('medium') || planName.includes('pro')) {
-                                                            modules = ['POS', 'ORDERING'];
-                                                        } else if (planName.includes('large') || planName.includes('enterprise')) {
-                                                            modules = ['POS', 'ORDERING', 'INVENTORY'];
-                                                        }
-                                                        form.setFieldsValue({ active_modules: modules });
-                                                    }
-                                                }}
-                                            >
-                                                {plans.map(p => <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>)}
-                                            </Select>
-                                        </Form.Item>
-                                    </Col>
-                                    <Col span={12}>
-                                        <Form.Item name="package_id" label="Industry Blueprint" rules={[{ required: true }]}>
-                                            <Select size="large">{packageList.map(p => <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>)}</Select>
-                                        </Form.Item>
-                                    </Col>
-                                </Row>
-                                 <Form.Item name="active_modules" hidden>
+                                <Form.Item name="plan_id" label="Subscription Tier" rules={[{ required: true }]}>
+                                    <Select 
+                                        size="large" 
+                                        placeholder="Select Plan"
+                                        onChange={(val) => {
+                                            const plan = plans.find(p => p.id === val);
+                                            if (plan) {
+                                                const planName = plan.name.toLowerCase();
+                                                let modules = ['POS'];
+                                                if (planName.includes('medium') || planName.includes('pro')) {
+                                                    modules = ['POS', 'ORDERING'];
+                                                } else if (planName.includes('large') || planName.includes('enterprise')) {
+                                                    modules = ['POS', 'ORDERING', 'INVENTORY'];
+                                                }
+                                                form.setFieldsValue({ active_modules: modules });
+                                            }
+                                        }}
+                                    >
+                                        {plans.map(p => <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>)}
+                                    </Select>
+                                </Form.Item>
+                                <Form.Item name="package_id" label="Industry Blueprint" rules={[{ required: true }]}>
+                                    <Select size="large">
+                                        {packageList.map(p => <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>)}
+                                    </Select>
+                                </Form.Item>
+                                <Form.Item name="active_modules" hidden>
                                     <Input />
                                 </Form.Item>
                             </Col>
