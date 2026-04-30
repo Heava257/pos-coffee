@@ -177,7 +177,6 @@ const MENU_STRUCTURE = [
           { key: "role", labelKey: "roles", icon: <SafetyCertificateOutlined /> },
           { key: "permission", labelKey: "permission", icon: <UnlockOutlined /> },
           { key: "plans", labelKey: "plans", icon: <CreditCardOutlined /> },
-          { key: "system-modules", labelKey: "system_modules", icon: <AppstoreOutlined /> },
         ],
       },
       {
