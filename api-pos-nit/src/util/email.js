@@ -65,11 +65,11 @@ exports.sendWelcomeEmail = async (to, businessName, ownerName, verifyToken) => {
                 <p>Congratulations! Your business <strong>${businessName}</strong> has been successfully registered.</p>
                 <p>To activate your account and start using the platform, please verify your email address by clicking the button below:</p>
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="${verifyUrl}" style="background-color: #a4c9a8; color: #1e4a2d; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">Verify Email & Activate Account</a>
+                    <a href="${verifyLink}" style="background-color: #a4c9a8; color: #1e4a2d; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">Verify Email & Activate Account</a>
                 </div>
 
                 <p>Or copy and paste this link into your browser:</p>
-                <p><a href="${verifyUrl}" style="color: #a4c9a8; word-break: break-all;">${verifyUrl}</a></p>
+                <p><a href="${verifyLink}" style="color: #a4c9a8; word-break: break-all;">${verifyLink}</a></p>
 
                 <p style="margin-top: 20px;">
                     Once verified, you will be <strong>automatically logged into your dashboard</strong> to start configuring your store.
