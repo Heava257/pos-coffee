@@ -64,17 +64,19 @@ exports.sendWelcomeEmail = async (to, businessName, ownerName, verifyToken) => {
                 <p>Hello <strong>${ownerName}</strong>,</p>
                 <p>Congratulations! Your business <strong>${businessName}</strong> has been successfully registered.</p>
                 <p>To activate your account and start using the platform, please verify your email address by clicking the button below:</p>
-                <div style="margin: 30px 0;">
-                    <a href="${verifyLink}" 
-                       style="background: #1e4a2d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                       Verify Email & Activate Account
-                    </a>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${verifyUrl}" style="background-color: #a4c9a8; color: #1e4a2d; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">Verify Email & Activate Account</a>
                 </div>
+
                 <p>Or copy and paste this link into your browser:</p>
-                <p style="font-size: 12px; color: #666;">${verifyLink}</p>
-                <p>Once verified, you can log in with: <strong>${to}</strong></p>
-                <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;" />
-                <p style="font-size: 11px; color: #999;">Sent by Coffee POS Platform Admin</p>
+                <p><a href="${verifyUrl}" style="color: #a4c9a8; word-break: break-all;">${verifyUrl}</a></p>
+
+                <p style="margin-top: 20px;">
+                    Once verified, you will be <strong>automatically logged into your dashboard</strong> to start configuring your store.
+                </p>
+                
+                <hr style="border: none; border-top: 1px solid #3d6a4c; margin: 30px 0;" />
+                <p style="color: #8b9d8b; font-size: 12px;">Sent by Coffee POS Platform Admin</p>
             </div>
         `;
 

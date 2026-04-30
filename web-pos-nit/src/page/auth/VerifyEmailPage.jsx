@@ -77,11 +77,10 @@ const VerifyEmailPage = () => {
                     <Result
                         status="success"
                         title="Verification Successful!"
-                        subTitle={msg}
+                        subTitle="Account activated! Redirecting you to the dashboard..."
                         extra={[
-                            <Button type="primary" key="login" size="large" onClick={() => navigate('/login')}>
-                                Go to Login
-                            </Button>
+                            <Spin size="small" style={{ marginRight: 8 }}/>,
+                            <span style={{ color: '#1e4a2d' }}>Loading your enterprise workspace...</span>
                         ]}
                     />
                 ) : (
