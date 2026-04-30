@@ -427,9 +427,9 @@ const BusinessPage = () => {
                         </Row>
                         <Divider orientation="left"><Text strong style={{ fontSize: 11 }}>ADMIN ACCESS CONTROL</Text></Divider>
                         <Row gutter={24}>
-                            <Col span={8}><Form.Item name="owner_name" label="Owner Full Name" rules={[{required:true}]}><Input prefix={<UserOutlined />} size="large"/></Form.Item></Col>
-                            <Col span={8}><Form.Item name="email" label="Admin Email" rules={[{required:true, type:'email'}]}><Input prefix={<MailOutlined />} size="large"/></Form.Item></Col>
-                            {visible === 'create' && <Col span={8}><Form.Item name="password" label="Temp Password" rules={[{required:true}]}><Input.Password prefix={<LockOutlined />} size="large"/></Form.Item></Col>}
+                            <Col span={8}><Form.Item name="owner_name" label="Owner Full Name" rules={[{required:true}]}><Input prefix={<UserOutlined />} size="large" autoComplete="off"/></Form.Item></Col>
+                            <Col span={8}><Form.Item name="email" label="Admin Email" rules={[{required:true, type:'email'}]}><Input prefix={<MailOutlined />} size="large" autoComplete="new-password"/></Form.Item></Col>
+                            {visible === 'create' && <Col span={8}><Form.Item name="password" label="Temp Password" rules={[{required:true}]}><Input.Password prefix={<LockOutlined />} size="large" autoComplete="new-password"/></Form.Item></Col>}
                         </Row>
                         </>
                     )}
