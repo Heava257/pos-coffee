@@ -34,7 +34,8 @@ import {
     KeyOutlined,
     BankOutlined,
     PlusOutlined,
-    QrcodeOutlined
+    QrcodeOutlined,
+    MailOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { Tabs } from "antd";
@@ -257,18 +258,48 @@ const PlanPage = () => {
             key: "action",
             align: 'center',
             render: (_, record) => (
-                <Button
-                    type="primary"
-                    ghost
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => handleEditSubscription(record)}
-                >
-                    Modify
-                </Button>
+                <Space>
+                    <Tooltip title="Send Expiry Reminder">
+                        <Button 
+                            type="default" 
+                            size="small" 
+                            icon={<MailOutlined />} 
+                            onClick={() => handleSendReminder(record)}
+                        />
+                    </Tooltip>
+                    <Button
+                        type="primary"
+                        ghost
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => handleEditSubscription(record)}
+                    >
+                        Modify
+                    </Button>
+                </Space>
             )
         }
     ];
+
+    const handleSendReminder = (record) => {
+        Modal.confirm({
+            title: `Send Reminder to ${record.business_name}?`,
+            content: `This will manually trigger an email to the business owner to remind them about their subscription status.`,
+            okText: "Send Email",
+            onOk: async () => {
+                try {
+                    const res = await request("system-subscriptions/send-reminder", "post", { business_id: record.business_id });
+                    if (res && res.success) {
+                        message.success(res.message);
+                    } else {
+                        message.error(res?.message || "Failed to send reminder");
+                    }
+                } catch (error) {
+                    message.error(error.message || "Failed to send reminder");
+                }
+            }
+        });
+    };
 
     const handleEditSubscription = (record) => {
         setEditingSubscription(record);

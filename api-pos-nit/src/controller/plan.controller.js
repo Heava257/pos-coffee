@@ -294,3 +294,44 @@ exports.updateSystemSubscription = async (req, res) => {
         conn.release();
     }
 };
+
+exports.sendManualReminder = async (req, res) => {
+    try {
+        const { business_id } = req.body;
+        if (!business_id) return res.status(400).json({ message: "Business ID is required" });
+
+        // Get business details
+        const [biz] = await db.query(`
+            SELECT b.name as business_name, b.owner_name, u.email,
+                   s.end_date, DATEDIFF(s.end_date, NOW()) as days_remaining
+            FROM businesses b
+            JOIN users u ON b.id = u.business_id AND u.role_id IN (SELECT id FROM roles WHERE code = 'owner')
+            LEFT JOIN subscriptions s ON b.id = s.business_id AND s.status = 'active'
+            WHERE b.id = ?
+            LIMIT 1
+        `, [business_id]);
+
+        if (biz.length === 0) {
+            return res.status(404).json({ message: "Business or owner not found" });
+        }
+
+        const { email, business_name, days_remaining } = biz[0];
+        
+        if (!email) {
+            return res.status(400).json({ message: "Owner email not found" });
+        }
+
+        const { sendExpiryReminder } = require("../util/email");
+        const days = days_remaining !== null ? days_remaining : -1;
+        
+        const result = await sendExpiryReminder(email, business_name, days > 0 ? days : 0);
+        
+        if (result) {
+            res.json({ success: true, message: \`Reminder email successfully sent to \${email}!\` });
+        } else {
+            res.status(500).json({ message: "Failed to send email. Please check SMTP configuration." });
+        }
+    } catch (error) {
+        logError("plan.sendManualReminder", error, res);
+    }
+};
