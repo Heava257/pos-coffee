@@ -1,17 +1,10 @@
-const nodemailer = require("nodemailer");
+const axios = require("axios");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
-    port: process.env.SMTP_PORT || 587,
-    secure: false,
-    requireTLS: true, // Force TLS
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    }
-});
+// Use Brevo API Key from environment
+const BREVO_API_KEY = (process.env.SMTP_PASS || "").replace(/\s/g, "");
+const PLATFORM_SENDER_EMAIL = process.env.SENDER_EMAIL || "pongchiva257@gmail.com";
 
 /**
  * Send Subscription Expiry Reminder Email
@@ -25,7 +18,7 @@ exports.sendExpiryReminder = async (to, businessName, daysLeft) => {
             ? `Action Required: Your Subscription for ${businessName} has Expired`
             : `Reminder: Your Subscription for ${businessName} expires in ${daysLeft} days`;
 
-        const html = `
+        const htmlContent = `
             <div style="font-family: sans-serif; padding: 20px; color: #333;">
                 <h2 style="color: #1e4a2d;">Subscription Reminder</h2>
                 <p>Hello,</p>
@@ -43,17 +36,19 @@ exports.sendExpiryReminder = async (to, businessName, daysLeft) => {
             </div>
         `;
 
-        const info = await transporter.sendMail({
-            from: `"Coffee POS Platform" <${process.env.SENDER_EMAIL || process.env.SMTP_USER}>`,
-            to,
-            subject,
-            html
+        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+            sender: { name: "Coffee POS Platform", email: PLATFORM_SENDER_EMAIL },
+            to: [{ email: to }],
+            subject: subject,
+            htmlContent: htmlContent
+        }, {
+            headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' }
         });
 
-        console.log(`[EMAIL] Expiry reminder sent to ${to} (${daysLeft} days left). ID: ${info.messageId}`);
-        return info;
+        console.log(`[EMAIL] Expiry reminder sent to ${to} (${daysLeft} days left). ID: ${response.data.messageId}`);
+        return response.data;
     } catch (error) {
-        console.error("[EMAIL ERROR] Failed to send reminder:", error.message);
+        console.error("[EMAIL ERROR] Failed to send reminder:", error.response?.data || error.message);
         return null;
     }
 };
@@ -63,7 +58,7 @@ exports.sendWelcomeEmail = async (to, businessName, ownerName, verifyToken) => {
         const subject = `Welcome to Coffee POS Platform - Please Verify Your Email`;
         const verifyLink = `${process.env.CLIENT_URL || 'https://pos-coffee-web-production.up.railway.app'}/verify-email?token=${verifyToken}&email=${to}`;
         
-        const html = `
+        const htmlContent = `
             <div style="font-family: sans-serif; padding: 20px; color: #333;">
                 <h2 style="color: #1e4a2d;">Welcome to Coffee POS Platform!</h2>
                 <p>Hello <strong>${ownerName}</strong>,</p>
@@ -83,17 +78,19 @@ exports.sendWelcomeEmail = async (to, businessName, ownerName, verifyToken) => {
             </div>
         `;
 
-        const info = await transporter.sendMail({
-            from: `"Coffee POS Platform" <${process.env.SENDER_EMAIL || process.env.SMTP_USER}>`,
-            to,
-            subject,
-            html
+        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+            sender: { name: "Coffee POS Platform", email: PLATFORM_SENDER_EMAIL },
+            to: [{ email: to, name: ownerName }],
+            subject: subject,
+            htmlContent: htmlContent
+        }, {
+            headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' }
         });
 
-        console.log(`[EMAIL] Welcome email sent to ${to}. ID: ${info.messageId}`);
-        return info;
+        console.log(`[EMAIL] Welcome email sent to ${to}. ID: ${response.data.messageId}`);
+        return response.data;
     } catch (error) {
-        console.error("[EMAIL ERROR] Failed to send welcome email:", error.message);
+        console.error("[EMAIL ERROR] Failed to send welcome email:", error.response?.data || error.message);
         return null;
     }
 };
