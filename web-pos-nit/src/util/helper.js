@@ -104,7 +104,7 @@ export const request = (url = "", method = "get", data = {}) => {
           }
         }
         if (status == 403) {
-          message.error("Access Denied: You don't have permission for this action.");
+          message.error(response.data.message || "Access Denied: You don't have permission for this action.");
         }
         setServerSatus(status);
         // 🚨 IMPORTANT: Use Promise.reject so the caller's .catch() or try/catch works

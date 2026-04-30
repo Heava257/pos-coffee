@@ -41,6 +41,11 @@ const VerifyEmailPage = () => {
                 setTimeout(() => {
                     window.location.href = "/";
                 }, 1500);
+            } else {
+                // Fallback if token is somehow missing
+                setTimeout(() => {
+                    window.location.href = "/login";
+                }, 2000);
             }
         } catch (error) {
             setStatus('error');
@@ -77,10 +82,17 @@ const VerifyEmailPage = () => {
                         status="success"
                         title="Verification Successful!"
                         subTitle="Account activated! Redirecting you to the dashboard..."
-                        extra={[
-                            <Spin size="small" style={{ marginRight: 8 }}/>,
-                            <span style={{ color: '#1e4a2d' }}>Loading your enterprise workspace...</span>
-                        ]}
+                        extra={
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                                <div>
+                                    <Spin size="small" style={{ marginRight: 8 }}/>
+                                    <span style={{ color: '#1e4a2d' }}>Loading your enterprise workspace...</span>
+                                </div>
+                                <Button type="link" onClick={() => window.location.href = "/"}>
+                                    Click here if you are not redirected automatically
+                                </Button>
+                            </div>
+                        }
                     />
                 ) : (
                     <Result
