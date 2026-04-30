@@ -483,7 +483,7 @@ exports.remove = async (req, res) => {
     try {
         if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden: Platform management only" });
         
-        const { id } = req.body;
+        const id = req.query.id || req.body.id;
         
         if (!id) return res.status(400).json({ message: "Business ID is required" });
         
