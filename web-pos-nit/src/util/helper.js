@@ -19,6 +19,7 @@ export const request = (url = "", method = "get", data = {}) => {
     url.includes("auth/register") ||
     url.includes("auth/register-owner") ||
     url.includes("auth/guest-access") ||
+    url.includes("auth/verify-email") ||
     url.includes("order-web") ||
     url.includes("business/public-config") ||
     isPublicMenu;
