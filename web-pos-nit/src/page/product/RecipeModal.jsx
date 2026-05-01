@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Button, Form, InputNumber, message, Modal, Select, Space, Table, Tag, Tooltip } from "antd";
+import { Button, Form, InputNumber, message, Modal, Select, Space, Table, Tag, Tooltip, Typography, Row, Col, Card } from "antd";
 import { request } from "../../util/helper";
-import { MdDelete, MdAdd } from "react-icons/md";
+import { MdDelete, MdAdd, MdReceiptLong, MdAttachMoney, MdShowChart } from "react-icons/md";
 import { useLanguage, translations } from "../../store/language.store";
+
+const { Text, Title } = Typography;
+
+const COLORS = {
+    darkGreen: "#1e4a2d",
+    midGreen: "#2d6a42",
+    lightGreen: "#e6f0e9",
+    gold: "#d4af37",
+    textSecondary: "#64748b",
+    border: "#f1f5f9"
+};
 
 function RecipeModal({ open, onCancel, product }) {
     const { lang } = useLanguage();
@@ -20,7 +31,7 @@ function RecipeModal({ open, onCancel, product }) {
     }, [open, product]);
 
     const fetchRawMaterials = async () => {
-        const res = await request("raw_material", "get", { status: 1 }); // Active only
+        const res = await request("raw_material", "get", { status: 1 });
         if (res && !res.error) {
             setRawMaterials(res.list.map(item => ({
                 label: `${item.name} (${item.unit})`,
@@ -49,14 +60,13 @@ function RecipeModal({ open, onCancel, product }) {
 
     const onFinish = async (values) => {
         if (!product) return;
-
         setLoading(true);
         const cleanIngredients = values.ingredients.map(ing => {
             const material = rawMaterials.find(rm => rm.value === ing.raw_material_id);
             return {
                 raw_material_id: ing.raw_material_id,
                 qty: ing.qty,
-                unit: material ? material.unit : ing.unit // Ensure unit is correct
+                unit: material ? material.unit : ing.unit
             };
         });
 
@@ -66,7 +76,7 @@ function RecipeModal({ open, onCancel, product }) {
         });
 
         if (res && !res.error) {
-            message.success("Recipe saved successfully!");
+            message.success(t.recipe_saved_success || "Recipe saved successfully!");
             onCancel();
         } else {
             message.error(res.error || "Failed to save recipe");
@@ -75,7 +85,7 @@ function RecipeModal({ open, onCancel, product }) {
     };
 
     const calculateSummary = () => {
-        const currentIngredients = form.getFieldValue("ingredients") || [];
+        const currentIngredients = Form.useWatch('ingredients', form) || [];
         let totalCost = 0;
         currentIngredients.forEach(ing => {
             if (!ing) return;
@@ -100,52 +110,73 @@ function RecipeModal({ open, onCancel, product }) {
 
     return (
         <Modal
-            title={<b>☕ {t.recipe_config_title} - {product?.name}</b>}
+            title={
+                <div style={{ padding: '8px 0' }}>
+                    <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px', color: COLORS.darkGreen }}>
+                        <MdReceiptLong size={24} />
+                        {t.recipe_config_title} - <span style={{ color: COLORS.gold }}>{product?.name}</span>
+                    </Title>
+                </div>
+            }
             open={open}
             onCancel={onCancel}
-            width={720}
+            width={850}
             footer={null}
             centered
             destroyOnClose
+            style={{ borderRadius: '24px', overflow: 'hidden' }}
         >
-            <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                background: "linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%)",
-                padding: "16px",
-                borderRadius: "12px",
-                marginBottom: "20px",
-                border: "1px solid #dee2e6"
-            }}>
-                <div>
-                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>{t.est_cost_per_cup}</div>
-                    <div style={{ fontSize: 20, fontWeight: "bold", color: "#333" }}>${summary.totalCost}</div>
-                </div>
-                <div>
-                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>{t.selling_price_label}</div>
-                    <div style={{ fontSize: 20, fontWeight: "bold", color: "#333" }}>${Number(product?.price || 0).toFixed(2)}</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 12, color: "#6c757d", textTransform: "uppercase" }}>{t.gross_profit_label}</div>
-                    <div style={{ fontSize: 20, fontWeight: "bold", color: "#2ecc71" }}>
-                        ${summary.profit} <span style={{ fontSize: 14, fontWeight: "normal" }}>({summary.margin}%)</span>
-                    </div>
-                </div>
+            <div style={{ marginBottom: '32px' }}>
+                <Row gutter={[16, 16]}>
+                    <Col span={8}>
+                        <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0', height: '100%' }}>
+                            <Text type="secondary" strong style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.est_cost_per_cup}</Text>
+                            <div style={{ fontSize: '24px', fontWeight: 900, color: COLORS.darkGreen, marginTop: '4px' }}>${summary.totalCost}</div>
+                        </div>
+                    </Col>
+                    <Col span={8}>
+                        <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0', height: '100%' }}>
+                            <Text type="secondary" strong style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.selling_price_label}</Text>
+                            <div style={{ fontSize: '24px', fontWeight: 900, color: '#64748b', marginTop: '4px' }}>${Number(product?.price || 0).toFixed(2)}</div>
+                        </div>
+                    </Col>
+                    <Col span={8}>
+                        <div style={{ 
+                            background: Number(summary.profit) > 0 ? '#f0fdf4' : '#fef2f2', 
+                            padding: '20px', 
+                            borderRadius: '20px', 
+                            border: `1px solid ${Number(summary.profit) > 0 ? '#dcfce7' : '#fee2e2'}`,
+                            height: '100%' 
+                        }}>
+                            <Text type="secondary" strong style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.gross_profit_label}</Text>
+                            <div style={{ fontSize: '24px', fontWeight: 900, color: Number(summary.profit) > 0 ? '#166534' : '#991b1b', marginTop: '4px' }}>
+                                ${summary.profit} <span style={{ fontSize: '14px', fontWeight: 600 }}>({summary.margin}%)</span>
+                            </div>
+                        </div>
+                    </Col>
+                </Row>
             </div>
 
             <Form form={form} layout="vertical" onFinish={onFinish}>
-                <div style={{ maxHeight: "400px", overflowY: "auto", overflowX: "hidden", paddingRight: 8 }}>
+                <div style={{ maxHeight: "450px", overflowY: "auto", overflowX: "hidden", padding: '4px 12px 4px 4px' }}>
                     <Form.List name="ingredients">
                         {(fields, { add, remove }) => (
                             <>
                                 {fields.map(({ key, name, ...restField }) => (
-                                    <div key={key} style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 8, padding: "12px", marginBottom: 12, position: "relative" }}>
-                                        <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
-                                            <div style={{ flex: 1 }}>
+                                    <div key={key} style={{ 
+                                        background: "#fff", 
+                                        border: "1px solid #f1f5f9", 
+                                        borderRadius: "16px", 
+                                        padding: "16px", 
+                                        marginBottom: "16px",
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                                    }}>
+                                        <Row gutter={16} align="bottom">
+                                            <Col flex="auto">
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, "raw_material_id"]}
-                                                    label={t.select_ingredient_label}
+                                                    label={<Text strong style={{ fontSize: '12px', color: COLORS.textSecondary }}>{t.select_ingredient_label}</Text>}
                                                     rules={[{ required: true, message: t.required }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
@@ -153,27 +184,28 @@ function RecipeModal({ open, onCancel, product }) {
                                                         placeholder="Search Ingredient..."
                                                         options={rawMaterials}
                                                         showSearch
-                                                        onChange={() => form.setFieldsValue({})}
+                                                        size="large"
+                                                        className="executive-select"
                                                     />
                                                 </Form.Item>
-                                            </div>
-                                            <div style={{ width: 120 }}>
+                                            </Col>
+                                            <Col span={6}>
                                                 <Form.Item
                                                     {...restField}
                                                     name={[name, "qty"]}
-                                                    label={t.usage_qty_label}
+                                                    label={<Text strong style={{ fontSize: '12px', color: COLORS.textSecondary }}>{t.usage_qty_label}</Text>}
                                                     rules={[{ required: true, message: t.required }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <InputNumber
-                                                        min={0.01}
-                                                        style={{ width: "100%" }}
+                                                        min={0.001}
+                                                        size="large"
+                                                        style={{ width: "100%", borderRadius: '12px' }}
                                                         placeholder="0.00"
-                                                        onChange={() => form.setFieldsValue({})}
                                                     />
                                                 </Form.Item>
-                                            </div>
-                                            <div style={{ width: 60, paddingBottom: 6 }}>
+                                            </Col>
+                                            <Col span={2}>
                                                 <Form.Item
                                                     shouldUpdate={(prev, curr) => prev.ingredients?.[name]?.raw_material_id !== curr.ingredients?.[name]?.raw_material_id}
                                                     style={{ marginBottom: 0 }}
@@ -181,25 +213,38 @@ function RecipeModal({ open, onCancel, product }) {
                                                     {() => {
                                                         const id = form.getFieldValue(["ingredients", name, "raw_material_id"]);
                                                         const material = rawMaterials.find(rm => rm.value === id);
-                                                        return <Tag bordered={false}>{material?.unit || '-'}</Tag>
+                                                        return <Tag bordered={false} style={{ height: '40px', lineHeight: '40px', padding: '0 12px', borderRadius: '8px', background: '#f1f5f9', color: '#64748b', fontWeight: 700 }}>
+                                                            {material?.unit || '-'}
+                                                        </Tag>
                                                     }}
                                                 </Form.Item>
-                                            </div>
-                                            <Button
-                                                danger
-                                                type="text"
-                                                icon={<MdDelete size={20} />}
-                                                onClick={() => { remove(name); form.setFieldsValue({}); }}
-                                            />
-                                        </div>
+                                            </Col>
+                                            <Col span={2}>
+                                                <Button
+                                                    danger
+                                                    type="text"
+                                                    icon={<MdDelete size={22} />}
+                                                    onClick={() => remove(name)}
+                                                    style={{ height: '40px', width: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                />
+                                            </Col>
+                                        </Row>
                                     </div>
                                 ))}
                                 <Button
                                     type="dashed"
                                     onClick={() => add()}
                                     block
-                                    icon={<MdAdd />}
-                                    style={{ height: 45, borderRadius: 8 }}
+                                    icon={<MdAdd size={20} />}
+                                    style={{ 
+                                        height: '56px', 
+                                        borderRadius: '16px', 
+                                        borderWidth: '2px', 
+                                        color: COLORS.midGreen,
+                                        borderColor: '#e2e8f0',
+                                        fontSize: '15px',
+                                        fontWeight: 700
+                                    }}
                                 >
                                     {t.add_ingredient_link}
                                 </Button>
@@ -208,10 +253,23 @@ function RecipeModal({ open, onCancel, product }) {
                     </Form.List>
                 </div>
 
-                <div style={{ textAlign: "right", marginTop: 24, borderTop: "1px solid #eee", paddingTop: 20 }}>
-                    <Space size="middle">
-                        <Button size="large" onClick={onCancel}>{t.close}</Button>
-                        <Button size="large" type="primary" htmlType="submit" loading={loading} style={{ paddingLeft: 40, paddingRight: 40 }}>
+                <div style={{ textAlign: "right", marginTop: '32px', borderTop: "1px solid #f1f5f9", paddingTop: '24px' }}>
+                    <Space size="large">
+                        <Button size="large" onClick={onCancel} style={{ borderRadius: '12px', padding: '0 32px', fontWeight: 600 }}>{t.close}</Button>
+                        <Button 
+                            size="large" 
+                            type="primary" 
+                            htmlType="submit" 
+                            loading={loading} 
+                            style={{ 
+                                borderRadius: '12px', 
+                                padding: '0 48px', 
+                                fontWeight: 800, 
+                                background: COLORS.darkGreen, 
+                                borderColor: COLORS.darkGreen,
+                                boxShadow: '0 4px 12px rgba(30, 74, 45, 0.2)'
+                            }}
+                        >
                             {t.sync_recipe_btn}
                         </Button>
                     </Space>

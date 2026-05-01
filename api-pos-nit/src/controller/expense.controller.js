@@ -4,7 +4,7 @@ const { db, logError } = require("../util/helper");
 exports.getExpenseTypes = async (req, res) => {
     try {
         const { business_id } = req;
-        const [list] = await db.query("SELECT id as value, name as label FROM expense_type WHERE business_id = ?", [business_id]);
+        const [list] = await db.query("SELECT id, name FROM expense_type WHERE business_id = ?", [business_id]);
         res.json({ list });
     } catch (error) {
         logError("expense.getExpenseTypes", error, res);

@@ -8,11 +8,11 @@ import ImgUser from "../../assets/profile.png";
 import { Tooltip } from "antd";
 import { MdOutlineMarkEmailUnread, MdRestaurantMenu, MdCompareArrows } from "react-icons/md";
 import { IoMdNotificationsOutline } from "react-icons/io";
-import { 
-  CoffeeOutlined, 
-  LockOutlined, 
-  MenuOutlined, 
-  PartitionOutlined, 
+import {
+  CoffeeOutlined,
+  LockOutlined,
+  MenuOutlined,
+  PartitionOutlined,
   UnlockOutlined,
   PieChartOutlined,
   DesktopOutlined,
@@ -395,16 +395,22 @@ const MainLayout = () => {
       console.warn(`Unauthorized access attempt to: ${currentPath}. Redirecting...`);
 
       // Smart Redirection:
-      // 1. If staff (has POS permission), send to /invoices
-      // 2. Otherwise send to first permitted route
-      // 3. Last fallback to login
-      const posPerm = permision.find(p => p.web_route_key?.includes('invoices'));
+      // 1. If we are already on POS, stay there
+      if (currentPath === "/invoices" || currentPath === "/invoices/") return;
+
+      // 2. If staff (has POS permission), send to /invoices
+      const posPerm = permision.find(p => (p.web_route_key || p.route_key)?.includes('invoices'));
       if (posPerm) {
         console.warn("Redirecting to /invoices (POS) as default permitted route.");
         navigate("/invoices");
-      } else if (permision[0] && permision[0].web_route_key) {
-        console.warn(`Redirecting to first permitted route: ${permision[0].web_route_key}`);
-        navigate(permision[0].web_route_key);
+      } else if (permision[0]) {
+        const targetPath = permision[0].web_route_key || permision[0].route_key;
+        if (targetPath) {
+          console.warn(`Redirecting to first permitted route: ${targetPath}`);
+          navigate(targetPath);
+        } else {
+          navigate("/login");
+        }
       } else {
         console.warn("No permitted routes found. Redirecting to login.");
         navigate("/login");
@@ -464,14 +470,14 @@ const MainLayout = () => {
         // --- Module Based Filtering ---
         // 1. Inventory Group (Visible for Medium and Large)
         if (newItem.labelKey === 'menu_group_inventory' && !hasInventory) return null;
-        
+
         // 2. Marketing & CRM Group
         if (newItem.labelKey === 'menu_group_marketing' && !hasCRM) return null;
 
         // 3. Ordering / Digital Menu Features
         const orderingKeys = ['marketing/dashboard', 'kds', 'menu-board', 'marketing_label'];
         if (orderingKeys.includes(newItem.key) && !hasOrdering) return null;
-        
+
         // Specific restriction: Digital Menu Board (TV) is Enterprise only
         if (newItem.key === 'menu-board' && isMediumPlan) return null;
 
@@ -481,8 +487,8 @@ const MainLayout = () => {
         // 4. Force Restriction for Small/Starter Plans (Business logic)
         const premiumGroups = ['menu_group_inventory', 'menu_group_admin']; // Admin group has sub-items that might be premium
         if (isSmallPlan && (newItem.key === 'marketing/dashboard' || newItem.key === 'membership/search')) {
-           // Even if modules are checked, Small plan might still restrict some high-end automation
-           // return null; // Uncomment if you want strict plan-based restriction
+          // Even if modules are checked, Small plan might still restrict some high-end automation
+          // return null; // Uncomment if you want strict plan-based restriction
         }
         if (newItem.labelKey) {
           newItem.label = t[newItem.labelKey];
@@ -846,9 +852,9 @@ const MainLayout = () => {
                     type="primary"
                     size="middle"
                     icon={
-                      (profile?.plan_name?.toLowerCase().includes('enterprise') || Number(profile?.plan_id) >= 6) ? <CrownOutlined /> : 
-                      (profile?.plan_name?.toLowerCase().includes('pro') || Number(profile?.plan_id) === 5) ? <StarOutlined /> : 
-                      <ShopOutlined />
+                      (profile?.plan_name?.toLowerCase().includes('enterprise') || Number(profile?.plan_id) >= 6) ? <CrownOutlined /> :
+                        (profile?.plan_name?.toLowerCase().includes('pro') || Number(profile?.plan_id) === 5) ? <StarOutlined /> :
+                          <ShopOutlined />
                     }
                     onClick={() => navigate('/my-plan')}
                     className={cn(
@@ -1042,10 +1048,10 @@ const MainLayout = () => {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-             <span>©{new Date().getFullYear()}</span>
-             <span style={{ fontWeight: 600, color: "#1e4a2d" }}>Team IT ស្រុកស្រែ</span>
-             <span style={{ color: "#cbd5e1" }}>|</span>
-             <span>Coffee POS Platform</span>
+            <span>©{new Date().getFullYear()}</span>
+            <span style={{ fontWeight: 600, color: "#1e4a2d" }}>Team IT ស្រុកស្រែ</span>
+            <span style={{ color: "#cbd5e1" }}>|</span>
+            <span>Coffee POS Platform</span>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -1053,13 +1059,13 @@ const MainLayout = () => {
               <div className="status-dot-blink" style={{ width: 8, height: 8, background: "#22c55e", borderRadius: "50%", boxShadow: "0 0 8px rgba(34, 197, 94, 0.5)" }}></div>
               <span style={{ color: "#22c55e", fontWeight: 500, fontSize: "11px", letterSpacing: "0.5px" }}>SYSTEM ONLINE</span>
             </div>
-            
-            <div style={{ 
-              background: "#f1f5f9", 
-              padding: "2px 8px", 
-              borderRadius: "4px", 
-              fontSize: "10px", 
-              fontWeight: 700, 
+
+            <div style={{
+              background: "#f1f5f9",
+              padding: "2px 8px",
+              borderRadius: "4px",
+              fontSize: "10px",
+              fontWeight: 700,
               color: "#475569",
               border: "1px solid #e2e8f0",
               textTransform: "uppercase"

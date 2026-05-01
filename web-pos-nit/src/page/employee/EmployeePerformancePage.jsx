@@ -6,7 +6,8 @@ import {
     TrophyOutlined, 
     DollarCircleOutlined,
     ShoppingOutlined,
-    ThunderboltOutlined
+    ThunderboltOutlined,
+    TeamOutlined
 } from "@ant-design/icons";
 import { request, formatDateClient } from "../../util/helper";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
@@ -14,6 +15,19 @@ import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
+
+const COLORS = {
+  bg: "#f4f1eb",
+  darkGreen: "#1e4a2d",
+  midGreen: "#2d6a42",
+  accentGreen: "#3a7d52",
+  white: "#ffffff",
+  textPrimary: "#1a2e1a",
+  textSecondary: "#6b7c6b",
+  softBorder: "#e8e3d8",
+  gold: "#d4af37",
+  chart: ['#1e4a2d', '#d4af37', '#2d6a42', '#3a7d52', '#a47148']
+};
 
 const EmployeePerformancePage = () => {
     const [data, setData] = useState([]);
@@ -28,12 +42,11 @@ const EmployeePerformancePage = () => {
         setLoading(true);
         const from = dates[0].format("YYYY-MM-DD");
         const to = dates[1].format("YYYY-MM-DD");
+        // Supporting both hyphen and underscore routes
         const res = await request(`employee-performance?from_date=${from}&to_date=${to}`, "get");
         if (res && res.list) setData(res.list);
         setLoading(false);
     };
-
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
     const columns = [
         {
@@ -42,8 +55,8 @@ const EmployeePerformancePage = () => {
             key: "staff_name",
             render: (text) => (
                 <Space>
-                    <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
-                    <Text strong>{text}</Text>
+                    <Avatar icon={<UserOutlined />} style={{ backgroundColor: COLORS.darkGreen }} />
+                    <Text strong style={{ color: COLORS.darkGreen }}>{text}</Text>
                 </Space>
             )
         },
@@ -52,7 +65,7 @@ const EmployeePerformancePage = () => {
             dataIndex: "total_orders",
             key: "total_orders",
             sorter: (a, b) => a.total_orders - b.total_orders,
-            render: (val) => <Tag color="blue">{val} orders</Tag>
+            render: (val) => <Tag color="blue" bordered={false} style={{ borderRadius: '6px', padding: '0 8px' }}>{val} orders</Tag>
         },
         {
             title: "Items Sold",
@@ -71,7 +84,7 @@ const EmployeePerformancePage = () => {
             title: "Commission",
             dataIndex: "commission_earned",
             key: "commission_earned",
-            render: (val) => <Tag color="gold">${Number(val).toFixed(2)}</Tag>,
+            render: (val) => <Tag color="gold" bordered={false} style={{ borderRadius: '6px', fontWeight: 700 }}>${Number(val).toFixed(2)}</Tag>,
             sorter: (a, b) => a.commission_earned - b.commission_earned,
         },
         {
@@ -80,7 +93,7 @@ const EmployeePerformancePage = () => {
             render: (_, record) => {
                 const maxSales = Math.max(...data.map(i => i.total_sales)) || 1;
                 const percent = (record.total_sales / maxSales) * 100;
-                return <Progress percent={Math.round(percent)} size="small" status="active" strokeColor="#52c41a" />
+                return <Progress percent={Math.round(percent)} size="small" status="active" strokeColor={COLORS.darkGreen} />
             }
         }
     ];
@@ -92,50 +105,55 @@ const EmployeePerformancePage = () => {
     }), { sales: 0, orders: 0, commission: 0 });
 
     return (
-        <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-            <Row gutter={[24, 24]} align="middle" style={{ marginBottom: 24 }}>
-                <Col span={12}>
-                    <Title level={2} style={{ margin: 0 }}>Employee Performance 🏆</Title>
-                    <Text type="secondary">Track staff sales efficiency and commissions.</Text>
+        <div style={{ padding: 32, background: COLORS.bg, minHeight: '100vh' }}>
+            <Row gutter={[24, 24]} align="middle" style={{ marginBottom: 32 }}>
+                <Col span={14}>
+                    <Title level={2} style={{ margin: 0, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <TeamOutlined /> Employee Performance 🏆
+                    </Title>
+                    <Text style={{ color: COLORS.textSecondary }}>Track staff sales efficiency and real-time commissions.</Text>
                 </Col>
-                <Col span={12} style={{ textAlign: 'right' }}>
+                <Col span={10} style={{ textAlign: 'right' }}>
                     <RangePicker 
                         value={dates} 
                         onChange={setDates} 
-                        style={{ borderRadius: 8 }}
+                        style={{ borderRadius: 12, padding: '8px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: 'none' }}
                     />
                 </Col>
             </Row>
 
-            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Row gutter={[20, 20]} style={{ marginBottom: 32 }}>
                 <Col xs={24} sm={8}>
-                    <Card bordered={false} className="stat-card">
+                    <Card bordered={false} className="stat-card" style={{ borderLeft: `4px solid ${COLORS.accentGreen}` }}>
                         <Statistic 
-                            title="Total Sales via Staff" 
+                            title={<Text strong style={{ color: COLORS.textSecondary, fontSize: '12px', textTransform: 'uppercase' }}>Total Sales via Staff</Text>}
                             value={totalStats.sales} 
-                            prefix={<DollarCircleOutlined style={{ color: '#52c41a' }} />} 
+                            prefix={<DollarCircleOutlined style={{ color: COLORS.darkGreen }} />} 
                             precision={2}
                             suffix="$"
+                            valueStyle={{ color: COLORS.darkGreen, fontWeight: 900 }}
                         />
                     </Card>
                 </Col>
                 <Col xs={24} sm={8}>
-                    <Card bordered={false} className="stat-card">
+                    <Card bordered={false} className="stat-card" style={{ borderLeft: `4px solid ${COLORS.accentGreen}` }}>
                         <Statistic 
-                            title="Total Orders Processed" 
+                            title={<Text strong style={{ color: COLORS.textSecondary, fontSize: '12px', textTransform: 'uppercase' }}>Total Orders Processed</Text>}
                             value={totalStats.orders} 
-                            prefix={<ShoppingOutlined style={{ color: '#1890ff' }} />} 
+                            prefix={<ShoppingOutlined style={{ color: COLORS.midGreen }} />} 
+                            valueStyle={{ color: COLORS.midGreen, fontWeight: 900 }}
                         />
                     </Card>
                 </Col>
                 <Col xs={24} sm={8}>
-                    <Card bordered={false} className="stat-card">
+                    <Card bordered={false} className="stat-card" style={{ borderLeft: `4px solid ${COLORS.gold}` }}>
                         <Statistic 
-                            title="Total Commissions" 
+                            title={<Text strong style={{ color: COLORS.textSecondary, fontSize: '12px', textTransform: 'uppercase' }}>Total Commissions</Text>}
                             value={totalStats.commission} 
-                            prefix={<TrophyOutlined style={{ color: '#faad14' }} />} 
+                            prefix={<TrophyOutlined style={{ color: COLORS.gold }} />} 
                             precision={2}
                             suffix="$"
+                            valueStyle={{ color: COLORS.gold, fontWeight: 900 }}
                         />
                     </Card>
                 </Col>
@@ -143,22 +161,33 @@ const EmployeePerformancePage = () => {
 
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
-                    <Card title={<><LineChartOutlined /> Sales Contribution by Staff</>} bordered={false} style={{ borderRadius: 16 }}>
+                    <Card 
+                        title={<Space><LineChartOutlined style={{ color: COLORS.darkGreen }} /><span style={{ color: COLORS.darkGreen }}>Sales Contribution by Staff</span></Space>} 
+                        bordered={false} 
+                        style={{ borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}
+                    >
                         <div style={{ height: 350 }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={data}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="staff_name" />
-                                    <YAxis />
-                                    <RechartsTooltip cursor={{fill: 'rgba(0,0,0,0.05)'}} />
-                                    <Bar dataKey="total_sales" fill="#1890ff" radius={[4, 4, 0, 0]} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                    <XAxis dataKey="staff_name" axisLine={false} tickLine={false} tick={{ fill: COLORS.textSecondary }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: COLORS.textSecondary }} />
+                                    <RechartsTooltip 
+                                        cursor={{fill: 'rgba(30, 74, 45, 0.05)'}} 
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                    />
+                                    <Bar dataKey="total_sales" fill={COLORS.darkGreen} radius={[8, 8, 0, 0]} barSize={40} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </Card>
                 </Col>
                 <Col xs={24} lg={8}>
-                    <Card title={<><ThunderboltOutlined /> Order Share (%)</>} bordered={false} style={{ borderRadius: 16 }}>
+                    <Card 
+                        title={<Space><ThunderboltOutlined style={{ color: COLORS.gold }} /><span style={{ color: COLORS.darkGreen }}>Order Share (%)</span></Space>} 
+                        bordered={false} 
+                        style={{ borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}
+                    >
                         <div style={{ height: 350 }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
@@ -166,17 +195,17 @@ const EmployeePerformancePage = () => {
                                         data={data}
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={60}
+                                        innerRadius={70}
                                         outerRadius={100}
-                                        paddingAngle={5}
+                                        paddingAngle={8}
                                         dataKey="total_orders"
                                         nameKey="staff_name"
                                     >
                                         {data.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            <Cell key={`cell-${index}`} fill={COLORS.chart[index % COLORS.chart.length]} />
                                         ))}
                                     </Pie>
-                                    <RechartsTooltip />
+                                    <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -184,13 +213,14 @@ const EmployeePerformancePage = () => {
                 </Col>
 
                 <Col span={24}>
-                    <Card bordered={false} style={{ borderRadius: 16 }}>
+                    <Card bordered={false} style={{ borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
                         <Table 
                             dataSource={data} 
                             columns={columns} 
                             rowKey="user_id" 
                             loading={loading}
                             pagination={false}
+                            className="executive-table"
                         />
                     </Card>
                 </Col>
@@ -198,14 +228,27 @@ const EmployeePerformancePage = () => {
 
             <style jsx global>{`
                 .stat-card {
-                    border-radius: 16px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                    border-radius: 20px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+                    transition: transform 0.3s ease;
                 }
-                .ant-statistic-title {
-                    font-size: 14px;
-                    font-weight: 500;
+                .stat-card:hover {
+                    transform: translateY(-5px);
                 }
-                .ant-statistic-content {
+                .executive-table .ant-table-thead > tr > th {
+                    background: #f8fafc;
+                    color: ${COLORS.textSecondary};
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    font-weight: 700;
+                    border-bottom: 2px solid ${COLORS.bg};
+                }
+                .executive-table .ant-table-tbody > tr > td {
+                    padding: 16px;
+                }
+                .ant-progress-text {
+                    color: ${COLORS.darkGreen};
                     font-weight: 700;
                 }
             `}</style>

@@ -26,7 +26,7 @@ exports.report_Sale_Summary = async (req, res) => {
         AND DATE(o.created_at) BETWEEN ? AND ?
         ${target_branch_id ? 'AND o.branch_id = ?' : ''}
         GROUP BY DATE_FORMAT(o.created_at, '%d/%m/%Y')
-        ORDER BY o.created_at DESC
+        ORDER BY MAX(o.created_at) DESC
     `;
 
     const params = [category_id, category_id, business_id, from_date, to_date];
@@ -83,7 +83,7 @@ exports.report_Customer = async (req, res) => {
         WHERE cu.business_id = ?
         AND cu.created_at BETWEEN ? AND ?
         GROUP BY DATE(cu.created_at)
-        ORDER BY cu.created_at ASC
+        ORDER BY MAX(cu.created_at) ASC
     `;
 
     const [list] = await db.query(sql, [business_id, from_date, to_date]);

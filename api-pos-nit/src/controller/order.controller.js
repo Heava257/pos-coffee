@@ -928,6 +928,21 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
             }
         }
 
+        // 🌟 AUTO-TRANSITION TO KITCHEN ON COMPLETION (PAYMENT)
+        // If the order is now 'completed' (Paid), any items still in 'draft' or 'pending' 
+        // should automatically move to 'preparing' so the kitchen sees them.
+        if (status === 'completed') {
+            await conn.query(
+                "UPDATE order_details SET kitchen_status = 'preparing' WHERE order_id = ? AND kitchen_status IN ('draft', 'pending')",
+                [order_id]
+            );
+            // Also sync the main order status if it was draft/pending
+            await conn.query(
+                "UPDATE orders SET kitchen_status = 'preparing' WHERE id = ? AND kitchen_status IN ('draft', 'pending')",
+                [order_id]
+            );
+        }
+
         await conn.commit();
 
         // 3. FETCH UPDATED DETAILS to send back to POS (So it gets new server_item_ids)

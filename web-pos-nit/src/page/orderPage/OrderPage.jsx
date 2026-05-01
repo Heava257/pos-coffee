@@ -86,7 +86,7 @@ function OrderPage() {
   const [actualCash, setActualCash] = useState(null);
   const [actualCashKHR, setActualCashKHR] = useState(null);
   const [remark, setRemark] = useState("");
-  const [currentShift, setCurrentShift] = useState(null); 
+  const [currentShift, setCurrentShift] = useState(null);
   const [visibleOpenShiftModal, setVisibleOpenShiftModal] = useState(false);
   const [shiftHistory, setShiftHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -102,7 +102,7 @@ function OrderPage() {
   const { profile } = useProfileStore();
   const isOwner = profile?.role_name?.toUpperCase() === "OWNER" || profile?.role_code === "owner";
   const isAdmin = profile?.role_name?.toUpperCase().includes("ADMIN") || profile?.role_code === "admin";
-  const canSeeAllReports = isOwner || isAdmin; 
+  const canSeeAllReports = isOwner || isAdmin;
   const { exchangeRate } = useExchangeRate();
   const [branchInfo, setBranchInfo] = useState(null);
   const refLabel = useRef(null);
@@ -124,7 +124,7 @@ function OrderPage() {
       } else {
         setCurrentShift(null);
         // Removed auto-open: user will click 'Open Shift' manually.
-        setVisibleOpenShiftModal(false); 
+        setVisibleOpenShiftModal(false);
       }
     } catch (error) {
       console.error("Error getting current shift:", error);
@@ -202,7 +202,7 @@ function OrderPage() {
       try {
         const opening_usd = Number(openingCash);
         const opening_khr = Number(openingCashKHR);
-        
+
         const actual_total_usd = actual_usd + (actual_khr / exchangeRate);
         const expected_total_usd = closeShiftSummary.expected_cash_usd;
         const diff_usd = actual_total_usd - expected_total_usd;
@@ -226,7 +226,7 @@ function OrderPage() {
         const res = await request("shift", "post", data);
         if (res && res.success) {
           message.success("Shift Closed Successfully!");
-          
+
           // Prepare for immediate print
           setPrintSummary(closeShiftSummary);
           setPrintStaffName(profile?.name || "Staff");
@@ -289,7 +289,7 @@ function OrderPage() {
   const [filter, setFilter] = useState({
     from_date: dayjs(), // Default to Today
     to_date: dayjs(),
-    user_id: defaultUserId, 
+    user_id: defaultUserId,
   });
 
   // 🧠 Fetch Orders - Fixed to match backend response
@@ -424,8 +424,8 @@ function OrderPage() {
   useEffect(() => {
     if (profileUserId) {
       getList();
-      getCurrentShift(); 
-      getShiftHistory(); 
+      getCurrentShift();
+      getShiftHistory();
       getBranchInfo();
     }
   }, [profileUserId, filter.user_id, filter.from_date, filter.to_date, currentShift?.id]);
@@ -513,13 +513,13 @@ function OrderPage() {
               textAlign: 'center',
               border: '1px solid #f1f5f9'
             }}>
-              <div style={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: 10, 
-                background: '#f1f5f9', 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 8
               }}>
@@ -543,13 +543,13 @@ function OrderPage() {
               textAlign: 'center',
               border: '1px solid #f1f5f9'
             }}>
-              <div style={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: 10, 
-                background: '#f1f5f9', 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 8
               }}>
@@ -573,13 +573,13 @@ function OrderPage() {
               textAlign: 'center',
               border: '1px solid #f1f5f9'
             }}>
-              <div style={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: 10, 
-                background: '#f1f5f9', 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 8
               }}>
@@ -603,13 +603,13 @@ function OrderPage() {
               textAlign: 'center',
               border: '1px solid #f1f5f9'
             }}>
-              <div style={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: 10, 
-                background: '#1e4a2d', 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: '#1e4a2d',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 8
               }}>
@@ -633,13 +633,13 @@ function OrderPage() {
               textAlign: 'center',
               border: '1px solid #f1f5f9'
             }}>
-              <div style={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: 10, 
-                background: '#f1f5f9', 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 8
               }}>
@@ -663,13 +663,13 @@ function OrderPage() {
               textAlign: 'center',
               color: '#fff'
             }}>
-              <div style={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: 10, 
-                background: 'rgba(255, 255, 255, 0.2)', 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: 'rgba(255, 255, 255, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 8
               }}>
@@ -694,12 +694,12 @@ function OrderPage() {
             }}>
               <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.top_selling_label}</div>
               {summary.top_products?.slice(0, 3).map((item, index) => (
-                  <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
-                      <span style={{ color: '#1e293b', fontWeight: 500 }}>{item.name}</span>
-                      <span style={{ color: '#1e4a2d', fontWeight: 700 }}>{item.total_qty} qty</span>
-                  </div>
+                <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
+                  <span style={{ color: '#1e293b', fontWeight: 500 }}>{item.name}</span>
+                  <span style={{ color: '#1e4a2d', fontWeight: 700 }}>{item.total_qty} qty</span>
+                </div>
               ))}
-              {(!summary.top_products || summary.top_products.length === 0) && <div style={{fontSize: 10, color: '#94a3b8'}}>No data</div>}
+              {(!summary.top_products || summary.top_products.length === 0) && <div style={{ fontSize: 10, color: '#94a3b8' }}>No data</div>}
             </div>
           </Col>
         </Row>
@@ -808,7 +808,7 @@ function OrderPage() {
                 >
                   {t.add_expense_btn}
                 </Button>
-                
+
                 <Button
                   type="primary"
                   icon={<ExportOutlined />}
@@ -891,7 +891,7 @@ function OrderPage() {
                 </Col>
               </Row>
             </div>
-            
+
             <Divider style={{ margin: '16px 0' }} />
             <Text strong>{t.orders_this_shift}</Text>
 
@@ -1008,17 +1008,17 @@ function OrderPage() {
                   render: (_, rec) => (
                     <Space>
                       <Tooltip title={t.view_details}>
-                        <Button 
+                        <Button
                           shape="circle"
-                          icon={<EyeOutlined />} 
+                          icon={<EyeOutlined />}
                           onClick={() => getOrderDetail(rec)}
                           style={{ color: '#1890ff', borderColor: '#1890ff' }}
                         />
                       </Tooltip>
                       <Tooltip title="Print Label">
-                        <Button 
+                        <Button
                           shape="circle"
-                          icon={<TagOutlined />} 
+                          icon={<TagOutlined />}
                           onClick={async () => {
                             setState(p => ({ ...p, loading: true }));
                             try {
@@ -1039,9 +1039,9 @@ function OrderPage() {
                         />
                       </Tooltip>
                       <Tooltip title="Print Invoice">
-                        <Button 
+                        <Button
                           shape="circle"
-                          icon={<FileTextOutlined />} 
+                          icon={<FileTextOutlined />}
                           onClick={async () => {
                             setState(p => ({ ...p, loading: true }));
                             try {
@@ -1070,155 +1070,155 @@ function OrderPage() {
         )}
 
         {state.activeTab === "2" && (
-            <div style={{ background: '#fff', borderRadius: 16, padding: 16 }}>
-               <Row gutter={16} style={{marginBottom: 20}}>
-                  <Col span={12}>
-                     <RangePicker 
-                       value={[filter.from_date, filter.to_date]}
-                       onChange={d => setFilter(p => ({...p, from_date: d[0], to_date: d[1]}))}
-                     />
-                  </Col>
-                  {canSeeAllReports && (
-                    <Col span={8}>
-                       <Select 
-                          allowClear placeholder="Filter by user" style={{width: '100%'}}
-                          options={config?.user || []}
-                          onChange={v => setFilter(p => ({...p, user_id: v}))}
-                          value={filter.user_id}
-                       />
-                    </Col>
-                  )}
-                  <Col span={4}>
-                     <Button type="primary" block onClick={getShiftHistory}>Refresh</Button>
-                  </Col>
-               </Row>
-
-                <Table 
-                  loading={loadingHistory}
-                  dataSource={shiftHistory}
-                  rowKey="id"
-                  className="premium-table"
-                  style={{ background: '#fff' }}
-                  columns={[
-                    { 
-                      title: t.close_date, 
-                      dataIndex: 'closed_at', 
-                      render: v => (
-                        <div>
-                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{formatDateClient(v, "MMM DD, YYYY")}</div>
-                          <div style={{ fontSize: 11, color: '#64748b' }}>{formatDateClient(v, "hh:mm A")}</div>
-                        </div>
-                      )
-                    },
-                    { 
-                      title: t.staff, 
-                      dataIndex: 'staff_name',
-                      render: v => (
-                        <Space>
-                          <div style={{ background: '#f1f5f9', width: 32, height: 32, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <UserOutlined style={{ color: '#64748b' }} />
-                          </div>
-                          <Text style={{ fontWeight: 500 }}>{v}</Text>
-                        </Space>
-                      )
-                    },
-                    { 
-                      title: t.opening_cash_label, 
-                      dataIndex: 'opening_cash_usd',
-                      render: v => <Text style={{ color: '#1e293b' }}>${Number(v || 0).toFixed(2)}</Text>
-                    },
-                    { 
-                      title: t.expected_label, 
-                      dataIndex: 'expected_cash_usd',
-                      render: v => <Text style={{ color: '#1e293b' }}>${Number(v || 0).toFixed(2)}</Text>
-                    },
-                    { 
-                      title: t.actual_in_drawer, 
-                      dataIndex: 'actual_cash_usd',
-                      render: v => <Text strong style={{ color: '#1e293b' }}>${Number(v || 0).toFixed(2)}</Text>
-                    },
-                    { 
-                      title: t.difference_label, 
-                      dataIndex: 'diff_usd',
-                      render: v => {
-                        const isZero = Math.abs(v) < 0.1;
-                        return (
-                          <Text style={{ color: isZero ? '#059669' : '#ef4444', fontWeight: 600 }}>
-                            {v >= 0 ? '+' : ''}${Number(v).toFixed(2)}
-                          </Text>
-                        );
-                      }
-                    },
-                    { 
-                      title: t.status_label, 
-                      dataIndex: 'diff_usd',
-                      render: v => {
-                        const isZero = Math.abs(v) < 0.1;
-                        return (
-                          <Tag 
-                            color={isZero ? 'green' : 'red'} 
-                            style={{ 
-                              borderRadius: 20, 
-                              padding: '0 12px', 
-                              border: 'none',
-                              background: isZero ? '#f0fdf4' : '#fef2f2',
-                              color: isZero ? '#059669' : '#ef4444',
-                              fontWeight: 600
-                            }}
-                          >
-                            {isZero ? t.balanced_status : t.discrepancy_status}
-                          </Tag>
-                        );
-                      }
-                    },
-                    {
-                      title: t.action,
-                      width: 150,
-                      render: (row) => (
-                        <Space>
-                          <Button 
-                            icon={<FileTextOutlined />} 
-                            style={{ 
-                              borderRadius: 8, 
-                              borderColor: '#1e4a2d', 
-                              color: '#1e4a2d',
-                              fontWeight: 500,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 6
-                            }}
-                            onClick={async () => {
-                              setLoadingHistory(true);
-                              try {
-                                const res = await request(`shift/summary?id=${row.id}`, "get");
-                                if (res && res.success) {
-                                  setPrintSummary(res.summary);
-                                  setActualCash(row.actual_cash_usd);
-                                  setActualCashKHR(row.actual_cash_khr);
-                                  setPrintStaffName(row.staff_name);
-                                  setPrintShiftDate(row.closed_at);
-                                  setPrintOpeningUSD(row.opening_cash_usd);
-                                  setPrintOpeningKHR(row.opening_cash_khr);
-                                  
-                                  setTimeout(() => {
-                                    handlePrintShift();
-                                    setLoadingHistory(false);
-                                  }, 500);
-                                }
-                              } catch (err) {
-                                message.error("Failed to load report");
-                                setLoadingHistory(false);
-                              }
-                            }}
-                          >
-                            {t.print_receipt_btn}
-                          </Button>
-                        </Space>
-                      )
-                    }
-                  ]}
+          <div style={{ background: '#fff', borderRadius: 16, padding: 16 }}>
+            <Row gutter={16} style={{ marginBottom: 20 }}>
+              <Col span={12}>
+                <RangePicker
+                  value={[filter.from_date, filter.to_date]}
+                  onChange={d => setFilter(p => ({ ...p, from_date: d[0], to_date: d[1] }))}
                 />
-            </div>
+              </Col>
+              {canSeeAllReports && (
+                <Col span={8}>
+                  <Select
+                    allowClear placeholder="Filter by user" style={{ width: '100%' }}
+                    options={config?.user || []}
+                    onChange={v => setFilter(p => ({ ...p, user_id: v }))}
+                    value={filter.user_id}
+                  />
+                </Col>
+              )}
+              <Col span={4}>
+                <Button type="primary" block onClick={getShiftHistory}>Refresh</Button>
+              </Col>
+            </Row>
+
+            <Table
+              loading={loadingHistory}
+              dataSource={shiftHistory}
+              rowKey="id"
+              className="premium-table"
+              style={{ background: '#fff' }}
+              columns={[
+                {
+                  title: t.close_date,
+                  dataIndex: 'closed_at',
+                  render: v => (
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{formatDateClient(v, "MMM DD, YYYY")}</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{formatDateClient(v, "hh:mm A")}</div>
+                    </div>
+                  )
+                },
+                {
+                  title: t.staff,
+                  dataIndex: 'staff_name',
+                  render: v => (
+                    <Space>
+                      <div style={{ background: '#f1f5f9', width: 32, height: 32, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <UserOutlined style={{ color: '#64748b' }} />
+                      </div>
+                      <Text style={{ fontWeight: 500 }}>{v}</Text>
+                    </Space>
+                  )
+                },
+                {
+                  title: t.opening_cash_label,
+                  dataIndex: 'opening_cash_usd',
+                  render: v => <Text style={{ color: '#1e293b' }}>${Number(v || 0).toFixed(2)}</Text>
+                },
+                {
+                  title: t.expected_label,
+                  dataIndex: 'expected_cash_usd',
+                  render: v => <Text style={{ color: '#1e293b' }}>${Number(v || 0).toFixed(2)}</Text>
+                },
+                {
+                  title: t.actual_in_drawer,
+                  dataIndex: 'actual_cash_usd',
+                  render: v => <Text strong style={{ color: '#1e293b' }}>${Number(v || 0).toFixed(2)}</Text>
+                },
+                {
+                  title: t.difference_label,
+                  dataIndex: 'diff_usd',
+                  render: v => {
+                    const isZero = Math.abs(v) < 0.1;
+                    return (
+                      <Text style={{ color: isZero ? '#059669' : '#ef4444', fontWeight: 600 }}>
+                        {v >= 0 ? '+' : ''}${Number(v).toFixed(2)}
+                      </Text>
+                    );
+                  }
+                },
+                {
+                  title: t.status_label,
+                  dataIndex: 'diff_usd',
+                  render: v => {
+                    const isZero = Math.abs(v) < 0.1;
+                    return (
+                      <Tag
+                        color={isZero ? 'green' : 'red'}
+                        style={{
+                          borderRadius: 20,
+                          padding: '0 12px',
+                          border: 'none',
+                          background: isZero ? '#f0fdf4' : '#fef2f2',
+                          color: isZero ? '#059669' : '#ef4444',
+                          fontWeight: 600
+                        }}
+                      >
+                        {isZero ? t.balanced_status : t.discrepancy_status}
+                      </Tag>
+                    );
+                  }
+                },
+                {
+                  title: t.action,
+                  width: 150,
+                  render: (row) => (
+                    <Space>
+                      <Button
+                        icon={<FileTextOutlined />}
+                        style={{
+                          borderRadius: 8,
+                          borderColor: '#1e4a2d',
+                          color: '#1e4a2d',
+                          fontWeight: 500,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                        onClick={async () => {
+                          setLoadingHistory(true);
+                          try {
+                            const res = await request(`shift/summary?id=${row.id}`, "get");
+                            if (res && res.success) {
+                              setPrintSummary(res.summary);
+                              setActualCash(row.actual_cash_usd);
+                              setActualCashKHR(row.actual_cash_khr);
+                              setPrintStaffName(row.staff_name);
+                              setPrintShiftDate(row.closed_at);
+                              setPrintOpeningUSD(row.opening_cash_usd);
+                              setPrintOpeningKHR(row.opening_cash_khr);
+
+                              setTimeout(() => {
+                                handlePrintShift();
+                                setLoadingHistory(false);
+                              }, 500);
+                            }
+                          } catch (err) {
+                            message.error("Failed to load report");
+                            setLoadingHistory(false);
+                          }
+                        }}
+                      >
+                        {t.print_receipt_btn}
+                      </Button>
+                    </Space>
+                  )
+                }
+              ]}
+            />
+          </div>
         )}
       </Card>
 
@@ -1477,38 +1477,38 @@ function OrderPage() {
             }}
           />
         </div>
-        <Divider style={{margin: 0}} />
+        <Divider style={{ margin: 0 }} />
         <div style={{ marginTop: 24, textAlign: 'right' }}>
-            {(currentOrder?.payment_method !== "Cash" && currentOrder?.status !== "Cancel") && (
-                <Button 
-                    type="primary" 
-                    size="large"
-                    icon={<ShoppingCartOutlined />}
-                    style={{ background: '#10b981', borderColor: '#10b981' }}
-                    onClick={() => {
-                       setQrData({ orderNo: currentOrder?.order_no || `#${currentOrder?.id}`, total: currentOrder?.total_amount });
-                       setQrModalVisible(true);
-                    }}
-                >
-                    Re-Scan KHQR
-                </Button>
-            )}
-            <Button 
-                icon={<TagOutlined />}
-                size="large"
-                onClick={handlePrintLabel}
-                style={{ marginLeft: 8 }}
+          {(currentOrder?.payment_method !== "Cash" && currentOrder?.status !== "Cancel") && (
+            <Button
+              type="primary"
+              size="large"
+              icon={<ShoppingCartOutlined />}
+              style={{ background: '#10b981', borderColor: '#10b981' }}
+              onClick={() => {
+                setQrData({ orderNo: currentOrder?.order_no || `#${currentOrder?.id}`, total: currentOrder?.total_amount });
+                setQrModalVisible(true);
+              }}
             >
-                Reprint Labels
+              Re-Scan KHQR
             </Button>
-            <Button 
-                icon={<FileTextOutlined />}
-                size="large"
-                onClick={handlePrintInvoice}
-                style={{ marginLeft: 8 }}
-            >
-                Reprint Invoice
-            </Button>
+          )}
+          <Button
+            icon={<TagOutlined />}
+            size="large"
+            onClick={handlePrintLabel}
+            style={{ marginLeft: 8 }}
+          >
+            Reprint Labels
+          </Button>
+          <Button
+            icon={<FileTextOutlined />}
+            size="large"
+            onClick={handlePrintInvoice}
+            style={{ marginLeft: 8 }}
+          >
+            Reprint Invoice
+          </Button>
         </div>
       </Modal>
 
@@ -1534,17 +1534,17 @@ function OrderPage() {
           exchange_rate={exchangeRate}
         />
         <div ref={refLabel}>
-          <PrintLabel 
-            cart_list={orderDetail} 
-            objSummary={currentOrder} 
-            branchInfo={branchInfo} 
+          <PrintLabel
+            cart_list={orderDetail}
+            objSummary={currentOrder}
+            branchInfo={branchInfo}
           />
         </div>
         <div ref={refInvoice}>
-          <PrintInvoice 
-            cart_list={orderDetail} 
-            objSummary={currentOrder} 
-            branchInfo={branchInfo} 
+          <PrintInvoice
+            cart_list={orderDetail}
+            objSummary={currentOrder}
+            branchInfo={branchInfo}
             layoutType={"coffee"}
             exchangeRate={exchangeRate}
           />
@@ -1559,30 +1559,30 @@ function OrderPage() {
         footer={null}
         width={400}
       >
-        <Form 
-          layout="vertical" 
+        <Form
+          layout="vertical"
           onFinish={onSaveExpense}
           initialValues={{ payment_method: 'Cash' }}
         >
-          <Form.Item 
-            name="expense_type_id" 
-            label={t.category} 
+          <Form.Item
+            name="expense_type_id"
+            label={t.category}
             rules={[{ required: true }]}
           >
-            <Select 
-              options={config?.expense_type || []} 
+            <Select
+              options={config?.expense_type || []}
               placeholder="Select category"
             />
           </Form.Item>
-          <Form.Item 
-            name="amount" 
-            label={t.expense_amount} 
+          <Form.Item
+            name="amount"
+            label={t.expense_amount}
             rules={[{ required: true }]}
           >
             <InputNumber style={{ width: '100%' }} prefix="$" min={0.01} step={0.1} />
           </Form.Item>
-          <Form.Item 
-            name="payment_method" 
+          <Form.Item
+            name="payment_method"
             label={t.payment_type}
             rules={[{ required: true }]}
           >
@@ -1591,22 +1591,22 @@ function OrderPage() {
               <Select.Option value="Bank">Bank / QR / ធនាគារ (មិនប៉ះសាច់ប្រាក់)</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item 
-            name="description" 
+          <Form.Item
+            name="description"
             label={t.description}
             rules={[{ required: true }]}
           >
             <Input.TextArea placeholder={t.describe_expense} rows={3} />
           </Form.Item>
           <div style={{ textAlign: 'right', marginTop: 16 }}>
-             <Space>
-                <Button onClick={() => setState(prev => ({ ...prev, visibleExpenseModal: false }))}>
-                  {t.cancel}
-                </Button>
-                <Button type="primary" htmlType="submit">
-                  {t.save}
-                </Button>
-             </Space>
+            <Space>
+              <Button onClick={() => setState(prev => ({ ...prev, visibleExpenseModal: false }))}>
+                {t.cancel}
+              </Button>
+              <Button type="primary" htmlType="submit">
+                {t.save}
+              </Button>
+            </Space>
           </div>
         </Form>
       </Modal>
@@ -1631,10 +1631,10 @@ function OrderPage() {
         maskClosable={false}
         footer={[
           <Button key="cancel" onClick={() => setVisibleCloseShiftModal(false)} size="large">Cancel</Button>,
-          <Button 
-            key="submit" 
-            type="primary" 
-            size="large" 
+          <Button
+            key="submit"
+            type="primary"
+            size="large"
             loading={isClosingShift}
             onClick={onConfirmCloseShift}
             style={{ minWidth: 200, background: '#1e4a2d', borderColor: '#1e4a2d' }}
@@ -1644,14 +1644,14 @@ function OrderPage() {
         ]}
       >
         <Divider style={{ margin: '16px 0' }} />
-        
+
         {closeShiftSummary && (
           <Row gutter={24}>
             {/* Left Column: Automated Summary */}
             <Col span={10}>
               <div style={{ background: '#f8fafc', padding: 20, borderRadius: 16, height: '100%' }}>
                 <Title level={5} style={{ marginBottom: 20, fontSize: 13, textTransform: 'uppercase', color: '#64748b' }}>System Expected</Title>
-                
+
                 <Space direction="vertical" style={{ width: '100%' }} size="large">
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Text type="secondary">Total Sales:</Text>
@@ -1673,9 +1673,9 @@ function OrderPage() {
                     <Text type="secondary">Expenses:</Text>
                     <Text strong style={{ color: '#ef4444' }}>-${closeShiftSummary.total_expense_usd.toFixed(2)}</Text>
                   </div>
-                  
+
                   <Divider style={{ margin: '12px 0' }} />
-                  
+
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text strong>EXPECTED CASH:</Text>
                     <Title level={4} style={{ margin: 0, color: '#1e4a2d' }}>${closeShiftSummary.expected_cash_usd.toFixed(2)}</Title>
@@ -1687,80 +1687,80 @@ function OrderPage() {
             {/* Right Column: Actual Count & Differences */}
             <Col span={14}>
               <div style={{ padding: '0 10px' }}>
-              <Title level={5} style={{ marginBottom: 20, fontSize: 13, textTransform: 'uppercase', color: '#64748b' }}>Actual Physical Count</Title>
-              
-              <Form layout="vertical">
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Form.Item label="Cash Count (USD)">
-                      <InputNumber 
-                        size="large"
-                        style={{ width: '100%' }} 
-                        prefix="$" 
-                        value={actualCash}
-                        onChange={setActualCash}
-                        placeholder="0.00"
-                        autoFocus
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item label="Cash Count (KHR)">
-                      <InputNumber 
-                        size="large"
-                        style={{ width: '100%' }} 
-                        prefix="៛" 
-                        value={actualCashKHR}
-                        onChange={setActualCashKHR}
-                        placeholder="0"
-                        step={100}
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
+                <Title level={5} style={{ marginBottom: 20, fontSize: 13, textTransform: 'uppercase', color: '#64748b' }}>Actual Physical Count</Title>
 
-                <Form.Item label="Shift Notes / Remark">
-                  <Input.TextArea 
-                    placeholder="Provide context for any discrepancies..." 
-                    rows={2} 
-                    value={remark}
-                    onChange={e => setRemark(e.target.value)}
-                  />
-                </Form.Item>
-              </Form>
+                <Form layout="vertical">
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item label="Cash Count (USD)">
+                        <InputNumber
+                          size="large"
+                          style={{ width: '100%' }}
+                          prefix="$"
+                          value={actualCash}
+                          onChange={setActualCash}
+                          placeholder="0.00"
+                          autoFocus
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item label="Cash Count (KHR)">
+                        <InputNumber
+                          size="large"
+                          style={{ width: '100%' }}
+                          prefix="៛"
+                          value={actualCashKHR}
+                          onChange={setActualCashKHR}
+                          placeholder="0"
+                          step={100}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
 
-              {/* Difference Visualization */}
-              {(() => {
-                const actualTotal = Number(actualCash) + (Number(actualCashKHR) / exchangeRate);
-                const diff = actualTotal - closeShiftSummary.expected_cash_usd;
-                const isExact = Math.abs(diff) < 0.01;
-                const isShort = diff < -0.01;
+                  <Form.Item label="Shift Notes / Remark">
+                    <Input.TextArea
+                      placeholder="Provide context for any discrepancies..."
+                      rows={2}
+                      value={remark}
+                      onChange={e => setRemark(e.target.value)}
+                    />
+                  </Form.Item>
+                </Form>
 
-                return (
-                  <div style={{ 
-                    padding: 24, 
-                    borderRadius: 16, 
-                    background: isExact ? '#f0fdf4' : (isShort ? '#fef2f2' : '#eff6ff'),
-                    border: '1px solid',
-                    borderColor: isExact ? '#bbf7d0' : (isShort ? '#fecaca' : '#bfdbfe'),
-                    textAlign: 'center',
-                    marginTop: 20
-                  }}>
-                    <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Reconciliation Difference</Text>
-                    <div style={{ 
-                      fontSize: 32, 
-                      fontWeight: 900, 
-                      color: isExact ? '#166534' : (isShort ? '#991b1b' : '#1e40af'),
-                      margin: '8px 0'
+                {/* Difference Visualization */}
+                {(() => {
+                  const actualTotal = Number(actualCash) + (Number(actualCashKHR) / exchangeRate);
+                  const diff = actualTotal - closeShiftSummary.expected_cash_usd;
+                  const isExact = Math.abs(diff) < 0.01;
+                  const isShort = diff < -0.01;
+
+                  return (
+                    <div style={{
+                      padding: 24,
+                      borderRadius: 16,
+                      background: isExact ? '#f0fdf4' : (isShort ? '#fef2f2' : '#eff6ff'),
+                      border: '1px solid',
+                      borderColor: isExact ? '#bbf7d0' : (isShort ? '#fecaca' : '#bfdbfe'),
+                      textAlign: 'center',
+                      marginTop: 20
                     }}>
-                      {diff >= 0 ? '+' : ''}{diff.toFixed(2)}$
+                      <Text type="secondary" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Reconciliation Difference</Text>
+                      <div style={{
+                        fontSize: 32,
+                        fontWeight: 900,
+                        color: isExact ? '#166534' : (isShort ? '#991b1b' : '#1e40af'),
+                        margin: '8px 0'
+                      }}>
+                        {diff >= 0 ? '+' : ''}{diff.toFixed(2)}$
+                      </div>
+                      {isShort && <Tag color="error">Shortage Detected - Review Required</Tag>}
+                      {isExact && <Tag color="success">Perfect Balance</Tag>}
+                      {!isExact && !isShort && <Tag color="processing">Overland / Excess Cash</Tag>}
                     </div>
-                    {isShort && <Tag color="error">Shortage Detected - Review Required</Tag>}
-                    {isExact && <Tag color="success">Perfect Balance</Tag>}
-                    {!isExact && !isShort && <Tag color="processing">Overland / Excess Cash</Tag>}
-                  </div>
-                );
-              })()}
+                  );
+                })()}
               </div>
             </Col>
           </Row>
@@ -1770,8 +1770,8 @@ function OrderPage() {
       {/* 🚀 Open Shift Modal */}
       <Modal
         title={
-          <div style={{textAlign: 'center', padding: '10px 0'}}>
-            <Title level={4} style={{margin: 0}}><ShopOutlined /> {t.open_new_shift}</Title>
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <Title level={4} style={{ margin: 0 }}><ShopOutlined /> {t.open_new_shift}</Title>
             <Text type="secondary">{t.enter_opening_cash}</Text>
           </div>
         }
@@ -1782,46 +1782,46 @@ function OrderPage() {
         maskClosable={false}
       >
         <Form layout="vertical" onFinish={onOpenShift}>
-          <div style={{background: '#f8fafc', padding: 20, borderRadius: 12, marginBottom: 20}}>
-            <Form.Item 
-              name="opening_cash_usd" 
-              label={t.opening_cash_usd} 
+          <div style={{ background: '#f8fafc', padding: 20, borderRadius: 12, marginBottom: 20 }}>
+            <Form.Item
+              name="opening_cash_usd"
+              label={t.opening_cash_usd}
               initialValue={0}
             >
-              <InputNumber 
-                style={{ width: '100%' }} 
+              <InputNumber
+                style={{ width: '100%' }}
                 size="large"
-                prefix="$" 
-                min={0} 
+                prefix="$"
+                min={0}
               />
             </Form.Item>
-            <Form.Item 
-              name="opening_cash_khr" 
-              label={t.opening_cash_khr} 
+            <Form.Item
+              name="opening_cash_khr"
+              label={t.opening_cash_khr}
               initialValue={0}
             >
-              <InputNumber 
-                style={{ width: '100%' }} 
+              <InputNumber
+                style={{ width: '100%' }}
                 size="large"
-                prefix="៛" 
-                min={0} 
+                prefix="៛"
+                min={0}
                 step={100}
               />
             </Form.Item>
           </div>
 
-          <div style={{textAlign: 'center', marginBottom: 10}}>
-            <Text type="secondary" style={{fontSize: 12}}>
-              {t.authorized_by}: <Text strong>{profile?.name}</Text> {profile?.role_name && <Tag size="small" style={{marginLeft: 4, transform: 'scale(0.8)'}}>{profile.role_name}</Tag>}
+          <div style={{ textAlign: 'center', marginBottom: 10 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {t.authorized_by}: <Text strong>{profile?.name}</Text> {profile?.role_name && <Tag size="small" style={{ marginLeft: 4, transform: 'scale(0.8)' }}>{profile.role_name}</Tag>}
             </Text>
           </div>
 
-          <Button 
-            type="primary" 
-            htmlType="submit" 
-            block 
-            size="large" 
-            style={{height: 50, borderRadius: 8, background: '#1e4a2d'}}
+          <Button
+            type="primary"
+            htmlType="submit"
+            block
+            size="large"
+            style={{ height: 50, borderRadius: 8, background: '#1e4a2d' }}
           >
             {t.open_shift_now}
           </Button>

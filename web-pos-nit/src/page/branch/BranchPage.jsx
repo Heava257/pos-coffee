@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space, Select,
-    Typography, Divider, Badge, Switch, Tooltip, Image, Upload
+    Typography, Divider, Badge, Switch, Tooltip, Image, Upload, Statistic, Avatar
 } from "antd";
 import {
     PlusOutlined,
@@ -14,7 +14,11 @@ import {
     PhoneOutlined,
     CheckCircleOutlined,
     WarningOutlined,
-    QrcodeOutlined
+    QrcodeOutlined,
+    GlobalOutlined,
+    HomeOutlined,
+    ArrowRightOutlined,
+    SafetyCertificateOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import { Config } from "../../util/config";
@@ -26,17 +30,16 @@ import { CAMBODIA_GEO } from "../../util/cambodia_geo";
 const { Title, Text } = Typography;
 
 const COLORS = {
-    darkGreen: "#1e4a2d",
-    midGreen: "#2d6a42",
-    textSecondary: "#6b7c6b",
+  bg: "#f4f1eb",
+  darkGreen: "#1e4a2d",
+  midGreen: "#2d6a42",
+  accentGreen: "#3a7d52",
+  white: "#ffffff",
+  textPrimary: "#1a2e1a",
+  textSecondary: "#6b7c6b",
+  softBorder: "#e8e3d8",
+  gold: "#d4af37",
 };
-
-const CAMBODIA_PROVINCES = [
-    "Phnom Penh", "Banteay Meanchey", "Battambang", "Kampong Cham", "Kampong Chhnang",
-    "Kampong Speu", "Kampong Thom", "Kampot", "Kandal", "Kep", "Koh Kong", "Kratie",
-    "Mondulkiri", "Oddar Meanchey", "Pailin", "Preah Sihanouk", "Preah Vihear", "Prey Veng",
-    "Pursat", "Ratanakiri", "Siem Reap", "Stung Treng", "Svay Rieng", "Takeo", "Tboung Khmum"
-];
 
 const BranchPage = () => {
     const { lang } = useLanguage();
@@ -159,12 +162,17 @@ const BranchPage = () => {
             title: t.branch_name,
             dataIndex: "name",
             key: "name",
+            width: 250,
             render: (text, record) => (
                 <Space direction="vertical" size={0}>
-                    <Text strong style={{ fontSize: '16px', color: '#1e4a2d' }}>
-                        {text} {record.is_main === '1' && <Tag color="gold" style={{ marginLeft: 8 }}>{t.main_headquarter}</Tag>}
-                    </Text>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>ID: BR-{record.id.toString().padStart(3, '0')}</Text>
+                    <Space>
+                        <Avatar icon={<ShopOutlined />} style={{ backgroundColor: record.is_main === '1' ? COLORS.gold : COLORS.darkGreen }} />
+                        <Text strong style={{ fontSize: '15px', color: COLORS.darkGreen }}>
+                            {text}
+                        </Text>
+                        {record.is_main === '1' && <Tag color="gold" bordered={false} style={{ borderRadius: '4px', fontSize: '10px', fontWeight: 800 }}>HQ</Tag>}
+                    </Space>
+                    <Text type="secondary" style={{ fontSize: '11px', marginLeft: 40 }}>ID: BR-{record.id.toString().padStart(3, '0')}</Text>
                 </Space>
             )
         },
@@ -174,8 +182,8 @@ const BranchPage = () => {
             key: "province",
             render: (text, record) => (
                 <Space direction="vertical" size={0}>
-                    <Tag color="blue" style={{ borderRadius: '6px' }}>{text || t.not_specified}</Tag>
-                    <Text type="secondary" style={{ fontSize: '11px' }}>{record.district}</Text>
+                    <Tag color="processing" bordered={false} style={{ borderRadius: '6px', fontWeight: 600 }}>{text || t.not_specified}</Tag>
+                    <Text type="secondary" style={{ fontSize: '11px', color: COLORS.textSecondary }}>{record.district}</Text>
                 </Space>
             )
         },
@@ -184,9 +192,9 @@ const BranchPage = () => {
             dataIndex: "location",
             key: "location",
             render: (text) => (
-                <Space>
-                    <EnvironmentOutlined style={{ color: '#f7c06a' }} />
-                    <Text>{text || t.not_specified}</Text>
+                <Space align="start">
+                    <EnvironmentOutlined style={{ color: COLORS.gold, marginTop: 4 }} />
+                    <Text style={{ fontSize: '13px', color: COLORS.textPrimary }}>{text || t.not_specified}</Text>
                 </Space>
             )
         },
@@ -196,8 +204,10 @@ const BranchPage = () => {
             key: "phone",
             render: (text) => (
                 <Space>
-                    <PhoneOutlined style={{ color: '#1e4a2d' }} />
-                    <Text>{text || t.no_phone}</Text>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <PhoneOutlined style={{ color: COLORS.darkGreen, fontSize: 12 }} />
+                    </div>
+                    <Text style={{ fontSize: '13px', color: COLORS.darkGreen }}>{text || t.no_phone}</Text>
                 </Space>
             )
         },
@@ -205,7 +215,7 @@ const BranchPage = () => {
             title: t.status,
             key: "status",
             render: () => (
-                <Badge status="processing" text={t.active} color="#52c41a" />
+                <Badge status="processing" text={<Text strong style={{ fontSize: '12px', color: COLORS.accentGreen }}>{t.active}</Text>} color={COLORS.accentGreen} />
             )
         },
         {
@@ -213,13 +223,15 @@ const BranchPage = () => {
             dataIndex: "khqr_image",
             key: "khqr_image",
             render: (text) => text ? (
-                <Image
-                    src={Config.getFullImagePath(text)}
-                    width={40}
-                    height={40}
-                    style={{ borderRadius: 8, objectFit: 'cover' }}
-                />
-            ) : <Tag color="default">{t.no_image}</Tag>
+                <Tooltip title="View Merchant QR">
+                    <Image
+                        src={Config.getFullImagePath(text)}
+                        width={32}
+                        height={32}
+                        style={{ borderRadius: 6, objectFit: 'cover', cursor: 'pointer', border: `1px solid ${COLORS.softBorder}` }}
+                    />
+                </Tooltip>
+            ) : <Tag bordered={false} color="default" style={{ fontSize: '10px' }}>{t.no_image}</Tag>
         },
         {
             title: t.action,
@@ -232,7 +244,8 @@ const BranchPage = () => {
                             type="text"
                             icon={<EditOutlined />}
                             onClick={() => onClickEdit(record)}
-                            style={{ color: '#1e4a2d' }}
+                            className="action-btn"
+                            style={{ color: COLORS.darkGreen }}
                         />
                     </Tooltip>
                     {record.is_main !== '1' && (
@@ -242,6 +255,7 @@ const BranchPage = () => {
                                 danger
                                 icon={<DeleteOutlined />}
                                 onClick={() => onClickDelete(record.id)}
+                                className="action-btn-danger"
                             />
                         </Tooltip>
                     )}
@@ -255,55 +269,101 @@ const BranchPage = () => {
         (item.location && item.location.toLowerCase().includes(searchText.toLowerCase()))
     );
 
-    return (
-        <div style={{ padding: '24px', background: '#f4f1eb', minHeight: '100vh' }}>
-            <div style={{
-                marginBottom: '24px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: '#fff',
-                padding: '24px',
-                borderRadius: '16px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
-            }}>
-                <div>
-                    <Title level={2} style={{ margin: 0, color: '#1e4a2d', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <ShopOutlined /> {t.branch_management}
-                    </Title>
-                    <Text type="secondary">{t.manage_locations}</Text>
-                </div>
+    const stats = {
+        total: list.length,
+        main: list.filter(i => i.is_main === '1').length,
+        others: list.filter(i => i.is_main !== '1').length
+    };
 
-                <Space size="middle">
-                    <Input
-                        prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                        placeholder={t.search}
-                        onChange={(e) => setSearchText(e.target.value)}
-                        style={{ width: 250, borderRadius: '8px' }}
-                    />
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => {
-                            setEditId(null);
-                            form.resetFields();
-                            setVisible(true);
-                        }}
-                        style={{
-                            background: '#1e4a2d',
-                            borderColor: '#1e4a2d',
-                            height: '40px',
-                            borderRadius: '8px',
-                            fontWeight: 600
-                        }}
-                    >
-                        {t.add_new_branch}
-                    </Button>
-                </Space>
-            </div>
+    return (
+        <div style={{ padding: '32px', background: COLORS.bg, minHeight: '100vh' }}>
+            {/* Header Section */}
+            <Row gutter={[24, 24]} align="middle" style={{ marginBottom: 32 }}>
+                <Col span={14}>
+                    <Title level={2} style={{ margin: 0, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <GlobalOutlined /> {t.branch_management}
+                    </Title>
+                    <Text style={{ color: COLORS.textSecondary }}>Coordinate operations across your business locations.</Text>
+                </Col>
+                <Col span={10} style={{ textAlign: 'right' }}>
+                    <Space size="middle">
+                        <Input
+                            prefix={<SearchOutlined style={{ color: COLORS.textSecondary }} />}
+                            placeholder={t.search}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            style={{ width: 280, borderRadius: 12, padding: '8px 16px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+                        />
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => {
+                                setEditId(null);
+                                form.resetFields();
+                                setVisible(true);
+                            }}
+                            style={{
+                                background: COLORS.darkGreen,
+                                borderColor: COLORS.darkGreen,
+                                height: 42,
+                                padding: '0 24px',
+                                borderRadius: 12,
+                                fontWeight: 600,
+                                boxShadow: '0 4px 10px rgba(30, 74, 45, 0.2)'
+                            }}
+                        >
+                            {t.add_new_branch}
+                        </Button>
+                    </Space>
+                </Col>
+            </Row>
+
+            {/* Statistics Section */}
+            <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
+                <Col xs={24} sm={8}>
+                    <Card bordered={false} className="executive-stat-card">
+                        <Statistic 
+                            title={<Text strong style={{ color: COLORS.textSecondary, fontSize: 12, textTransform: 'uppercase' }}>Total Active Branches</Text>}
+                            value={stats.total} 
+                            prefix={<HomeOutlined style={{ color: COLORS.darkGreen }} />} 
+                            valueStyle={{ color: COLORS.darkGreen, fontWeight: 900 }}
+                        />
+                        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Badge status="processing" color={COLORS.accentGreen} />
+                            <Text type="secondary" style={{ fontSize: 11 }}>Synchronized across cloud</Text>
+                        </div>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={8}>
+                    <Card bordered={false} className="executive-stat-card">
+                        <Statistic 
+                            title={<Text strong style={{ color: COLORS.textSecondary, fontSize: 12, textTransform: 'uppercase' }}>Headquarters</Text>}
+                            value={stats.main} 
+                            prefix={<SafetyCertificateOutlined style={{ color: COLORS.gold }} />} 
+                            valueStyle={{ color: COLORS.gold, fontWeight: 900 }}
+                        />
+                        <div style={{ marginTop: 12 }}>
+                            <Tag color="gold" bordered={false} style={{ fontSize: 10 }}>PRIMARY LOGISTICS HUB</Tag>
+                        </div>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={8}>
+                    <Card bordered={false} className="executive-stat-card">
+                        <Statistic 
+                            title={<Text strong style={{ color: COLORS.textSecondary, fontSize: 12, textTransform: 'uppercase' }}>Regional Outlets</Text>}
+                            value={stats.others} 
+                            prefix={<ArrowRightOutlined style={{ color: COLORS.midGreen }} />} 
+                            valueStyle={{ color: COLORS.midGreen, fontWeight: 900 }}
+                        />
+                        <div style={{ marginTop: 12 }}>
+                            <Text type="secondary" style={{ fontSize: 11 }}>{stats.others > 0 ? "Operational & Integrated" : "No regional outlets yet"}</Text>
+                        </div>
+                    </Card>
+                </Col>
+            </Row>
 
             <Card
-                style={{ borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: 'none' }}
+                bordered={false}
+                style={{ borderRadius: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', overflow: 'hidden' }}
                 bodyStyle={{ padding: 0 }}
             >
                 <Table
@@ -311,177 +371,263 @@ const BranchPage = () => {
                     dataSource={filteredList}
                     rowKey="id"
                     loading={loading}
-                    pagination={{ pageSize: 8 }}
-                    style={{ padding: '8px' }}
+                    pagination={{ 
+                        pageSize: 8,
+                        showTotal: (total) => <Text type="secondary" style={{ fontSize: 12 }}>Total {total} branches</Text>
+                    }}
+                    className="executive-table"
                 />
             </Card>
 
             <Modal
-                title={<Title level={4} style={{ margin: 0 }}>{editId ? t.update_branch : t.setup_new_branch}</Title>}
+                title={
+                    <div style={{ paddingBottom: 16 }}>
+                        <Title level={4} style={{ margin: 0, color: COLORS.darkGreen }}>
+                            {editId ? t.update_branch : t.setup_new_branch}
+                        </Title>
+                        <Text style={{ color: COLORS.textSecondary, fontSize: 12 }}>Configure location operational settings</Text>
+                    </div>
+                }
                 open={visible}
                 onCancel={() => {
                     setVisible(false);
-                    setEditId(null);
-                    form.resetFields();
+                    setFileList([]);
                 }}
                 onOk={() => form.submit()}
                 okText={editId ? t.update_branch : t.create_branch}
                 okButtonProps={{
-                    style: { background: '#1e4a2d', borderColor: '#1e4a2d' }
+                    style: { background: COLORS.darkGreen, borderColor: COLORS.darkGreen, padding: '0 40px', height: 42, borderRadius: 12, fontWeight: 600 }
                 }}
-                width={500}
+                cancelButtonProps={{
+                    style: { borderRadius: 12, height: 42, border: 'none', background: '#f1f5f9' }
+                }}
+                width={1000}
                 destroyOnClose
+                centered
+                bodyStyle={{ padding: '24px 32px' }}
             >
-                <div style={{ marginBottom: '20px', padding: '12px', background: '#fff9ef', borderRadius: '8px', border: '1px solid #f7c06a' }}>
-                    <Space>
-                        <WarningOutlined style={{ color: '#f7c06a' }} />
-                        <Text style={{ fontSize: '13px' }}>
-                            {profile?.plan_type === 'free'
-                                ? t.free_plan_limit
-                                : t.pro_plan_info}
-                        </Text>
-                    </Space>
-                </div>
-
                 <Form form={form} layout="vertical" onFinish={onFinish}>
-                    <Form.Item
-                        name="name"
-                        label={t.branch_name}
-                        rules={[{ required: true, message: t.branch_name + " is required" }]}
-                    >
-                        <Input placeholder="e.g. Riverside Coffee, Terminal 2" size="large" />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="province"
-                        label={t.province_city || "Province/City"}
-                        rules={[{ required: true, message: "Province is required" }]}
-                    >
-                        <Select
-                            showSearch
-                            placeholder="Select Province"
-                            size="large"
-                            options={Object.keys(CAMBODIA_GEO).map(p => ({ label: p, value: p }))}
-                            onChange={() => form.setFieldsValue({ district: undefined })}
-                        />
-                    </Form.Item>
-
-                    <Form.Item
-                        noStyle
-                        shouldUpdate={(prev, curr) => prev.province !== curr.province}
-                    >
-                        {({ getFieldValue }) => {
-                            const province = getFieldValue("province");
-                            const districts = province ? CAMBODIA_GEO[province] : [];
-                            return (
-                                <Form.Item
-                                    name="district"
-                                    label={t.district_khan || "District/Khan"}
-                                    rules={[{ required: true, message: "District is required" }]}
-                                >
-                                    <Select
-                                        showSearch
-                                        placeholder="Select District/Khan"
-                                        size="large"
-                                        disabled={!province}
-                                        options={districts.map(d => ({ label: d, value: d }))}
-                                    />
-                                </Form.Item>
-                            );
-                        }}
-                    </Form.Item>
-
-                    <Form.Item
-                        name="location"
-                        label={t.location_address}
-                    >
-                        <Input.TextArea placeholder={t.location_address} rows={3} />
-                    </Form.Item>
-
-                    <Row gutter={16}>
-                        <Col span={12}>
+                    <Row gutter={48}>
+                        {/* Left Column: Branch Operations */}
+                        <Col span={12} style={{ borderRight: `1px solid ${COLORS.softBorder}` }}>
+                            <Divider orientation="left" style={{ marginTop: 0 }}>
+                                <Space><EnvironmentOutlined style={{ color: COLORS.darkGreen }} /><Text strong style={{ color: COLORS.darkGreen, fontSize: 12 }}>CORE LOGISTICS</Text></Space>
+                            </Divider>
+                            
                             <Form.Item
-                                name="phone"
-                                label={t.contact_phone}
+                                name="name"
+                                label={<Text strong style={{ fontSize: 13 }}>{t.branch_name}</Text>}
+                                rules={[{ required: true, message: t.branch_name + " is required" }]}
+                                style={{ marginBottom: 20 }}
                             >
-                                <Input placeholder="012 345 678" />
+                                <Input placeholder="e.g. Riverside Coffee, Terminal 2" size="large" style={{ borderRadius: 10 }} />
                             </Form.Item>
-                        </Col>
-                        <Col span={12}>
+
+                            <Row gutter={16}>
+                                <Col span={12}>
+                                    <Form.Item
+                                        name="province"
+                                        label={<Text strong style={{ fontSize: 13 }}>{t.province_city}</Text>}
+                                        rules={[{ required: true, message: "Required" }]}
+                                        style={{ marginBottom: 20 }}
+                                    >
+                                        <Select
+                                            showSearch
+                                            placeholder="Province"
+                                            size="large"
+                                            style={{ borderRadius: 10 }}
+                                            options={Object.keys(CAMBODIA_GEO).map(p => ({ label: p, value: p }))}
+                                            onChange={() => form.setFieldsValue({ district: undefined })}
+                                        />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item
+                                        noStyle
+                                        shouldUpdate={(prev, curr) => prev.province !== curr.province}
+                                    >
+                                        {({ getFieldValue }) => {
+                                            const province = getFieldValue("province");
+                                            const districts = province ? CAMBODIA_GEO[province] : [];
+                                            return (
+                                                <Form.Item
+                                                    name="district"
+                                                    label={<Text strong style={{ fontSize: 13 }}>{t.district_khan}</Text>}
+                                                    rules={[{ required: true, message: "Required" }]}
+                                                    style={{ marginBottom: 20 }}
+                                                >
+                                                    <Select
+                                                        showSearch
+                                                        placeholder="District"
+                                                        size="large"
+                                                        style={{ borderRadius: 10 }}
+                                                        disabled={!province}
+                                                        options={districts.map(d => ({ label: d, value: d }))}
+                                                    />
+                                                </Form.Item>
+                                            );
+                                        }}
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+
                             <Form.Item
-                                name="is_main"
-                                label={t.set_as_main_hq}
-                                valuePropName="checked"
+                                name="location"
+                                label={<Text strong style={{ fontSize: 13 }}>{t.location_address}</Text>}
+                                style={{ marginBottom: 20 }}
                             >
-                                <Switch
-                                    disabled={editId && list.find(b => b.id === editId)?.is_main === '1'}
-                                />
+                                <Input.TextArea placeholder="Full physical address..." rows={3} style={{ borderRadius: 10 }} />
                             </Form.Item>
-                        </Col>
-                    </Row>
 
-                    <Divider orientation="left" style={{ fontSize: '13px', color: COLORS.textSecondary }}>{t.khqr_setting}</Divider>
+                            <Row gutter={16}>
+                                <Col span={12}>
+                                    <Form.Item
+                                        name="phone"
+                                        label={<Text strong style={{ fontSize: 13 }}>{t.contact_phone}</Text>}
+                                        style={{ marginBottom: 20 }}
+                                    >
+                                        <Input placeholder="012 345 678" size="large" style={{ borderRadius: 10 }} />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item
+                                        name="is_main"
+                                        label={<Text strong style={{ fontSize: 13 }}>{t.set_as_main_hq}</Text>}
+                                        valuePropName="checked"
+                                        style={{ marginBottom: 20 }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', height: 40, background: '#f8fafc', padding: '0 12px', borderRadius: 10, border: `1px solid ${COLORS.softBorder}` }}>
+                                            <Switch
+                                                size="small"
+                                                disabled={editId && list.find(b => b.id === editId)?.is_main === '1'}
+                                            />
+                                            <Text type="secondary" style={{ fontSize: 12, marginLeft: 10 }}>Primary Headquarters</Text>
+                                        </div>
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+                        </Col>
 
-                    <Row gutter={16}>
-                        <Col span={24}>
-                            <div style={{ marginBottom: 16, padding: 12, background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8 }}>
-                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                    <QrcodeOutlined /> {t.khqr_setup_tip || "Setup your bank API for dynamic QR with automatic amount."}
-                                </Text>
-                            </div>
-                        </Col>
+                        {/* Right Column: Payment & KHQR */}
                         <Col span={12}>
-                            <Form.Item name="payment_provider" label="Bank Provider">
-                                <Select
-                                    placeholder="Select bank"
-                                    options={[
-                                        { label: "Bakong/KHQR", value: "KHQR" },
-                                        { label: "ABA PayWay", value: "ABA" },
-                                        { label: "Wing Bank", value: "WING" },
-                                    ]}
-                                />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item name="payment_api_url" label="API Endpoint URL">
-                                <Input placeholder="https://api.bank.com/v1" />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item name="payment_merchant_id" label={t.merchant_id || "Merchant ID"}>
-                                <Input placeholder="e.g. M12345" />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item name="payment_receiver_name" label={t.receiver_name || "Receiver Name"}>
-                                <Input placeholder="e.g. COFFEE SHOP" />
-                            </Form.Item>
-                        </Col>
-                        <Col span={24}>
-                            <Form.Item name="payment_api_key" label={t.api_key_label || "API Token Key"}>
-                                <Input.Password placeholder="Your Secret API Key" />
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                            <Divider orientation="left" style={{ marginTop: 0 }}>
+                                <Space><QrcodeOutlined style={{ color: COLORS.midGreen }} /><Text strong style={{ color: COLORS.darkGreen, fontSize: 12 }}>PAYMENT INFRASTRUCTURE</Text></Space>
+                            </Divider>
 
-                    <Form.Item label={t.upload_khqr + " (Fallback)"}>
-                        <Upload
-                            listType="picture-card"
-                            fileList={fileList}
-                            onChange={({ fileList }) => setFileList(fileList)}
-                            beforeUpload={() => false}
-                            maxCount={1}
-                        >
-                            {fileList.length < 1 && (
+                            <div style={{ marginBottom: 20, padding: 16, background: '#f0fdf4', border: `1px solid ${COLORS.accentGreen}33`, borderRadius: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+                                <Avatar size={40} icon={<SafetyCertificateOutlined />} style={{ backgroundColor: COLORS.accentGreen }} />
                                 <div>
-                                    <PlusOutlined />
-                                    <div style={{ marginTop: 8 }}>{t.upload}</div>
+                                    <Text strong style={{ color: COLORS.darkGreen, fontSize: 13 }}>Secure KHQR Integration</Text><br/>
+                                    <Text type="secondary" style={{ fontSize: 11 }}>Setup API gateway for automated settlements.</Text>
                                 </div>
-                            )}
-                        </Upload>
-                    </Form.Item>
+                            </div>
+
+                            <Row gutter={16}>
+                                <Col span={12}>
+                                    <Form.Item name="payment_provider" label={<Text strong style={{ fontSize: 13 }}>Bank Provider</Text>} style={{ marginBottom: 20 }}>
+                                        <Select
+                                            placeholder="Select bank"
+                                            size="large"
+                                            style={{ borderRadius: 10 }}
+                                            options={[
+                                                { label: "Bakong / KHQR", value: "KHQR" },
+                                                { label: "ABA PayWay", value: "ABA" },
+                                                { label: "Wing Bank", value: "WING" },
+                                            ]}
+                                        />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="payment_api_url" label={<Text strong style={{ fontSize: 13 }}>Gateway URL</Text>} style={{ marginBottom: 20 }}>
+                                        <Input placeholder="https://api.bank.com" size="large" style={{ borderRadius: 10 }} />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="payment_merchant_id" label={<Text strong style={{ fontSize: 13 }}>Merchant ID</Text>} style={{ marginBottom: 20 }}>
+                                        <Input placeholder="M-123456" size="large" style={{ borderRadius: 10 }} />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="payment_receiver_name" label={<Text strong style={{ fontSize: 13 }}>Account Name</Text>} style={{ marginBottom: 20 }}>
+                                        <Input placeholder="Store / Account Name" size="large" style={{ borderRadius: 10 }} />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={24}>
+                                    <Form.Item name="payment_api_key" label={<Text strong style={{ fontSize: 13 }}>Security API Token</Text>} style={{ marginBottom: 20 }}>
+                                        <Input.Password placeholder="Enter secret token" size="large" style={{ borderRadius: 10 }} />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+
+                            <Form.Item label={<Text strong style={{ fontSize: 13 }}>{t.upload_khqr} (Manual fallback)</Text>} style={{ marginBottom: 0 }}>
+                                <Upload
+                                    listType="picture-card"
+                                    fileList={fileList}
+                                    onChange={({ fileList }) => setFileList(fileList)}
+                                    beforeUpload={() => false}
+                                    maxCount={1}
+                                    className="executive-upload"
+                                >
+                                    {fileList.length < 1 && (
+                                        <div style={{ color: COLORS.textSecondary }}>
+                                            <PlusOutlined />
+                                            <div style={{ marginTop: 4, fontSize: 12 }}>{t.upload}</div>
+                                        </div>
+                                    )}
+                                </Upload>
+                            </Form.Item>
+                        </Col>
+                    </Row>
                 </Form>
             </Modal>
+
+            <style jsx global>{`
+                .executive-stat-card {
+                    border-radius: 20px;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+                    transition: all 0.3s ease;
+                }
+                .executive-stat-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 8px 25px rgba(30, 74, 45, 0.05);
+                }
+                .executive-table .ant-table-thead > tr > th {
+                    background: #f8fafc;
+                    color: ${COLORS.textSecondary};
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    font-weight: 700;
+                    border-bottom: 2px solid ${COLORS.bg};
+                    padding: 16px;
+                }
+                .executive-table .ant-table-tbody > tr > td {
+                    padding: 16px;
+                }
+                .action-btn {
+                    border-radius: 8px;
+                    transition: all 0.2s;
+                }
+                .action-btn:hover {
+                    background: #f0fdf4 !important;
+                }
+                .action-btn-danger {
+                    border-radius: 8px;
+                    transition: all 0.2s;
+                }
+                .action-btn-danger:hover {
+                    background: #fef2f2 !important;
+                }
+                .executive-upload .ant-upload-select {
+                    border-radius: 12px !important;
+                    border: 2px dashed ${COLORS.softBorder} !important;
+                    background: #f8fafc !important;
+                }
+                .ant-modal-content {
+                    border-radius: 24px !important;
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.1) !important;
+                }
+            `}</style>
         </div>
     );
 };

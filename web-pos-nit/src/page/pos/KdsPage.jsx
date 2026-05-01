@@ -1,12 +1,17 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Row, Col, Card, Tag, Button, Space, Typography, Badge, Spin, Empty, message, Segmented } from "antd";
+import { Row, Col, Card, Tag, Button, Space, Typography, Badge, Spin, Empty, message, Segmented, Statistic, Avatar } from "antd";
 import { 
     ClockCircleOutlined, 
     CheckCircleOutlined, 
     FireOutlined, 
     BellOutlined,
     HistoryOutlined,
-    ThunderboltOutlined
+    ThunderboltOutlined,
+    LoadingOutlined,
+    SmileOutlined,
+    ExclamationCircleOutlined,
+    CoffeeOutlined,
+    TrophyOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import dayjs from "dayjs";
@@ -22,6 +27,31 @@ const KdsPage = () => {
     const [loading, setLoading] = useState(false);
     const [viewMode, setViewMode] = useState("active"); // active | history
     const refreshInterval = useRef(null);
+    const prevOrderCount = useRef(0);
+
+    // Audio context for notification sound
+    const playNotificationSound = () => {
+        try {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, context.currentTime); // A5 note
+            oscillator.frequency.exponentialRampToValueAtTime(1320, context.currentTime + 0.1); // E6 note
+            
+            gain.gain.setValueAtTime(0.1, context.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.3);
+            
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            
+            oscillator.start();
+            oscillator.stop(context.currentTime + 0.3);
+        } catch (e) {
+            console.log("Audio play blocked", e);
+        }
+    };
 
     useEffect(() => {
         fetchOrders();
@@ -33,9 +63,16 @@ const KdsPage = () => {
     }, [viewMode]);
 
     const fetchOrders = async () => {
-        // setLoading(true); // Don't show full spin on auto-refresh to avoid flickering
         const res = await request(`order-kds?is_history=${viewMode === 'history' ? 1 : 0}`, "get");
-        if (res && res.list) setOrders(res.list);
+        if (res && res.list) {
+            setOrders(res.list);
+            
+            // Play sound if new orders arrived (only in active mode)
+            if (viewMode === 'active' && res.list.length > prevOrderCount.current) {
+                playNotificationSound();
+            }
+            prevOrderCount.current = res.list.length;
+        }
         setLoading(false);
     };
 
@@ -46,147 +83,375 @@ const KdsPage = () => {
             kitchen_status: status 
         });
         if (res && res.success) {
-            message.success(`Order #${id} is now ${status}`);
+            message.success({
+                content: `Order #${id} updated to ${status}`,
+                icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+                style: { marginTop: '10vh' }
+            });
             fetchOrders();
         }
     };
 
-    const getWaitTimeColor = (createdAt) => {
+    const getWaitTimeInfo = (createdAt) => {
         const minutes = dayjs().diff(dayjs(createdAt), 'minute');
-        if (minutes > 15) return '#e74c3c'; // Red - Urgent
-        if (minutes > 8) return '#f39c12';  // Orange - Warning
-        return '#2ecc71';                   // Green - Good
+        const seconds = dayjs().diff(dayjs(createdAt), 'second') % 60;
+        
+        if (minutes > 15) return { color: '#ef4444', label: 'CRITICAL', class: 'pulse-red' };
+        if (minutes > 8) return { color: '#f59e0b', label: 'WARNING', class: 'pulse-yellow' };
+        return { color: '#10b981', label: 'NORMAL', class: '' };
     };
+
+    const calculateMetrics = () => {
+        const activeCount = orders.length;
+        const avgWait = orders.reduce((acc, curr) => acc + dayjs().diff(dayjs(curr.order_date), 'minute'), 0) / (activeCount || 1);
+        const urgentCount = orders.filter(o => dayjs().diff(dayjs(o.order_date), 'minute') > 10).length;
+
+        return { activeCount, avgWait: avgWait.toFixed(1), urgentCount };
+    };
+
+    const metrics = calculateMetrics();
 
     const renderOrderCard = (order) => {
         const items = order.items_summary ? order.items_summary.split('\n') : [];
+        const waitInfo = getWaitTimeInfo(order.order_date);
+        const minutes = dayjs().diff(dayjs(order.order_date), 'minute');
         
         return (
             <Card 
                 key={`${order.order_id}-${order.kitchen_batch_id}`}
-                className="kds-card"
-                style={{ 
-                    borderRadius: 16, 
-                    borderLeft: `6px solid ${getWaitTimeColor(order.order_date)}`,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                    marginBottom: 16
-                }}
+                className={`premium-kds-card ${waitInfo.class}`}
                 title={
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>
-                            <Text strong style={{ fontSize: 18 }}>#{order.order_id}</Text>
-                            <Tag color="blue" style={{ marginLeft: 8 }}>
+                    <div className="card-header-flex">
+                        <div className="order-identity">
+                            <div className="order-number">#{order.order_id}</div>
+                            <Tag color={order.order_type === 'dine_in' ? 'geekblue' : 'orange'} className="type-tag">
                                 {order.order_type === 'dine_in' 
                                     ? `${t.table_label || 'Table'} ${order.table_no}` 
                                     : (t.takeaway_label || 'Take Away')}
                             </Tag>
-                            {order.kitchen_batch_id && <Tag color="purple" style={{ fontSize: 10 }}>{t.batch_label || 'Batch'}: {order.kitchen_batch_id.slice(-4)}</Tag>}
-                        </span>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                            <ClockCircleOutlined /> {dayjs(order.order_date).format("HH:mm")}
-                        </Text>
+                        </div>
+                        <div className="timer-box" style={{ background: waitInfo.color }}>
+                            <ClockCircleOutlined /> {minutes}m
+                        </div>
                     </div>
                 }
             >
-                <div style={{ minHeight: 120, marginBottom: 15 }}>
-                    {items.map((item, idx) => (
-                        <div key={idx} style={{ padding: '4px 0', borderBottom: '1px dashed #f0f0f0' }}>
-                            <Text strong style={{ fontSize: 16 }}>{item}</Text>
-                        </div>
-                    ))}
+                <div className="order-items-list">
+                    {items.map((item, idx) => {
+                        const [qty, ...nameParts] = item.split(' x ');
+                        return (
+                            <div key={idx} className="order-item-row">
+                                <span className="item-qty">{qty}x</span>
+                                <span className="item-name">{nameParts.join(' x ')}</span>
+                            </div>
+                        );
+                    })}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Tag color={
-                        order.kitchen_status === 'preparing' ? 'orange' : 
-                        order.kitchen_status === 'ready' ? 'green' : 'default'
-                    }>
-                        {order.kitchen_status === 'preparing' ? (t.preparing_status || 'PREPARING') :
-                         order.kitchen_status === 'ready' ? (t.ready_status || 'READY') :
-                         order.kitchen_status === 'served' ? (t.done_status || 'DONE') : (t.pending_status || 'PENDING')}
-                    </Tag>
+                <div className="card-footer-actions">
+                    <div className="status-indicator">
+                        <Badge status={
+                            order.kitchen_status === 'preparing' ? 'processing' : 
+                            order.kitchen_status === 'ready' ? 'success' : 'default'
+                        } text={
+                            <Text strong style={{ fontSize: 12, color: '#64748b' }}>
+                                {order.kitchen_status === 'preparing' ? (t.preparing_status || 'PREPARING') :
+                                 order.kitchen_status === 'ready' ? (t.ready_status || 'READY') :
+                                 order.kitchen_status === 'served' ? (t.done_status || 'DONE') : (t.pending_status || 'PENDING')}
+                            </Text>
+                        } />
+                    </div>
                     
-                    <Space>
+                    <div className="action-buttons">
                         {order.kitchen_status !== 'preparing' && order.kitchen_status !== 'ready' && order.kitchen_status !== 'served' && (
                             <Button 
+                                className="op-btn start"
                                 icon={<FireOutlined />} 
                                 onClick={() => updateStatus(order.order_id, order.kitchen_batch_id, 'preparing')}
-                                style={{ background: '#f39c12', color: '#fff', border: 'none', borderRadius: 8 }}
                             >
-                                {t.start_btn}
+                                {t.start_btn || "START"}
                             </Button>
                         )}
                         {order.kitchen_status === 'preparing' && (
                             <Button 
+                                className="op-btn ready"
                                 icon={<BellOutlined />} 
                                 onClick={() => updateStatus(order.order_id, order.kitchen_batch_id, 'ready')}
-                                style={{ background: '#2ecc71', color: '#fff', border: 'none', borderRadius: 8 }}
                             >
-                                {t.ready_btn}
+                                {t.ready_btn || "READY"}
                             </Button>
                         )}
                         {order.kitchen_status === 'ready' && (
                             <Button 
+                                className="op-btn done"
                                 icon={<CheckCircleOutlined />} 
                                 onClick={() => updateStatus(order.order_id, order.kitchen_batch_id, 'served')}
-                                style={{ background: '#1e4a2d', color: '#fff', border: 'none', borderRadius: 8 }}
                             >
-                                {t.done_btn}
+                                {t.done_btn || "SERVE"}
                             </Button>
                         )}
-                    </Space>
+                    </div>
                 </div>
             </Card>
         );
     };
 
     return (
-        <div style={{ padding: 24, background: '#f4f7f6', minHeight: '100vh' }}>
-            <Row gutter={24} align="middle" style={{ marginBottom: 24 }}>
-                <Col span={12}>
-                    <Title level={2} style={{ margin: 0 }}>{t.kds_header || "Kitchen Display System (KDS)"} ☕️</Title>
-                    <Text type="secondary">{t.kds_subtitle}</Text>
-                </Col>
-                <Col span={12} style={{ textAlign: 'right' }}>
-                    <Space size="large">
-                        <Badge count={orders.length} offset={[10, 0]}>
-                            <Segmented 
-                                options={[
-                                    { label: t.active_orders, value: 'active', icon: <ThunderboltOutlined /> },
-                                    { label: t.history, value: 'history', icon: <HistoryOutlined /> }
-                                ]} 
-                                value={viewMode}
-                                onChange={setViewMode}
-                                style={{ borderRadius: 12, padding: 4 }}
-                            />
-                        </Badge>
-                        <Button onClick={fetchOrders} icon={<HistoryOutlined />}>{t.refresh}</Button>
-                    </Space>
-                </Col>
-            </Row>
+        <div className="kds-premium-layout">
+            {/* Executive Header */}
+            <div className="kds-top-bar">
+                <div className="brand-section">
+                    <div className="logo-box">
+                        <FireOutlined className="fire-icon" />
+                    </div>
+                    <div>
+                        <Title level={2} style={{ margin: 0, color: '#1e4a2d' }}>KDS Dashboard</Title>
+                        <Text type="secondary" style={{ fontSize: 12 }}>Executive Kitchen Operations</Text>
+                    </div>
+                </div>
 
-            {loading && orders.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 100 }}><Spin size="large" /></div>
-            ) : orders.length === 0 ? (
-                <Empty description={viewMode === 'active' ? t.no_active_orders : t.no_kds_history} />
-            ) : (
-                <Row gutter={[16, 16]}>
-                    {orders.map(order => (
-                        <Col xs={24} sm={12} md={8} lg={6} key={`${order.order_id}-${order.kitchen_batch_id}`}>
-                            {renderOrderCard(order)}
-                        </Col>
-                    ))}
-                </Row>
-            )}
+                <div className="metrics-group">
+                    <div className="metric-glass-card">
+                        <div className="metric-icon active"><ThunderboltOutlined /></div>
+                        <div className="metric-content">
+                            <div className="m-val">{metrics.activeCount}</div>
+                            <div className="m-lbl">Active Orders</div>
+                        </div>
+                    </div>
+                    <div className="metric-glass-card">
+                        <div className="metric-icon wait"><ClockCircleOutlined /></div>
+                        <div className="metric-content">
+                            <div className="m-val">{metrics.avgWait}m</div>
+                            <div className="m-lbl">Avg. Wait Time</div>
+                        </div>
+                    </div>
+                    <div className="metric-glass-card urgent">
+                        <div className="metric-icon critical"><ExclamationCircleOutlined /></div>
+                        <div className="metric-content">
+                            <div className="m-val">{metrics.urgentCount}</div>
+                            <div className="m-lbl">Urgent (>10m)</div>
+                        </div>
+                    </div>
+                </div>
 
-            <style jsx global>{`
-                .kds-card .ant-card-head {
-                    border-bottom: 1px solid #f0f0f0;
-                    padding: 0 16px;
-                    min-height: 50px;
+                <div className="view-switcher">
+                    <Segmented 
+                        options={[
+                            { label: 'ACTIVE', value: 'active', icon: <ThunderboltOutlined /> },
+                            { label: 'HISTORY', value: 'history', icon: <HistoryOutlined /> }
+                        ]} 
+                        value={viewMode}
+                        onChange={setViewMode}
+                        className="premium-segmented"
+                    />
+                </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="kds-content-grid">
+                {loading && orders.length === 0 ? (
+                    <div className="loading-state">
+                        <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#1e4a2d' }} spin />} />
+                        <Text style={{ marginTop: 16, color: '#1e4a2d', fontWeight: 600 }}>Refreshing Kitchen Data...</Text>
+                    </div>
+                ) : orders.length === 0 ? (
+                    <div className="empty-state">
+                        <Empty 
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            description={
+                                <div className="empty-msg">
+                                    <SmileOutlined style={{ fontSize: 32, color: '#1e4a2d', marginBottom: 12 }} />
+                                    <div className="big-txt">{viewMode === 'active' ? "Kitchen is Clear!" : "No History Records"}</div>
+                                    <div className="sub-txt">{viewMode === 'active' ? "Relax, enjoy a coffee while waiting for new orders." : "Check back later for historical data."}</div>
+                                </div>
+                            } 
+                        />
+                    </div>
+                ) : (
+                    <Row gutter={[20, 20]}>
+                        {orders.map(order => (
+                            <Col xs={24} sm={12} md={12} lg={8} xl={6} key={`${order.order_id}-${order.kitchen_batch_id}`}>
+                                {renderOrderCard(order)}
+                            </Col>
+                        ))}
+                    </Row>
+                )}
+            </div>
+
+            <style>{`
+                .kds-premium-layout {
+                    padding: 20px;
+                    background: #f0f4f2;
+                    min-height: 100vh;
+                    font-family: 'Inter', -apple-system, sans-serif;
                 }
-                .kds-card .ant-card-body {
-                    padding: 16px;
+                
+                /* Header Section */
+                .kds-top-bar {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: rgba(255, 255, 255, 0.8);
+                    backdrop-filter: blur(10px);
+                    padding: 20px 30px;
+                    border-radius: 24px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+                    margin-bottom: 30px;
+                    border: 1px solid rgba(255,255,255,0.3);
+                }
+                
+                .brand-section { display: flex; gap: 15px; align-items: center; }
+                .logo-box {
+                    width: 48px;
+                    height: 48px;
+                    background: #1e4a2d;
+                    border-radius: 14px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 24px;
+                    box-shadow: 0 8px 16px rgba(30, 74, 45, 0.2);
+                }
+                
+                /* Metrics */
+                .metrics-group { display: flex; gap: 20px; }
+                .metric-glass-card {
+                    background: #fff;
+                    padding: 12px 20px;
+                    border-radius: 18px;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    min-width: 160px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+                    border: 1px solid #f1f5f9;
+                }
+                .metric-glass-card.urgent { border: 1px solid #fee2e2; }
+                .metric-icon {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 18px;
+                }
+                .metric-icon.active { background: #e0f2fe; color: #0ea5e9; }
+                .metric-icon.wait { background: #f0fdf4; color: #22c55e; }
+                .metric-icon.critical { background: #fef2f2; color: #ef4444; }
+                
+                .m-val { font-size: 20px; font-weight: 900; color: #1e293b; line-height: 1; }
+                .m-lbl { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-top: 4px; }
+                
+                /* Order Cards */
+                .premium-kds-card {
+                    background: rgba(255, 255, 255, 0.9) !important;
+                    backdrop-filter: blur(5px);
+                    border-radius: 24px !important;
+                    border: 1px solid rgba(255,255,255,0.4) !important;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.04) !important;
+                    overflow: hidden;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .premium-kds-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.08) !important;
+                }
+                
+                .premium-kds-card .ant-card-head { border: none !important; padding: 20px 20px 10px !important; }
+                .card-header-flex { display: flex; justify-content: space-between; align-items: flex-start; }
+                .order-number { font-size: 22px; font-weight: 900; color: #1e293b; letter-spacing: -0.5px; line-height: 1.2; }
+                .type-tag { border-radius: 6px !important; border: none !important; font-weight: 700 !important; font-size: 11px !important; }
+                
+                .timer-box {
+                    padding: 4px 12px;
+                    border-radius: 10px;
+                    color: white;
+                    font-weight: 900;
+                    font-size: 13px;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                }
+                
+                .order-items-list {
+                    min-height: 140px;
+                    padding: 10px 0;
+                }
+                .order-item-row {
+                    display: flex;
+                    gap: 12px;
+                    padding: 8px 0;
+                    border-bottom: 1px solid #f8fafc;
+                }
+                .item-qty { font-weight: 900; color: #1e4a2d; font-size: 16px; min-width: 30px; }
+                .item-name { font-weight: 600; color: #334155; font-size: 16px; }
+                
+                /* Actions */
+                .card-footer-actions {
+                    margin-top: 15px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding-top: 15px;
+                    border-top: 1px solid #f1f5f9;
+                }
+                
+                .op-btn {
+                    height: 44px !important;
+                    border-radius: 14px !important;
+                    font-weight: 900 !important;
+                    border: none !important;
+                    transition: all 0.2s !important;
+                    padding: 0 20px !important;
+                    font-size: 14px !important;
+                    letter-spacing: 0.5px !important;
+                }
+                .op-btn.start { background: linear-gradient(135deg, #f59e0b, #d97706) !important; color: white !important; box-shadow: 0 6px 12px rgba(245, 158, 11, 0.2) !important; }
+                .op-btn.ready { background: linear-gradient(135deg, #10b981, #059669) !important; color: white !important; box-shadow: 0 6px 12px rgba(16, 185, 129, 0.2) !important; }
+                .op-btn.done { background: linear-gradient(135deg, #1e4a2d, #112919) !important; color: white !important; box-shadow: 0 6px 12px rgba(30, 74, 45, 0.2) !important; }
+                .op-btn:hover { transform: scale(1.05); filter: brightness(1.1); }
+                .op-btn:active { transform: scale(0.95); }
+                
+                /* Animations */
+                @keyframes pulse-card-red {
+                    0% { border: 1px solid rgba(239, 68, 68, 0.3); }
+                    50% { border: 1px solid rgba(239, 68, 68, 0.8); box-shadow: 0 0 20px rgba(239, 68, 68, 0.2) !important; }
+                    100% { border: 1px solid rgba(239, 68, 68, 0.3); }
+                }
+                .pulse-red { animation: pulse-card-red 2s infinite; }
+                
+                @keyframes pulse-card-yellow {
+                    0% { border: 1px solid rgba(245, 158, 11, 0.2); }
+                    50% { border: 1px solid rgba(245, 158, 11, 0.6); }
+                    100% { border: 1px solid rgba(245, 158, 11, 0.2); }
+                }
+                .pulse-yellow { animation: pulse-card-yellow 3s infinite; }
+                
+                /* States */
+                .loading-state, .empty-state {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 100px 0;
+                    text-align: center;
+                }
+                .empty-msg .big-txt { font-size: 24px; font-weight: 900; color: #1e293b; }
+                .empty-msg .sub-txt { font-size: 14px; color: #64748b; margin-top: 5px; }
+                
+                .premium-segmented {
+                    background: rgba(226, 232, 240, 0.5) !important;
+                    border-radius: 14px !important;
+                    padding: 4px !important;
+                }
+                .premium-segmented .ant-segmented-item-selected {
+                    background: #fff !important;
+                    border-radius: 10px !important;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
+                    color: #1e4a2d !important;
                 }
             `}</style>
         </div>

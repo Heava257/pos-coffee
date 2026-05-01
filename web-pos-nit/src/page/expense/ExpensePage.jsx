@@ -21,15 +21,18 @@ import {
 import { request } from "../../util/helper";
 import moment from "moment";
 
+import { useLanguage, translations } from "../../store/language.store";
+
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const COLORS = {
-    primary: "#006241",    // Starbucks Green
-    secondary: "#1e3932",  // Deep Green
+    primary: "#1e4a2d",    // Executive Green
+    secondary: "#d4af37",  // Executive Gold
+    dark: "#0b2615",
     cogs: "#cf1322",       // Red for COGS
-    opex: "#0958d9",       // Blue for OpEx
+    opex: "#1677ff",       // Blue for OpEx
     admin: "#722ed1",      // Purple for Admin
     lightBg: "#f4f1eb",
 };
@@ -37,6 +40,7 @@ const COLORS = {
 const ExpensePage = () => {
     const { lang } = useLanguage();
     const t = translations[lang];
+    const [list, setList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [visible, setVisible] = useState(false);
     const [types, setTypes] = useState([]);

@@ -74,7 +74,7 @@ function HomePage() {
   const checkMorningBriefing = async () => {
     const today = dayjs().format("YYYY-MM-DD");
     const lastShown = localStorage.getItem("last_briefing_shown");
-    
+
     if (lastShown !== today) {
       try {
         const res = await request("dashboard/morning-briefing", "get");
@@ -104,20 +104,20 @@ function HomePage() {
       const res = await request('dashboard', "get", params);
       if (res && res.success) {
         setTodaySummary({
-            income: Number(res.today_summary?.income || 0),
-            expense: Number(res.today_summary?.expense || 0)
+          income: Number(res.today_summary?.income || 0),
+          expense: Number(res.today_summary?.expense || 0)
         });
         setStockSummary(res.stock_summary ? {
-            ...res.stock_summary,
-            total_stock_value: Number(res.stock_summary.total_stock_value || 0),
-            total_items: Number(res.stock_summary.total_items || 0),
-            low_stock_count: Number(res.stock_summary.low_stock_count || 0)
+          ...res.stock_summary,
+          total_stock_value: Number(res.stock_summary.total_stock_value || 0),
+          total_items: Number(res.stock_summary.total_items || 0),
+          low_stock_count: Number(res.stock_summary.low_stock_count || 0)
         } : { total_items: 0, low_stock_count: 0, total_stock_value: 0, low_stock_list: [], expiry_alerts: [] });
         setRangeSummary({
-            total_sale: Number(res.range_summary?.total_sale || 0),
-            total_expense: Number(res.range_summary?.total_expense || 0),
-            net_profit: Number(res.range_summary?.net_profit || 0),
-            order_count: Number(res.range_summary?.order_count || 0)
+          total_sale: Number(res.range_summary?.total_sale || 0),
+          total_expense: Number(res.range_summary?.total_expense || 0),
+          net_profit: Number(res.range_summary?.net_profit || 0),
+          order_count: Number(res.range_summary?.order_count || 0)
         });
 
         if (res.recentOrders) {
@@ -372,16 +372,16 @@ function HomePage() {
         width={500}
         styles={{ content: { borderRadius: 30, padding: 0, overflow: 'hidden', border: 'none' } }}
       >
-        <div style={{ 
-          padding: '40px 30px', 
-          background: `linear-gradient(135deg, #1e4a2d 0%, #112919 100%)`, 
+        <div style={{
+          padding: '40px 30px',
+          background: `linear-gradient(135deg, #1e4a2d 0%, #112919 100%)`,
           color: '#fff',
           position: 'relative',
           overflow: 'hidden'
         }}>
           {/* Decorative elements */}
           <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(192,160,96,0.1)' }} />
-          
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 10 }}>
             <div style={{ background: 'rgba(192,160,96,0.2)', padding: 10, borderRadius: 12 }}>
               <TrendingUp size={24} color="#c0a060" />
@@ -456,15 +456,15 @@ function HomePage() {
             </Col>
           </Row>
 
-          <Button 
-            type="primary" 
-            block 
-            size="large" 
+          <Button
+            type="primary"
+            block
+            size="large"
             onClick={() => setBriefingVisible(false)}
-            style={{ 
-              height: 55, 
-              borderRadius: 18, 
-              background: COLORS.darkGreen, 
+            style={{
+              height: 55,
+              borderRadius: 18,
+              background: COLORS.darkGreen,
               marginTop: 30,
               fontSize: 16,
               fontWeight: 800,

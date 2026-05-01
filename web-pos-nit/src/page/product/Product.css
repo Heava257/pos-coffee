@@ -1,59 +1,89 @@
-.form-section {
-  background-color: #f9f9f9;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 16px;
+/* ─── Executive Design Language Core ───────────────────────────────────────── */
+
+:root {
+  --primary-executive: #1e4a2d;
+  --secondary-executive: #2d6a42;
+  --accent-executive: #3a7d52;
+  --bg-executive: #f4f1eb;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --soft-shadow: 0 8px 32px rgba(0,0,0,0.06);
 }
 
 .form-section-premium {
   background-color: #ffffff;
-  padding: 24px;
-  border-radius: 20px;
-  border: 1px solid #f0f0f0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+  padding: 32px;
+  border-radius: 24px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
   margin-bottom: 24px;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .form-section-premium:hover {
-  border-color: #e6f0e9;
-  box-shadow: 0 8px 24px rgba(30, 74, 45, 0.05);
+  transform: translateY(-4px);
+  border-color: var(--secondary-executive);
+  box-shadow: 0 12px 30px rgba(30, 74, 45, 0.08);
 }
 
-.ant-form-item-label > label {
-  font-weight: 700 !important;
-  color: #2d6a42 !important;
-  font-size: 13px !important;
+/* ─── Executive Table Styles ─────────────────────────────────────────────── */
+
+.executive-table .ant-table {
+  background: transparent !important;
+}
+
+.executive-table .ant-table-thead > tr > th {
+  background: #fdfcf9 !important;
+  border-bottom: 2.5px solid #f4f1eb !important;
+  padding: 24px !important;
+  color: var(--primary-executive) !important;
+  font-weight: 800 !important;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 12px !important;
+  letter-spacing: 0.8px;
 }
 
-.ant-input-lg, .ant-select-lg, .ant-input-number-lg {
+.executive-table .ant-table-tbody > tr > td {
+  padding: 24px !important;
+  border-bottom: 1px solid #f4f1eb !important;
+  transition: all 0.2s ease;
+}
+
+.executive-table .ant-table-row:hover > td {
+  background: #faf9f6 !important;
+}
+
+/* ─── Executive Inputs & Controls ────────────────────────────────────────── */
+
+.executive-select .ant-select-selector {
   border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  height: 45px !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
-.add-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #1890ff;
-  cursor: pointer;
-  margin-top: 8px;
+.premium-upload-control .ant-upload-select-picture-card {
+  border-radius: 24px !important;
+  border: 2px dashed #cbd5e1 !important;
+  background: #fff !important;
+  width: 130px !important;
+  height: 130px !important;
+  transition: all 0.3s ease;
 }
 
-h3 {
-  margin-bottom: 8px;
-  font-size: 16px;
-  font-weight: 600;
+.premium-upload-control .ant-upload-select-picture-card:hover {
+  border-color: var(--secondary-executive) !important;
+  background: #f6fbf8 !important;
 }
 
-/* Custom Selectable Cards for Moods */
+/* ─── Custom Selectable Cards for Moods/Configurations ───────────────────── */
+
 .custom-mood-checkbox {
   width: 100%;
 }
 
 .custom-mood-checkbox .ant-checkbox {
-  display: none; /* Hide standard square */
+  display: none;
 }
 
 .custom-mood-checkbox > span:last-child {
@@ -61,48 +91,38 @@ h3 {
   width: 100%;
 }
 
-.custom-mood-checkbox .ant-checkbox-wrapper {
-  width: 100%;
+.custom-mood-checkbox div {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1.5px solid #eee !important;
 }
 
-.custom-mood-checkbox-checked > div {
-  border-color: #2d6a42 !important;
-  background-color: #e6f0e9 !important;
-  box-shadow: 0 4px 12px rgba(45, 106, 66, 0.1);
-}
-
-.custom-mood-checkbox-checked > div span {
-  color: #1e4a2d !important;
-}
-
-/* Ant Design override for Checked state in our custom layout */
-.ant-checkbox-wrapper-checked .custom-mood-checkbox > div,
-.ant-checkbox-group-item-checked .custom-mood-checkbox div {
-  border-color: #2d6a42 !important;
-  background-color: #e6f0e9 !important;
-  box-shadow: 0 4px 12px rgba(45, 106, 66, 0.1);
+.ant-checkbox-wrapper-checked .custom-mood-checkbox div {
+  border-color: var(--secondary-executive) !important;
+  background-color: #f0fdf4 !important;
+  box-shadow: 0 8px 20px rgba(45, 106, 66, 0.12);
+  transform: scale(1.02);
 }
 
 .ant-checkbox-wrapper:hover .custom-mood-checkbox div {
-  border-color: #2d6a42;
+  border-color: var(--secondary-executive) !important;
+  background: #fff;
 }
 
-/* Enhance price inputs visibility */
-.ant-input-number-focused {
-  border-color: #2d6a42 !important;
-  box-shadow: 0 0 0 2px rgba(45, 106, 66, 0.1) !important;
+/* ─── Typography & Utilities ──────────────────────────────────────────────── */
+
+.executive-title {
+  color: var(--primary-executive);
+  font-weight: 900;
+  letter-spacing: -0.5px;
 }
 
-.ant-input-number-lg input {
-  height: 48px !important;
-  font-size: 16px !important;
+.executive-card-stat {
+  border-radius: 20px;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+  transition: transform 0.3s ease;
 }
 
-.premium-table .ant-table-thead > tr > th {
-  background: #f6fbf8 !important;
-  color: #1e4a2d !important;
-  font-weight: 800 !important;
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.5px;
+.executive-card-stat:hover {
+  transform: translateY(-5px);
 }

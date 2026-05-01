@@ -10,6 +10,7 @@ import {
   Modal,
   Form,
   Tag,
+  Tooltip,
   Typography,
   Spin,
   Divider,
@@ -37,6 +38,7 @@ import PrintShiftReport from "../../component/pos/PrintShiftReport";
 import PrintLabel from "../../component/pos/PrintLabel";
 import QRPaymentModal from "../../QRPaymentModal/QRPaymentModal";
 import { PriceDisplay, useExchangeRate } from "../../component/pos/ExchangeRateContext";
+import { useNavigate } from "react-router-dom";
 import {
   SearchOutlined,
   BellOutlined,
@@ -56,10 +58,31 @@ import {
   UnorderedListOutlined,
   TableOutlined,
   PushpinOutlined,
-  TagOutlined,
-  SyncOutlined,
+  ThunderboltOutlined,
+  PlusSquareOutlined,
+  PercentageOutlined,
+  DatabaseOutlined,
+  CheckCircleOutlined,
+  HistoryOutlined,
+  ShopOutlined,
   SoundOutlined,
+  TagOutlined,
+  CodeOutlined,
+  SyncOutlined,
   PlusCircleFilled,
+  AudioOutlined,
+  PauseCircleOutlined,
+  SaveOutlined,
+  FolderOpenOutlined,
+  PlusCircleOutlined,
+  LogoutOutlined,
+  HeartOutlined,
+  StarOutlined,
+  FireOutlined,
+  CoffeeOutlined,
+  ExperimentOutlined,
+  RocketOutlined,
+  CrownOutlined
 } from "@ant-design/icons";
 import { FiSettings } from "react-icons/fi";
 import { useUIStore } from "../../store/uiStore";
@@ -67,14 +90,6 @@ import ImgUser from "../../assets/profile.png";
 import useSound from "use-sound";
 import { useLanguage, translations } from "../../store/language.store";
 import { useHeldOrdersStore } from "../../store/heldOrdersStore";
-import {
-  PauseCircleOutlined,
-  HistoryOutlined,
-  SaveOutlined,
-  FolderOpenOutlined,
-  PlusCircleOutlined,
-  LogoutOutlined,
-} from "@ant-design/icons";
 
 
 // Public notification sound URL (stable mirror)
@@ -550,7 +565,6 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
 
             return (
               <tr
-                key={p.id}
                 onClick={() => !isOOS && onAdd(p)}
                 style={{ borderBottom: `1px solid ${COLORS.softBorder}`, cursor: isOOS ? 'default' : 'pointer', transition: 'all 0.2s', opacity: isOOS ? 0.6 : 1 }}
                 onMouseEnter={e => !isOOS && (e.currentTarget.style.background = '#fcfbf7')}
@@ -644,16 +658,16 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
 });
 
 // ─── Table Selector Modal (New) ──────────────────────────────
-const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, heldOrders, onResume, guestCount, setGuestCount }) => {
+const TableSelectorModal = ({ open, onCancel, onSelect, branchId, COLORS, t, heldOrders, onResume, guestCount, setGuestCount }) => {
   const { lang } = useLanguage();
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (visible && branchId) {
+    if (open && branchId) {
       fetchTables();
     }
-  }, [visible, branchId]);
+  }, [open, branchId]);
 
   const fetchTables = async () => {
     setLoading(true);
@@ -689,7 +703,7 @@ const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, 
           </div>
         </div>
       }
-      open={visible}
+      open={open}
       onCancel={onCancel}
       footer={null}
       width={720}
@@ -752,7 +766,9 @@ const TableSelectorModal = ({ visible, onCancel, onSelect, branchId, COLORS, t, 
                   }}
                 >
                   <div style={{ fontSize: 24, marginBottom: 4 }}>{isOccupied ? '🍱' : '🪑'}</div>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: COLORS.textPrimary }}>{table.table_name}</div>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: COLORS.textPrimary }}>
+                    {t.table_label} {table.table_name}
+                  </div>
 
                   {isOccupied ? (
                     <div style={{ marginTop: 4 }}>
@@ -963,7 +979,9 @@ function PosPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isEditingUniqueId, setIsEditingUniqueId] = useState(null);
   const [parentCategories, setParentCategories] = useState([{ id: 'all', name: "All Products", icon: "🌐", color: primaryColor }]);
+  const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
+  const [isListening, setIsListening] = useState(false);
   const [branchInfo, setBranchInfo] = useState(null);
   const [tables, setTables] = useState([]);
 
@@ -1016,13 +1034,16 @@ function PosPage() {
       console.error("Fetch tables error:", error);
     }
   };
-  const [orderType, setOrderType] = useState(Number(profile?.plan_id) <= 4 ? "take_away" : "dine_in");
+  const [orderType, setOrderType] = useState("take_away");
   const [customerName, setCustomerName] = useState("");
   const [tableNo, setTableNo] = useState("");
   const [playBell] = useSound(BELL_SOUND_URL);
   const [isSoundEnabled, setIsSoundEnabled] = useState(false);
   const prevPendingCountRef = useRef(0);
   const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [recommendation, setRecommendation] = useState(null); // AI Recommendation state
+  const [voiceCandidates, setVoiceCandidates] = useState([]); // Multiple matches from voice
+
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [selectedProductForOptions, setSelectedProductForOptions] = useState(null);
   const [tempOptions, setTempOptions] = useState({
@@ -1057,6 +1078,13 @@ function PosPage() {
   const [tableModalVisible, setTableModalVisible] = useState(false);
   const [guestCount, setGuestCount] = useState(1); // Restaurant: number of guests
   const [tempUnassignedItems, setTempUnassignedItems] = useState([]); // Items picked in current session but not yet saved/printed
+
+  // ── Smart Command Palette State ──────────────────────────────────────────
+  const [globalDiscount, setGlobalDiscount] = useState(0);
+  const [isCommandPaletteVisible, setIsCommandPaletteVisible] = useState(false);
+  const [commandValue, setCommandValue] = useState("");
+  const [commandResults, setCommandResults] = useState([]);
+
 
   const { config } = configStore();
   const refInvoice = useRef(null);
@@ -1442,17 +1470,19 @@ function PosPage() {
       save_discount += ((originalUnitPrice - discountedUnitPrice) * qty) + bogoSavings;
     });
 
-    const total = sub_total - save_discount;
+    const totalBeforeGlobal = sub_total - save_discount;
+    const finalGlobalDiscountAmount = totalBeforeGlobal * (globalDiscount / 100);
+    const total = totalBeforeGlobal - finalGlobalDiscountAmount;
 
     setObjSummary((p) => ({
       ...p,
       total_qty,
       sub_total: parseFloat(sub_total.toFixed(2)),
-      save_discount: parseFloat(save_discount.toFixed(2)),
+      save_discount: parseFloat((save_discount + finalGlobalDiscountAmount).toFixed(2)),
       total: parseFloat(total.toFixed(2)),
       tax: 0,
     }));
-  }, [state.cart_list]);
+  }, [state.cart_list, globalDiscount]);
 
   const getCartPayload = useCallback((cartList = state.cart_list) => {
     return cartList.map((item) => {
@@ -1476,12 +1506,85 @@ function PosPage() {
   }, [state.cart_list]);
 
   // ── cart helpers ──
-  const handleAdd = useCallback((product) => {
+  // AI Recommendation Trigger Helper (Inventory Aware)
+  const triggerRecommendation = (p, currentCart = []) => {
+    const category = (p.category_name || "").toLowerCase();
+    const name = (p.name || "").toLowerCase();
+    let suggested = null;
+
+    // Define complementary categories
+    const isDrink = category.includes("coffee") || category.includes("juice") || category.includes("milk") || category.includes("drink");
+    const isFood = category.includes("snack") || category.includes("dessert") || category.includes("rice") || category.includes("cake") || category.includes("food");
+
+    // Strategy: 
+    // - If Drink added, find a Food item in inventory
+    // - If Food added, find a Drink item in inventory
+    let targetCategory = "";
+    if (isDrink) targetCategory = "snack"; // Default target
+    else if (isFood) targetCategory = "coffee"; // Default target
+
+    if (targetCategory) {
+      // Look for a real product in inventory that matches target category
+      // Pick one that is NOT already in cart
+      const cartToCheck = currentCart.length > 0 ? currentCart : state.cart_list;
+
+      const realProduct = state.list.find(item => {
+        const itemCat = (item.category_name || "").toLowerCase();
+        const alreadyInCart = cartToCheck.find(c => c.id === item.id);
+        return itemCat.includes(targetCategory) && !alreadyInCart;
+      });
+
+      if (realProduct) {
+        suggested = {
+          id: realProduct.id,
+          name: realProduct.name,
+          price: realProduct.price,
+          icon: getIconForCategory(realProduct.category_name),
+          originalProduct: realProduct
+        };
+      }
+    }
+
+    console.log("AI (Dynamic) checking for complement. Target Category:", targetCategory, "Found:", suggested?.name);
+
+    if (suggested) {
+      setRecommendation(suggested);
+      // Auto hide after 15 seconds
+      setTimeout(() => setRecommendation(null), 15000);
+    } else {
+      setRecommendation(null);
+    }
+  };
+
+  const handleAdd = useCallback((product, voiceOptions = null) => {
     // 1. Check if product has options (moods, sizes, or addons)
     const moods = safeParse(product.moods);
     const sizes = safeParse(product.sizes);
     const addons = safeParse(product.addons);
     const hasOptions = (Array.isArray(moods) && moods.length > 0) || (Array.isArray(sizes) && sizes.length > 0) || (Array.isArray(addons) && addons.length > 0);
+
+    // If we have voice options, we attempt to add directly bypassing the modal
+    if (voiceOptions) {
+      const uniqueId = `${product.id}-${voiceOptions.size || 'std'}-${voiceOptions.mood || 'std'}-${voiceOptions.sugar || 'std'}`;
+      setState((prev) => {
+        const cart = [...prev.cart_list];
+        const idx = cart.findIndex((c) => c.unique_id === uniqueId);
+        if (idx === -1) {
+          const newItem = {
+            ...product,
+            ...voiceOptions,
+            cart_qty: 1,
+            unique_id: uniqueId,
+            price: voiceOptions.price || product.price
+          };
+          cart.push(newItem);
+        } else {
+          cart[idx] = { ...cart[idx], cart_qty: (cart[idx].cart_qty || 0) + 1 };
+        }
+        return { ...prev, cart_list: cart };
+      });
+      return;
+    }
 
     const isDrink = product.category_name?.toLowerCase().includes("coffee") || product.category_name?.toLowerCase().includes("drink") || product.category_name?.toLowerCase().includes("juice");
 
@@ -1523,6 +1626,7 @@ function PosPage() {
         }
         const newItem = { ...product, cart_qty: 1, unique_id: standardId };
         cart.push(newItem);
+        setTempUnassignedItems(prevTemp => [...prevTemp, { ...newItem }]);
       } else {
         if (product.product_type !== 'recipe' && cart[idx].cart_qty >= Number(product.qty)) {
           notification.warning({ message: `Only ${product.qty} available` });
@@ -1541,7 +1645,8 @@ function PosPage() {
       }
       return { ...prev, cart_list: cart };
     });
-  }, [profile, setTempUnassignedItems, setOptionsModalVisible, setSelectedProductForOptions, setTempOptions]);
+    triggerRecommendation(product, [...state.cart_list, product]);
+  }, [profile, setTempUnassignedItems, setOptionsModalVisible, setSelectedProductForOptions, setTempOptions, state.cart_list]);
 
   const handleEditCartItem = useCallback((item) => {
     // Find the original product from the list to get full metadata (sizes, addons)
@@ -1647,6 +1752,7 @@ function PosPage() {
       return { ...prev, cart_list: cart };
     });
 
+    triggerRecommendation(product, [...state.cart_list, product]);
     setOptionsModalVisible(false);
     setSelectedProductForOptions(null);
     setIsEditingUniqueId(null);
@@ -1695,17 +1801,26 @@ function PosPage() {
     pageStyle: `@page { size: 40mm 30mm !important; margin: 0 !important; } @media print { body { -webkit-print-color-adjust: exact; margin: 0 !important; } }`,
   });
 
-  const handleHoldOrder = (directCart = null, skipPrint = false, extraPayload = {}) => {
+  const handleHoldOrder = async (directCart = null, skipPrint = false, extraPayload = {}) => {
     const cartToSave = directCart || state.cart_list;
     if (cartToSave.length === 0) {
       if (!directCart) message.warning("Cart is empty");
-      return;
+      return null;
+    }
+
+    // 🚀 NEW: Enforce table selection for Dine-In before saving to Held Drafts
+    const effectiveTableNo = extraPayload?.table_no || tableNo;
+
+    if (orderType === 'dine_in' && !effectiveTableNo) {
+      message.warning(t.please_select_table || "Please select a table to continue / សូមជ្រើសរើសតុដើម្បីបន្ត");
+      setTableModalVisible(true); // Open table selector
+      return null;
     }
 
     // Smart logic for restaurant: If tableNo is set, check if an active draft already exists for this table
     let draftIdToUpdate = currentDraftId;
-    if (!draftIdToUpdate && tableNo && orderType === 'dine_in') {
-      const existingTableDraft = heldOrders.find(o => String(o.tableNo) === String(tableNo));
+    if (!draftIdToUpdate && effectiveTableNo && orderType === 'dine_in') {
+      const existingTableDraft = heldOrders.find(o => String(o.tableNo) === String(effectiveTableNo));
       if (existingTableDraft) {
         draftIdToUpdate = existingTableDraft.id;
       }
@@ -1714,20 +1829,29 @@ function PosPage() {
     // Mark items as printed/processed
     const labeledCart = cartToSave.map(item => ({ ...item, printed: true }));
 
-    // 1. Local Save (ONLY if NOT synced to server yet)
-    if (!currentOrderId) {
-      holdOrder({
-        id: draftIdToUpdate,
-        cart_list: labeledCart,
-        customerName,
-        tableNo,
-        guestCount,
-        orderType,
-        objSummary,
-        currentOrderId,
-      });
+    // 1. Local Save or Cleanup
+    if (!currentOrderId || orderType === 'take_away') {
+      if (effectiveTableNo) {
+        // 🚀 REQUIREMENT: If it has a table, it SHOULD NOT be in Held Drafts
+        if (currentDraftId) {
+          removeHeldOrder(currentDraftId);
+          setCurrentDraftId(null);
+        }
+      } else {
+        // Only save to local Held if it's a floating order (no table)
+        holdOrder({
+          id: draftIdToUpdate,
+          cart_list: labeledCart,
+          customerName,
+          tableNo: effectiveTableNo,
+          guestCount,
+          orderType,
+          objSummary,
+          currentOrderId,
+        });
+      }
     } else {
-      // If it's on server, make sure we REMOVE any local draft to avoid duplication in briefcase
+      // If it's already on server, make sure we REMOVE any local draft to avoid duplication
       if (draftIdToUpdate) {
         removeHeldOrder(draftIdToUpdate);
         setCurrentDraftId(null);
@@ -1735,50 +1859,50 @@ function PosPage() {
     }
 
     // 2. Server Sync for KDS (Essential for Restaurant mode)
-    const syncWithServer = async () => {
-      try {
-        const items = getCartPayload(labeledCart);
-        const payload = {
-          ...objSummary,
-          cart_items: items,
-          customer_name: customerName,
-          table_no: tableNo,
-          order_type: orderType,
-          guest_count: guestCount,
-          sub_total: +objSummary.sub_total,
-          total_amount: +objSummary.total,
-          total_qty: +objSummary.total_qty,
-          payment_method: objSummary.payment_method || 'Unpaid',
-          status: 'unpaid', // Drafts are unpaid
-          shift_id: currentShift?.id,
-          order_id: currentOrderId, // If exists, update
-          ...extraPayload
-        };
+    let savedId = currentOrderId;
+    try {
+      const items = getCartPayload(labeledCart);
+      const payload = {
+        ...objSummary,
+        cart_items: items,
+        customer_name: customerName,
+        table_no: tableNo,
+        order_type: orderType,
+        guest_count: guestCount,
+        sub_total: +objSummary.sub_total,
+        total_amount: +objSummary.total,
+        total_qty: +objSummary.total_qty,
+        payment_method: objSummary.payment_method || 'Unpaid',
+        status: 'unpaid', // Drafts are unpaid
+        shift_id: currentShift?.id,
+        order_id: currentOrderId, // If exists, update
+        ...extraPayload
+      };
 
-        const endpoint = currentOrderId ? "order/update" : "order";
-        const method = currentOrderId ? "put" : "post";
+      const endpoint = currentOrderId ? "order/update" : "order";
+      const method = currentOrderId ? "put" : "post";
 
-        const res = await request(endpoint, method, payload);
-        if (res && !res.error) {
-          if (res.order_id) {
-            setCurrentOrderId(res.order_id);
-          }
-
-          // 🔥 CRITICAL: Update the local cart with the server_item_ids returned from backend
-          // This prevents duplicate items on subsequent saves.
-          if (res.details && res.details.length > 0) {
-            handleResumeServerOrder({ id: res.order_id, ...payload }, res.details);
-          }
-
-          // IMPORTANT: Refresh the pending list after sync to clear any auto-cleared web orders
-          getPendingOrders();
+      const res = await request(endpoint, method, payload);
+      if (res && !res.error) {
+        if (res.order_id) {
+          savedId = res.order_id;
+          setCurrentOrderId(res.order_id);
         }
-      } catch (err) {
-        console.error("KDS Server Sync failed:", err);
-        // We don't block the user, as local save still works
+
+        // 🔥 CRITICAL: Update the local cart with the server_item_ids returned from backend
+        // This prevents duplicate items on subsequent saves.
+        if (res.details && res.details.length > 0) {
+          handleResumeServerOrder({ id: res.order_id, ...payload }, res.details);
+        }
+
+        // IMPORTANT: Refresh the pending list after sync to clear any auto-cleared web orders
+        getPendingOrders();
+        setTempUnassignedItems([]); // 🚀 Reset session items after save
       }
-    };
-    syncWithServer();
+    } catch (err) {
+      console.error("KDS Server Sync failed:", err);
+      // We don't block the user, as local save still works
+    }
 
     // 3. Auto-Print Label ONLY when explicitly requested
     const pSettings = getPrinterSettings();
@@ -1786,12 +1910,13 @@ function PosPage() {
       setState(prev => ({
         ...prev,
         printCart: labeledCart,
-        printSummary: { ...objSummary, order_type: orderType, order_no: "DRAFT" }
+        printSummary: { ...objSummary, order_type: orderType, order_no: savedId || "DRAFT" }
       }));
       setTimeout(() => {
         handlePrintLabel();
       }, 500);
     }
+    return savedId;
   };
 
   // RESUME ORDER FROM SERVER (e.g. Web Order already merged or unpaid bill from another terminal)
@@ -1872,6 +1997,7 @@ function PosPage() {
       setOrderType(resumed.orderType || "dine_in");
       setCurrentDraftId(resumed.id);
       setCurrentOrderId(resumed.currentOrderId || null);
+      setTempUnassignedItems([]); // 🚀 Reset session items before resume
       setHeldOrdersVisible(false);
       message.success(`Merged items into Table ${resumed.tableNo || ''}`);
     }
@@ -1935,16 +2061,29 @@ function PosPage() {
   const kitchenItems = state.cart_list.filter(item => !item.isSentToKitchen);
 
   const handleSendToKitchen = async () => {
-    if (!currentOrderId) {
+    // 🚀 NEW: Enforce table selection for Dine-In before sending to kitchen
+    if (orderType === 'dine_in' && !tableNo) {
+      message.warning(t.please_select_table || "Please select a table to continue / សូមជ្រើសរើសតុដើម្បីបន្ត");
+      setTableVisible(true); // Open table selector
+      return;
+    }
+
+    let orderId = currentOrderId;
+    if (!orderId) {
       // Must save to server first to get an ID
       message.loading("Saving order to server first...");
-      await handleHoldOrder(state.cart_list, true); // Silent save
+      orderId = await handleHoldOrder(state.cart_list, true); // Silent save returns the ID
+    }
+
+    if (!orderId) {
+      message.error("Could not save order. Cannot notify kitchen.");
+      return;
     }
 
     // Now send to kitchen via dedicated endpoint
     try {
       const res = await request("order-send-to-kitchen", "put", {
-        order_id: currentOrderId || state.currentOrderId // Ensure we have the ID
+        order_id: orderId
       });
 
       if (res && !res.error) {
@@ -1980,7 +2119,8 @@ function PosPage() {
           display_name: d.product_name + (d.note ? ` [${d.note}]` : ""),
           // Include order.id in unique_id for web orders to prevent merging separate orders together
           unique_id: `web-${order.id}-${d.product_id}-${d.note || ""}`,
-          isSentToKitchen: true, // Web orders are already in KDS
+          // 🚀 FIX: Only mark as sent if the status from server is NOT draft/pending
+          isSentToKitchen: d.kitchen_status !== 'draft' && d.kitchen_status !== 'pending',
           kitchen_status: d.kitchen_status,
           kitchen_batch_id: d.kitchen_batch_id
         }));
@@ -2073,7 +2213,7 @@ function PosPage() {
 
   const triggerAutoPrintWorkflow = useCallback((skipLabel = false) => {
     const pSettings = getPrinterSettings();
-    
+
     // Set print type to trigger the useEffect workflow
     if (pSettings.auto_print) {
       setState(prev => ({
@@ -2209,6 +2349,364 @@ function PosPage() {
   }, [kitchenItems, objSummary, customerName, tableNo, orderType, handleHoldOrder]);
 
   // ── place order ──
+  // ─── Voice Command Logic ──────────────────────────────────────────────────
+  const startVoiceCommand = () => {
+    if (!window.webkitSpeechRecognition && !window.SpeechRecognition) {
+      message.error("Your browser does not support voice recognition.");
+      return;
+    }
+
+    // Plan Protection Logic: Only Pro/Business or SuperAdmin can use
+    const currentPlan = profile?.plan_name?.toLowerCase();
+    const planId = Number(profile?.plan_id || 0);
+
+    // Assuming Plan IDs for Pro/Business are > 4 based on earlier code observations
+    if (planId <= 4 && profile?.role_name !== 'super_admin') {
+      Modal.confirm({
+        title: "💎 Pro Feature Required",
+        content: "Voice Command is a premium feature. Please upgrade your plan to access hands-free ordering.",
+        okText: "Upgrade Now",
+        cancelText: "Later",
+        onOk: () => navigate("/my-plan")
+      });
+      return;
+    }
+
+    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+    const recognition = new SpeechRecognition();
+
+    // Dynamic Language: Switch based on app setting
+    recognition.lang = lang === "en" ? "en-US" : "km-KH";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      notification.info({
+        key: 'voice-status',
+        message: lang === "en" ? 'Listening...' : 'កំពុងស្ដាប់...',
+        description: lang === "en" ? 'Speak product name and quantity (e.g. "Latte 2")' : 'សូមនិយាយឈ្មោះផលិតផល និងចំនួន (ឧទាហរណ៍៖ "ឡាតេ ២")',
+        icon: <AudioOutlined style={{ color: '#52c41a' }} />,
+        duration: 2
+      });
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript.toLowerCase();
+      processVoiceCommand(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      console.error("Voice Error:", event.error);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
+
+  const processVoiceCommand = (text) => {
+    const originalText = text.toLowerCase().trim();
+    const delimiters = [" និង ", " ហើយ ", " and ", " plus ", " + ", ", "];
+
+    const synonyms = {
+      "អាមេរិកកាណូ": "americano", "អាមេរិកាណូ": "americano", "អាមេរិក": "americano", "អាមេ": "americano",
+      "ឡាតេ": "latte", "ឡាតេកាហ្វេ": "latte",
+      "កាពូឈីណូ": "cappuccino", "កាពូ": "cappuccino",
+      "ម៉ូកា": "mocha", "ម៉ូកាក់": "mocha",
+      "សូកូឡា": "chocolate", "សូកូ": "chocolate",
+      "តែ": "tea", "តែបៃតង": "green tea", "តែក្រហម": "red tea",
+      "ទឹកបរិសុទ្ធ": "ទឹកសុទ្ធ", "ទឹក": "ទឹកសុទ្ធ",
+      "កាហ្វេ": "", "ភេសជ្ជៈ": "",
+      "តូច": "s", "ធំ": "m", "មធ្យម": "m", "ធំបំផុត": "l",
+      "មួយ": "1", "ពីរ": "2", "បី": "3", "បួន": "4", "ប្រាំ": "5", "ដប់": "10"
+    };
+
+    // Helper for Fuzzy Matching (Levenshtein Distance)
+    const getSimilarity = (s1, s2) => {
+      let longer = s1.length < s2.length ? s2 : s1;
+      let shorter = s1.length < s2.length ? s1 : s2;
+      if (longer.length === 0) return 1.0;
+      const editDistance = (s1, s2) => {
+        let costs = new Array();
+        for (let i = 0; i <= s1.length; i++) {
+          let lastValue = i;
+          for (let j = 0; j <= s2.length; j++) {
+            if (i === 0) costs[j] = j;
+            else if (j > 0) {
+              let newValue = costs[j - 1];
+              if (s1.charAt(i - 1) !== s2.charAt(j - 1)) newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+              costs[j - 1] = lastValue;
+              lastValue = newValue;
+            }
+          }
+          if (i > 0) costs[s2.length] = lastValue;
+        }
+        return costs[s2.length];
+      };
+      return (longer.length - editDistance(longer, shorter)) / parseFloat(longer.length);
+    };
+
+    let partsToProcess = [originalText];
+    delimiters.forEach(d => {
+      let newParts = [];
+      partsToProcess.forEach(p => {
+        const splitP = p.split(d);
+        newParts = [...newParts, ...splitP];
+      });
+      partsToProcess = newParts.filter(p => p.trim().length > 0);
+    });
+
+    const searchAndAdd = (rawPart) => {
+      const partOriginal = rawPart.trim();
+      let processedPart = partOriginal;
+      Object.keys(synonyms).forEach(key => {
+        if (processedPart.includes(key)) processedPart = processedPart.replace(new RegExp(key, 'g'), synonyms[key]);
+      });
+
+      const executeSearch = (searchTerm) => {
+        let qty = 1, sizeSearch = "", workingName = searchTerm;
+        if (workingName.includes(" s ")) { sizeSearch = "S"; workingName = workingName.replace(" s ", " "); }
+        else if (workingName.endsWith(" s")) { sizeSearch = "S"; workingName = workingName.slice(0, -2); }
+        if (workingName.includes(" m ")) { sizeSearch = "M"; workingName = workingName.replace(" m ", " "); }
+        else if (workingName.endsWith(" m")) { sizeSearch = "M"; workingName = workingName.slice(0, -2); }
+        if (workingName.includes(" l ")) { sizeSearch = "L"; workingName = workingName.replace(" l ", " "); }
+        else if (workingName.endsWith(" l")) { sizeSearch = "L"; workingName = workingName.slice(0, -2); }
+
+        const trailingMatch = workingName.match(/(\d+)$/);
+        if (trailingMatch) { qty = parseInt(trailingMatch[1]); workingName = workingName.replace(/(\d+)$/, "").trim(); }
+        else {
+          const leadingMatch = workingName.match(/^(\d+)/);
+          if (leadingMatch) { qty = parseInt(leadingMatch[1]); workingName = workingName.replace(/^(\d+)/, "").trim(); }
+        }
+
+        const cleanSearch = workingName.trim().toLowerCase();
+        if (!cleanSearch) return null;
+
+        // Smart Scoring System
+        const scored = state.list.map(p => {
+          const pName = (p.name || "").toLowerCase().trim();
+          const pKhName = (p.name_kh || "").toLowerCase().trim();
+          const pBarcode = (p.barcode || "").toLowerCase().trim();
+
+          let score = 0;
+          const isShort = cleanSearch.length < 3;
+
+          // 1. Exact Match (Highest Priority)
+          if ((pName && pName === cleanSearch) || (pKhName && pKhName === cleanSearch) || (pBarcode && pBarcode === cleanSearch)) {
+            score = 100;
+          }
+          // 2. Repetition Match (e.g., "acac" for "ac")
+          else if (pName && cleanSearch === (pName + pName)) {
+            score = 95;
+          }
+          else if (!isShort) {
+            // 3. Prefix Match
+            if ((pName.length > 1 && pName.startsWith(cleanSearch)) || (pKhName.length > 1 && pKhName.startsWith(cleanSearch))) {
+              score = 90;
+            }
+            // 4. Partial Match
+            else if ((pName.length > 2 && pName.includes(cleanSearch)) || (pKhName.length > 2 && pKhName.includes(cleanSearch))) {
+              score = 75;
+            }
+            // 5. Reverse Partial Match (Search term contains product name)
+            // Allow length >= 2 to catch "acac" matching "ac"
+            else if ((pName.length >= 2 && cleanSearch.includes(pName)) || (pKhName.length >= 2 && cleanSearch.includes(pKhName))) {
+              score = 65;
+            }
+            // 6. Fuzzy Match (Fallback)
+            else {
+              const fuzzyScore = Math.max(getSimilarity(pName, cleanSearch), getSimilarity(pKhName, cleanSearch));
+              if (fuzzyScore > 0.8) score = fuzzyScore * 60;
+            }
+          }
+          return { ...p, score };
+        }).filter(p => p.score > 0).sort((a, b) => b.score - a.score);
+
+        return scored.length > 0 ? { matches: scored, qty, sizeSearch, term: cleanSearch } : null;
+      };
+
+      let result = executeSearch(processedPart) || (processedPart !== partOriginal && executeSearch(partOriginal));
+
+      if (result) {
+        const topMatch = result.matches[0];
+        // Auto-select logic: clear winner or high confidence
+        const hasClearWinner = result.matches.length === 1 ||
+          topMatch.score === 100 ||
+          (result.matches[1] && (topMatch.score - result.matches[1].score) > 25);
+
+        if (hasClearWinner) {
+          let voiceOptions = null;
+          if (result.sizeSearch) {
+            const sizes = safeParse(topMatch.sizes);
+            const matchSize = sizes.find(s => (s.label || s).toString().toUpperCase() === result.sizeSearch);
+            if (matchSize) voiceOptions = { size: result.sizeSearch, price: matchSize.price || topMatch.price, note: "Voice" };
+          }
+          for (let i = 0; i < result.qty; i++) handleAdd(topMatch, voiceOptions);
+          message.success(lang === "en" ? `Added ${result.qty} x ${topMatch.name}` : `បានបញ្ចូល ${result.qty} x ${topMatch.name_kh || topMatch.name}`);
+        } else {
+          setVoiceCandidates(result.matches.slice(0, 12));
+        }
+      } else {
+        notification.warning({
+          message: lang === "en" ? "Not Found" : "រកមិនឃើញ",
+          description: `"${partOriginal}"`
+        });
+      }
+    };
+
+    // 5. Execute for each part
+    partsToProcess.forEach(part => searchAndAdd(part));
+  };
+  // ── Smart Command Palette Execution (Spotlight Style) ────────────────────────
+  const COMMANDS = [
+    { key: 'report', label: 'View Today\'s Report', icon: <FileTextOutlined />, action: () => setPendingOrdersVisible(true), shortcut: '/report', category: 'Analytics', pro: true, roles: ['admin', 'super_admin'] },
+    { key: 'suggest', label: 'AI Suggestion', icon: <ThunderboltOutlined style={{ color: '#faad14' }} />, action: () => handleAISuggestion(), shortcut: '/suggest', category: 'AI Insights', pro: true },
+    { key: 'find', label: 'Quick Add Product', icon: <PlusSquareOutlined />, action: (val) => handleQuickAdd(val), shortcut: '/find [name]', category: 'General' },
+    { key: 'discount', label: 'Apply Global Discount', icon: <PercentageOutlined />, action: (val) => handleQuickDiscount(val), shortcut: '/discount [%]', category: 'Admin', pro: true, roles: ['admin', 'super_admin'] },
+    { key: 'stock', label: 'Check Stock Level', icon: <DatabaseOutlined />, action: (val) => handleQuickStock(val), shortcut: '/stock [name]', category: 'General' },
+    { key: 'clear', label: 'Clear Shopping Cart', icon: <DeleteOutlined />, action: () => handleClearCart(true), shortcut: '/clear', category: 'General' },
+    { key: 'hold', label: 'Hold Current Order', icon: <HistoryOutlined />, action: () => handleHoldOrder(), shortcut: '/hold', category: 'General', pro: true },
+    { key: 'print', label: 'Print Last Invoice', icon: <PrinterOutlined />, action: () => handlePrintInvoice(), shortcut: '/print', category: 'General' },
+    { key: 'shift', label: 'Shift Management', icon: <ShopOutlined />, action: () => setOpenShiftModalVisible(true), shortcut: '/shift', category: 'Admin', pro: true, roles: ['admin', 'super_admin'] },
+    { key: 'checkout', label: 'Proceed to Checkout', icon: <CheckCircleOutlined />, action: () => handleClickOut(), shortcut: '/checkout', category: 'General' },
+    { key: 'customer', label: 'Set Customer Name', icon: <UserOutlined />, action: (val) => setCustomerName(val), shortcut: '/customer [name]', category: 'General' },
+    { key: 'table', label: 'Select Table', icon: <TableOutlined />, action: (val) => setTableNo(val), shortcut: '/table [num]', category: 'General', pro: true },
+  ];
+
+  // ── AI Smart Command Handlers ──────────────────────────────────────────
+  const handleQuickAdd = (name) => {
+    if (!name) return message.warning("Please enter product name");
+    const found = state.list.find(p => p.name.toLowerCase().includes(name.toLowerCase()));
+    if (found) {
+      onAdd(found);
+      message.success(`Added ${found.name} to cart`);
+    } else {
+      message.error("Product not found");
+    }
+  };
+
+  const handleQuickDiscount = (val) => {
+    const num = parseFloat(val);
+    if (isNaN(num)) return message.warning("Enter a valid number for discount");
+    setGlobalDiscount(num);
+    message.success(`Applied ${num}% global discount`);
+  };
+
+  const handleQuickStock = (name) => {
+    if (!name) return message.warning("Please enter product name");
+    const found = state.list.find(p => p.name.toLowerCase().includes(name.toLowerCase()));
+    if (found) {
+      Modal.info({
+        title: `Stock Status: ${found.name}`,
+        content: `Available: ${found.qty} units | Price: $${Number(found.unit_price || found.price).toFixed(2)}`,
+      });
+    } else {
+      message.error("Product not found");
+    }
+  };
+
+  const handleAISuggestion = () => {
+    // Mock AI Logic: Suggest high margin / trending items
+    const trending = state.list.filter(p => p.is_promo).slice(0, 2);
+    Modal.success({
+      title: "🤖 AI Sales Assistant",
+      content: (
+        <div>
+          <p>Based on current trends, customers are buying:</p>
+          {trending.map(p => (
+            <div key={p.id} style={{ fontWeight: 'bold', color: COLORS.primary }}>• {p.name}</div>
+          ))}
+          <p style={{ marginTop: 10, fontSize: 12 }}>Tip: Mention the 10% discount to increase conversion!</p>
+        </div>
+      )
+    });
+  };
+
+  const checkAccess = (cmd) => {
+    const planId = Number(profile?.plan_id || 0);
+    const role = profile?.role_name?.toLowerCase();
+
+    if (cmd.pro && planId <= 4 && role !== 'super_admin') {
+      showUpgradeModal(cmd.label);
+      return false;
+    }
+    if (cmd.roles && !cmd.roles.includes(role)) {
+      message.error("Access Denied: You don't have permission for this action.");
+      return false;
+    }
+    return true;
+  };
+
+  const showUpgradeModal = (feature) => {
+    Modal.confirm({
+      title: "💎 Upgrade to Pro",
+      content: `The feature "${feature}" is only available in Pro and Business plans. Upgrade now to unlock all AI features.`,
+      okText: "View Plans",
+      onOk: () => navigate("/my-plan")
+    });
+  };
+
+  const handleCommandPaletteChange = (val) => {
+    setCommandValue(val);
+    if (!val) {
+      setCommandResults(COMMANDS); // Show all commands by default
+      return;
+    }
+    const filtered = COMMANDS.filter(cmd =>
+      cmd.label.toLowerCase().includes(val.toLowerCase()) ||
+      cmd.shortcut.toLowerCase().includes(val.toLowerCase())
+    );
+    setCommandResults(filtered);
+  };
+
+  // Keyboard Shortcuts (Alt+K or Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Open Command Palette with Alt+K or Ctrl+K (Meta+K for Mac)
+      const isK = e.key.toLowerCase() === 'k';
+      const isModifier = e.altKey || e.ctrlKey || e.metaKey;
+
+      if (isModifier && isK) {
+        e.preventDefault();
+        setIsCommandPaletteVisible(true);
+        setCommandResults(COMMANDS);
+      }
+
+      if (e.key === 'Escape') {
+        setIsCommandPaletteVisible(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [COMMANDS]);
+
+  const executeCommandAction = (cmd, fullValue) => {
+    if (!checkAccess(cmd)) return;
+
+    setIsCommandPaletteVisible(false);
+    setCommandValue("");
+
+    const parts = fullValue.split(" ");
+    const hasParam = parts.length > 1;
+    const param = hasParam ? parts.slice(1).join(" ") : null;
+
+    if (cmd.key === 'customer' || cmd.key === 'table' || cmd.key === 'find' || cmd.key === 'discount' || cmd.key === 'stock') {
+      if (hasParam) {
+        cmd.action(param);
+        return;
+      } else if (cmd.key === 'customer' || cmd.key === 'table') {
+        message.warning(`Please provide a value. Example: ${cmd.shortcut}`);
+        return;
+      }
+    }
+
+    cmd.action();
+  };
+
   const handleClickOut = async () => {
     if (!currentShift) {
       message.warning("Please open a shift before placing an order!");
@@ -2669,6 +3167,42 @@ function PosPage() {
                 fontSize: 14,
                 color: COLORS.textPrimary,
                 fontFamily: "inherit",
+              }}
+            />
+
+            <Tooltip title="Command Palette (Alt+K)">
+              <Button
+                shape="circle"
+                icon={<CodeOutlined />}
+                onClick={() => {
+                  setIsCommandPaletteVisible(true);
+                  setCommandResults(COMMANDS);
+                }}
+                style={{
+                  background: '#f5f5f5',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginLeft: 8,
+                  color: COLORS.primary
+                }}
+              />
+            </Tooltip>
+
+            <Button
+              type="primary"
+              shape="circle"
+              icon={isListening ? <SyncOutlined spin /> : <AudioOutlined />}
+              onClick={startVoiceCommand}
+              style={{
+                background: isListening ? '#ff4d4f' : COLORS.darkGreen,
+                border: 'none',
+                boxShadow: isListening ? '0 0 15px rgba(255, 77, 79, 0.5)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: 8
               }}
             />
 
@@ -3141,7 +3675,7 @@ function PosPage() {
               {/* Identification Input */}
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 10, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 700 }}>CUSTOMER NAME / NOTE (ចំណាំ)</div>
-                <Input 
+                <Input
                   placeholder="e.g. Blue Shirt, Guest at Corner..."
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
@@ -3149,7 +3683,7 @@ function PosPage() {
                   prefix={<UserOutlined style={{ color: COLORS.darkGreen }} />}
                 />
               </div>
-              
+
               {/* Order Type Toggle */}
               <div style={{ display: "flex", background: "#f1f3f5", borderRadius: 12, padding: 4, gap: 4, marginBottom: 12 }}>
                 {[
@@ -3158,7 +3692,14 @@ function PosPage() {
                 ].map(({ key, label, icon }) => (
                   <button
                     key={key}
-                    onClick={() => setOrderType(key)}
+                    onClick={() => {
+                      setOrderType(key);
+                      if (key === 'take_away') {
+                        setTableNo("");
+                      } else if (key === 'dine_in' && !tableNo) {
+                        setTableModalVisible(true);
+                      }
+                    }}
                     style={{
                       flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
                       background: orderType === key ? (key === 'take_away' ? '#e65100' : COLORS.darkGreen) : "transparent",
@@ -3214,11 +3755,11 @@ function PosPage() {
           )}
 
           <TableSelectorModal
-            visible={tableModalVisible}
+            open={tableModalVisible}
             onCancel={() => setTableModalVisible(false)}
             onSelect={async (val, serverOrderId) => {
               setTableNo(val);
-              setCurrentDraftId(null);
+              setOrderType("dine_in");
               setTableModalVisible(false);
 
               if (serverOrderId) {
@@ -3376,6 +3917,44 @@ function PosPage() {
                 </div>
               )}
             </div>
+
+            {/* AI Smart Recommendation Widget */}
+            {recommendation && (
+              <div style={{
+                marginBottom: 12,
+                padding: '10px 14px',
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                borderRadius: 14,
+                border: '1px solid #bbf7d0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                animation: 'slideUp 0.3s ease-out',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.04)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 22, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>{recommendation.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: COLORS.darkGreen, textTransform: 'uppercase', letterSpacing: 0.5 }}>AI Suggested</div>
+                    <div style={{ fontWeight: 700, color: COLORS.textPrimary, fontSize: 13 }}>{recommendation.name} (+${recommendation.price.toFixed(2)})</div>
+                  </div>
+                </div>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    if (recommendation.originalProduct) {
+                      handleAdd(recommendation.originalProduct);
+                    }
+                    setRecommendation(null);
+                  }}
+                  style={{ background: COLORS.darkGreen, border: 'none', borderRadius: 8, height: 28, fontSize: 11, fontWeight: 700 }}
+                >
+                  ADD
+                </Button>
+              </div>
+            )}
 
             {/* Action Row */}
             <div style={{ display: 'flex', gap: 8 }}>
@@ -3549,7 +4128,7 @@ function PosPage() {
       </Drawer>
 
       <QRPaymentModal
-        visible={qrModalVisible}
+        open={qrModalVisible}
         onClose={() => {
           setQrModalVisible(false);
           setPaymentData({ paymentLink: "", orderNo: "", total: 0 });
@@ -4242,6 +4821,218 @@ function PosPage() {
             {t.open_shift_now_btn}
           </Button>
         </Form>
+      </Modal>
+      {/* ── Spotlight Command Palette 2.0 ── */}
+      <Modal
+        open={isCommandPaletteVisible}
+        onCancel={() => setIsCommandPaletteVisible(false)}
+        footer={null}
+        closable={false}
+        width={700}
+        styles={{ body: { padding: 0, overflow: 'hidden', borderRadius: 16 } }}
+        style={{ top: 100 }}
+      >
+        <div style={{
+          background: COLORS.white,
+          backdropFilter: 'blur(20px)',
+          border: `1px solid ${COLORS.softBorder}`
+        }}>
+          <div style={{ padding: '24px 24px 16px 24px', borderBottom: `1px solid ${COLORS.softBorder}` }}>
+            <Input
+              autoFocus
+              prefix={<SearchOutlined style={{ fontSize: 20, color: COLORS.textSecondary }} />}
+              placeholder="Search actions or type commands (e.g., /report)..."
+              variant="borderless"
+              value={commandValue}
+              onChange={(e) => handleCommandPaletteChange(e.target.value)}
+              style={{ fontSize: 18, fontWeight: 500 }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && commandResults.length > 0) {
+                  executeCommandAction(commandResults[0], commandValue);
+                }
+              }}
+            />
+          </div>
+          <div style={{ maxHeight: 450, overflowY: 'auto', padding: '8px 0' }}>
+            {commandResults.length === 0 ? (
+              <Empty description="No matching commands found" style={{ padding: 40 }} />
+            ) : (
+              <div>
+                {/* Group by Category */}
+                {['General', 'Analytics', 'Admin'].map(cat => {
+                  const catCmds = commandResults.filter(c => (c.category || 'General') === cat);
+                  if (catCmds.length === 0) return null;
+                  return (
+                    <div key={cat} style={{ marginBottom: 12 }}>
+                      <div style={{ padding: '8px 24px', fontSize: 11, fontWeight: 800, color: COLORS.textSecondary, letterSpacing: 1, textTransform: 'uppercase' }}>
+                        {cat}
+                      </div>
+                      {catCmds.map(cmd => (
+                        <div
+                          key={cmd.key}
+                          onClick={() => executeCommandAction(cmd, commandValue)}
+                          style={{
+                            padding: '12px 24px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          className="spotlight-item"
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <div style={{
+                              width: 36, height: 36,
+                              borderRadius: 10, background: '#f5f5f5',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 18, color: COLORS.primary
+                            }}>
+                              {cmd.icon}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 14 }}>{cmd.label}</div>
+                              <div style={{ fontSize: 12, color: COLORS.textSecondary }}>{cmd.shortcut}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {cmd.pro && (
+                              <Tag color="gold" style={{ borderRadius: 6, fontWeight: 800, fontSize: 10 }}>PRO</Tag>
+                            )}
+                            <div style={{
+                              background: '#eeeeee', padding: '2px 8px',
+                              borderRadius: 6, fontSize: 11, color: COLORS.textSecondary,
+                              fontWeight: 700
+                            }}>
+                              ↵ Enter
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div style={{ padding: '12px 24px', background: '#fafafa', borderTop: `1px solid ${COLORS.softBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: 12, color: COLORS.textSecondary }}>
+              Tip: Use <Tag style={{ margin: 0 }}>↑↓</Tag> to navigate and <Tag style={{ margin: 0 }}>Enter</Tag> to select
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.primary }}>
+              AI Command Center v2.0
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <style>{`
+        .spotlight-item:hover {
+          background: #f8f9fa !important;
+        }
+        .spotlight-item:hover .ant-tag {
+          transform: scale(1.05);
+        }
+      `}</style>
+
+      {/* Ambiguity Resolution Modal (Voice Candidates) */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SoundOutlined style={{ color: COLORS.darkGreen }} />
+            <span style={{ fontWeight: 800 }}>{lang === "en" ? "Select Intended Product" : "សូមជ្រើសរើសផលិតផល"}</span>
+          </div>
+        }
+        open={voiceCandidates.length > 0}
+        onCancel={() => setVoiceCandidates([])}
+        footer={null}
+        width={700}
+        centered
+        styles={{ body: { padding: '20px 24px 30px', maxHeight: '75vh', overflowY: 'auto' } }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: 20, color: COLORS.textSecondary, fontSize: 14 }}>
+          {lang === "en"
+            ? "Multiple products matched your voice command. Which one did you mean?"
+            : "មានផលិតផលច្រើនដែលស្រដៀងនឹងការនិយាយរបស់លោកគ្រូ។ តើមួយណាដែលលោកគ្រូចង់បាន?"}
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+          gap: 16,
+          padding: 4
+        }}>
+          {voiceCandidates.map(p => (
+            <div
+              key={p.id}
+              onClick={() => {
+                handleAdd(p, { note: "Voice Selection" });
+                setVoiceCandidates([]);
+                message.success(lang === "en" ? `Added ${p.name}` : `បានបញ្ចូល ${p.name_kh || p.name}`);
+              }}
+              style={{
+                padding: 16,
+                borderRadius: 16,
+                border: `2px solid #f0f0f0`,
+                cursor: 'pointer',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: 10,
+                background: '#fff',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+                position: 'relative'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = COLORS.darkGreen;
+                e.currentTarget.style.transform = 'translateY(-5px)';
+                e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.1)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = '#f0f0f0';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.04)';
+              }}
+            >
+              <div style={{
+                width: 85,
+                height: 85,
+                borderRadius: 14,
+                background: '#f8f9fa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.05)'
+              }}>
+                {p.image ? (
+                  <img src={Config.image_path + p.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ fontSize: 36 }}>{getIconForCategory(p.category_name)}</div>
+                )}
+              </div>
+              <div style={{ width: '100%' }}>
+                <div style={{ fontWeight: 800, fontSize: 14, color: COLORS.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                <div style={{ fontWeight: 500, fontSize: 13, color: COLORS.darkGreen, marginTop: 4, minHeight: 20 }}>{p.name_kh}</div>
+                <div style={{ color: COLORS.primary, fontWeight: 900, fontSize: 17, marginTop: 8 }}>${Number(p.price).toFixed(2)}</div>
+              </div>
+              {p.score === 100 && (
+                <div style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  background: COLORS.darkGreen,
+                  color: '#fff',
+                  fontSize: 10,
+                  padding: '2px 8px',
+                  borderRadius: 10,
+                  fontWeight: 700
+                }}>BEST</div>
+              )}
+            </div>
+          ))}
+        </div>
       </Modal>
     </div>
   );
