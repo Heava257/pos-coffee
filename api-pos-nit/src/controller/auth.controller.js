@@ -482,17 +482,15 @@ exports.forgotPassword = async (req, res) => {
     );
 
     const { sendPasswordResetEmail } = require("../util/email");
-    const emailRes = await sendPasswordResetEmail(email, user.name, otpCode);
     
-    if (!emailRes) {
-      return res.status(500).json({ 
-        message: "Failed to send OTP email. Please check if the sender email is verified in Brevo or contact administrator." 
-      });
-    }
+    // 🔥 Send email in background to avoid UI hang
+    sendPasswordResetEmail(email, user.name, otpCode).catch(err => {
+      console.error("[BACKGROUND EMAIL ERROR] Forgot Password:", err.message);
+    });
 
     res.json({
       success: true,
-      message: "6-digit OTP code has been sent to your email!"
+      message: "6-digit OTP code has been sent to your email! (Please check your spam folder)"
     });
   } catch (error) {
     logError("auth.forgotPassword", error, res);

@@ -5,12 +5,16 @@ dotenv.config();
 // Setup Nodemailer Transporter using Brevo SMTP
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
-    port: process.env.SMTP_PORT || 587,
+    port: parseInt(process.env.SMTP_PORT) || 587,
     secure: false, // true for 465, false for other ports
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
+    // Add timeouts to prevent long hangs
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,   // 10 seconds
+    socketTimeout: 20000,     // 20 seconds
 });
 
 const PLATFORM_SENDER_EMAIL = process.env.SENDER_EMAIL || "pongchiva257@gmail.com";
