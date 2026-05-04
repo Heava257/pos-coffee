@@ -153,16 +153,20 @@ app.listen(PORT, async () => {
     `);
     
     // Seed default tiers for business 1 if empty
-    const [tiers] = await db.query("SELECT id FROM membership_tiers WHERE business_id = 1");
-    if (tiers.length === 0) {
-      await db.query(`
-        INSERT INTO membership_tiers (business_id, name, min_points, discount_rate) VALUES 
-        (1, 'Welcome', 0, 0),
-        (1, 'Silver', 500, 5),
-        (1, 'Gold', 1500, 10),
-        (1, 'Platinum', 5000, 15)
-      `);
-      console.log("Migration: Seeded default membership tiers");
+    try {
+      const [tiers] = await db.query("SELECT id FROM membership_tiers WHERE business_id = 1");
+      if (tiers.length === 0) {
+        await db.query(`
+          INSERT INTO membership_tiers (business_id, name, min_points, discount_rate) VALUES 
+          (1, 'Welcome', 0, 0),
+          (1, 'Silver', 500, 5),
+          (1, 'Gold', 1500, 10),
+          (1, 'Platinum', 5000, 15)
+        `);
+        console.log("Migration: Seeded default membership tiers");
+      }
+    } catch (tierErr) {
+      console.log("Migration (Seeding Tiers) skipped:", tierErr.message);
     }
 
     await db.query(`
@@ -383,7 +387,7 @@ app.listen(PORT, async () => {
     const [perms] = await db.query("SELECT id FROM permissions WHERE route_key = 'table'");
     let permId;
     if (perms.length === 0) {
-      const [res] = await db.query("INSERT INTO permissions (name, route_key, group_name) VALUES ('Tables', 'table', 'General Setup')");
+      const [res] = await db.query("INSERT INTO permissions (name, route_key) VALUES ('Tables', 'table')");
       permId = res.insertId;
     } else {
       permId = perms[0].id;
