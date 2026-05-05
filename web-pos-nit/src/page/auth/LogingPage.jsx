@@ -125,22 +125,24 @@ const GoogleBtn = ({ onSuccess, loading, t }) => {
       onMouseLeave={() => setHovered(false)}
       style={{
         width: "100%",
-        height: 48,
-        borderRadius: 100,
-        border: `1.5px solid ${hovered ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)"}`,
-        background: hovered ? "rgba(255,255,255,0.06)" : "transparent",
-        color: "rgba(255,255,255,0.8)",
+        height: 52,
+        borderRadius: 12,
+        border: `1px solid ${hovered ? "#c0a060" : "rgba(255,255,255,0.2)"}`,
+        background: hovered ? "rgba(192, 160, 96, 0.15)" : "transparent",
+        color: hovered ? "#c0a060" : "white",
         fontSize: 14,
         fontWeight: 600,
         fontFamily: "'DM Sans', Inter, sans-serif",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: 10,
+        gap: 12,
         cursor: loading ? "not-allowed" : "pointer",
-        transition: "all 0.2s ease",
+        transition: "all 0.3s ease",
         opacity: loading ? 0.5 : 1,
-        letterSpacing: 0.2,
+        letterSpacing: 0.3,
+        transform: hovered ? "translateY(-2px)" : "none",
+        boxShadow: hovered ? "0 5px 15px rgba(0,0,0,0.3)" : "none",
       }}
     >
       <img
@@ -211,7 +213,7 @@ function LoginPageInner() {
       const res = await request("auth/login", "post", { email, password });
       if (res?.access_token) onSuccess(res);
       else message.error(res?.message || "Invalid credentials.");
-    } catch { message.error("Cannot connect to server."); }
+    } catch (err) { message.error(err.message || "Cannot connect to server."); }
     finally { setLoading(false); }
   };
 
@@ -223,7 +225,7 @@ function LoginPageInner() {
       if (res?.access_token) onSuccess(res);
       else if (res?.not_registered) setDenied(true);
       else message.error(res?.message || "Google login failed.");
-    } catch { message.error("Google authentication error."); }
+    } catch (err) { message.error(err.message || "Google authentication error."); }
     finally { setGoogleLoading(false); }
   };
 
@@ -497,24 +499,46 @@ function LoginPageInner() {
               disabled={loading}
               style={{
                 width: "100%",
-                height: 50,
-                borderRadius: 100,
+                height: 54,
+                borderRadius: 12,
                 border: "none",
-                background: loading ? "rgba(255,255,255,0.4)" : "white",
+                background: loading ? "#555" : "#c0a060",
                 color: "#1a1a1a",
-                fontSize: 15,
-                fontWeight: 700,
+                fontSize: 16,
+                fontWeight: 800,
                 fontFamily: "'DM Sans', Inter, sans-serif",
                 cursor: loading ? "not-allowed" : "pointer",
-                transition: "all 0.2s",
-                letterSpacing: 0.2,
-                marginBottom: 20,
-                boxShadow: "0 4px 16px rgba(255,255,255,0.08)",
+                transition: "all 0.3s ease",
+                letterSpacing: 0.5,
+                marginBottom: 24,
+                boxShadow: "0 6px 20px rgba(192, 160, 96, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                zIndex: 5,
               }}
-              onMouseEnter={(e) => { if (!loading) e.target.style.background = "#eeeeee"; }}
-              onMouseLeave={(e) => { e.target.style.background = loading ? "rgba(255,255,255,0.4)" : "white"; }}
+              onMouseEnter={(e) => { 
+                if (!loading) {
+                  e.currentTarget.style.transform = "scale(1.02) translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 12px 32px rgba(192, 160, 96, 0.4)";
+                }
+              }}
+              onMouseLeave={(e) => { 
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "0 8px 24px rgba(192, 160, 96, 0.25)";
+              }}
             >
-              {loading ? (t.signing_in || "Signing in…") : (t.sign_in || "Sign in")}
+              {loading ? (
+                <span>{t.signing_in || "Signing in…"}</span>
+              ) : (
+                <>
+                  <span>{t.sign_in || "Sign in"}</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="#1a1a1a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </>
+              )}
             </button>
 
             {/* Divider */}

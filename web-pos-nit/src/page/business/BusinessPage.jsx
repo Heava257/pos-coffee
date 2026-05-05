@@ -25,7 +25,8 @@ import {
     PlusCircleOutlined,
     LockOutlined,
     InfoCircleOutlined,
-    DeleteOutlined
+    DeleteOutlined,
+    AppstoreOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
 import CategoryManageTab from "../settings/CategoryManageTab";
@@ -228,6 +229,16 @@ const BusinessPage = () => {
             render: (record) => (
                 <Space>
                     <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(record)}>View</Button>
+                    <Button 
+                        icon={<AppstoreOutlined />} 
+                        onClick={() => {
+                            setSelectedBiz(record);
+                            setCatVisible(true);
+                        }}
+                        style={{ color: '#2d6a3e' }}
+                    >
+                        Categories
+                    </Button>
                     <Button icon={<CrownOutlined />} onClick={() => {
                         setVisible('renew');
                         form.setFieldsValue({ business_id: record.id, plan_id: record.plan_id, duration_days: 30 });
@@ -312,6 +323,13 @@ const BusinessPage = () => {
             >
                 <Table columns={columns} dataSource={filteredList} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
             </Card>
+
+            {/* Category Assignment Modal */}
+            <BusinessCategoryModal 
+                visible={catVisible} 
+                onCancel={() => setCatVisible(false)} 
+                selectedBiz={selectedBiz} 
+            />
 
             {/* Main Action Modal */}
             <Modal
@@ -544,6 +562,38 @@ const BusinessPage = () => {
                 </div>
             </Modal>
         </div>
+    );
+};
+
+const BusinessCategoryModal = ({ visible, onCancel, selectedBiz }) => {
+    return (
+        <Modal
+            title={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                        width: 40, height: 40, borderRadius: 10,
+                        background: '#f6ffed', color: '#1e4a2d',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        <AppstoreOutlined style={{ fontSize: 20 }} />
+                    </div>
+                    <div>
+                        <Title level={4} style={{ margin: 0 }}>Assign Categories</Title>
+                        <Text type="secondary" style={{ fontSize: 12 }}>Manage active modules for {selectedBiz?.name}</Text>
+                    </div>
+                </div>
+            }
+            open={visible}
+            onCancel={onCancel}
+            footer={null}
+            width={1000}
+            centered
+            destroyOnClose
+            bodyStyle={{ padding: '0 24px 24px 24px' }}
+        >
+            <Divider style={{ marginTop: 0 }} />
+            <CategoryManageTab targetBusinessId={selectedBiz?.id} />
+        </Modal>
     );
 };
 

@@ -101,27 +101,37 @@ export const request = (url = "", method = "get", data = {}) => {
       var response = err.response;
       if (response) {
         var status = response.status;
+        var errorMessage = response.data?.message || response.data?.error || "Operation failed";
+
         if (status == 401) {
           localStorage.removeItem("access_token");
           localStorage.removeItem("profile");
-          if (window.location.pathname !== "/login") {
-            window.location.href = "/login";
+          // Only redirect if not already on login/register/etc.
+          if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/register")) {
+             window.location.href = "/login";
           }
         }
+        
         if (status == 403) {
-          message.error(response.data.message || "Access Denied: You don't have permission for this action.");
+          message.error(errorMessage || "Access Denied: You don't have permission for this action.");
+        } else if (status >= 500) {
+          message.error("Server Error: " + (errorMessage || "Please try again later."));
         } else if (status !== 401) {
-          message.error(response.data.message || "Operation failed. Please try again.");
+          message.error(errorMessage);
         }
+        
         setServerSatus(status);
-        // 🚨 IMPORTANT: Use Promise.reject so the caller's .catch() or try/catch works
-        return Promise.reject({ ...response.data, error: true, status: status });
+        return Promise.reject({ ...response.data, message: errorMessage, error: true, status: status });
       } else if (err.code == "ERR_NETWORK") {
         setServerSatus("error");
-        return Promise.reject({ error: true, message: "Network Error: Please check your connection." });
+        const networkMsg = "Cannot connect to server. Please check if the backend is running.";
+        message.error(networkMsg);
+        return Promise.reject({ error: true, message: networkMsg });
       }
-      console.log(">>>", err);
-      return Promise.reject({ error: true, message: err.message || "Something went wrong" });
+      
+      const fallbackMsg = err.message || "Something went wrong";
+      message.error(fallbackMsg);
+      return Promise.reject({ error: true, message: fallbackMsg });
     });
 };
 
