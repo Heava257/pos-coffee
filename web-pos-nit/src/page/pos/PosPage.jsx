@@ -82,7 +82,9 @@ import {
   CoffeeOutlined,
   ExperimentOutlined,
   RocketOutlined,
-  CrownOutlined
+  CrownOutlined,
+  LockOutlined,
+  KeyOutlined
 } from "@ant-design/icons";
 import { FiSettings } from "react-icons/fi";
 import { useUIStore } from "../../store/uiStore";
@@ -90,12 +92,12 @@ import ImgUser from "../../assets/profile.png";
 import useSound from "use-sound";
 import { useLanguage, translations } from "../../store/language.store";
 import { useHeldOrdersStore } from "../../store/heldOrdersStore";
-
+import { useShiftStore } from "../../store/shiftStore";
 
 // Public notification sound URL (stable mirror)
 const BELL_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3";
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 // ─── Utility ────────────────────────────────────────────────────────────────
 const safeParse = (str) => {
@@ -214,7 +216,8 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
     ? Math.min(...productSizes.map(s => Number(s.price || 0)))
     : basePrice;
 
-  const isOOS = product.product_type === 'recipe' ? false : Number(product.qty) <= 0;
+  const isRecipe = product.product_type === 'recipe' || (product.estimated_servings !== null && product.estimated_servings !== undefined);
+  const isOOS = isRecipe ? false : Number(product.qty) <= 0;
   const imgUrl = product.image ? Config.optimizeCloudinary(Config.getFullImagePath(product.image), "w_300,h_300,c_fill,f_auto,q_auto") : null;
 
   return (
@@ -385,11 +388,16 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
             {/* name + price */}
             <div style={{ width: "100%", textAlign: "left" }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                <Tag color={product.product_type === 'recipe' ? "orange" : "blue"} style={{ fontSize: 9, borderRadius: 4, margin: 0, padding: '0 4px' }}>
-                  {product.product_type === 'recipe'
-                    ? `RECIPE (${product.estimated_servings ?? 0} Srv)`
-                    : `STOCK: ${product.qty}`}
-                </Tag>
+                {(() => {
+                  const isRecipe = product.product_type === 'recipe' || (product.estimated_servings !== null && product.estimated_servings !== undefined);
+                  return (
+                    <Tag color={isRecipe ? "orange" : "blue"} style={{ fontSize: 9, borderRadius: 4, margin: 0, padding: '0 4px' }}>
+                      {isRecipe
+                        ? `RECIPE (${product.estimated_servings ?? 0} Srv)`
+                        : `STOCK: ${product.qty || 0}`}
+                    </Tag>
+                  );
+                })()}
                 <span style={{ fontSize: 9, color: COLORS.textSecondary, fontWeight: 700 }}>#{product.barcode || product.id}</span>
               </div>
               <div
@@ -539,7 +547,8 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
         <tbody>
           {products.map(p => {
             const cartQty = getCartQty(p.id);
-            const isOOS = p.product_type === 'recipe' ? false : Number(p.qty) <= 0;
+            const isRecipe = p.product_type === 'recipe' || (p.estimated_servings !== null && p.estimated_servings !== undefined);
+            const isOOS = isRecipe ? false : Number(p.qty) <= 0;
             const productSizes = safeParse(p.sizes) || [];
             const productMoods = safeParse(p.moods) || [];
             const basePrice = Number(p.unit_price || p.price || 0);
@@ -670,6 +679,10 @@ const TableSelectorModal = ({ open, onCancel, onSelect, branchId, COLORS, t, hel
   }, [open, branchId]);
 
   const fetchTables = async () => {
+    const { permissions } = useProfileStore.getState();
+    const hasTablePerm = permissions?.some(p => p.route_key?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'table');
+    if (!hasTablePerm) return;
+
     setLoading(true);
     try {
       const res = await request("table", "get", { branch_id: branchId });
@@ -887,6 +900,7 @@ const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove, onEdi
           <button onClick={() => onIncrease(item)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, color: COLORS.darkGreen, width: 18 }}>+</button>
         </div>
       </div>
+
     </div>
   );
 });
@@ -906,9 +920,14 @@ function PosPage() {
   const refShiftReport = useRef(null);
   const refLabel = useRef(null);
   const t = translations[lang];
-  const { profile } = useProfileStore(); // Reactive profile
+  const { profile, permissions } = useProfileStore(); // Reactive profile
+  const hasTablePerm = permissions?.some(p => p.route_key?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'table');
   const { isFullScreen, toggleFullScreen } = useUIStore();
   const [isDisabled, setIsDisabled] = useState(false);
+  const [managerApprovalVisible, setManagerApprovalVisible] = useState(false);
+  const [pendingShiftData, setPendingShiftData] = useState(null);
+  const [approvalForm] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
   // ── LAYOUT ENGINE CONFIGURATION ──
   const LAYOUTS = {
@@ -1025,6 +1044,9 @@ function PosPage() {
   }, [branchInfo]);
 
   const fetchTables = async (branchId) => {
+    const hasTablePerm = permissions?.some(p => p.route_key?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'table');
+    if (!hasTablePerm) return;
+
     try {
       const res = await request("table", "get", { branch_id: branchId });
       if (res && res.list) {
@@ -1065,7 +1087,7 @@ function PosPage() {
   const [cashReceivedUSD, setCashReceivedUSD] = useState(0);
   const [cashReceivedKHR, setCashReceivedKHR] = useState(0);
   const [cashPaymentModalVisible, setCashPaymentModalVisible] = useState(false);
-  const [currentShift, setCurrentShift] = useState(null);
+  const { currentShift, fetchCurrentShift, openShift: storeOpenShift, closeShift: storeCloseShift } = useShiftStore();
   const [openShiftModalVisible, setOpenShiftModalVisible] = useState(false);
   const [closeShiftModalVisible, setCloseShiftModalVisible] = useState(false);
   const [shiftSummary, setShiftSummary] = useState(null);
@@ -1165,22 +1187,15 @@ function PosPage() {
 
   const checkShiftStatus = async () => {
     try {
-      const res = await request("shift/current", "get");
-      if (res && res.success && res.data) {
-        setCurrentShift(res.data);
-        setOpenShiftModalVisible(false);
-      } else {
-        setCurrentShift(null);
-        // User requested: don't auto-open modal. They will click to open.
-        setOpenShiftModalVisible(false);
-      }
+      await fetchCurrentShift();
+      setOpenShiftModalVisible(false);
     } catch (error) {
       console.error("Error checking shift status:", error);
     }
   };
 
   const handlePrintShiftReport = useReactToPrint({
-    content: () => refShiftReport.current,
+    contentRef: refShiftReport,
   });
 
   const fetchShiftSummary = async () => {
@@ -1216,16 +1231,55 @@ function PosPage() {
         diff_usd: diffUSD,
         remark: values.remark
       };
-      const res = await request("shift", "post", data);
+      // Rule 3: Approval for big difference (e.g. > $10)
+      const totalActual = (valUSD || 0) + ((valKHR || 0) / (shiftSummary?.exchange_rate || exchangeRate));
+      const expected = shiftSummary?.expected_cash_usd || 0;
+      const variance = totalActual - expected;
+
+      if (Math.abs(variance) > 10) {
+        setPendingShiftData(data);
+        setManagerApprovalVisible(true);
+        return;
+      }
+
+      const res = await storeCloseShift(data);
       if (res && res.success) {
         handlePrintShiftReport();
         message.success("Shift closed successfully!");
         setCloseShiftModalVisible(false);
-        checkShiftStatus();
       }
     } catch (error) {
       console.error(error);
       message.error("Failed to close shift");
+    }
+  };
+
+  const handleManagerApproval = async (values) => {
+    try {
+      setLoading(true);
+      const resVerify = await request("auth/verify-manager", "post", {
+        username: values.username,
+        password: values.password
+      });
+
+      if (resVerify && resVerify.success) {
+        // Verification success, now proceed with closing shift
+        const resClose = await storeCloseShift(pendingShiftData);
+        if (resClose && resClose.success) {
+          handlePrintShiftReport();
+          message.success(`Shift closed. Authorized by ${values.username}`);
+          setManagerApprovalVisible(false);
+          setCloseShiftModalVisible(false);
+          approvalForm.resetFields();
+        }
+      } else {
+        message.error("Manager authorization failed!");
+      }
+    } catch (error) {
+      console.error(error);
+      message.error(error?.response?.data?.message || "Authorization Error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1235,15 +1289,10 @@ function PosPage() {
 
     const proceed = async () => {
       try {
-        const data = {
-          opening_cash_usd: usd,
-          opening_cash_khr: khr,
-        };
-        const res = await request("shift/open", "post", data);
+        const res = await storeOpenShift(usd, khr);
         if (res && res.success) {
           message.success(res.message);
           handleClearCart(true, true); // Force hard clear of everything (cart, table, etc)
-          checkShiftStatus();
         } else {
           message.warning(res.message);
         }
@@ -1276,6 +1325,18 @@ function PosPage() {
   useEffect(() => {
     handleCalSummary();
   }, [state.cart_list]);
+
+  // 🔔 AUTO-SYNC: Poll for pending web orders every 10 seconds
+  useEffect(() => {
+    // Initial fetch
+    getPendingOrders();
+
+    const interval = setInterval(() => {
+      getPendingOrders();
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, [branchInfo, profile]);
 
   const getPendingOrders = async () => {
     try {
@@ -1590,7 +1651,9 @@ function PosPage() {
 
     // 2. If it has options, ALWAYS open the modal to get specific choices
     if (hasOptions) {
-      if (product.product_type !== 'recipe' && Number(product.qty) <= 0) {
+      const isRecipe = product.product_type === 'recipe' || (product.estimated_servings !== null && product.estimated_servings !== undefined);
+
+      if (!isRecipe && Number(product.qty) <= 0) {
         notification.error({ message: "Out of Stock" });
         return;
       }
@@ -1620,7 +1683,9 @@ function PosPage() {
       const idx = cart.findIndex((c) => c.unique_id === standardId);
 
       if (idx === -1) {
-        if (product.product_type !== 'recipe' && Number(product.qty) <= 0) {
+        const isRecipe = product.product_type === 'recipe' || (product.estimated_servings !== null && product.estimated_servings !== undefined);
+
+        if (!isRecipe && Number(product.qty) <= 0) {
           notification.error({ message: "Out of Stock" });
           return prev;
         }
@@ -1628,7 +1693,9 @@ function PosPage() {
         cart.push(newItem);
         setTempUnassignedItems(prevTemp => [...prevTemp, { ...newItem }]);
       } else {
-        if (product.product_type !== 'recipe' && cart[idx].cart_qty >= Number(product.qty)) {
+        const isRecipe = product.product_type === 'recipe' || (product.estimated_servings !== null && product.estimated_servings !== undefined);
+
+        if (!isRecipe && cart[idx].cart_qty >= Number(product.qty)) {
           notification.warning({ message: `Only ${product.qty} available` });
           return prev;
         }
@@ -2853,9 +2920,8 @@ function PosPage() {
           // Trigger print workflow for all order types at checkout 
           triggerAutoPrintWorkflow(false);
         } else {
-          // For bank payments, we clear the UI now so the user can start a new order
-          // The actual printing will be triggered when the QR modal is closed
-          handleClearCart(true);
+          // For bank payments, we wait for the QR modal to close before clearing the cart
+          // and triggering the print workflow.
         }
       } else {
         message.error(`Order failed! ${res?.message || res?.error || ""}`);
@@ -3626,44 +3692,51 @@ function PosPage() {
             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', width: '100%' }}>
               {layoutConfig.hasKitchen && (
                 <>
-                  <Button
-                    size="small"
-                    icon={<PrinterOutlined />}
-                    onClick={handleSendToKitchen}
-                    disabled={state.cart_list.length === 0 || kitchenItems.length === 0}
-                    style={{
-                      borderRadius: 8,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      height: 32,
-                      background: kitchenItems.length === 0 ? '#f5f5f5' : '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      color: kitchenItems.length === 0 ? '#bfbfbf' : COLORS.textPrimary
-                    }}
-                  >
-                    {kitchenItems.length === 0 ? (t.sent_status + " ✅") : t.kds}
-                  </Button>
-                  <Button
-                    size="small"
-                    icon={<PushpinOutlined />}
-                    onClick={() => {
-                      handleHoldOrder(state.cart_list, true, { kitchen_status: 'draft' }); // Save SILENTLY (no print) and CLEAR from pending
-                      handleClearCart(false, true); // Clear screen for next guest but KEEP draft
-                      message.success(tableNo ? `Tab for Table ${tableNo} saved / រក្សាទុកតុលេខ ${tableNo} រួចរាល់` : "Draft saved!");
-                    }}
-                    disabled={state.cart_list.length === 0}
-                    style={{
-                      borderRadius: 8,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      height: 32,
-                      background: '#fff',
-                      color: COLORS.darkGreen,
-                      border: `1px solid ${COLORS.darkGreen}`
-                    }}
-                  >
-                    {currentDraftId ? t.update : t.save_btn}
-                  </Button>
+                  {/* Show Kitchen button only for Dine-in (as requested) or if there are kitchen items */}
+                  {orderType === 'dine_in' && (
+                    <Button
+                      size="small"
+                      icon={<PrinterOutlined />}
+                      onClick={handleSendToKitchen}
+                      disabled={state.cart_list.length === 0 || kitchenItems.length === 0}
+                      style={{
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        height: 32,
+                        background: kitchenItems.length === 0 ? '#f5f5f5' : COLORS.darkGreen,
+                        border: `1px solid ${COLORS.darkGreen}`,
+                        color: kitchenItems.length === 0 ? '#bfbfbf' : '#fff'
+                      }}
+                    >
+                      {kitchenItems.length === 0 ? (t.sent_status + " ✅") : t.kds}
+                    </Button>
+                  )}
+
+                  {/* Show Save/Hold button ONLY for Walk-in (Take-away) as requested */}
+                  {orderType === 'take_away' && (
+                    <Button
+                      size="small"
+                      icon={<PushpinOutlined />}
+                      onClick={() => {
+                        handleHoldOrder(state.cart_list, true, { kitchen_status: 'draft' }); // Save to local draft
+                        handleClearCart(false, true); // Clear screen for next guest
+                        message.success(t.order_held || "Order held in drafts! / កម្ម៉ង់ត្រូវបានរក្សាទុកបណ្ដោះអាសន្ន");
+                      }}
+                      disabled={state.cart_list.length === 0}
+                      style={{
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        height: 32,
+                        background: '#fff',
+                        color: COLORS.midGreen,
+                        border: `1px solid ${COLORS.midGreen}`
+                      }}
+                    >
+                      {t.save_btn || "Hold / រក្សាទុក"}
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -3689,7 +3762,7 @@ function PosPage() {
                 {[
                   { key: "dine_in", label: t.dine_in, icon: "🍽️" },
                   { key: "take_away", label: t.take_away, icon: "📦" },
-                ].map(({ key, label, icon }) => (
+                ].filter(opt => opt.key !== 'dine_in' || hasTablePerm).map(({ key, label, icon }) => (
                   <button
                     key={key}
                     onClick={() => {
@@ -3714,43 +3787,45 @@ function PosPage() {
               </div>
 
               {/* Takeaway / Table Selection Row */}
-              <div style={{ display: "flex", gap: 12 }}>
-                {/* Table Section (Only for Dine-in) */}
-                {orderType === 'dine_in' ? (
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
-                      {t.table_label?.toUpperCase()}
-                      <span onClick={() => setTableModalVisible(true)} style={{ color: COLORS.darkGreen, cursor: 'pointer', textDecoration: 'underline', fontWeight: 800 }}>{t.dashboard?.toUpperCase()} 📋</span>
+              {hasTablePerm && (
+                <div style={{ display: "flex", gap: 12 }}>
+                  {/* Table Section (Only for Dine-in) */}
+                  {orderType === 'dine_in' ? (
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 10, color: COLORS.textSecondary, marginBottom: 4, fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
+                        {t.table_label?.toUpperCase()}
+                        <span onClick={() => setTableModalVisible(true)} style={{ color: COLORS.darkGreen, cursor: 'pointer', textDecoration: 'underline', fontWeight: 800 }}>{t.dashboard?.toUpperCase()} 📋</span>
+                      </div>
+                      <div
+                        onClick={() => setTableModalVisible(true)}
+                        style={{
+                          width: "100%", border: `1px solid ${COLORS.softBorder}`, borderRadius: 10,
+                          padding: "8px 12px", fontSize: 13, background: "#fafafa", textAlign: 'center', cursor: 'pointer', fontWeight: 800, color: COLORS.textPrimary,
+                          animation: (!tableNo && state.cart_list.length > 0) ? 'pulse-border 1.5s infinite' : 'none'
+                        }}
+                      >
+                        {tableNo ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                            <span>{t.table_label?.toUpperCase()} {tableNo}</span>
+                            <span style={{ fontSize: 11, color: COLORS.textSecondary, fontWeight: 500, background: '#eee', padding: '1px 8px', borderRadius: 20 }}>{guestCount} 👥</span>
+                          </div>
+                        ) : (
+                          <span style={{ color: state.cart_list.length > 0 ? COLORS.redBadge : 'inherit' }}>{t.select_material?.replace('Material', 'Table')?.toUpperCase() || 'SELECT TABLE'}</span>
+                        )}
+                      </div>
                     </div>
-                    <div
-                      onClick={() => setTableModalVisible(true)}
-                      style={{
-                        width: "100%", border: `1px solid ${COLORS.softBorder}`, borderRadius: 10,
-                        padding: "8px 12px", fontSize: 13, background: "#fafafa", textAlign: 'center', cursor: 'pointer', fontWeight: 800, color: COLORS.textPrimary,
-                        animation: (!tableNo && state.cart_list.length > 0) ? 'pulse-border 1.5s infinite' : 'none'
-                      }}
-                    >
-                      {tableNo ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                          <span>{t.table_label?.toUpperCase()} {tableNo}</span>
-                          <span style={{ fontSize: 11, color: COLORS.textSecondary, fontWeight: 500, background: '#eee', padding: '1px 8px', borderRadius: 20 }}>{guestCount} 👥</span>
-                        </div>
-                      ) : (
-                        <span style={{ color: state.cart_list.length > 0 ? COLORS.redBadge : 'inherit' }}>{t.select_material?.replace('Material', 'Table')?.toUpperCase() || 'SELECT TABLE'}</span>
-                      )}
+                  ) : (
+                    // Takeaway Mode UI 
+                    <div style={{ flex: 1, padding: '12px', background: `${COLORS.darkGreen}08`, border: `1px dashed ${COLORS.darkGreen}`, borderRadius: 10, textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: COLORS.darkGreen, fontWeight: 700, marginBottom: 4 }}>TAKEAWAY QUEUE / លេខរៀងកក់ខ្ចប់</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: COLORS.darkGreen }}>
+                        #{String(objSummary.order_no || "00000").padStart(5, "0")}
+                      </div>
+                      <div style={{ fontSize: 9, color: COLORS.textSecondary, marginTop: 2 }}>Order is marked for packaging</div>
                     </div>
-                  </div>
-                ) : (
-                  // Takeaway Mode UI 
-                  <div style={{ flex: 1, padding: '12px', background: `${COLORS.darkGreen}08`, border: `1px dashed ${COLORS.darkGreen}`, borderRadius: 10, textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: COLORS.darkGreen, fontWeight: 700, marginBottom: 4 }}>TAKEAWAY QUEUE / លេខរៀងកក់ខ្ចប់</div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: COLORS.darkGreen }}>
-                      #{String(objSummary.order_no || "00000").padStart(5, "0")}
-                    </div>
-                    <div style={{ fontSize: 9, color: COLORS.textSecondary, marginTop: 2 }}>Order is marked for packaging</div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -4692,14 +4767,20 @@ function PosPage() {
                         const totalActual = (actualCashUSD || 0) + ((actualCashKHR || 0) / (shiftSummary?.exchange_rate || exchangeRate));
                         const variance = totalActual - (shiftSummary?.expected_cash_usd || 0);
                         const isSafe = Math.abs(variance) < 0.01;
+                        const isOver = variance >= 0.01;
 
                         return (
-                          <div style={{
-                            fontSize: 22,
-                            fontWeight: 900,
-                            color: isSafe ? COLORS.darkGreen : (variance > 0 ? '#10b981' : '#ef4444')
-                          }}>
-                            {variance > 0 ? '+' : ''}{variance.toFixed(2)}$
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{
+                              fontSize: 22,
+                              fontWeight: 900,
+                              color: isSafe ? COLORS.darkGreen : (isOver ? '#10b981' : '#ef4444')
+                            }}>
+                              {isOver ? '+' : ''}{variance.toFixed(2)}$
+                            </div>
+                            <Tag color={isSafe ? "success" : (isOver ? "processing" : "error")} style={{ borderRadius: 6, fontWeight: 800 }}>
+                              {isSafe ? "BALANCED" : (isOver ? "OVER" : "SHORTAGE")}
+                            </Tag>
                           </div>
                         );
                       })()}
@@ -5032,6 +5113,81 @@ function PosPage() {
               )}
             </div>
           ))}
+        </div>
+      </Modal>
+
+      {/* 🔐 Manager Approval Modal */}
+      <Modal
+        title={null}
+        open={managerApprovalVisible}
+        onCancel={() => setManagerApprovalVisible(false)}
+        footer={null}
+        centered
+        width={400}
+        styles={{ content: { borderRadius: 24, padding: 0, overflow: 'hidden' } }}
+      >
+        <div style={{ background: '#ef4444', padding: '30px 20px', textAlign: 'center', color: '#fff' }}>
+          <LockOutlined style={{ fontSize: 48, marginBottom: 15, opacity: 0.8 }} />
+          <Title level={4} style={{ color: '#fff', margin: 0, fontWeight: 900 }}>Manager Authorization</Title>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>
+            High discrepancy detected. Please enter Manager or Owner credentials to authorize this shift closure.
+          </Text>
+        </div>
+        <div style={{ padding: '30px 25px' }}>
+          <Form 
+            form={approvalForm} 
+            layout="vertical" 
+            onFinish={handleManagerApproval}
+            requiredMark={false}
+          >
+            <Form.Item 
+              label={<Text strong style={{ fontSize: 12 }}>USERNAME / EMAIL</Text>}
+              name="username" 
+              rules={[{ required: true, message: 'Required' }]}
+            >
+              <Input 
+                prefix={<UserOutlined style={{ color: '#94a3b8' }} />} 
+                placeholder="Manager account"
+                style={{ height: 45, borderRadius: 12 }}
+              />
+            </Form.Item>
+            <Form.Item 
+              label={<Text strong style={{ fontSize: 12 }}>AUTHORIZATION PASSWORD</Text>}
+              name="password" 
+              rules={[{ required: true, message: 'Required' }]}
+            >
+              <Input.Password 
+                prefix={<KeyOutlined style={{ color: '#94a3b8' }} />} 
+                placeholder="••••••••"
+                style={{ height: 45, borderRadius: 12 }}
+              />
+            </Form.Item>
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              block 
+              loading={loading}
+              style={{ 
+                height: 50, 
+                borderRadius: 15, 
+                background: '#1e293b', 
+                border: 'none',
+                fontWeight: 800,
+                fontSize: 16,
+                marginTop: 10
+              }}
+            >
+              AUTHORIZE & CLOSE
+            </Button>
+            <Button 
+              type="text" 
+              block 
+              onClick={() => setManagerApprovalVisible(false)}
+              style={{ marginTop: 10, color: '#64748b', fontWeight: 600 }}
+            >
+              Cancel
+            </Button>
+          </Form>
         </div>
       </Modal>
     </div>

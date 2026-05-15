@@ -438,8 +438,16 @@ const BusinessPage = () => {
                                         {packageList.map(p => <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>)}
                                     </Select>
                                 </Form.Item>
-                                <Form.Item name="active_modules" hidden>
-                                    <Input />
+                                <Divider orientation="left" style={{ marginTop: 24 }}><Text strong style={{ fontSize: 11 }}>ACTIVE MODULES (FEATURES)</Text></Divider>
+                                <Form.Item name="active_modules" rules={[{ required: true, message: 'Please select at least one module' }]}>
+                                    <Checkbox.Group style={{ width: '100%' }}>
+                                        <Row gutter={[16, 16]}>
+                                            <Col span={12}><Checkbox value="POS">Core POS System</Checkbox></Col>
+                                            <Col span={12}><Checkbox value="ORDERING">Web QR Ordering</Checkbox></Col>
+                                            <Col span={12}><Checkbox value="INVENTORY">Advanced Inventory</Checkbox></Col>
+                                            <Col span={12}><Checkbox value="CRM">Marketing & CRM (Loyalty)</Checkbox></Col>
+                                        </Row>
+                                    </Checkbox.Group>
                                 </Form.Item>
                             </Col>
                         </Row>

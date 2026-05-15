@@ -83,6 +83,9 @@ const ProfilePage = () => {
       if (values.password) {
         formData.append("password", values.password);
       }
+      if (values.pin_code) {
+        formData.append("pin_code", values.pin_code);
+      }
       if (imageFile) {
         formData.append("upload_image", imageFile);
       }

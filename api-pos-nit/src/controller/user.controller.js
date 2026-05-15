@@ -22,7 +22,7 @@ exports.getList = async (req, res) => {
             SELECT u.id, u.name, u.email as username, u.tel, u.address, u.image as profile_image,
                    u.status, u.is_super_admin, r.name as role_name, b.name as branch_name,
                    u.role_id, u.branch_id, u.created_at as create_at, u.business_id,
-                   biz.name as business_name
+                   biz.name as business_name, u.pin_code
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN branches b ON u.branch_id = b.id
@@ -84,7 +84,7 @@ exports.register = async (req, res) => {
     try {
         const { business_id: session_biz_id } = req;
         const {
-            id, name, username, password, role_id, branch_id, is_super_admin, address, tel, is_active, business_id
+            id, name, username, password, pin_code, role_id, branch_id, is_super_admin, address, tel, is_active, business_id
         } = req.body;
 
         // Platform Admin can specify target business_id
@@ -102,8 +102,8 @@ exports.register = async (req, res) => {
             const isPlatformAdmin = session_biz_id === 1;
 
             // Update existing staff
-            let sql = "UPDATE users SET name=?, role_id=?, branch_id=?, is_super_admin=?, address=?, tel=?, status=?";
-            let params = [name, role_id, branch_id, is_super_admin || 0, address, tel, statusVal];
+            let sql = "UPDATE users SET name=?, role_id=?, branch_id=?, is_super_admin=?, address=?, tel=?, status=?, pin_code=?";
+            let params = [name, role_id, branch_id, is_super_admin || 0, address, tel, statusVal, pin_code];
 
             if (username && (isPlatformAdmin || req.auth?.role_code === 'owner')) {
                 const [existing] = await db.query("SELECT id FROM users WHERE email = ? AND id != ?", [username, id]);
@@ -145,10 +145,11 @@ exports.register = async (req, res) => {
             }
 
             const hashedPassword = bcrypt.hashSync(password, 10);
+            const defaultPin = pin_code || '1234';
             await db.query(`
-                INSERT INTO users (business_id, branch_id, name, email, password, role_id, is_super_admin, address, tel, status, image) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [bizId, branch_id, name, username, hashedPassword, role_id, is_super_admin || 0, address, tel, statusVal, image]);
+                INSERT INTO users (business_id, branch_id, name, email, password, pin_code, role_id, is_super_admin, address, tel, status, image, is_verified) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            `, [bizId, branch_id, name, username, hashedPassword, defaultPin, role_id, is_super_admin || 0, address, tel, statusVal, image]);
 
             return res.json({ message: "User created successfully!" });
         }
@@ -172,5 +173,31 @@ exports.remove = async (req, res) => {
         res.json({ message: "User deleted successfully", data });
     } catch (error) {
         logError("user.remove", error, res);
+    }
+};
+
+exports.getStaffSwitchList = async (req, res) => {
+    try {
+        const { business_id, branch_id } = req;
+        
+        // Get all active staff in the same business (and optionally same branch)
+        // We only return safe info: id, name, image, role_name
+        let sql = `
+            SELECT u.id, u.name, u.image as profile_image, r.name as role_name
+            FROM users u
+            INNER JOIN roles r ON u.role_id = r.id
+            WHERE u.business_id = ? AND u.status = 'active'
+        `;
+        let params = [business_id];
+
+        // If you want to restrict to same branch only, uncomment this:
+        // if (branch_id) { sql += " AND u.branch_id = ?"; params.push(branch_id); }
+
+        sql += " ORDER BY u.name ASC";
+        
+        const [list] = await db.query(sql, params);
+        res.json({ list });
+    } catch (error) {
+        logError("user.getStaffSwitchList", error, res);
     }
 };

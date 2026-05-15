@@ -14,7 +14,7 @@ exports.getAllPlans = async (req, res) => {
 
 exports.updatePlan = async (req, res) => {
     try {
-        const { id, name, max_branches, max_staff, max_products, price, billing_cycle, is_active } = req.body;
+        const { id, name, max_branches, max_staff, max_products, price, billing_cycle, is_active, active_modules } = req.body;
         await db.query(`
             UPDATE subscription_plans SET 
                 name = ?, 
@@ -23,9 +23,10 @@ exports.updatePlan = async (req, res) => {
                 max_products = ?, 
                 price = ?, 
                 billing_cycle = ?,
-                is_active = ?
+                is_active = ?,
+                active_modules = ?
             WHERE id = ?
-        `, [name, max_branches, max_staff, max_products, price, billing_cycle || 'monthly', is_active, id]);
+        `, [name, max_branches, max_staff, max_products, price, billing_cycle || 'monthly', is_active, active_modules, id]);
 
         res.json({
             message: "Plan updated successfully",

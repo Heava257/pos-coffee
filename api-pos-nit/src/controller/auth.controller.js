@@ -93,8 +93,8 @@ exports.register = async (req, res) => {
       const hashedPassword = bcrypt.hashSync(password, 10);
       const verifyToken = require('crypto').randomBytes(32).toString('hex');
       await conn.query(
-        "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [business_id, branch_id, owner_role_id, owner_name, email, hashedPassword, 'active', 0, verifyToken]
+        "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token, pin_code, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
+        [business_id, branch_id, owner_role_id, owner_name, email, hashedPassword, 'active', 0, verifyToken, '1234']
       );
 
       // E. Enable all global categories by default for new businesses
@@ -142,7 +142,7 @@ exports.googleLogin = async (req, res) => {
                    r.name as role_name, r.code as role_code,
                    b.name as business_name, b.status as business_status, b.logo as business_logo,
                    b.active_modules, b.plan_type, b.plan_id as plan_id,
-                   p.name as plan_name, p.max_branches, p.max_staff, p.max_products,
+                   p.name as plan_name, p.max_branches, p.max_staff, p.max_products, p.active_modules as plan_modules,
                    mp.ui_layout as business_layout
             FROM users u
             INNER JOIN roles r ON u.role_id = r.id
@@ -155,9 +155,9 @@ exports.googleLogin = async (req, res) => {
     const [users] = await db.query(sql, [email]);
 
     if (users.length === 0) {
-      return res.status(200).json({ 
-        not_registered: true, 
-        message: "This Gmail is not registered in our system." 
+      return res.status(200).json({
+        not_registered: true,
+        message: "This Gmail is not registered in our system."
       });
     }
 
@@ -214,27 +214,38 @@ const generateLoginResponse = async (user) => {
     business_layout: user.business_layout
   };
 
-  const activeModules = (user.active_modules || "POS").split(",").map(m => m.trim());
+  const bizModules = (user.active_modules || "").split(",").map(m => m.trim()).filter(Boolean);
+  const planModules = (user.plan_modules || "").split(",").map(m => m.trim()).filter(Boolean);
+  const activeModules = [...new Set([...bizModules, ...planModules])];
 
   const [rolePerms] = await db.query(`
-        SELECT DISTINCT p.route_key, p.name 
+        SELECT DISTINCT 
+            p.route_key, 
+            p.name,
+            CASE WHEN r.code IN ('owner') THEN 1 ELSE rp.can_view END as can_view
         FROM permissions p
-        INNER JOIN role_permissions rp ON p.id = rp.permission_id
+        INNER JOIN businesses b ON b.id = ?
+        INNER JOIN roles r ON r.id = ?
+        LEFT JOIN role_permissions rp ON p.id = rp.permission_id AND rp.role_id = r.id
+        LEFT JOIN plan_permissions pp ON p.id = pp.permission_id AND pp.plan_id = b.plan_id
         LEFT JOIN module_permissions mp ON p.id = mp.permission_id
         LEFT JOIN system_modules sm ON mp.module_id = sm.id
-        WHERE rp.role_id = ?
-        ${user.business_id === 1 ? '' : 'AND p.min_plan_id <= (SELECT plan_id FROM businesses WHERE id = ?)'}
-        AND (
-            ? = 1 -- 👑 Super Admin Bypass
-            OR mp.module_id IS NULL -- Core Permission
-            OR sm.code IN (?) -- Belongs to active module
+        WHERE (
+            pp.plan_id IS NOT NULL -- Belongs to active plan
+            OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', '')) -- Belongs to active module
+            OR (
+                -- Truly Core: No mapping to ANY plan and NO mapping to ANY module
+                NOT EXISTS (SELECT 1 FROM plan_permissions WHERE permission_id = p.id)
+                AND NOT EXISTS (SELECT 1 FROM module_permissions WHERE permission_id = p.id)
+            )
         )
-    `, user.business_id === 1
-    ? [user.role_id, user.business_id, activeModules]
-    : [user.role_id, user.business_id, user.business_id, activeModules]
-  );
+        AND (
+            r.code IN ('owner') -- Owners get all entitlements allowed by plan/module
+            OR rp.permission_id IS NOT NULL -- Others must have it assigned to their role
+        )
+`, [user.business_id, user.role_id]);
 
-  payload.permissions = rolePerms.map(p => p.route_key.replace('/', ''));
+  payload.permissions = rolePerms.map(p => p.route_key);
   const accessToken = generateAccessToken(payload);
 
   if (user.branch_id) {
@@ -260,7 +271,7 @@ exports.login = async (req, res) => {
                    r.name as role_name, r.code as role_code,
                    b.name as business_name, b.status as business_status, b.logo as business_logo,
                    b.active_modules, b.plan_type, b.plan_id as plan_id,
-                   p.name as plan_name, p.max_branches, p.max_staff, p.max_products,
+                   p.name as plan_name, p.max_branches, p.max_staff, p.max_products, p.active_modules as plan_modules,
                    mp.ui_layout as business_layout
             FROM users u
             INNER JOIN roles r ON u.role_id = r.id
@@ -278,7 +289,8 @@ exports.login = async (req, res) => {
 
     const user = users[0];
 
-    if (user.is_verified === 0) {
+    const isStaff = user.role_code !== 'owner' && user.role_code !== 'super_admin';
+    if (user.is_verified === 0 && !isStaff) {
       return res.status(403).json({
         message: "Your email is not verified yet!",
         unverified: true,
@@ -308,39 +320,183 @@ exports.login = async (req, res) => {
   }
 };
 
-// 3. User Profile (Synchronized with latest DB state)
-exports.getProfile = async (req, res) => {
+exports.loginByPassword = async (req, res) => {
   try {
-    const [fullUser] = await db.query(`
-      SELECT u.*, r.name as role_name, r.code as role_code, 
-             b.name as business_name, b.active_modules, b.plan_type, b.plan_id,
-             sp.name as plan_name,
-             br.name as branch_name, mp.ui_layout as business_layout
+    const { id, password } = req.body;
+    const { business_id } = req;
+
+    if (!id || !password) {
+      return res.status(400).json({ message: "ID and Password are required!" });
+    }
+
+    const sql = `
+      SELECT u.*, 
+             r.name as role_name, r.code as role_code,
+             b.name as business_name, b.status as business_status, b.logo as business_logo,
+             b.active_modules, b.plan_type, b.plan_id as plan_id,
+             p.name as plan_name, p.max_branches, p.max_staff, p.max_products, p.active_modules as plan_modules,
+             mp.ui_layout as business_layout
       FROM users u
       INNER JOIN roles r ON u.role_id = r.id
       INNER JOIN businesses b ON u.business_id = b.id
-      LEFT JOIN subscription_plans sp ON b.plan_id = sp.id
-      LEFT JOIN branches br ON u.branch_id = br.id
+      LEFT JOIN subscription_plans p ON b.plan_id = p.id
       LEFT JOIN modular_packages mp ON b.package_id = mp.id
       WHERE u.id = ?
-    `, [req.user_id]);
+    `;
 
-    if (fullUser.length === 0) {
+    const [users] = await db.query(sql, [id]);
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: "User not found!" });
+    }
+
+    const user = users[0];
+
+    // Verify Password
+    if (!bcrypt.compareSync(password, user.password)) {
+      return res.status(400).json({ message: "Password incorrect!" });
+    }
+
+    // Check if user belongs to the same business
+    if (business_id && user.business_id !== business_id) {
+       return res.status(403).json({ message: "Access denied." });
+    }
+
+    if (user.status !== 'active') {
+      return res.status(403).json({ message: "Account deactivated." });
+    }
+
+    const loginData = await generateLoginResponse(user);
+    res.json({
+      message: "Switch successful",
+      ...loginData
+    });
+  } catch (error) {
+    logError("auth.loginByPassword", error, res);
+  }
+};
+
+/**
+ * 4. Verify Manager/Owner credentials for high-level approvals
+ * (e.g., closing a shift with a large discrepancy)
+ */
+exports.verifyManager = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const { business_id } = req;
+
+    if (!username || !password) {
+      return res.status(400).json({ message: "Credentials required!" });
+    }
+
+    const sql = `
+      SELECT u.id, u.password, u.status, u.business_id, r.code as role_code
+      FROM users u
+      INNER JOIN roles r ON u.role_id = r.id
+      WHERE u.username = ? OR u.email = ?
+    `;
+
+    const [users] = await db.query(sql, [username, username]);
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: "User not found!" });
+    }
+
+    const user = users[0];
+
+    // Check if the user is a Manager or Owner
+    const isAuthorized = ["owner", "admin", "manager"].includes(user.role_code.toLowerCase());
+    if (!isAuthorized) {
+      return res.status(403).json({ message: "Authorized personnel only!" });
+    }
+
+    // Verify Password
+    if (!bcrypt.compareSync(password, user.password)) {
+      return res.status(401).json({ message: "Password incorrect!" });
+    }
+
+    // Check if user belongs to the same business
+    if (business_id && user.business_id !== business_id) {
+       return res.status(403).json({ message: "Security breach: Wrong business domain." });
+    }
+
+    if (user.status !== 'active') {
+      return res.status(403).json({ message: "Account is inactive." });
+    }
+
+    res.json({
+      success: true,
+      message: "Manager verification successful",
+      verified_by: user.id
+    });
+  } catch (error) {
+    logError("auth.verifyManager", error, res);
+  }
+};
+
+// 3. User Profile (Synchronized with latest DB state)
+exports.getProfile = async (req, res) => {
+  try {
+    const sql = `
+            SELECT u.*, 
+                   r.name as role_name, r.code as role_code,
+                   b.name as business_name, b.status as business_status, b.logo as business_logo,
+                   b.active_modules, b.plan_type, b.plan_id as plan_id,
+                   p.name as plan_name, p.max_branches, p.max_staff, p.max_products, p.active_modules as plan_modules,
+                   mp.ui_layout as business_layout
+            FROM users u
+            INNER JOIN roles r ON u.role_id = r.id
+            INNER JOIN businesses b ON u.business_id = b.id
+            LEFT JOIN subscription_plans p ON b.plan_id = p.id
+            LEFT JOIN modular_packages mp ON b.package_id = mp.id
+            WHERE u.id = ?
+        `;
+
+    const [users] = await db.query(sql, [req.user_id]);
+
+    if (users.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const user = users[0];
+    const bizModules = (user.active_modules || "").split(",").map(m => m.trim()).filter(Boolean);
+    const planModules = (user.plan_modules || "").split(",").map(m => m.trim()).filter(Boolean);
+    const activeModules = [...new Set([...bizModules, ...planModules])];
+
     const [rolePerms] = await db.query(`
-       SELECT p.route_key, p.name FROM permissions p
-       INNER JOIN role_permissions rp ON p.id = rp.permission_id
-       WHERE rp.role_id = ?
-    `, [fullUser[0].role_id]);
+        SELECT DISTINCT 
+            p.route_key, 
+            p.name,
+            CASE WHEN r.code IN ('owner') THEN 1 ELSE rp.can_view END as can_view
+        FROM permissions p
+        INNER JOIN businesses b ON b.id = ?
+        INNER JOIN roles r ON r.id = ?
+        LEFT JOIN role_permissions rp ON p.id = rp.permission_id AND rp.role_id = r.id
+        LEFT JOIN plan_permissions pp ON p.id = pp.permission_id AND pp.plan_id = b.plan_id
+        LEFT JOIN module_permissions mp ON p.id = mp.permission_id
+        LEFT JOIN system_modules sm ON mp.module_id = sm.id
+        WHERE (
+            pp.plan_id IS NOT NULL -- Belongs to active plan
+            OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', '')) -- Belongs to active module
+            OR (
+                -- Truly Core: No mapping to ANY plan and NO mapping to ANY module
+                NOT EXISTS (SELECT 1 FROM plan_permissions WHERE permission_id = p.id)
+                AND NOT EXISTS (SELECT 1 FROM module_permissions WHERE permission_id = p.id)
+            )
+        )
+        AND (
+            r.code IN ('owner') -- Owners get all entitlements allowed by plan/module
+            OR rp.permission_id IS NOT NULL -- Others must have it assigned to their role
+        )
+`, [user.business_id, user.role_id]);
 
     res.json({
       profile: {
-        ...fullUser[0],
-        is_super_admin: fullUser[0].role_code === 'super_admin' ? 1 : 0
+        ...user,
+        active_modules: activeModules.join(","),
+        is_super_admin: user.role_code === 'super_admin' ? 1 : 0
       },
-      permission: rolePerms
+      permission: rolePerms.map(p => p.route_key)
     });
   } catch (error) {
     logError("auth.getProfile", error, res);
@@ -350,7 +506,7 @@ exports.getProfile = async (req, res) => {
 // 4. Update Profile (User themselves)
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, password, email } = req.body;
+    const { name, password, email, pin_code } = req.body;
     const user_id = req.user_id; // From token
     const image = req.file?.path || req.file?.filename;
 
@@ -365,6 +521,11 @@ exports.updateProfile = async (req, res) => {
 
     let sql = "UPDATE users SET name = ?";
     let params = [name];
+
+    if (pin_code) {
+      sql += ", pin_code = ?";
+      params.push(pin_code);
+    }
 
     if (email && isSuperAdmin) {
       // Check if email already exists for another user
@@ -399,7 +560,7 @@ exports.updateProfile = async (req, res) => {
       SELECT 
         u.id, u.name, u.email, u.image as profile_image, u.branch_id, u.business_id, u.role_id,
         b.name as business_name, b.logo as business_logo, b.active_modules, b.plan_type, b.plan_id,
-        sp.name as plan_name,
+        sp.name as plan_name, sp.active_modules as plan_modules,
         r.name as role_name, r.code as role_code, br.name as branch_name,
         mp.ui_layout as business_layout
       FROM users u
@@ -413,6 +574,7 @@ exports.updateProfile = async (req, res) => {
 
     const newProfile = {
       ...updatedUser[0],
+      active_modules: [...new Set([...(updatedUser[0].active_modules || "").split(","), ...(updatedUser[0].plan_modules || "").split(","), "POS"])].filter(Boolean).join(","),
       is_super_admin: updatedUser[0].role_code === 'super_admin' ? 1 : 0
     };
 
@@ -482,7 +644,7 @@ exports.forgotPassword = async (req, res) => {
     );
 
     const { sendPasswordResetEmail } = require("../util/email");
-    
+
     // 🔥 Send email in background to avoid UI hang
     sendPasswordResetEmail(email, user.name, otpCode).catch(err => {
       console.error("[BACKGROUND EMAIL ERROR] Forgot Password:", err.message);

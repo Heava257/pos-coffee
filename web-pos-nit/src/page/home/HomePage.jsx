@@ -15,7 +15,8 @@ import {
   DollarOutlined,
   TrophyOutlined,
   TeamOutlined,
-  ShoppingCartOutlined
+  ShoppingCartOutlined,
+  AppstoreOutlined
 } from "@ant-design/icons";
 import {
   LineChart,
@@ -29,7 +30,9 @@ import {
 import dayjs from "dayjs";
 import { useLanguage, translations } from "../../store/language.store";
 import { useProfileStore } from "../../store/profileStore";
-import { DollarSign, ShoppingBag, TrendingUp, Wallet, Package, AlertCircle } from "lucide-react";
+import { DollarSign, ShoppingBag, TrendingUp, Wallet, Package, AlertCircle, FileText } from "lucide-react";
+import { useReactToPrint } from "react-to-print";
+import PrintZReport from "../../component/pos/PrintZReport";
 
 import SuperAdminDashboard from "./SuperAdminDashboard";
 
@@ -45,7 +48,6 @@ const COLORS = {
   textSecondary: "#64748b",
   bgLight: "#f8fafc",
 };
-
 function HomePage() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
@@ -63,6 +65,14 @@ function HomePage() {
   const [transactionData, setTransactionData] = useState([]);
   const [briefingVisible, setBriefingVisible] = useState(false);
   const [briefingData, setBriefingData] = useState(null);
+
+  const [viewStyle, setViewStyle] = useState(1); // 1: Analytical, 2: Operational, 3: Inventory
+
+  const refZReport = React.useRef(null);
+  const handlePrintZReport = useReactToPrint({
+    contentRef: refZReport,
+    documentTitle: `Z-Report-${dayjs().format("YYYYMMDD")}`,
+  });
 
   useEffect(() => {
     if (!isPlatformAdmin) {
@@ -150,216 +160,261 @@ function HomePage() {
     return `$${num.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
 
+  // --- STYLE 1: ANALYTICAL (Finance & Trends) ---
+  const renderAnalyticalView = () => (
+    <div className="view-fade-in">
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <div className="owner-stat-card analytical gold">
+            <div className="card-icon"><DollarSign size={20} /></div>
+            <div className="card-label">{translations[lang].period_revenue}</div>
+            <div className="card-value">{formatCurrency(rangeSummary.total_sale)}</div>
+          </div>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <div className="owner-stat-card analytical dark">
+            <div className="card-icon"><Wallet size={20} /></div>
+            <div className="card-label">{translations[lang].period_expenses}</div>
+            <div className="card-value">{formatCurrency(rangeSummary.total_expense)}</div>
+          </div>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <div className="owner-stat-card analytical green">
+            <div className="card-icon"><TrendingUp size={20} /></div>
+            <div className="card-label">{translations[lang].net_profit}</div>
+            <div className="card-value">{formatCurrency(rangeSummary.net_profit)}</div>
+          </div>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <div className="owner-stat-card analytical secondary">
+            <div className="card-icon"><Package size={20} /></div>
+            <div className="card-label">{translations[lang].stock_valuation}</div>
+            <div className="card-value">{formatCurrency(stockSummary.total_stock_value)}</div>
+          </div>
+        </Col>
+      </Row>
+
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={16}>
+          <Card bordered={false} className="premium-main-card" title={<Space><BarChartOutlined /> {translations[lang].financial_trend}</Space>}>
+            <div style={{ height: 350 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={salesData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
+                  <Line type="monotone" dataKey="Sale" stroke="#c0a060" strokeWidth={4} dot={{ r: 6, fill: '#c0a060' }} />
+                  <Line type="monotone" dataKey="Expense" stroke="#1e4a2d" strokeWidth={2} dot={false} strokeDasharray="5 5" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} lg={8}>
+          <Card bordered={false} className="premium-main-card" title={<Space><SyncOutlined /> {translations[lang].live_summary_today}</Space>}>
+            <div className="live-today-box">
+              <div className="live-row">
+                <Text type="secondary">{translations[lang].todays_income}</Text>
+                <Text strong style={{ color: '#52c41a' }}>{formatCurrency(todaySummary.income)}</Text>
+              </div>
+              <div className="live-row">
+                <Text type="secondary">{translations[lang].todays_expense}</Text>
+                <Text strong style={{ color: '#f5222d' }}>{formatCurrency(todaySummary.expense)}</Text>
+              </div>
+              <Divider style={{ margin: '12px 0' }} />
+              <div className="live-row total">
+                <Text strong>{translations[lang].net_daily_profit}</Text>
+                <Tag color="gold" style={{ borderRadius: 8 }}>{formatCurrency(todaySummary.income - todaySummary.expense)}</Tag>
+              </div>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+    </div>
+  );
+
+  // --- STYLE 2: OPERATIONAL (Solid & Action-focused) ---
+  const renderOperationalView = () => (
+    <div className="view-fade-in">
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={8}>
+          <div className="op-summary-panel gold">
+            <div style={{ fontSize: 14, opacity: 0.8 }}>Live Sales Today</div>
+            <div style={{ fontSize: 36, fontWeight: 900 }}>{formatCurrency(todaySummary.income)}</div>
+            <div style={{ marginTop: 12, display: 'flex', gap: 10 }}>
+              <Tag color="white" style={{color: '#c0a060', border: 'none', margin: 0}}>Real-time Update</Tag>
+              <Button 
+                size="small" 
+                icon={<FileText size={14} />} 
+                style={{ 
+                  background: 'rgba(255,255,255,0.2)', 
+                  border: 'none', 
+                  color: '#fff', 
+                  fontSize: 11, 
+                  fontWeight: 700,
+                  height: 24,
+                  borderRadius: 6
+                }}
+                onClick={handlePrintZReport}
+              >
+                PRINT Z-REPORT
+              </Button>
+            </div>
+          </div>
+        </Col>
+        <Col xs={24} lg={16}>
+          <Row gutter={[16, 16]}>
+            <Col span={12}>
+              <div className="op-mini-card">
+                <Text type="secondary">Period Orders</Text>
+                <div style={{ fontSize: 24, fontWeight: 800 }}>{rangeSummary.order_count}</div>
+              </div>
+            </Col>
+            <Col span={12}>
+              <div className="op-mini-card">
+                <Text type="secondary">Low Stock Warning</Text>
+                <div style={{ fontSize: 24, fontWeight: 800, color: stockSummary.low_stock_count > 0 ? '#f5222d' : '#52c41a' }}>
+                  {stockSummary.low_stock_count}
+                </div>
+              </div>
+            </Col>
+            <Col span={12}>
+              <div className="op-mini-card">
+                <Text type="secondary">System Status</Text>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#52c41a' }}>ONLINE</div>
+              </div>
+            </Col>
+            <Col span={12}>
+              <div className="op-mini-card">
+                <Text type="secondary">Active Shift</Text>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>YES</div>
+              </div>
+            </Col>
+          </Row>
+        </Col>
+      </Row>
+
+      <Card bordered={false} style={{ marginTop: 24, borderRadius: 24, boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }} title={<div style={{fontWeight: 900}}>{translations[lang].recent_activity}</div>}>
+        <Table
+          dataSource={transactionData.slice(0, 5)}
+          pagination={false}
+          columns={[
+            { title: 'Order ID', dataIndex: 'id', key: 'id', render: (val) => <Text strong>#{val}</Text> },
+            { title: 'Branch', dataIndex: 'branch_name', key: 'branch_name' },
+            { title: 'Amount', dataIndex: 'total_amount', key: 'total_amount', align: 'right', render: (val) => <Text strong>{formatCurrency(val)}</Text> },
+            { title: 'Status', key: 'status', render: () => <Badge status="success" text="Completed" /> }
+          ]}
+        />
+      </Card>
+    </div>
+  );
+
+  // --- STYLE 3: INVENTORY & DATA (Technical Focus) ---
+  const renderInventoryView = () => (
+    <div className="view-fade-in">
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={12}>
+          <div className="tech-inventory-card">
+            <div className="header">
+              <Package size={20} color="#c0a060" />
+              <Text strong style={{ marginLeft: 8 }}>Inventory Audit</Text>
+            </div>
+            <Row gutter={[16, 16]}>
+              <Col span={12}>
+                <div className="stat-box">
+                  <Text type="secondary" style={{ fontSize: 10 }}>TOTAL ITEMS</Text>
+                  <div className="val">{stockSummary.total_items}</div>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div className="stat-box">
+                  <Text type="secondary" style={{ fontSize: 10 }}>TOTAL VALUE</Text>
+                  <div className="val">{formatCurrency(stockSummary.total_stock_value)}</div>
+                </div>
+              </Col>
+            </Row>
+            
+            <div style={{ marginTop: 24 }}>
+              <Text strong style={{ fontSize: 12 }}>Stock Alerts</Text>
+              <div style={{ maxHeight: 200, overflowY: 'auto', marginTop: 12 }}>
+                {stockSummary.low_stock_list?.map((item, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <Text style={{ fontSize: 12 }}>{item.name}</Text>
+                    <Tag color="red" style={{ margin: 0 }}>Qty: {item.qty}</Tag>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Col>
+        <Col xs={24} lg={12}>
+          <div className="tech-inventory-card">
+            <div className="header">
+              <BarChartOutlined style={{ color: '#1e4a2d' }} />
+              <Text strong style={{ marginLeft: 8 }}>Profitability Analysis</Text>
+            </div>
+            <div style={{ height: 200, marginBottom: 20 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={salesData.slice(-7)}>
+                  <Line type="stepAfter" dataKey="Profit" stroke="#1e4a2d" strokeWidth={3} dot={false} />
+                  <XAxis dataKey="name" hide />
+                  <Tooltip />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ padding: '16px', background: '#f8fafc', borderRadius: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Text type="secondary">Net Profit (Period)</Text>
+                <Text strong style={{ color: '#52c41a' }}>{formatCurrency(rangeSummary.net_profit)}</Text>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                <Text type="secondary">Expense Ratio</Text>
+                <Text strong>{((rangeSummary.total_expense / (rangeSummary.total_sale || 1)) * 100).toFixed(1)}%</Text>
+              </div>
+            </div>
+          </div>
+        </Col>
+      </Row>
+    </div>
+  );
+
   return (
     <div style={{ padding: '0 0 24px 0' }}>
-
       {/* Header & Date Filter */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
         <div>
-          <Title level={4} style={{ margin: 0, color: '#1e4a2d', fontWeight: 800 }}>
+          <Title level={4} style={{ margin: 0, color: '#1e4a2d', fontWeight: 900 }}>
             {lang === 'en' ? 'Welcome back' : 'ស្វាគមន៍ការត្រឡប់មកវិញ'}, {profile?.name || 'Partner'}!
           </Title>
-          <Text type="secondary">{lang === 'en' ? "Here's what's happening with your store today." : "នេះគឺជាអ្វីដែលកំពុងកើតឡើងនៅក្នុងហាងរបស់អ្នកថ្ងៃនេះ"}</Text>
+          <Text type="secondary">
+            {viewStyle === 1 && (lang === 'en' ? "Analytical overview of your business performance." : "ទិដ្ឋភាពទូទៅនៃការវិភាគលើអាជីវកម្មរបស់អ្នក។")}
+            {viewStyle === 2 && (lang === 'en' ? "Operational live stats and recent activity." : "ស្ថិតិប្រតិបត្តិការបន្តផ្ទាល់ និងសកម្មភាពចុងក្រោយ។")}
+            {viewStyle === 3 && (lang === 'en' ? "Inventory audit and profitability insights." : "ការធ្វើសវនកម្មស្តុក និងការយល់ដឹងពីប្រាក់ចំណេញ។")}
+          </Text>
         </div>
-        <Space direction="vertical" align="end">
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <RangePicker
             value={dates}
             onChange={(v) => v && setDates(v)}
-            style={{ borderRadius: 8, border: '1px solid #e6f2eb', padding: '8px 16px' }}
-            presets={[
-              { label: 'Today', value: [dayjs(), dayjs()] },
-              { label: 'This Week', value: [dayjs().startOf('week'), dayjs()] },
-              { label: 'This Month', value: [dayjs().startOf('month'), dayjs()] },
-            ]}
+            style={{ borderRadius: 10, border: '1px solid #e6f2eb', height: 40 }}
           />
-        </Space>
+          <Button 
+            onClick={() => setViewStyle(viewStyle >= 3 ? 1 : viewStyle + 1)}
+            style={{ 
+              background: '#1e293b', color: '#fff', border: 'none', borderRadius: '10px',
+              height: 40, display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px'
+            }}
+          >
+            Change View <AppstoreOutlined />
+          </Button>
+        </div>
       </div>
 
       <Spin spinning={isLoading}>
-        {/* Row 1: Range Summary (Filterable) */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <div className="dash-card primary">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div className="icon-box"><DollarSign size={20} color="#1e4a2d" /></div>
-                <AntTooltip title="Total Sales in selected period"><InfoCircleOutlined style={{ color: '#c0a060' }} /></AntTooltip>
-              </div>
-              <div style={{ marginTop: 16 }}>
-                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>{translations[lang].period_revenue}</Text>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#1e4a2d' }}>{formatCurrency(rangeSummary.total_sale)}</div>
-              </div>
-            </div>
-          </Col>
-
-          <Col xs={24} sm={12} lg={6}>
-            <div className="dash-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div className="icon-box expense"><Wallet size={20} color="#f5222d" /></div>
-              </div>
-              <div style={{ marginTop: 16 }}>
-                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>{translations[lang].period_expenses}</Text>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#f5222d' }}>{formatCurrency(rangeSummary.total_expense)}</div>
-              </div>
-            </div>
-          </Col>
-
-          <Col xs={24} sm={12} lg={6}>
-            <div className="dash-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div className="icon-box profit"><TrendingUp size={20} color="#52c41a" /></div>
-              </div>
-              <div style={{ marginTop: 16 }}>
-                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>{translations[lang].net_profit}</Text>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#52c41a' }}>{formatCurrency(rangeSummary.net_profit)}</div>
-              </div>
-            </div>
-          </Col>
-
-          <Col xs={24} sm={12} lg={6}>
-            <div className="dash-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div className="icon-box inventory"><Package size={20} color="#c0a060" /></div>
-              </div>
-              <div style={{ marginTop: 16 }}>
-                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>{translations[lang].stock_valuation}</Text>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#c0a060' }}>{formatCurrency(stockSummary.total_stock_value)}</div>
-              </div>
-            </div>
-          </Col>
-        </Row>
-
-        {/* Row 2: Charts & Live Today */}
-        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-          {/* Main Chart */}
-          <Col xs={24} lg={16}>
-            <Card
-              title={<Space><BarChartOutlined /> {translations[lang].financial_trend}</Space>}
-              style={{ borderRadius: 20, boxShadow: '0 4px 15px rgba(0,0,0,0.02)', border: '1px solid #f0f0f0' }}
-            >
-              <div style={{ height: 350 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#c0c0c0', fontSize: 12 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#c0c0c0', fontSize: 12 }} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
-                    />
-                    <Line type="monotone" dataKey="Sale" stroke="#1e4a2d" strokeWidth={3} dot={{ r: 4, fill: '#1e4a2d' }} />
-                    <Line type="monotone" dataKey="Expense" stroke="#f5222d" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </Col>
-
-          {/* Side Widgets: Today & Stock */}
-          <Col xs={24} lg={8}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {/* Today's Live Info */}
-              <Card
-                title={<Space><SyncOutlined spin={isLoading} /> {translations[lang].live_summary_today}</Space>}
-                style={{ borderRadius: 20, border: '1px solid #e6f2eb', background: '#fdfdfd' }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div>
-                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>{translations[lang].todays_income}</Text>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1e4a2d' }}>{formatCurrency(todaySummary.income)}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>{translations[lang].todays_expense}</Text>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#f5222d' }}>{formatCurrency(todaySummary.expense)}</div>
-                  </div>
-                </div>
-                <Divider style={{ margin: '12px 0' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text strong>{translations[lang].net_daily_profit}</Text>
-                  <Tag color={todaySummary.income - todaySummary.expense >= 0 ? "green" : "red"} style={{ borderRadius: 20 }}>
-                    {formatCurrency(todaySummary.income - todaySummary.expense)}
-                  </Tag>
-                </div>
-              </Card>
-
-              {/* Stock Warning Widget */}
-              <Card
-                title={<Space><Package color="#c0a060" size={18} /> {translations[lang].stock_insights}</Space>}
-                style={{ borderRadius: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}
-              >
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <div style={{ textAlign: 'center', background: '#f9f9f9', padding: '12px', borderRadius: 12 }}>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: '#1e4a2d' }}>{stockSummary.total_items}</div>
-                      <Text type="secondary" style={{ fontSize: 10 }}>{translations[lang].total_items}</Text>
-                    </div>
-                  </Col>
-                  <Col span={12}>
-                    <div style={{ textAlign: 'center', background: stockSummary.low_stock_count > 0 ? '#fff1f0' : '#f9f9f9', padding: '12px', borderRadius: 12, border: stockSummary.low_stock_count > 0 ? '1px solid #ffa39e' : 'none' }}>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: stockSummary.low_stock_count > 0 ? '#f5222d' : '#1e4a2d' }}>
-                        {stockSummary.low_stock_count}
-                      </div>
-                      <Text type="secondary" style={{ fontSize: 10, color: stockSummary.low_stock_count > 0 ? '#f5222d' : '' }}>{translations[lang].low_stock}</Text>
-                    </div>
-                  </Col>
-                </Row>
-
-                {stockSummary.expiry_alerts?.length > 0 && (
-                  <div style={{ marginTop: 16, padding: '12px', background: '#fff7e6', borderRadius: 12, border: '1px solid #ffd591' }}>
-                    <Text strong style={{ fontSize: 12, color: '#d46b08' }}><AlertCircle size={14} style={{ marginRight: 4 }} /> {translations[lang].expiring_soon}:</Text>
-                    {stockSummary.expiry_alerts.map((item, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                        <Text style={{ fontSize: 11 }}>{item.name}</Text>
-                        <Tag color="orange" style={{ fontSize: 9, margin: 0 }}>{dayjs(item.expiry_date).format('MMM DD')}</Tag>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {stockSummary.low_stock_list?.length > 0 && (
-                  <div style={{ marginTop: 16 }}>
-                    <Text type="secondary" style={{ fontSize: 11, fontWeight: 700 }}>{translations[lang].reorder_needed}:</Text>
-                    {stockSummary.low_stock_list.map((item, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                        <Text style={{ fontSize: 12 }}>{item.name}</Text>
-                        <Badge count={item.qty} color="#f5222d" size="small" />
-                      </div>
-                    ))}
-                    <Button type="link" size="small" style={{ padding: 0, marginTop: 8 }} onClick={() => navigate('/stock')}>{translations[lang].view_inventory}</Button>
-                  </div>
-                )}
-              </Card>
-            </div>
-          </Col>
-        </Row>
-
-        {/* Row 3: Recent Transactions */}
-        <Card
-          title={<Space><CalendarOutlined /> {translations[lang].recent_activity}</Space>}
-          style={{ borderRadius: 20 }}
-          extra={<Button type="link" onClick={() => navigate('/order')}>{translations[lang].view_all_orders}</Button>}
-        >
-          <Table
-            dataSource={transactionData}
-            pagination={false}
-            size="middle"
-            columns={[
-              { title: 'Order ID', dataIndex: 'id', key: 'id', render: (val) => <Text strong>#{val}</Text> },
-              { title: 'Branch', dataIndex: 'branch_name', key: 'branch_name' },
-              { title: 'Date', dataIndex: 'created_at', key: 'created_at', render: (val) => dayjs(val).format('YYYY-MM-DD HH:mm') },
-              {
-                title: 'Amount',
-                dataIndex: 'total_amount',
-                key: 'total_amount',
-                align: 'right',
-                render: (val) => <span style={{ fontWeight: 800, color: '#1e4a2d' }}>{formatCurrency(val)}</span>
-              },
-              {
-                title: 'Status',
-                key: 'status',
-                render: () => <Badge status="success" text="Completed" />
-              }
-            ]}
-          />
-        </Card>
+        {viewStyle === 1 && renderAnalyticalView()}
+        {viewStyle === 2 && renderOperationalView()}
+        {viewStyle === 3 && renderInventoryView()}
       </Spin>
 
       {/* AI EXECUTIVE MORNING BRIEFING MODAL */}
@@ -477,41 +532,79 @@ function HomePage() {
       </Modal>
 
       <style jsx global>{`
-        .dash-card {
-          background: #ffffff;
-          border-radius: 20px;
-          padding: 20px;
-          border: 1px solid #f0f0f0;
-          height: 100%;
-          transition: all 0.3s ease;
-          position: relative;
-          overflow: hidden;
+        .view-fade-in {
+          animation: fadeIn 0.4s ease-out;
         }
-        .dash-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 40px rgba(30, 74, 45, 0.12);
-          border-color: #c0a060;
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        .dash-card.primary {
-           border-bottom: 4px solid #c0a060;
+
+        /* --- STYLE 1: ANALYTICAL --- */
+        .owner-stat-card.analytical {
+          background: #fff;
+          padding: 24px;
+          border-radius: 24px;
+          border: 1px solid #f1f5f9;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.02);
         }
-        .icon-box {
+        .owner-stat-card.analytical.gold { border-bottom: 4px solid #c0a060; }
+        .owner-stat-card.analytical.green { border-bottom: 4px solid #1e4a2d; }
+        .owner-stat-card.analytical.dark { border-bottom: 4px solid #0f172a; }
+        .owner-stat-card.analytical.secondary { border-bottom: 4px solid #64748b; }
+        
+        .owner-stat-card .card-icon {
           width: 40px;
           height: 40px;
           border-radius: 12px;
-          background: #f4f1eb;
           display: flex;
           align-items: center;
           justify-content: center;
+          margin-bottom: 16px;
         }
-        .icon-box.expense { background: #fff1f0; }
-        .icon-box.profit { background: #f6ffed; }
-        .icon-box.order { background: #e6f7ff; }
+        .gold .card-icon { background: rgba(192, 160, 96, 0.1); color: #c0a060; }
+        .green .card-icon { background: rgba(30, 74, 45, 0.1); color: #1e4a2d; }
+        .dark .card-icon { background: rgba(15, 23, 42, 0.1); color: #0f172a; }
+        .secondary .card-icon { background: rgba(100, 116, 139, 0.1); color: #64748b; }
         
+        .card-label { font-size: 12px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+        .card-value { font-size: 24px; font-weight: 900; color: #1e293b; }
+
+        .premium-main-card { border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+        .live-today-box .live-row { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .live-today-box .live-row.total { font-size: 16px; }
+
+        /* --- STYLE 2: OPERATIONAL --- */
+        .op-summary-panel {
+          padding: 40px 32px;
+          border-radius: 32px;
+          color: #fff;
+          height: 100%;
+        }
+        .op-summary-panel.gold { background: linear-gradient(135deg, #c0a060 0%, #d4b47a 100%); }
+        .op-mini-card {
+          padding: 20px;
+          background: #fff;
+          border-radius: 20px;
+          border: 1px solid #f1f5f9;
+          height: 100%;
+        }
+
+        /* --- STYLE 3: INVENTORY --- */
+        .tech-inventory-card {
+          background: #fff;
+          border-radius: 24px;
+          padding: 24px;
+          border: 1px solid #e2e8f0;
+          height: 100%;
+        }
+        .tech-inventory-card .header { display: flex; align-items: center; margin-bottom: 24px; }
+        .tech-inventory-card .stat-box { background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .tech-inventory-card .stat-box .val { font-size: 18px; font-weight: 900; margin-top: 4px; }
+
         .ant-table-thead > tr > th {
             background: #fafafa !important;
-            font-weight: 700 !important;
-            font-size: 13px;
+            font-weight: 800 !important;
         }
       `}</style>
     </div>

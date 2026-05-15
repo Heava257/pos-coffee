@@ -32,6 +32,7 @@ const authMiddleware = (permission_name) => {
             req.branch_id = Number(decoded.branch_id);
             req.role_id = Number(decoded.role_id);
             req.auth = decoded;
+            let rows = [];
 
             // 🚀 GUEST ACCESS BYPASS: If no role_id but has guest permissions in token
             if (!req.role_id && decoded.role_code === 'guest') {
@@ -44,20 +45,34 @@ const authMiddleware = (permission_name) => {
                 if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
                     rows = cached.data;
                 } else {
+                    // 🚀 SAAS-AWARE PERMISSION QUERY
+                    // 1. Check Plan Entitlements
+                    // 2. Check Module Entitlements
+                    // 3. Check Role Granular Permissions
                     [rows] = await db.query(
-                        `SELECT DISTINCT p.route_key, rp.can_view, rp.can_create, rp.can_edit, rp.can_delete 
+                        `SELECT DISTINCT 
+                            p.route_key, 
+                            CASE WHEN r.code IN ('owner') THEN 1 ELSE rp.can_view END as can_view,
+                            CASE WHEN r.code IN ('owner') THEN 1 ELSE rp.can_create END as can_create,
+                            CASE WHEN r.code IN ('owner') THEN 1 ELSE rp.can_edit END as can_edit,
+                            CASE WHEN r.code IN ('owner') THEN 1 ELSE rp.can_delete END as can_delete
                          FROM permissions p 
-                         INNER JOIN role_permissions rp ON p.id = rp.permission_id 
+                         INNER JOIN businesses b ON b.id = ?
+                         INNER JOIN roles r ON r.id = ?
+                         LEFT JOIN role_permissions rp ON p.id = rp.permission_id AND rp.role_id = r.id
+                         LEFT JOIN plan_permissions pp ON p.id = pp.permission_id AND pp.plan_id = b.plan_id
                          LEFT JOIN module_permissions mp ON p.id = mp.permission_id
                          LEFT JOIN system_modules sm ON mp.module_id = sm.id
-                         INNER JOIN businesses b ON b.id = ?
-                         WHERE rp.role_id = ?
+                         WHERE (
+                            pp.plan_id IS NOT NULL -- Permission is in the Plan
+                            OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', '')) -- Permission is in an active Module
+                            OR mp.permission_id IS NULL -- Legacy/Core Permission (not in any plan/module)
+                         )
                          AND (
-                            ? = 1 -- 👑 Super Admin/Business 1 Bypass
-                            OR mp.module_id IS NULL -- Core Permission
-                            OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', '')) -- Belongs to active module
+                            r.code IN ('owner') -- Owners get all entitlements for their context
+                            OR rp.permission_id IS NOT NULL -- Others must have it assigned to their role
                          )`,
-                        [req.business_id, req.role_id, req.business_id]
+                        [req.business_id, req.role_id]
                     );
                     permCache.set(cacheKey, { data: rows, ts: Date.now() });
                 }
@@ -112,6 +127,11 @@ const authMiddleware = (permission_name) => {
             return res.status(401).json({ message: "Invalid identity token", error: "TOKEN_INVALID" });
         }
     };
+};
+
+authMiddleware.clearCache = () => {
+    console.log("🚀 Clearing Permission Cache...");
+    permCache.clear();
 };
 
 module.exports = authMiddleware;

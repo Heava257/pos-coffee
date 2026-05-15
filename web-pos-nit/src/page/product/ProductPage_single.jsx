@@ -353,6 +353,8 @@ const getBase64 = (file) =>
 function ProductPage() {
   const { lang } = useLanguage();
   const t = translations[lang];
+  const { profile, permissions } = useProfileStore(); 
+  const hasRecipePerm = permissions?.some(p => p.route_key?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'recipe');
   const { config } = configStore();
   const [form] = Form.useForm();
   const [state, setState] = useState({
@@ -889,14 +891,16 @@ function ProductPage() {
                 align: 'right',
                 render: (_, r, index) => (
                   <Space size="middle">
-                    <Tooltip title={t.recipe_tooltip || "Recipe / Ingredients"}>
-                      <Button
-                        type="text"
-                        icon={<MdRestaurantMenu style={{ fontSize: '24px', color: COLORS.midGreen }} />}
-                        onClick={() => onClickRecipe(r)}
-                        style={{ background: '#f0fdf4', borderRadius: '12px', width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #dcfce7' }}
-                      />
-                    </Tooltip>
+                    {hasRecipePerm && (
+                      <Tooltip title={t.recipe_tooltip || "Recipe / Ingredients"}>
+                        <Button
+                          type="text"
+                          icon={<MdRestaurantMenu style={{ fontSize: '24px', color: COLORS.midGreen }} />}
+                          onClick={() => onClickRecipe(r)}
+                          style={{ background: '#f0fdf4', borderRadius: '12px', width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #dcfce7' }}
+                        />
+                      </Tooltip>
+                    )}
                     <Button
                       type="text"
                       icon={<MdEdit style={{ fontSize: '20px', color: '#2563eb' }} />}

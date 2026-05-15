@@ -158,6 +158,38 @@ function RecipeModal({ open, onCancel, product }) {
             </div>
 
             <Form form={form} layout="vertical" onFinish={onFinish}>
+                <div style={{ marginBottom: '24px', padding: '16px', background: '#f0f9ff', borderRadius: '16px', border: '1px dashed #bae6fd' }}>
+                    <Text strong style={{ display: 'block', marginBottom: '8px', color: '#0369a1', fontSize: '13px' }}>
+                        ⚡ {t.quick_add_ingredients || "Quick Add Multiple Ingredients"}
+                    </Text>
+                    <Select
+                        mode="multiple"
+                        placeholder="Type to search and select multiple ingredients..."
+                        style={{ width: '100%' }}
+                        size="large"
+                        options={rawMaterials}
+                        value={[]} // Always empty so it acts as an adder
+                        onChange={(selectedIds) => {
+                            const currentIngredients = form.getFieldValue('ingredients') || [];
+                            const newIngredients = [...currentIngredients];
+                            
+                            selectedIds.forEach(id => {
+                                if (!currentIngredients.some(ing => ing?.raw_material_id === id)) {
+                                    const material = rawMaterials.find(rm => rm.value === id);
+                                    newIngredients.push({
+                                        raw_material_id: id,
+                                        qty: 1,
+                                        unit: material?.unit
+                                    });
+                                }
+                            });
+                            
+                            form.setFieldsValue({ ingredients: newIngredients });
+                        }}
+                        maxTagCount="responsive"
+                    />
+                </div>
+
                 <div style={{ maxHeight: "450px", overflowY: "auto", overflowX: "hidden", padding: '4px 12px 4px 4px' }}>
                     <Form.List name="ingredients">
                         {(fields, { add, remove }) => (

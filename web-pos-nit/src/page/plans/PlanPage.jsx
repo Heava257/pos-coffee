@@ -38,15 +38,17 @@ import {
     MailOutlined
 } from "@ant-design/icons";
 import { request } from "../../util/helper";
-import { Tabs } from "antd";
+import { Tabs, Checkbox } from "antd";
 import { Config } from "../../util/config";
 import dayjs from "dayjs";
 import { Upload } from "lucide-react";
+import { useLocation } from "react-router-dom";
 const { TabPane } = Tabs;
 
 const { Title, Text } = Typography;
 
 const PlanPage = () => {
+    const location = useLocation();
     const [plans, setPlans] = useState([]);
     const [subscriptions, setSubscriptions] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -54,10 +56,16 @@ const PlanPage = () => {
     const [form] = Form.useForm();
     const [systemForm] = Form.useForm();
     const [editingPlan, setEditingPlan] = useState(null);
-    const [activeTab, setActiveTab] = useState("plans");
+    const [activeTab, setActiveTab] = useState(location.pathname === "/system-subscriptions" ? "monitoring" : "plans");
     const [systemSettings, setSystemSettings] = useState({});
     const [sysLoading, setSysLoading] = useState(false);
     const [fileList, setFileList] = useState([]);
+
+    useEffect(() => {
+        if (location.pathname === "/system-subscriptions") {
+            setActiveTab("monitoring");
+        }
+    }, [location.pathname]);
 
     useEffect(() => {
         fetchPlans();
@@ -122,14 +130,22 @@ const PlanPage = () => {
 
     const handleEdit = (record) => {
         setEditingPlan(record);
-        form.setFieldsValue(record);
+        form.setFieldsValue({
+            ...record,
+            active_modules: record.active_modules ? record.active_modules.split(",") : []
+        });
         setIsModalOpen(true);
     };
 
     const handleSave = async () => {
         try {
             const values = await form.validateFields();
-            const res = await request("plans", "put", { ...values, id: editingPlan.id });
+            const payload = {
+                ...values,
+                id: editingPlan.id,
+                active_modules: values.active_modules ? values.active_modules.join(",") : ""
+            };
+            const res = await request("plans", "put", payload);
             if (res && res.success) {
                 message.success("Plan updated successfully!");
                 setIsModalOpen(false);
@@ -503,28 +519,17 @@ const PlanPage = () => {
                             </Form.Item>
                         </Col>
                     </Row>
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item name="billing_cycle" label="Billing Cycle" rules={[{ required: true }]}>
-                                <Select>
-                                    <Select.Option value="monthly">Monthly</Select.Option>
-                                    <Select.Option value="lifetime">Lifetime (One-time)</Select.Option>
-                                </Select>
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item name="is_active" label="Status" valuePropName="checked">
-                                <Badge
-                                    status={form.getFieldValue("is_active") ? "success" : "default"}
-                                    text={form.getFieldValue("is_active") ? "Active" : "Inactive"}
-                                />
-                                <Select style={{ width: '100%', marginTop: 8 }}>
-                                    <Select.Option value={1}>Active</Select.Option>
-                                    <Select.Option value={0}>Inactive</Select.Option>
-                                </Select>
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                    <Divider orientation="left" style={{ fontSize: 13, color: '#999' }}>Included Modules</Divider>
+                    <Form.Item name="active_modules">
+                        <Checkbox.Group style={{ width: '100%' }}>
+                            <Row gutter={[16, 16]}>
+                                <Col span={12}><Checkbox value="POS">Core POS System</Checkbox></Col>
+                                <Col span={12}><Checkbox value="ORDERING">Web QR Ordering</Checkbox></Col>
+                                <Col span={12}><Checkbox value="INVENTORY">Advanced Inventory</Checkbox></Col>
+                                <Col span={12}><Checkbox value="CRM">Marketing & CRM</Checkbox></Col>
+                            </Row>
+                        </Checkbox.Group>
+                    </Form.Item>
                 </Form>
             </Modal>
 

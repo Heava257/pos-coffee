@@ -25,9 +25,9 @@ const PrintInvoice = ({
   const changeInUSD = totalReceivedInUSD - totalUSD;
 
   return (
-    <div className="print-invoice-wrapper" style={{ width: '80mm', color: '#000', backgroundColor: '#fff', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
+    <div className="print-invoice-wrapper" style={{ width: '80mm', margin: '0 auto', color: '#000', backgroundColor: '#fff', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
       <div style={{
-        width: '74mm',
+        width: '76mm',
         margin: '0 auto',
         padding: '4mm 0',
       }}>

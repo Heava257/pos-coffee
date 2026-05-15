@@ -114,13 +114,16 @@ exports.create = async (req, res) => {
         const order_id = order_res.insertId;
 
         // C. AUTO-CLEAR PENDING WEB ORDERS for this table
+        // If staff starts a NEW order for this table, we mark OLD pending web orders as 'preparing' 
+        // BUT only if they are older than 1 minute to avoid clearing a just-arrived web order
         if (table_no) {
-            console.log(`[Auto-Clear Create] Table: ${table_no}, Biz: ${business_id}, Skip ID: ${order_id}`);
             const [clearRes] = await conn.query(
-                "UPDATE orders SET kitchen_status = 'preparing' WHERE TRIM(table_no) = TRIM(?) AND business_id = ? AND kitchen_status = 'pending' AND id != ?",
+                "UPDATE orders SET kitchen_status = 'preparing' WHERE TRIM(table_no) = TRIM(?) AND business_id = ? AND kitchen_status = 'pending' AND id != ? AND created_at < NOW() - INTERVAL 1 MINUTE",
                 [table_no, business_id, order_id]
             );
-            console.log(`[Auto-Clear Create] Affected rows: ${clearRes.affectedRows}`);
+            if (clearRes.affectedRows > 0) {
+                console.log(`[Auto-Clear Create] Table ${table_no}: Moved ${clearRes.affectedRows} stale pending orders to preparing.`);
+            }
         }
 
         // B. Insert Details & Deduct Stock (Recipe Aware)
@@ -476,10 +479,33 @@ exports.getPendingOrders = async (req, res) => {
     try {
         const { business_id } = req;
         const branch_id = req.query.branch_id || req.branch_id;
-        const [list] = await db.query(
-            "SELECT id, table_no, status, kitchen_status, order_type, total_amount, created_at FROM orders WHERE business_id = ? AND branch_id = ? AND status = 'unpaid' AND order_type = 'dine_in' AND kitchen_status = 'pending' AND table_no IS NOT NULL AND table_no != '' ORDER BY id DESC",
-            [business_id, branch_id]
-        );
+
+        if (!business_id || !branch_id) {
+            return res.status(400).json({ list: [], message: "Missing Business or Branch context" });
+        }
+
+        // Query for orders that need attention (Pending + Table-based)
+        // We look for 'pending' kitchen_status because that's what shows up in the staff badge
+        const sql = `
+            SELECT id, table_no, status, kitchen_status, order_type, total_amount, customer_name, is_verified, lat, created_at 
+            FROM orders 
+            WHERE business_id = ? AND branch_id = ? 
+            AND status = 'unpaid' 
+            AND kitchen_status = 'pending' 
+            AND table_no IS NOT NULL AND table_no != '' 
+            ORDER BY id DESC
+        `;
+        const [list] = await db.query(sql, [business_id, branch_id]);
+
+        // Fetch details for each order to show in the list
+        for (let order of list) {
+            const [details] = await db.query(
+                "SELECT od.*, p.name as product_name FROM order_details od JOIN products p ON od.product_id = p.id WHERE od.order_id = ?",
+                [order.id]
+            );
+            order.details = details;
+        }
+
         res.json({ list });
     } catch (error) {
         logError("order.getPendingOrders", error, res);
@@ -516,10 +542,25 @@ exports.getKDSOrders = async (req, res) => {
                 od.kitchen_batch_id,
                 od.kitchen_status,
                 u.name as staff_name,
-                GROUP_CONCAT(CONCAT(od.qty, ' x ', p.name) SEPARATOR '\n') as items_summary
+                GROUP_CONCAT(
+                    CONCAT(
+                        od.qty, ' x ', p.name, 
+                        '||', IFNULL(cap.servings, 0),
+                        '||', IFNULL(bp.stock_qty, 0),
+                        '||', p.product_type
+                    ) SEPARATOR '\n'
+                ) as items_summary
             FROM order_details od
             JOIN orders o ON od.order_id = o.id
             JOIN products p ON od.product_id = p.id
+            LEFT JOIN branch_products bp ON p.id = bp.product_id AND bp.branch_id = o.branch_id
+            LEFT JOIN (
+                SELECT rd.product_id, MIN(FLOOR(rm.qty / rd.qty)) as servings
+                FROM recipe_detail rd 
+                JOIN raw_material rm ON rd.raw_material_id = rm.id 
+                WHERE rd.business_id = ?
+                GROUP BY rd.product_id
+            ) cap ON p.id = cap.product_id
             LEFT JOIN users u ON o.user_id = u.id
             WHERE o.business_id = ? AND o.branch_id = ? 
             AND o.status != 'cancelled'
@@ -535,7 +576,7 @@ exports.getKDSOrders = async (req, res) => {
         sql += " GROUP BY o.id, od.kitchen_batch_id, od.kitchen_status, u.name ";
         sql += " ORDER BY o.id ASC, od.kitchen_batch_id ASC ";
 
-        const [list] = await db.query(sql, [business_id, branch_id]);
+        const [list] = await db.query(sql, [business_id, business_id, branch_id]);
         res.json({ list });
     } catch (error) {
         logError("order.getKDSOrders", error, res);
@@ -630,7 +671,7 @@ exports.createWebOrder = async (req, res) => {
                 // REDIRECT TO ADDITIVE UPDATE
                 await connection.commit();
                 connection.release();
-                // Force kitchen_status back to pending so POS staff sees the new items
+                // 🚀 FORCE 'pending' status so it shows up for staff even if the previous state was 'preparing'
                 req.body.kitchen_status = 'pending';
                 return exports.update(req, res, true, existingOrders[0].id);
             }
@@ -675,7 +716,7 @@ exports.createWebOrder = async (req, res) => {
         for (const item of cart_items) {
             await connection.query(
                 "INSERT INTO order_details (order_id, product_id, qty, price, note, kitchen_batch_id, kitchen_status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                [orderId, item.product_id, item.qty, item.price, item.note, batchId, req.body.kitchen_status || 'preparing']
+                [orderId, item.product_id, item.qty, item.price, item.note, batchId, 'pending']
             );
         }
 
@@ -819,13 +860,15 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
 
         // A.1 AUTO-CLEAR PENDING WEB ORDERS for this table
         // SKIP this if it's an additive update (mobile merging), because we want to keep the main order pending
+        // ALSO skip if it's a very recent order (within 1 minute)
         if (table_no && !is_additive) {
-            console.log(`[Auto-Clear Update] Table: ${table_no}, Biz: ${business_id}, Skip ID: ${order_id}`);
             const [clearRes] = await conn.query(
-                "UPDATE orders SET kitchen_status = 'preparing' WHERE TRIM(table_no) = TRIM(?) AND business_id = ? AND kitchen_status = 'pending' AND id != ?",
+                "UPDATE orders SET kitchen_status = 'preparing' WHERE TRIM(table_no) = TRIM(?) AND business_id = ? AND kitchen_status = 'pending' AND id != ? AND created_at < NOW() - INTERVAL 1 MINUTE",
                 [table_no, business_id, order_id]
             );
-            console.log(`[Auto-Clear Update] Affected rows: ${clearRes.affectedRows}`);
+            if (clearRes.affectedRows > 0) {
+                console.log(`[Auto-Clear Update] Table ${table_no}: Moved ${clearRes.affectedRows} stale pending orders to preparing.`);
+            }
         }
 
         // B. Update Details & Stock

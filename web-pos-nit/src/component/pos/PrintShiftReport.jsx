@@ -12,8 +12,6 @@ const PrintShiftReport = forwardRef((props, ref) => {
         opening_cash = 0,
         opening_cash_khr = 0,
         exchange_rate = 4000,
-        total_expense_usd = 0,
-        remark = ""
     } = props;
 
     const formatUSD = (value) => {
@@ -34,157 +32,154 @@ const PrintShiftReport = forwardRef((props, ref) => {
     const safeSummary = summary || {};
     const opening_total_usd = Number(opening_cash) + (Number(opening_cash_khr) / exchange_rate);
     const actual_total_usd = Number(actual_cash) + (Number(actual_cash_khr) / exchange_rate);
-    const expected_total_usd = opening_total_usd + Number(safeSummary.total_cash_usd || 0) - (Number(total_expense_usd) || 0);
-    const diff = actual_total_usd - expected_total_usd;
+    const expected_total_usd = Number(safeSummary.expected_cash_usd || 0);
+    const variance = actual_total_usd - expected_total_usd;
+    
+    const isSafe = Math.abs(variance) < 0.01;
+    const isOver = variance >= 0.01;
+    const statusLabel = isSafe ? "BALANCED" : (isOver ? "CASH OVER" : "CASH SHORTAGE");
 
     return (
         <div ref={ref} className="print-shift-report-wrapper" style={{ width: '80mm', color: '#000', margin: '0 auto', backgroundColor: '#fff', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
             <div style={{
                 width: '74mm',
                 margin: '0 auto',
-                padding: '4mm 1mm',
-                lineHeight: '1.3',
+                padding: '6mm 1mm',
+                lineHeight: '1.4',
             }}>
                 {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                    <div style={{ fontSize: '18px', fontWeight: '900', marginBottom: '4px', textTransform: 'uppercase' }}>
-                        SHIFT REPORT
+                <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+                    <div style={{ fontSize: '20px', fontWeight: '900', marginBottom: '2px', letterSpacing: '1px' }}>
+                        X-REPORT (SHIFT)
                     </div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#333' }}>
                         {profile?.business_name || "COFFEE SHOP"}
                     </div>
-                    <div style={{ fontSize: '11px', opacity: 0.8 }}>
+                    <div style={{ fontSize: '11px', opacity: 0.7 }}>
                         {profile?.branch_name || "Main Branch"}
                     </div>
                 </div>
 
-                <div style={{ borderTop: '0.5pt solid #000', margin: '8px 0' }}></div>
+                <div style={{ borderTop: '1pt solid #000', margin: '10px 0' }}></div>
 
                 {/* Info Section */}
-                <div style={{ fontSize: '12px', marginBottom: '8px' }}>
+                <div style={{ fontSize: '12px', marginBottom: '10px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>STAFF:</span>
-                        <span style={{ fontWeight: 'bold' }}>{staff_name}</span>
+                        <span style={{ fontWeight: 600 }}>STAFF:</span>
+                        <span style={{ fontWeight: '800' }}>{staff_name.toUpperCase()}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>DATE:</span>
-                        <span>{dayjs(filter.from_date).format("DD MMM YYYY")}</span>
+                        <span>SHIFT START:</span>
+                        <span>{dayjs(filter.from_date).format("DD/MM/YYYY HH:mm")}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>PRINT TIME:</span>
-                        <span>{dayjs().format("HH:mm:ss")}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>RATE:</span>
-                        <span>1$ = {exchange_rate}៛</span>
+                        <span>REPORT TIME:</span>
+                        <span>{dayjs().format("DD/MM/YYYY HH:mm")}</span>
                     </div>
                 </div>
 
-                <div style={{ borderTop: '0.5pt solid #000', margin: '8px 0' }}></div>
+                <div style={{ borderTop: '0.5pt dashed #000', margin: '10px 0' }}></div>
 
                 {/* Sales Summary */}
-                <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontWeight: '900', fontSize: '13px', marginBottom: '4px' }}>SALES SUMMARY:</div>
+                <div style={{ marginBottom: '15px' }}>
+                    <div style={{ fontWeight: '900', fontSize: '13px', marginBottom: '6px', borderBottom: '0.5pt solid #000', display: 'inline-block' }}>FINANCIAL SUMMARY</div>
                     <div style={{ fontSize: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '900', marginTop: '2px' }}>
-                            <span>GROSS SALES:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Gross Sales:</span>
                             <span>${formatUSD(safeSummary.total_sales_usd)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#000', fontStyle: 'italic' }}>
-                            <span>Total Expense:</span>
-                            <span>-${formatUSD(safeSummary.total_expense_usd)}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#555' }}>
+                            <span>Total Discount:</span>
+                            <span>-${formatUSD(safeSummary.total_discount_usd || 0)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '900', marginTop: '4px', fontSize: '15px', borderTop: '0.5pt solid #000', paddingTop: '4px' }}>
-                            <span>NET PROFIT:</span>
-                            <span>${formatUSD(Number(safeSummary.total_sales_usd || 0) - Number(safeSummary.total_expense_usd || 0))}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', marginTop: '4px', paddingTop: '4px', borderTop: '0.5pt solid #eee' }}>
+                            <span>NET SALES:</span>
+                            <span>${formatUSD(Number(safeSummary.total_sales_usd || 0) - Number(safeSummary.total_discount_usd || 0))}</span>
                         </div>
-                    </div>
-                </div>
-
-                <div style={{ borderTop: '0.5pt dashed #000', margin: '8px 0' }}></div>
-
-                {/* Payment Methods */}
-                <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontWeight: '900', fontSize: '13px', marginBottom: '4px' }}>PAYMENT METHODS:</div>
-                    <div style={{ fontSize: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>CASH ($):</span>
-                            <span>${formatUSD(safeSummary.total_cash_usd)}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>ABA (QR):</span>
-                            <span>${formatUSD(safeSummary.total_aba_usd)}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>WING/OTHER:</span>
-                            <span>${formatUSD(safeSummary.total_wing_usd)}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div style={{ borderTop: '0.5pt solid #000', margin: '8px 0' }}></div>
-
-                {/* Reconciliation */}
-                <div style={{ marginBottom: '12px', border: '0.5pt solid #000', padding: '6px' }}>
-                    <div style={{ fontWeight: '900', fontSize: '13px', marginBottom: '6px', textAlign: 'center' }}>RECONCILIATION</div>
-                    <div style={{ fontSize: '11px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Opening Cash:</span>
-                            <span>${formatUSD(opening_cash)} | {formatKHR(opening_cash_khr)}៛</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Expected Cash ($):</span>
-                            <span>${formatUSD(safeSummary.expected_cash_usd)}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Expected Cash (៛):</span>
-                            <span>{formatKHR(safeSummary.expected_cash_khr)}៛</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ef4444', fontStyle: 'italic' }}>
                             <span>Total Expenses:</span>
                             <span>-${formatUSD(safeSummary.total_expense_usd)}</span>
                         </div>
-                        <div style={{ borderTop: '0.5pt dashed #000', margin: '4px 0' }}></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '2px' }}>
-                            <span>Actual Cash:</span>
-                            <span>${formatUSD(actual_cash)} | {formatKHR(actual_cash_khr)}៛</span>
+                    </div>
+                </div>
+
+                {/* Payment Breakdown */}
+                <div style={{ marginBottom: '15px' }}>
+                    <div style={{ fontWeight: '900', fontSize: '13px', marginBottom: '6px', borderBottom: '0.5pt solid #000', display: 'inline-block' }}>PAYMENT BREAKDOWN</div>
+                    <div style={{ fontSize: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>CASH (USD/KHR):</span>
+                            <span>${formatUSD(safeSummary.total_cash_usd)}</span>
                         </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>KHQR (ABA/WING):</span>
+                            <span>${formatUSD(Number(safeSummary.total_aba_usd || 0) + Number(safeSummary.total_wing_usd || 0))}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Reconciliation Section */}
+                <div style={{ 
+                    marginBottom: '20px', 
+                    padding: '10px', 
+                    background: '#f9f9f9', 
+                    border: '1pt solid #000',
+                    borderRadius: '4px'
+                }}>
+                    <div style={{ fontWeight: '900', fontSize: '14px', marginBottom: '8px', textAlign: 'center', textDecoration: 'underline' }}>CASH RECONCILIATION</div>
+                    <div style={{ fontSize: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Opening Cash:</span>
+                            <span style={{ fontWeight: 600 }}>${formatUSD(opening_total_usd)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>(+) Cash Sales:</span>
+                            <span>${formatUSD(safeSummary.total_cash_usd)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
+                            <span>(-) Expenses:</span>
+                            <span>-${formatUSD(safeSummary.total_expense_usd)}</span>
+                        </div>
+                        <div style={{ borderTop: '0.5pt dashed #999', margin: '6px 0' }}></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800' }}>
+                            <span>EXPECTED CASH:</span>
+                            <span>${formatUSD(expected_total_usd)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', marginTop: '4px' }}>
+                            <span>ACTUAL COUNTED:</span>
+                            <span>${formatUSD(actual_total_usd)}</span>
+                        </div>
+                        
                         <div style={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            fontWeight: '900',
-                            fontSize: '14px',
-                            marginTop: '4px',
-                            borderTop: '0.5pt solid #000',
-                            paddingTop: '2px'
+                            marginTop: '10px', 
+                            padding: '8px', 
+                            background: isSafe ? '#f0fdf4' : (isOver ? '#f0f9ff' : '#fef2f2'),
+                            textAlign: 'center',
+                            border: '0.5pt solid #000'
                         }}>
-                            <span>DIFFERENCE:</span>
-                            <span>${formatUSD(diff)}</span>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#555' }}>VARIANCE STATUS</div>
+                            <div style={{ fontSize: '16px', fontWeight: '900' }}>
+                                {variance > 0 ? '+' : ''}{formatUSD(variance)} $
+                            </div>
+                            <div style={{ fontSize: '11px', fontWeight: '800' }}>{statusLabel}</div>
                         </div>
                     </div>
                 </div>
 
-                {/* Top Products */}
-                {safeSummary.top_products && safeSummary.top_products.length > 0 && (
-                    <div style={{ marginBottom: '15px' }}>
-                        <div style={{ fontWeight: '900', fontSize: '11px', borderBottom: '0.5pt solid #ccc', marginBottom: '2px' }}>TOP SELLING ITEMS:</div>
-                        {safeSummary.top_products.map((item, index) => (
-                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
-                                <span>{item.name}</span>
-                                <span>{item.total_qty} qty</span>
-                            </div>
-                        ))}
+                {/* Signatures */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px', textAlign: 'center' }}>
+                    <div style={{ width: '45%' }}>
+                        <div style={{ borderBottom: '0.5pt solid #000', marginBottom: '5px' }}></div>
+                        <div style={{ fontSize: '10px', fontWeight: 'bold' }}>CASHIER</div>
                     </div>
-                )}
-
-                <div style={{ marginTop: '30px', textAlign: 'center' }}>
-                    <div style={{ borderTop: '0.5pt solid #000', width: '60%', margin: '0 auto' }}></div>
-                    <div style={{ fontSize: '10px', marginTop: '5px' }}>Staff Signature</div>
+                    <div style={{ width: '45%' }}>
+                        <div style={{ borderBottom: '0.5pt solid #000', marginBottom: '5px' }}></div>
+                        <div style={{ fontSize: '10px', fontWeight: 'bold' }}>MANAGER</div>
+                    </div>
                 </div>
 
-                <div style={{ marginTop: '40px', textAlign: 'center', paddingBottom: '20px' }}>
-                    <div style={{ borderTop: '0.5pt solid #000', width: '60%', margin: '0 auto' }}></div>
-                    <div style={{ fontSize: '10px', marginTop: '5px' }}>Manager Signature</div>
+                <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '9px', fontStyle: 'italic', opacity: 0.6 }}>
+                    * This is a temporary Shift Report (X-Report) for audit purposes.
                 </div>
             </div>
         </div>

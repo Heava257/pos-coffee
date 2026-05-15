@@ -382,8 +382,8 @@ const RecipePage = () => {
                         className="recipe-editor-card"
                     >
                         {/* Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                            <Space size={12}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 16 }}>
+                            <Space size={12} style={{ flexShrink: 0 }}>
                                 <div style={{ 
                                     width: 36, height: 36, borderRadius: 8, background: '#1e4a2d', 
                                     display: 'flex', alignItems: 'center', justifyContent: 'center' 
@@ -402,23 +402,69 @@ const RecipePage = () => {
                                     </Space>
                                 </div>
                             </Space>
-                            <Space size={8}>
-                                <Button
-                                    type="default"
-                                    icon={<PlusOutlined />}
+
+                            <div style={{ flex: 1, maxWidth: 500 }}>
+                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, fontWeight: 600 }}>
+                                    ⚡ {t.quick_batch_add || "Quick Add Multiple Ingredients"}
+                                </div>
+                                <Select
+                                    mode="multiple"
+                                    placeholder="Search and add more ingredients..."
+                                    style={{ width: '100%' }}
                                     disabled={!state.selectedProduct}
-                                    onClick={() => setState(p => ({ ...p, isAddModalVisible: true }))}
-                                    style={{ borderRadius: 6, fontWeight: 500 }}
-                                >
-                                    {t.add_ingredient}
-                                </Button>
+                                    options={state.rawMaterials
+                                        .filter(rm => !state.ingredients.some(i => i.raw_material_id === rm.id))
+                                        .map(rm => ({ label: `${rm.name} (${rm.unit})`, value: rm.id }))
+                                    }
+                                    value={[]}
+                                    maxTagCount="responsive"
+                                    onChange={(ids) => {
+                                        const newIngredients = [...state.ingredients];
+                                        ids.forEach(id => {
+                                            if (!newIngredients.some(i => i.raw_material_id === id)) {
+                                                const rm = state.rawMaterials.find(m => m.id === id);
+                                                const canConvert = ["kg", "l"].includes(rm.unit?.toLowerCase());
+                                                const defaultQty = canConvert ? 0.01 : 1; // 10g or 1 unit
+                                                const wasteFactor = 0;
+                                                const effectiveQty = defaultQty * (1 + wasteFactor / 100);
+
+                                                newIngredients.push({
+                                                    raw_material_id: rm.id,
+                                                    name: rm.name,
+                                                    code: rm.code,
+                                                    base_unit: rm.unit,
+                                                    qty: defaultQty,
+                                                    effective_qty: effectiveQty,
+                                                    waste_factor: wasteFactor,
+                                                    unit: rm.unit,
+                                                    cost_price: rm.price,
+                                                    stock_qty: rm.qty,
+                                                    size_label: state.selectedSize
+                                                });
+                                            }
+                                        });
+                                        setState(p => ({ ...p, ingredients: newIngredients }));
+                                    }}
+                                />
+                            </div>
+
+                            <Space size={8} style={{ flexShrink: 0 }}>
+                                <Tooltip title="Detailed Add">
+                                    <Button
+                                        type="default"
+                                        icon={<PlusOutlined />}
+                                        disabled={!state.selectedProduct}
+                                        onClick={() => setState(p => ({ ...p, isAddModalVisible: true }))}
+                                        style={{ borderRadius: 6 }}
+                                    />
+                                </Tooltip>
                                 <Button
                                     type="primary"
                                     icon={<SaveOutlined />}
                                     loading={state.saving}
                                     disabled={!state.selectedProduct}
                                     onClick={saveRecipe}
-                                    style={{ backgroundColor: '#1e4a2d', borderColor: '#1e4a2d', borderRadius: 6, fontWeight: 500 }}
+                                    style={{ backgroundColor: '#1e4a2d', borderColor: '#1e4a2d', borderRadius: 6, fontWeight: 600 }}
                                 >
                                     {t.save || "រក្សាទុក"}
                                 </Button>
@@ -433,13 +479,13 @@ const RecipePage = () => {
                                     const size = key === 'null' ? null : key;
                                     fetchRecipe(state.selectedProduct, size);
                                 }}
-                                style={{ marginBottom: 12 }}
+                                style={{ marginBottom: 8 }}
                                 size="small"
                                 tabBarGutter={16}
                                 items={sizeTabs.map(s => ({
                                     key: String(s.key),
                                     label: (
-                                        <span style={{ fontSize: 13, fontWeight: 500 }}>
+                                        <span style={{ fontSize: 12, fontWeight: 500 }}>
                                             {s.label}
                                             {s.key && state.selectedProduct?.product_type === 'recipe' && (
                                                 <Badge status="success" style={{ marginLeft: 6 }} />

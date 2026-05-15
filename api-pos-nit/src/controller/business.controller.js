@@ -265,10 +265,27 @@ exports.update = async (req, res) => {
             console.log("UPDATE_SQL_RESULT:", updateResult.info);
             
             // 2. Update owner user name and email (Super Admin of this business)
-            await conn.query(
-                "UPDATE users SET name = ?, email = ? WHERE business_id = ? AND is_super_admin = 1",
-                [owner_name, email, id]
+            // We fetch the ID first to ensure we only update ONE record, avoiding self-collision 
+            // if multiple super admins accidentally exist for one business.
+            const [owners] = await conn.query(
+                "SELECT id FROM users WHERE business_id = ? AND is_super_admin = 1 ORDER BY id ASC LIMIT 1",
+                [id]
             );
+            if (owners.length > 0) {
+                // Check if the NEW email is already used by ANOTHER user (not this owner)
+                const [dupEmail] = await conn.query(
+                    "SELECT id FROM users WHERE email = ? AND id != ?",
+                    [email, owners[0].id]
+                );
+                if (dupEmail.length > 0) {
+                    throw new Error(`Email '${email}' is already in use by another account.`);
+                }
+
+                await conn.query(
+                    "UPDATE users SET name = ?, email = ? WHERE id = ?",
+                    [owner_name, email, owners[0].id]
+                );
+            }
 
             // 3. Sync permissions for the owner role if the package changed
             if (package_id) {
@@ -407,10 +424,11 @@ exports.getInsights = async (req, res) => {
 
 exports.getPublicConfig = async (req, res) => {
     try {
-        const { business_id } = req.query;
+        const { business_id, branch_id } = req.query;
         if (!business_id) return res.status(400).json({ message: "Business ID is required" });
 
-        const [list] = await db.query(`
+        // Base business config
+        const [bizList] = await db.query(`
             SELECT name, promo_title, promo_subtitle, promo_image, promo_discount, promo_is_active,
                    global_bogo_active, global_bogo_text, promo_scope, promo_applied_categories, promo_applied_products,
                    promo_tag, promo_tag_color, promo_desc, promo_buy_qty, promo_get_qty, promo_start_date, promo_end_date,
@@ -419,15 +437,29 @@ exports.getPublicConfig = async (req, res) => {
             WHERE id = ?
         `, [business_id]);
 
-        if (list.length === 0) return res.status(404).json({ message: "Business not found" });
+        if (bizList.length === 0) return res.status(404).json({ message: "Business not found" });
+
+        let branchConfig = {};
+        if (branch_id) {
+            const [branchList] = await db.query(`
+                SELECT name as branch_name, khqr_image, payment_merchant_id, payment_receiver_name, 
+                       payment_provider, payment_api_url, payment_api_key
+                FROM branches 
+                WHERE id = ? AND business_id = ?
+            `, [branch_id, business_id]);
+            if (branchList.length > 0) {
+                branchConfig = branchList[0];
+            }
+        }
         
         // Parse JSON strings back to arrays for the frontend
         const config = {
-            ...list[0],
-            promo_applied_categories: list[0].promo_applied_categories ? JSON.parse(list[0].promo_applied_categories) : [],
-            promo_applied_products: list[0].promo_applied_products ? JSON.parse(list[0].promo_applied_products) : [],
-            discount_applied_categories: list[0].discount_applied_categories ? JSON.parse(list[0].discount_applied_categories) : [],
-            discount_applied_products: list[0].discount_applied_products ? JSON.parse(list[0].discount_applied_products) : [],
+            ...bizList[0],
+            ...branchConfig,
+            promo_applied_categories: bizList[0].promo_applied_categories ? JSON.parse(bizList[0].promo_applied_categories) : [],
+            promo_applied_products: bizList[0].promo_applied_products ? JSON.parse(bizList[0].promo_applied_products) : [],
+            discount_applied_categories: bizList[0].discount_applied_categories ? JSON.parse(bizList[0].discount_applied_categories) : [],
+            discount_applied_products: bizList[0].discount_applied_products ? JSON.parse(bizList[0].discount_applied_products) : [],
         };
         
         res.json({ config });

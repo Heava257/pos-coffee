@@ -623,7 +623,7 @@
 .icon-action-btn:hover {
   background: #fff;
   color: #1e4a2d;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transform: translateY(-1px);
 }
 
@@ -633,13 +633,13 @@
   border-radius: 14px;
   object-fit: cover;
   border: 2px solid #fff;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
 .profile-wrapper:hover .img-user-premium {
   transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 @media (max-width: 768px) {
@@ -649,3 +649,4 @@
     border-radius: 10px;
   }
 }
+

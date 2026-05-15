@@ -13,7 +13,8 @@ import {
     Table,
     Tag,
     DatePicker,
-    Divider
+    Divider,
+    Segmented
 } from "antd";
 import { request } from "../../util/helper";
 import { MdAdd, MdDelete, MdEdit, MdInventory, MdOutlineCameraAlt, MdQrCodeScanner, MdRemoveRedEye, MdSearch } from "react-icons/md";
@@ -28,6 +29,11 @@ function PurchasePage() {
     const t = translations[lang];
     const [form] = Form.useForm();
     const { profile } = useProfileStore();
+    const { permissions } = useProfileStore();
+    const hasRawPerm = permissions?.some(p => {
+        const route = typeof p === 'string' ? p : p.route_key;
+        return route?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'raw_material';
+    });
     const isOwner = profile?.role_name?.toUpperCase() === "OWNER" || profile?.role_code === "owner";
     const isAdmin = profile?.role_name?.toUpperCase().includes("ADMIN") || profile?.role_code === "admin";
     const canApprove = isOwner || isAdmin;
@@ -113,33 +119,47 @@ function PurchasePage() {
     const fetchAllPurchaseItems = async () => {
         setState(pre => ({ ...pre, isFetchingItems: true }));
         try {
+            const { permissions } = useProfileStore.getState();
+            const hasRawPerm = permissions?.some(p => p.route_key?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'raw_material');
+
             // 1. Fetch Raw Materials
+            let rms = [];
             const resRM = await request("raw_material", "get", { status: 1 });
-            const rms = (resRM && !resRM.error) ? resRM.list.map(rm => ({
-                label: `📦 ${rm.name} [Ingredient]`,
+            rms = (resRM && !resRM.error) ? resRM.list.map(rm => ({
+                label: `📦 ${rm.name} [Material]`,
                 value: `rm-${rm.id}`,
                 item_id: rm.id,
                 item_type: 'raw_material',
                 price: rm.price || 0,
-                name: rm.name
+                name: rm.name,
+                unit_name: rm.unit_name
             })) : [];
 
-            // 2. Fetch Finished Products
+            // 2. Fetch Products
             const resPD = await request("product", "get", { is_list_all: 1 });
-            const pds = (resPD && !resPD.error) ? resPD.list
-                .filter(p => p.product_type !== 'recipe')
-                .map(p => ({
-                    label: `🥤 ${p.name} [Ready Item]`,
-                    value: `pd-${p.id}`,
-                    item_id: p.id,
-                    item_type: 'product',
-                    price: p.cost_price || 0,
-                    name: p.name
-                })) : [];
+            let pds = [];
+            if (resPD && !resPD.error) {
+                pds = resPD.list
+                    .filter(p => {
+                        if (hasRawPerm) {
+                            return p.product_type === 'ready'; // Enterprise: Only buy ready items
+                        }
+                        return p.product_type !== 'service'; // Small/Medium: Buy anything except service
+                    })
+                    .map(p => ({
+                        label: `🥤 ${p.name} [Product]`,
+                        value: `pd-${p.id}`,
+                        item_id: p.id,
+                        item_type: 'product',
+                        price: p.cost_price || 0,
+                        name: p.name
+                    }));
+            }
 
             setState(pre => ({
                 ...pre,
-                allItems: [...rms, ...pds],
+                rawMaterials: rms,
+                products: pds,
                 isFetchingItems: false
             }));
         } catch (error) {
@@ -151,7 +171,7 @@ function PurchasePage() {
         form.resetFields();
         form.setFieldsValue({
             purchase_date: dayjs(),
-            items: [null]
+            items: [{ item_type: hasRawPerm ? 'raw_material' : 'product' }]
         });
         setState(p => ({ ...p, visibleModal: true }));
         fetchSuppliers();
@@ -514,30 +534,30 @@ function PurchasePage() {
     return (
         <MainPage loading={state.loading}>
             {/* 🚀 Dashboard Stats */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 24 }}>
                 <Row gutter={[16, 16]}>
                     <Col xs={12} sm={12} md={6}>
-                        <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "#fff", padding: isMobile ? "15px" : "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "10px", textTransform: "uppercase" }}>{t.total_purchase}</div>
-                            <div style={{ fontSize: isMobile ? "18px" : "24px", fontWeight: "bold" }}>${totals.totalAmount.toFixed(2)}</div>
+                        <div style={{ background: "#fff", border: "1px solid #e2e8f0", padding: isMobile ? "15px" : "20px", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+                            <div style={{ color: "#64748b", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: '0.5px' }}>{t.total_purchase}</div>
+                            <div style={{ fontSize: isMobile ? "20px" : "26px", fontWeight: 800, color: "#1e293b", marginTop: 4 }}>${totals.totalAmount.toLocaleString()}</div>
                         </div>
                     </Col>
                     <Col xs={12} sm={12} md={6}>
-                        <div style={{ background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)", color: "#fff", padding: isMobile ? "15px" : "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "10px", textTransform: "uppercase" }}>{t.total_paid}</div>
-                            <div style={{ fontSize: isMobile ? "18px" : "24px", fontWeight: "bold" }}>${totals.totalPaid.toFixed(2)}</div>
+                        <div style={{ background: "#fff", border: "1px solid #e2e8f0", padding: isMobile ? "15px" : "20px", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+                            <div style={{ color: "#64748b", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: '0.5px' }}>{t.total_paid}</div>
+                            <div style={{ fontSize: isMobile ? "20px" : "26px", fontWeight: 800, color: "#10b981", marginTop: 4 }}>${totals.totalPaid.toLocaleString()}</div>
                         </div>
                     </Col>
                     <Col xs={12} sm={12} md={6}>
-                        <div style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", color: "#fff", padding: isMobile ? "15px" : "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "10px", textTransform: "uppercase" }}>{t.outstanding}</div>
-                            <div style={{ fontSize: isMobile ? "18px" : "24px", fontWeight: "bold" }}>${totals.totalBalance.toFixed(2)}</div>
+                        <div style={{ background: "#fff", border: "1px solid #e2e8f0", padding: isMobile ? "15px" : "20px", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+                            <div style={{ color: "#64748b", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: '0.5px' }}>{t.outstanding}</div>
+                            <div style={{ fontSize: isMobile ? "20px" : "26px", fontWeight: 800, color: "#ef4444", marginTop: 4 }}>${totals.totalBalance.toLocaleString()}</div>
                         </div>
                     </Col>
                     <Col xs={12} sm={12} md={6}>
-                        <div style={{ background: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)", color: "#fff", padding: isMobile ? "15px" : "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-                            <div style={{ opacity: 0.8, fontSize: "10px", textTransform: "uppercase" }}>{t.total_orders}</div>
-                            <div style={{ fontSize: isMobile ? "18px" : "24px", fontWeight: "bold" }}>{state.total}</div>
+                        <div style={{ background: "#fff", border: "1px solid #e2e8f0", padding: isMobile ? "15px" : "20px", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+                            <div style={{ color: "#64748b", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: '0.5px' }}>{t.total_orders}</div>
+                            <div style={{ fontSize: isMobile ? "20px" : "26px", fontWeight: 800, color: "#3b82f6", marginTop: 4 }}>{state.total}</div>
                         </div>
                     </Col>
                 </Row>
@@ -607,279 +627,172 @@ function PurchasePage() {
                 />
             )}
 
-            {/* 🚀 CREATE PURCHASE MODAL (MOBILE-OPTIMIZED) */}
+            {/* 🚀 CREATE PURCHASE MODAL (SIMPLIFIED & STANDARD) */}
             <Modal
-                title={<div style={{ fontSize: isMobile ? '16px' : '20px' }}><b>➕ {t.new_purchase}</b></div>}
+                title={<b>{t.new_purchase}</b>}
                 open={state.visibleModal}
                 onCancel={onCloseModal}
-                width={isMobile ? "100%" : 1400}
-                style={isMobile ? { top: 0, margin: 0, maxWidth: '100vw', paddingBottom: 0 } : { top: 20 }}
-                styles={{ 
-                    body: { 
-                        padding: isMobile ? '16px' : '20px', 
-                        height: isMobile ? 'calc(100vh - 110px)' : 'auto', 
-                        overflowY: 'auto',
-                        background: isMobile ? '#f8fafc' : '#fff'
-                    }
-                }}
+                width={isMobile ? "100%" : 1100}
+                style={isMobile ? { top: 0, margin: 0, maxWidth: '100vw' } : { top: 40 }}
+                styles={{ body: { padding: '16px' } }}
                 footer={null}
                 centered={!isMobile}
                 destroyOnClose
             >
                 <Form layout="vertical" form={form} onFinish={onFinish}>
-                    <div style={{ 
-                        background: isMobile ? '#fff' : '#f8fafc', 
-                        padding: isMobile ? '20px' : '24px', 
-                        borderRadius: '16px', 
-                        marginBottom: '24px', 
-                        border: '1px solid #e2e8f0',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                    }}>
-                        <Row gutter={[20, 20]}>
-                            <Col xs={24} sm={12} md={5}>
-                                <Form.Item name="supplier_id" label={<b style={{ color: '#64748b' }}>{t.supplier}</b>} rules={[{ required: true }]}>
-                                    <Select size="large" options={state.suppliers} placeholder={t.supplier} showSearch style={{ borderRadius: '10px' }} />
-                                </Form.Item>
-                            </Col>
-                            <Col xs={24} sm={12} md={5}>
-                                <Form.Item name="ref" label={<b style={{ color: '#64748b' }}>{t.ref_no}</b>}>
-                                    <Input size="large" placeholder={t.invoice_placeholder} style={{ borderRadius: '10px' }} />
-                                </Form.Item>
-                            </Col>
-                            <Col xs={24} sm={12} md={5}>
-                                <Form.Item name="purchase_date" label={<b style={{ color: '#64748b' }}>{t.receive_date}</b>} rules={[{ required: true }]}>
-                                    <DatePicker size="large" showTime style={{ width: '100%', borderRadius: '10px' }} />
-                                </Form.Item>
-                            </Col>
-                            {!isMobile && (
-                                <>
-                                    <Col span={3}><Form.Item name="status" label={<b style={{ color: '#64748b' }}>{t.status}</b>} rules={[{ required: true }]} initialValue="Pending"><Select size="large" options={[{ label: `📥 ${t.request_status}`, value: "Request" }, { label: `⌛ ${t.pending_status_simple}`, value: "Pending" }, { label: `✅ ${t.received_status}`, value: "Received" }]} style={{ borderRadius: '10px' }} /></Form.Item></Col>
-                                    <Col span={3}><Form.Item name="payment_method" label={<b style={{ color: '#64748b' }}>{t.payment_method}</b>} initialValue="Cash"><Select size="large" options={[{ label: `💵 ${t.cash_method}`, value: "Cash" }, { label: `💳 ${t.bank_method}`, value: "Bank" }]} style={{ borderRadius: '10px' }} /></Form.Item></Col>
-                                    <Col span={3}><Form.Item name="note" label={<b style={{ color: '#64748b' }}>{t.note}</b>}><Input size="large" placeholder={t.note} style={{ borderRadius: '10px' }} /></Form.Item></Col>
-                                </>
-                            )}
-                        </Row>
-                        {isMobile && (
-                             <Row gutter={[12, 12]}>
-                                <Col span={12}><Form.Item name="status" label={<b style={{ color: '#64748b' }}>{t.status}</b>} initialValue="Pending"><Select size="large" options={[{ label: t.request_status, value: "Request" }, { label: t.pending_status_simple, value: "Pending" }, { label: t.received_status, value: "Received" }]} style={{ borderRadius: '10px' }} /></Form.Item></Col>
-                                <Col span={12}><Form.Item name="payment_method" label={<b style={{ color: '#64748b' }}>{t.payment_method}</b>} initialValue="Cash"><Select size="large" options={[{ label: t.cash_method, value: "Cash" }, { label: t.bank_method, value: "Bank" }]} style={{ borderRadius: '10px' }} /></Form.Item></Col>
-                             </Row>
+                    <Row gutter={[16, 8]}>
+                        <Col xs={24} sm={12} md={6}>
+                            <Form.Item name="supplier_id" label={t.supplier} rules={[{ required: true }]}>
+                                <Select options={state.suppliers} placeholder={t.supplier} showSearch />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Form.Item name="ref" label={t.ref_no}>
+                                <Input placeholder={t.invoice_placeholder} />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Form.Item name="purchase_date" label={t.receive_date} rules={[{ required: true }]}>
+                                <DatePicker showTime style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                             <Form.Item name="status" label={t.status} initialValue="Pending">
+                                <Select options={[{ label: t.request_status, value: "Request" }, { label: t.pending_status_simple, value: "Pending" }, { label: t.received_status, value: "Received" }]} />
+                            </Form.Item>
+                        </Col>
+                        {!isMobile && (
+                            <>
+                                <Col span={6}><Form.Item name="payment_method" label={t.payment_method} initialValue="Cash"><Select options={[{ label: t.cash_method, value: "Cash" }, { label: t.bank_method, value: "Bank" }]} /></Form.Item></Col>
+                                <Col span={18}><Form.Item name="note" label={t.note}><Input placeholder={t.note} /></Form.Item></Col>
+                            </>
                         )}
-                    </div>
+                    </Row>
 
-                    <Divider orientation="left" style={{ margin: '10px 0 20px 0' }}><span style={{ color: '#64748b', fontSize: '14px' }}>{t.product_list_header}</span></Divider>
+                    <Divider style={{ margin: '12px 0' }} />
 
                     <Form.List name="items">
                         {(fields, { add, remove }) => (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: isMobile ? '120px' : '40px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {fields.map(({ key, name, ...restField }) => (
                                     <div key={key} style={{ 
-                                        background: '#fff', 
-                                        borderRadius: '20px', 
-                                        padding: isMobile ? '20px' : '24px', 
-                                        border: '1px solid #e2e8f0',
-                                        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+                                        padding: '12px', 
+                                        border: '1px solid #f0f0f0', 
+                                        borderRadius: '8px',
                                         position: 'relative',
-                                        transition: 'all 0.3s ease'
+                                        background: '#fafafa'
                                     }}>
-                                        <Button 
-                                            danger 
-                                            type="text" 
-                                            icon={<MdDelete size={22} />} 
-                                            style={{ position: 'absolute', top: '15px', right: '15px', zIndex: 1, background: '#fee2e2', borderRadius: '10px' }}
-                                            onClick={() => { remove(name); setState(p => ({ ...p })); }}
-                                        />
-
-                                        <Row gutter={[24, 16]}>
+                                        <Row gutter={[16, 12]} align="bottom">
                                             <Col xs={24} md={10}>
-                                                <Form.Item {...restField} name={[name, 'item_composite_id']} label={<b style={{ fontSize: '14px' }}>{t.product_label}</b>} rules={[{ required: true }]}>
-                                                    <Select 
-                                                        size="large" 
-                                                        placeholder="Select Product" 
-                                                        options={state.allItems} 
-                                                        showSearch 
-                                                        style={{ borderRadius: '12px' }}
-                                                        onChange={(val) => {
-                                                            const item = state.allItems.find(i => i.value === val);
-                                                            if (item) {
-                                                                const items = [...form.getFieldValue('items')];
-                                                                items[name].cost = item.price;
-                                                                items[name].qty = items[name].qty || 1;
-                                                                items[name].item_type = item.item_type;
-                                                                items[name].real_id = item.item_id;
-                                                                items[name].unit = items[name].unit || "Pcs";
-                                                                form.setFieldsValue({ items });
-                                                                setState(p => ({ ...p }));
-                                                            }
-                                                        }} 
-                                                    />
+                                                <Space direction="vertical" style={{ width: '100%' }} size={4}>
+                                                    {hasRawPerm && (
+                                                        <div style={{ marginBottom: 4 }}>
+                                                            <Segmented
+                                                                size="small"
+                                                                options={[
+                                                                    { label: 'MATERIAL', value: 'raw_material' },
+                                                                    { label: 'PRODUCT', value: 'product' }
+                                                                ]}
+                                                                value={form.getFieldValue(['items', name, 'item_type'])}
+                                                                onChange={(val) => {
+                                                                    const items = form.getFieldValue('items') || [];
+                                                                    if (!items[name]) items[name] = {};
+                                                                    items[name].item_type = val;
+                                                                    items[name].item_composite_id = undefined;
+                                                                    form.setFieldsValue({ items });
+                                                                    setState(p => ({ ...p }));
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <Form.Item {...restField} name={[name, 'item_composite_id']} label={form.getFieldValue(['items', name, 'item_type']) === 'raw_material' ? "Material" : "Product"} rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                                                        <Select 
+                                                            placeholder="Select..." 
+                                                            options={form.getFieldValue(['items', name, 'item_type']) === 'raw_material' ? state.rawMaterials : state.products} 
+                                                            showSearch 
+                                                            onChange={(val) => {
+                                                                const currentType = form.getFieldValue(['items', name, 'item_type']);
+                                                                const sourceList = currentType === 'raw_material' ? state.rawMaterials : state.products;
+                                                                const item = sourceList.find(i => i.value === val);
+                                                                if (item) {
+                                                                    const items = [...form.getFieldValue('items')];
+                                                                    items[name].cost = item.price;
+                                                                    items[name].qty = items[name].qty || 1;
+                                                                    items[name].item_type = item.item_type;
+                                                                    items[name].real_id = item.item_id;
+                                                                    items[name].unit = items[name].unit || (currentType === 'raw_material' ? item.unit_name : "Pcs");
+                                                                    form.setFieldsValue({ items });
+                                                                    setState(p => ({ ...p }));
+                                                                }
+                                                            }} 
+                                                        />
+                                                    </Form.Item>
+                                                </Space>
+                                            </Col>
+
+                                            <Col xs={12} md={3}>
+                                                <Form.Item {...restField} name={[name, 'qty']} label={t.qty_label || "Qty"} rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                                                    <InputNumber placeholder="0" style={{ width: '100%' }} onChange={() => setState({ ...state })} />
                                                 </Form.Item>
                                             </Col>
 
-                                            <Col xs={24} md={14}>
-                                                <Row gutter={16}>
-                                                    <Col span={8}>
-                                                        <Form.Item {...restField} name={[name, 'qty']} label={<b style={{ fontSize: '14px' }}>{t.quantity_label}</b>} rules={[{ required: true }]}>
-                                                            <InputNumber 
-                                                                size="large" 
-                                                                placeholder="0" 
-                                                                style={{ width: '100%', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold' }} 
-                                                                onChange={() => setState({ ...state })} 
-                                                            />
-                                                        </Form.Item>
-                                                    </Col>
-                                                    <Col span={16}>
-                                                        <Form.Item {...restField} name={[name, 'unit']} label={<b style={{ fontSize: '14px' }}>{t.unit_label}</b>} initialValue="Pcs">
-                                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                                                {["Pcs", "Box", "Case"].map(u => {
-                                                                    const currentUnit = form.getFieldValue(['items', name, 'unit']);
-                                                                    const isActive = currentUnit === u;
-                                                                    return (
-                                                                        <div 
-                                                                            key={u}
-                                                                            onClick={() => {
-                                                                                const items = [...form.getFieldValue('items')];
-                                                                                items[name].unit = u;
-                                                                                form.setFieldsValue({ items });
-                                                                                setState(p => ({ ...p }));
-                                                                            }}
-                                                                            style={{
-                                                                                flex: 1,
-                                                                                padding: '10px',
-                                                                                textAlign: 'center',
-                                                                                borderRadius: '10px',
-                                                                                cursor: 'pointer',
-                                                                                background: isActive ? '#3b82f6' : '#f1f5f9',
-                                                                                color: isActive ? '#fff' : '#64748b',
-                                                                                fontWeight: 600,
-                                                                                border: isActive ? '2px solid #2563eb' : '2px solid transparent',
-                                                                                transition: 'all 0.2s ease'
-                                                                            }}
-                                                                        >
-                                                                            {t[`unit_${u.toLowerCase()}`] || u}
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </Form.Item>
-                                                    </Col>
-                                                </Row>
-                                                
-                                                <Row gutter={16} align="middle">
-                                                    <Col span={12}>
-                                                        <Form.Item {...restField} name={[name, 'cost']} label={<b style={{ fontSize: '14px' }}>{t.cost_price_label}</b>} rules={[{ required: true }]}>
-                                                            <InputNumber 
-                                                                size="large" 
-                                                                prefix={<span style={{ color: '#10b981' }}>$</span>} 
-                                                                style={{ width: '100%', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold' }} 
-                                                                onChange={() => setState({ ...state })} 
-                                                            />
-                                                        </Form.Item>
-                                                    </Col>
-                                                    <Col span={12}>
-                                                        <div style={{ textAlign: 'right' }}>
-                                                            <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Subtotal</div>
-                                                            <div style={{ fontSize: '24px', fontWeight: 800, color: '#10b981' }}>
-                                                                ${((form.getFieldValue(['items', name, 'qty']) || 0) * (form.getFieldValue(['items', name, 'cost']) || 0)).toFixed(2)}
-                                                            </div>
-                                                        </div>
-                                                    </Col>
-                                                </Row>
+                                            <Col xs={12} md={4}>
+                                                <Form.Item {...restField} name={[name, 'unit']} label={t.unit_label} style={{ marginBottom: 0 }}>
+                                                    <Select options={(form.getFieldValue(['items', name, 'item_type']) === 'raw_material' ? ["Kg", "G", "L", "Ml", "Unit"] : ["Pcs", "Box", "Case"]).map(u => ({ label: u, value: u }))} />
+                                                </Form.Item>
+                                            </Col>
+
+                                            <Col xs={12} md={3}>
+                                                <Form.Item {...restField} name={[name, 'cost']} label={t.cost_label || "Cost"} rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                                                    <InputNumber prefix="$" style={{ width: '100%' }} onChange={() => setState({ ...state })} />
+                                                </Form.Item>
+                                            </Col>
+
+                                            <Col xs={8} md={3}>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>Total</div>
+                                                    <div style={{ fontWeight: 'bold' }}>
+                                                        ${((form.getFieldValue(['items', name, 'qty']) || 0) * (form.getFieldValue(['items', name, 'cost']) || 0)).toFixed(2)}
+                                                    </div>
+                                                </div>
+                                            </Col>
+
+                                            <Col xs={4} md={1}>
+                                                <Button danger type="text" icon={<MdDelete />} onClick={() => { remove(name); setState(p => ({ ...p })); }} />
                                             </Col>
                                         </Row>
                                     </div>
                                 ))}
                                 <Button 
                                     type="dashed" 
-                                    onClick={() => add()} 
+                                    onClick={() => add({ item_type: hasRawPerm ? 'raw_material' : 'product' })} 
                                     block 
-                                    icon={<MdAdd size={20} />} 
-                                    size="large"
-                                    style={{ 
-                                        height: '60px', 
-                                        borderRadius: '16px', 
-                                        background: '#f8fafc', 
-                                        border: '2px dashed #cbd5e1',
-                                        color: '#64748b',
-                                        fontSize: '16px',
-                                        fontWeight: 600
-                                    }}
+                                    icon={<MdAdd />}
                                 >
-                                    {t.add_new}
+                                    {t.add_item_list || "Add Item"}
                                 </Button>
                             </div>
                         )}
                     </Form.List>
 
-                    {/* 💾 STICKY BOTTOM SUMMARY BAR */}
                     <div style={{ 
-                        position: isMobile ? 'fixed' : 'sticky', 
-                        bottom: 0, 
-                        left: 0, 
-                        right: 0, 
-                        padding: isMobile ? '20px 24px 32px 24px' : '24px', 
-                        background: '#ffffff', 
-                        borderTop: '1px solid #e2e8f0', 
+                        marginTop: '20px', 
+                        padding: '16px', 
+                        borderTop: '1px solid #f0f0f0', 
                         display: 'flex', 
-                        flexDirection: isMobile ? 'column' : 'row',
                         justifyContent: 'space-between',
-                        alignItems: isMobile ? 'stretch' : 'center',
-                        gap: '24px', 
-                        zIndex: 1000,
-                        boxShadow: '0 -10px 20px rgba(0,0,0,0.04)',
-                        margin: isMobile ? 0 : '0 -24px -24px -24px',
-                        borderRadius: isMobile ? 0 : '0 0 20px 20px'
+                        alignItems: 'center'
                     }}>
-                        <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <div style={{ textAlign: 'left' }}>
-                                <div style={{ fontSize: '12px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>{t.grand_total}</div>
-                                <div style={{ fontSize: '32px', fontWeight: 900, color: "#10b981", lineHeight: 1 }}>
-                                    ${(form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0).toFixed(2)}
-                                </div>
-                            </div>
-                            
-                            <Form.Item name="paid_amount" label={<b style={{ color: '#64748b' }}>Paid Amount</b>} style={{ marginBottom: 0 }}>
-                                <InputNumber 
-                                    prefix={<span style={{ color: '#3b82f6' }}>$</span>} 
-                                    size="large" 
-                                    style={{ width: 160, borderRadius: '12px', fontSize: '20px', fontWeight: 800 }} 
-                                />
-                            </Form.Item>
+                        <div>
+                            <span style={{ fontSize: '14px', color: '#94a3b8' }}>{t.grand_total}: </span>
+                            <span style={{ fontSize: '20px', fontWeight: 'bold', color: "#1890ff" }}>
+                                ${(form.getFieldValue("items") || []).reduce((sum, item) => sum + ((Number(item?.qty) || 0) * (Number(item?.cost) || 0)), 0).toFixed(2)}
+                            </span>
                         </div>
-                        
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <Button 
-                                size="large" 
-                                onClick={onCloseModal} 
-                                style={{ 
-                                    minWidth: '120px', 
-                                    height: '56px', 
-                                    borderRadius: '16px', 
-                                    fontWeight: 600,
-                                    border: 'none',
-                                    background: '#f1f5f9',
-                                    color: '#64748b'
-                                }}
-                            >
-                                {t.cancel}
-                            </Button>
-                            <Button 
-                                type="primary" 
-                                size="large" 
-                                htmlType="submit" 
-                                style={{ 
-                                    minWidth: '200px', 
-                                    height: '56px', 
-                                    borderRadius: '16px', 
-                                    fontWeight: 700, 
-                                    background: '#3b82f6',
-                                    fontSize: '18px',
-                                    boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
-                                }}
-                            >
-                                {t.save}
-                            </Button>
-                        </div>
+                        <Space>
+                            <Button onClick={onCloseModal}>{t.cancel}</Button>
+                            <Button type="primary" htmlType="submit">{t.save}</Button>
+                        </Space>
                     </div>
                 </Form>
             </Modal>

@@ -15,30 +15,30 @@ const CustomGoogleButton = ({ onSuccess, loading, bizId }) => {
       fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokenResponse.access_token}`)
         .then(res => res.json())
         .then(data => {
-           onSuccess({ 
-             isCustom: true,
-             profile: data,
-             token: tokenResponse.access_token 
-           });
+          onSuccess({
+            isCustom: true,
+            profile: data,
+            token: tokenResponse.access_token
+          });
         });
     },
     onError: () => message.error("Google Login Failed"),
   });
 
   return (
-    <button 
+    <button
       onClick={() => login()}
       disabled={loading}
-      style={{ 
-        width: "100%", 
-        height: 50, 
-        borderRadius: 100, 
-        border: "1px solid #EDE8DF", 
-        background: "#fff", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center", 
-        gap: 12, 
+      style={{
+        width: "100%",
+        height: 50,
+        borderRadius: 100,
+        border: "1px solid #EDE8DF",
+        background: "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
         cursor: "pointer",
         fontWeight: 700,
         fontSize: 14,
@@ -159,22 +159,22 @@ const CSS = `
    SVG ICONS
 ────────────────────────────────────────────────────────────── */
 const Ico = {
-  Home: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-  Search: ({s=20})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-  Bag: ({s=22})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
-  User: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-  Clock: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-  Star: ({f})=><svg width="15" height="15" viewBox="0 0 24 24" fill={f?"currentColor":"none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-  Plus: ({s=16})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  Minus: ({s=15})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  X: ({s=18})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-  Lock: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
-  Arrow: ()=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
-  Leaf: ()=><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-8 2"/></svg>,
-  Pin: ()=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
-  Check: ()=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>,
-  Heart: ({s=20})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
-  HeartFilled: ({s=20})=><svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+  Home: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>,
+  Search: ({ s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>,
+  Bag: ({ s = 22 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>,
+  User: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
+  Clock: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
+  Star: ({ f }) => <svg width="15" height="15" viewBox="0 0 24 24" fill={f ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
+  Plus: ({ s = 16 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>,
+  Minus: ({ s = 15 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>,
+  X: ({ s = 18 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>,
+  Lock: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>,
+  Arrow: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>,
+  Leaf: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-8 2" /></svg>,
+  Pin: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>,
+  Check: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>,
+  Heart: ({ s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>,
+  HeartFilled: ({ s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>,
 };
 
 /* ──────────────────────────────────────────────────────────────
@@ -200,24 +200,24 @@ const getDiscountPercent = (item, selectedShop) => {
   return dPercent;
 };
 const uid = () => Math.random().toString(36).slice(2);
-const CAT_ICONS = { all:"⊞", coffee:"☕", tea:"🍵", pastry:"🥐", cold:"🧋" };
-const TEMP_ICON  = { Hot:"☕", Iced:"🧊", Frappe:"🥤" };
-const TEMP_COLOR = { Hot:"#C9463D", Iced:"#3B78C9", Frappe:"#7B5EA7" };
+const CAT_ICONS = { all: "⊞", coffee: "☕", tea: "🍵", pastry: "🥐", cold: "🧋" };
+const TEMP_ICON = { Hot: "☕", Iced: "🧊", Frappe: "🥤" };
+const TEMP_COLOR = { Hot: "#C9463D", Iced: "#3B78C9", Frappe: "#7B5EA7" };
 
 const Section = ({ title, sub, children }) => (
-  <div style={{ marginBottom:18 }}>
-    <div style={{ display:"flex", alignItems:"baseline", gap:6, marginBottom:10 }}>
-      <h4 style={{ fontSize:13, fontWeight:700, color:"#1C1C1C" }}>{title}</h4>
-      {sub && <span style={{ fontSize:12, color:"#9A9083", fontWeight:500 }}>({sub})</span>}
+  <div style={{ marginBottom: 18 }}>
+    <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
+      <h4 style={{ fontSize: 13, fontWeight: 700, color: "#1C1C1C" }}>{title}</h4>
+      {sub && <span style={{ fontSize: 12, color: "#9A9083", fontWeight: 500 }}>({sub})</span>}
     </div>
     {children}
   </div>
 );
 
 const Row = ({ label, val, valColor }) => (
-  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:7 }}>
-    <span style={{ fontSize:12, color:"#9A9083", fontWeight:600 }}>{label}</span>
-    <span style={{ fontSize:13, fontWeight:700, color: valColor||"#1C1C1C" }}>{val}</span>
+  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
+    <span style={{ fontSize: 12, color: "#9A9083", fontWeight: 600 }}>{label}</span>
+    <span style={{ fontSize: 13, fontWeight: 700, color: valColor || "#1C1C1C" }}>{val}</span>
   </div>
 );
 
@@ -227,165 +227,85 @@ const Row = ({ label, val, valColor }) => (
 
 function ProductCard({ p, onOpen, starred, onStar, selectedShop }) {
   const isOnPromo = isProductOnPromo(p, selectedShop);
+  const dP = getDiscountPercent(p, selectedShop);
 
   return (
-    <div 
+    <div
       onClick={() => onOpen(p)}
-      style={{ 
-        display: "flex", 
-        gap: 16, 
-        padding: 14, 
-        background: "rgba(255, 255, 255, 0.8)", 
-        backdropFilter: "blur(10px)",
-        borderRadius: 24, 
+      className="product-card-premium"
+      style={{
+        display: "flex",
+        gap: 16,
+        padding: 16,
+        background: "#fff",
+        borderRadius: 24,
         marginBottom: 16,
-        boxShadow: "0 8px 20px rgba(0,0,0,0.03)",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
         cursor: "pointer",
         position: "relative",
-        border: "1px solid rgba(255, 255, 255, 0.5)",
-        transition: "transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+        border: "1px solid #F3F4F6",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
       }}
-      onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.98)"}
-      onMouseUp={(e) => e.currentTarget.style.transform = "scale(1)"}
     >
-      {/* Percentage Discount Badge (Floating Gradient) */}
-      {(() => {
-        const dP = getDiscountPercent(p, selectedShop);
-        if (dP > 0) {
-          return (
-            <div style={{ 
-              position: "absolute", top: -8, right: 16, 
-              background: "linear-gradient(135deg, #FF6B6B 0%, #E8534A 100%)", 
-              color: "#fff", 
-              padding: "4px 12px", borderRadius: "10px 10px 10px 0", 
-              fontSize: 11, fontWeight: 900, zIndex: 20,
-              boxShadow: "0 4px 12px rgba(232, 83, 74, 0.3)",
-              border: "2px solid #fff"
-            }}>
-              OFF {dP}%
-            </div>
-          );
-        }
-        return null;
-      })()}
+      {/* Badges */}
+      <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+        {dP > 0 && (
+          <div style={{ background: "#4A6741", color: "#fff", padding: "4px 10px", borderRadius: 100, fontSize: 10, fontWeight: 800 }}>
+            -{dP}%
+          </div>
+        )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onStar(p); }}
+          style={{ background: "rgba(255,255,255,0.9)", border: "none", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: starred ? "#E8534A" : "#9CA3AF", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+        >
+          {starred ? <Ico.HeartFilled s={18} /> : <Ico.Heart s={18} />}
+        </button>
+      </div>
 
-      {/* Promo Badge (BOGO) - Sleek Pill style */}
-      {isOnPromo && (
-        <div style={{ 
-          position: "absolute", bottom: -8, left: 16, 
-          background: "linear-gradient(135deg, #C8952A 0%, #A67C21 100%)", 
-          color: "#fff", 
-          padding: "4px 12px", borderRadius: 100, fontSize: 10, fontWeight: 800, zIndex: 20,
-          boxShadow: "0 4px 10px rgba(200, 149, 42, 0.3)", textTransform: "uppercase",
-          border: "2px solid #fff",
-          display: "flex", alignItems: "center", gap: 4
-        }}>
-          <Ico.Check /> {p.promo_text || selectedShop?.global_bogo_text || "Buy 1 Get 1"}
-        </div>
-      )}
-
-      {/* Thumbnail with soft inner shadow */}
-      <div style={{ width: 90, height: 90, borderRadius: 20, overflow: "hidden", flexShrink: 0, background: "#F5F0E8", boxShadow: "inset 0 0 10px rgba(0,0,0,0.05)" }}>
-        <img 
-          src={Config.getFullImagePath(p.image)} 
-          style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.5s" }} 
+      {/* Image */}
+      <div style={{ width: 100, height: 100, borderRadius: 18, overflow: "hidden", flexShrink: 0, background: "#F9FAFB" }}>
+        <img
+          src={Config.getFullImagePath(p.image)}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
           alt={p.name}
-          onMouseOver={(e) => e.target.style.transform = "scale(1.1)"}
-          onMouseOut={(e) => e.target.style.transform = "scale(1)"}
           onError={e => { e.target.style.opacity = 0.5; }}
         />
       </div>
 
-      {/* Info Section */}
-      <div style={{ flex: 1, minWidth: 0, paddingTop: 4 }}>
-        <h3 style={{ fontSize: 17, fontWeight: 800, color: "#1C1C1C", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", letterSpacing: "-0.3px" }}>
-          {p.name}
-        </h3>
-        <p style={{ fontSize: 12, color: "#9A9083", marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.5, opacity: 0.8 }}>
-          {p.description || "Premium quality coffee brewed to perfection."}
+      {/* Content */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>{p.name}</h3>
+          {isOnPromo && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#C8952A" }} />}
+        </div>
+
+        <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 12, display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.4 }}>
+          {p.description || "Crafted with passion and the finest beans."}
         </p>
+
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {getDiscountPercent(p, selectedShop) > 0 && (
-              <span style={{ fontSize: 11, color: "#BBB3A8", textDecoration: "line-through", marginBottom: -2 }}>
-                {(() => {
-                  let displayPrice = p.price;
-                  if (p.sizes) {
-                    try {
-                      const sizes = typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes;
-                      if (Array.isArray(sizes) && sizes.length > 0) {
-                        displayPrice = Math.min(...sizes.map(s => parseFloat(s.price)));
-                      }
-                    } catch (e) {}
-                  }
-                  return fmt(displayPrice);
-                })()}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: "#4A6741" }}>
+              {fmt(p.price * (1 - dP / 100))}
+            </span>
+            {dP > 0 && (
+              <span style={{ fontSize: 13, color: "#9CA3AF", textDecoration: "line-through" }}>
+                {fmt(p.price)}
               </span>
             )}
-            <div style={{ fontSize: 18, fontWeight: 900, color: "#4A6741" }}>
-              {(() => {
-                let displayPrice = p.price;
-                if (p.sizes) {
-                  try {
-                    const sizes = typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes;
-                    if (Array.isArray(sizes) && sizes.length > 0) {
-                      // Find minimum price among sizes
-                      displayPrice = Math.min(...sizes.map(s => parseFloat(s.price)));
-                    }
-                  } catch (e) {}
-                }
-                return fmt(displayPrice * (1 - getDiscountPercent(p, selectedShop) / 100));
-              })()}
-              {p.sizes && JSON.parse(p.sizes).length > 0 && (
-                <span style={{ fontSize: 10, marginLeft: 4, opacity: 0.6 }}>Starting</span>
-              )}
-            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(200, 149, 42, 0.08)", padding: "4px 10px", borderRadius: 100 }}>
-            <Ico.Star f={true} s={11} style={{ color: "#C8952A" }} />
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#C8952A" }}>{p.rating || (4.5 + (p.id % 5) * 0.1).toFixed(1)}</span>
-          </div>
-        </div>
-      </div>
 
-      {/* Actions (Heart & Add) */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
-        <button 
-          onClick={(e) => { e.stopPropagation(); onStar(p); }}
-          style={{ 
-            background: "none", 
-            border: "none", 
-            padding: 4, 
-            cursor: "pointer",
-            color: starred ? "#E8534A" : "#DDD8CF",
-            transition: "transform 0.2s"
-          }}
-        >
-          {starred ? <Ico.HeartFilled s={24} /> : <Ico.Heart s={24} />}
-        </button>
-        
-        <button 
-          onClick={(e) => { e.stopPropagation(); onOpen(p); }}
-          style={{ 
-            width: 32, 
-            height: 32, 
-            borderRadius: "50%", 
-            background: "#4A6741", 
-            color: "#fff", 
-            border: "none", 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center",
-            boxShadow: "0 2px 6px rgba(74, 103, 65, 0.3)",
-            cursor: "pointer"
-          }}
-        >
-          <Ico.Plus s={18} />
-        </button>
+          <button
+            style={{ width: 32, height: 32, borderRadius: 10, background: "#4A6741", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <Ico.Plus s={18} />
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+
 
 function ProductModal({ p, onClose, onAdd, isDesktop }) {
   const parseJson = (val) => { try { return typeof val === 'string' ? JSON.parse(val) : val; } catch { return []; } };
@@ -431,25 +351,25 @@ function ProductModal({ p, onClose, onAdd, isDesktop }) {
     <div className="overlay fade-in" onClick={onClose}>
       <div className={`modal-sheet slide-up ${isDesktop ? "center-modal" : ""}`} onClick={e => e.stopPropagation()}>
         <div className="drag-handle" />
-        <div style={{ position:"relative", height:220, margin:"10px 14px 0", borderRadius:18, overflow:"hidden", flexShrink:0 }}>
-          <img src={Config.getFullImagePath(p.image)} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={e => { e.target.style.background="#EDE8DF"; }} />
-          <button onClick={onClose} style={{ position:"absolute", top:12, right:12, width:34, height:34, borderRadius:"50%", background:"rgba(0,0,0,.38)", color:"#fff", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", border:"none" }}>
+        <div style={{ position: "relative", height: 220, margin: "10px 14px 0", borderRadius: 18, overflow: "hidden", flexShrink: 0 }}>
+          <img src={Config.getFullImagePath(p.image)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.background = "#EDE8DF"; }} />
+          <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%", background: "rgba(0,0,0,.38)", color: "#fff", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", border: "none" }}>
             <Ico.X s={16} />
           </button>
         </div>
         <div className="modal-inner">
-          <div style={{ padding:"18px 18px 4px" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
+          <div style={{ padding: "18px 18px 4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
               <div>
-                <h2 style={{ fontSize:22, fontWeight:700, color:"#1C1C1C", lineHeight:1.2 }}>{p.name}</h2>
-                <p style={{ fontSize:13, color:"#9A9083", marginTop:3 }}>Signature Selection</p>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#1C1C1C", lineHeight: 1.2 }}>{p.name}</h2>
+                <p style={{ fontSize: 13, color: "#9A9083", marginTop: 3 }}>Signature Selection</p>
               </div>
-              <span style={{ fontSize:22, fontWeight:700, color:"#1C1C1C", marginLeft:12, flexShrink:0 }}>{fmt(price)}</span>
+              <span style={{ fontSize: 22, fontWeight: 700, color: "#1C1C1C", marginLeft: 12, flexShrink: 0 }}>{fmt(price)}</span>
             </div>
 
             {moodConfig.sugar.length > 0 && (
               <Section title="Sugar Level">
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {moodConfig.sugar.map(s => (
                     <button key={s} className="opill" onClick={() => setSugar(s)} style={{ background: sugar === s ? "#9B6F2A" : "#fff", color: sugar === s ? "#fff" : "#6B6058", borderColor: sugar === s ? "#9B6F2A" : "#DDD8CF" }}>{s}</button>
                   ))}
@@ -459,10 +379,10 @@ function ProductModal({ p, onClose, onAdd, isDesktop }) {
 
             {moodConfig.temp.length > 0 && (
               <Section title="Temperature">
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {moodConfig.temp.map(t => (
-                    <button key={t} className="opill" onClick={() => setTemp(t)} style={{ background: temp === t ? (TEMP_COLOR[t] || "#4A6741") : "#fff", color: temp === t ? "#fff" : "#6B6058", borderColor: temp === t ? (TEMP_COLOR[t] || "#4A6741") : "#DDD8CF", display:"flex", alignItems:"center", gap:6 }}>
-                      <span style={{ fontSize:15 }}>{TEMP_ICON[t] || "☕"}</span>{t}
+                    <button key={t} className="opill" onClick={() => setTemp(t)} style={{ background: temp === t ? (TEMP_COLOR[t] || "#4A6741") : "#fff", color: temp === t ? "#fff" : "#6B6058", borderColor: temp === t ? (TEMP_COLOR[t] || "#4A6741") : "#DDD8CF", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 15 }}>{TEMP_ICON[t] || "☕"}</span>{t}
                     </button>
                   ))}
                 </div>
@@ -471,11 +391,11 @@ function ProductModal({ p, onClose, onAdd, isDesktop }) {
 
             {sizes.length > 0 && (
               <Section title="Size">
-                <div style={{ display:"flex", gap:8 }}>
+                <div style={{ display: "flex", gap: 8 }}>
                   {sizes.map(s => (
-                    <button key={s.label} onClick={() => setSize(s.label)} style={{ flex:1, padding:"12px 8px", borderRadius:14, border: `1.5px solid ${size === s.label ? "#3B78C9" : "#DDD8CF"}`, background: size === s.label ? "#3B78C9" : "#fff", color: size === s.label ? "#fff" : "#6B6058", fontSize:13, fontWeight:600, display:"flex", flexDirection:"column", alignItems:"center", gap:4, outline:"none", cursor:"pointer" }}>
+                    <button key={s.label} onClick={() => setSize(s.label)} style={{ flex: 1, padding: "12px 8px", borderRadius: 14, border: `1.5px solid ${size === s.label ? "#3B78C9" : "#DDD8CF"}`, background: size === s.label ? "#3B78C9" : "#fff", color: size === s.label ? "#fff" : "#6B6058", fontSize: 13, fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, outline: "none", cursor: "pointer" }}>
                       <span>{s.label}</span>
-                      <span style={{ fontSize:11, opacity:.8 }}>{fmt(s.price)}</span>
+                      <span style={{ fontSize: 11, opacity: .8 }}>{fmt(s.price)}</span>
                     </button>
                   ))}
                 </div>
@@ -484,12 +404,12 @@ function ProductModal({ p, onClose, onAdd, isDesktop }) {
 
             {addons.length > 0 && (
               <Section title="Add-Ons" sub="Optional">
-                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {addons.map(a => (
-                    <div key={a.label} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 14px", background:"#FAFAF8", borderRadius:13, border:"1px solid #EDE8DF" }}>
+                    <div key={a.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", background: "#FAFAF8", borderRadius: 13, border: "1px solid #EDE8DF" }}>
                       <div>
-                        <div style={{ fontSize:13, fontWeight:600, color:"#1C1C1C" }}>{a.label}</div>
-                        <div style={{ fontSize:11, color:"#4A6741", fontWeight:600 }}>+{fmt(a.price)}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1C" }}>{a.label}</div>
+                        <div style={{ fontSize: 11, color: "#4A6741", fontWeight: 600 }}>+{fmt(a.price)}</div>
                       </div>
                       <div className="tgl" onClick={() => toggleAddon(a.label)} style={{ background: selAddons[a.label] ? "#4A6741" : "#D0CBC2" }}>
                         <div className={`tgl-dot${selAddons[a.label] ? " on" : ""}`} />
@@ -501,13 +421,13 @@ function ProductModal({ p, onClose, onAdd, isDesktop }) {
             )}
           </div>
         </div>
-        <div style={{ padding:"14px 18px 28px", borderTop:"1px solid #EDE8DF", background:"#fff", display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
+        <div style={{ padding: "14px 18px 28px", borderTop: "1px solid #EDE8DF", background: "#fff", display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
           <div className="qty-ctrl">
             <button className="qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))}><Ico.Minus /></button>
-            <span style={{ fontSize:16, fontWeight:700, minWidth:22, textAlign:"center" }}>{qty}</span>
+            <span style={{ fontSize: 16, fontWeight: 700, minWidth: 22, textAlign: "center" }}>{qty}</span>
             <button className="qty-btn" onClick={() => setQty(q => q + 1)}><Ico.Plus /></button>
           </div>
-          <button onClick={handleAdd} style={{ flex:1, height:52, borderRadius:100, background:"#4A6741", color:"#fff", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:10, border:"none" }}>
+          <button onClick={handleAdd} style={{ flex: 1, height: 52, borderRadius: 100, background: "#4A6741", color: "#fff", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, border: "none" }}>
             <span>Add to Cart — {fmt(price * qty)}</span>
             <Ico.Arrow />
           </button>
@@ -545,7 +465,7 @@ const isProductOnPromo = (item, selectedShop) => {
 
 function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar, selectedShop, loading, activeOrder }) {
   const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-  
+
   // Calculate Discounts & BOGO Savings
   const savings = cart.reduce((total_savings, item) => {
     const dPercent = getDiscountPercent(item, selectedShop);
@@ -567,29 +487,29 @@ function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar, sele
 
   const final_total = total - savings;
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
-      <div style={{ padding:"20px 20px 14px", borderBottom:"1px solid #EDE8DF", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <h2 style={{ fontSize:19, fontWeight:700, color:"#1C1C1C" }}>Your Order</h2>
-        {!asSidebar && <button onClick={onClose} style={{ width:32, height:32, borderRadius:"50%", background:"#F5F0E8", border:"none", display:"flex", alignItems:"center", justifyContent:"center" }}><Ico.X s={16}/></button>}
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ padding: "20px 20px 14px", borderBottom: "1px solid #EDE8DF", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <h2 style={{ fontSize: 19, fontWeight: 700, color: "#1C1C1C" }}>Your Order</h2>
+        {!asSidebar && <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", background: "#F5F0E8", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico.X s={16} /></button>}
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"16px" }} className="noscroll">
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }} className="noscroll">
         {/* ACTIVE BILL SECTION */}
         {activeOrder && activeOrder.details && activeOrder.details.length > 0 && (
-          <div style={{ marginBottom: 24, padding: "16px", background: "#fdf8ef", borderRadius: 20, border: "1.5px dashed #D0C5B3" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color: "#8A7E6A", textTransform: "uppercase", letterSpacing: 0.5 }}>Ongoing Bill / មុខម្ហូបកំពុងមាន</span>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4A6741", boxShadow: "0 0 10px #4A6741" }}></div>
+          <div style={{ marginBottom: 16, padding: "12px", background: "#fdf8ef", borderRadius: 16, border: "1.5px dashed #D0C5B3" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#8A7E6A", textTransform: "uppercase", letterSpacing: 0.5 }}>Ongoing Bill</span>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#4A6741" }}></div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {activeOrder.details.map((d, idx) => (
-                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {activeOrder.details.map((d) => (
+                <div key={`active-${d.id}-${d.product_name}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
                   <span style={{ color: "#4B5563", fontWeight: 500 }}>
-                    {d.product_name} <span style={{ color: "#9A9083", fontSize: 12 }}>x{d.qty}</span>
+                    {d.product_name} <span style={{ color: "#9A9083", fontSize: 11 }}>x{d.qty}</span>
                   </span>
                   <span style={{ fontWeight: 700, color: "#1C1C1C" }}>{fmt(d.price * d.qty)}</span>
                 </div>
               ))}
-              <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between", fontWeight: 800, color: "#4A6741" }}>
+              <div style={{ marginTop: 4, paddingTop: 6, borderTop: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between", fontWeight: 800, color: "#4A6741", fontSize: 12 }}>
                 <span>Subtotal</span>
                 <span>{fmt(activeOrder.total_amount)}</span>
               </div>
@@ -599,55 +519,57 @@ function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar, sele
 
         {cart.length === 0 ? (
           !activeOrder && (
-            <div style={{ textAlign:"center", padding:"52px 0", color:"#B0A496" }}>
-              <div style={{ fontSize:46, marginBottom:12 }}>🛒</div>
-              <p style={{ fontSize:15, fontWeight:600 }}>Your basket is empty</p>
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#B0A496" }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🛒</div>
+              <p style={{ fontSize: 14, fontWeight: 600 }}>Your basket is empty</p>
             </div>
           )
         ) : (
-          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {cart.map(item => (
-              <div key={item.cid} className="cart-item">
-                <img src={Config.getFullImagePath(item.image)} alt={item.name} style={{ width:54, height:54, borderRadius:12, objectFit:"cover" }} />
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#1C1C1C" }}>{item.name}</div>
-                  {isProductOnPromo(item, selectedShop) && (
-                    <div style={{ display: "inline-flex", color: "#059669", fontSize: 10, fontWeight: 700, marginTop: 1 }}>
-                      • {selectedShop?.global_bogo_text || "Buy 1 Get 1 Applied"}
-                    </div>
-                  )}
-                  <div style={{ fontSize:11, color:"#9A9083", marginBottom:4 }}>{item.custom}</div>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                    <span style={{ fontSize:14, fontWeight:700, color:"#4A6741" }}>{fmt(item.price * item.qty)}</span>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <button className="qty-btn" style={{ width:26, height:26, background:"#EDE8DF" }} onClick={() => onQty(item.cid, -1)}><Ico.Minus s={12}/></button>
-                      <span style={{ fontSize:13, fontWeight:700 }}>{item.qty}</span>
-                      <button className="qty-btn" style={{ width:26, height:26, background:"#4A6741", color:"#fff" }} onClick={() => onQty(item.cid, 1)}><Ico.Plus s={12}/></button>
+              <div key={item.cid} className="cart-item" style={{ padding: "8px 0" }}>
+                <img src={Config.getFullImagePath(item.image)} alt={item.name} style={{ width: 44, height: 44, borderRadius: 10, objectFit: "cover" }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#1C1C1C" }}>{item.name}</div>
+                  <div style={{ fontSize: 10, color: "#9A9083", marginBottom: 2 }}>{item.custom}</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#4A6741" }}>{fmt(item.price * item.qty)}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <button className="qty-btn" style={{ width: 22, height: 22, background: "#EDE8DF" }} onClick={() => onQty(item.cid, -1)}><Ico.Minus s={10} /></button>
+                      <span style={{ fontSize: 12, fontWeight: 700 }}>{item.qty}</span>
+                      <button className="qty-btn" style={{ width: 22, height: 22, background: "#4A6741", color: "#fff" }} onClick={() => onQty(item.cid, 1)}><Ico.Plus s={10} /></button>
                     </div>
                   </div>
                 </div>
-                <button onClick={() => onRemove(item.cid)} style={{ background:"none", border:"none", color:"#C0B8AE" }}><Ico.X s={15}/></button>
+                <button onClick={() => onRemove(item.cid)} style={{ background: "none", border: "none", color: "#C0B8AE" }}><Ico.X s={14} /></button>
               </div>
             ))}
           </div>
         )}
       </div>
       {cart.length > 0 && (
-        <div style={{ padding:"16px 18px 28px", borderTop:"1px solid #EDE8DF", background:"#fff" }}>
-          <div style={{ background:"#FAFAF8", borderRadius:14, padding:"12px 14px", marginBottom:14 }}>
-            <Row label="Subtotal" val={fmt(total)} />
-            {savings > 0 && <Row label="Promotion" val={`-${fmt(savings)}`} valColor="#e85d5d" />}
-            <Row label="Service" val="Free" valColor="#4A6741" />
-            <div style={{ height:1, background:"#EDE8DF", margin:"10px 0" }}/>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
-              <span style={{ fontSize:14, fontWeight:700, color:"#4A6741" }}>Total</span>
-              <span style={{ fontSize:24, fontWeight:800, color:"#4A6741" }}>{fmt(final_total)}</span>
+        <div style={{ padding: "12px 16px 20px", borderTop: "1px solid #EDE8DF", background: "#fff" }}>
+          <div style={{ background: "#FAFAF8", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+            <div style={{ fontSize: 12, display: "flex", justifyContent: "space-between", color: "#8A8070", marginBottom: 4 }}>
+              <span>Subtotal</span>
+              <span>{fmt(total)}</span>
+            </div>
+            {savings > 0 && (
+              <div style={{ fontSize: 12, display: "flex", justifyContent: "space-between", color: "#e85d5d", marginBottom: 4 }}>
+                <span>Promotion</span>
+                <span>-{fmt(savings)}</span>
+              </div>
+            )}
+            <div style={{ height: 1, background: "#EDE8DF", margin: "8px 0" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#4A6741" }}>Total</span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#4A6741" }}>{fmt(final_total)}</span>
             </div>
           </div>
-          <button 
+          <button
             disabled={loading}
-            onClick={onCheckout} 
-            style={{ width:"100%", height:54, borderRadius:100, background:loading ? "#9A9083" : "#4A6741", color:"#fff", fontSize:15, fontWeight:700, border:"none", cursor: loading ? "not-allowed" : "pointer" }}
+            onClick={onCheckout}
+            style={{ width: "100%", height: 48, borderRadius: 100, background: loading ? "#9A9083" : "#4A6741", color: "#fff", fontSize: 14, fontWeight: 700, border: "none", cursor: loading ? "not-allowed" : "pointer" }}
           >
             {loading ? "Processing..." : "Place Order ☕"}
           </button>
@@ -660,6 +582,296 @@ function CartPanel({ cart, onClose, onQty, onRemove, onCheckout, asSidebar, sele
 /* ──────────────────────────────────────────────────────────────
    MAIN APPLICATION
 ────────────────────────────────────────────────────────────── */
+
+const ProductDetailModal = ({
+  product,
+  visible,
+  onCancel,
+  onAddToCart,
+  selectedShop
+}) => {
+  if (!product) return null;
+  const [qty, setQty] = useState(1);
+  const [note, setNote] = useState("");
+
+  return (
+    <Modal
+      open={visible}
+      onCancel={onCancel}
+      footer={null}
+      centered
+      width={480}
+      bodyStyle={{ padding: 0, overflow: 'hidden', borderRadius: 32 }}
+      className="product-detail-modal"
+    >
+      <div style={{ position: "relative" }}>
+        <img
+          src={Config.getFullImagePath(product.image)}
+          style={{ width: "100%", height: 320, objectFit: "cover" }}
+          alt={product.name}
+        />
+        <button
+          onClick={onCancel}
+          style={{ position: "absolute", top: 16, right: 16, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.8)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}
+        >
+          <Ico.X s={20} />
+        </button>
+      </div>
+      <div style={{ padding: "24px 32px 32px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+          <div>
+            <h2 className="brand" style={{ fontSize: 28, color: "#1C1C1C", marginBottom: 4 }}>{product.name}</h2>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", color: "#C8952A" }}><Ico.Star s={14} /><Ico.Star s={14} /><Ico.Star s={14} /><Ico.Star s={14} /><Ico.Star s={14} /></div>
+              <span style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 600 }}>4.9 (120+ reviews)</span>
+            </div>
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: "#4A6741" }}>{fmt(product.price)}</div>
+        </div>
+
+        <p style={{ fontSize: 14, color: "#6B7280", lineHeight: "1.6", marginBottom: 24 }}>
+          {product.description || "Our premium crafted beverage, prepared with the finest ingredients to ensure a perfect balance of flavor and aroma."}
+        </p>
+
+        <div style={{ background: "#F9FAFB", borderRadius: 20, padding: "16px", marginBottom: 24, display: "flex", justifyContent: "space-around" }}>
+          <div style={{ textAlign: "center" }}><div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 2 }}>Calories</div><div style={{ fontSize: 14, fontWeight: 700, color: "#1C1C1C" }}>120 kcal</div></div>
+          <div style={{ width: 1, height: 24, background: "#E5E7EB" }}></div>
+          <div style={{ textAlign: "center" }}><div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 2 }}>Fat</div><div style={{ fontSize: 14, fontWeight: 700, color: "#1C1C1C" }}>2.4g</div></div>
+          <div style={{ width: 1, height: 24, background: "#E5E7EB" }}></div>
+          <div style={{ textAlign: "center" }}><div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 2 }}>Caffeine</div><div style={{ fontSize: 14, fontWeight: 700, color: "#1C1C1C" }}>95mg</div></div>
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ fontSize: 13, fontWeight: 700, color: "#1C1C1C", display: "block", marginBottom: 8 }}>Special Instructions</label>
+          <textarea
+            placeholder="Add a note (e.g., less ice, more sugar...)"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            style={{ width: "100%", borderRadius: 16, border: "1.5px solid #E5E7EB", padding: "12px 16px", fontSize: 14, resize: "none", height: 80, outline: "none", transition: "border-color 0.2s" }}
+          />
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", background: "#F3F4F6", borderRadius: 100, padding: "4px" }}>
+            <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 44, height: 44, borderRadius: "50%", background: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}><Ico.Minus s={18} /></button>
+            <span style={{ width: 40, textAlign: "center", fontSize: 18, fontWeight: 800 }}>{qty}</span>
+            <button onClick={() => setQty(qty + 1)} style={{ width: 44, height: 44, borderRadius: "50%", background: "#4A6741", color: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 4px rgba(74,103,65,0.2)" }}><Ico.Plus s={18} /></button>
+          </div>
+          <button
+            onClick={() => {
+              onAddToCart(product, qty, note);
+              onCancel();
+            }}
+            style={{ flex: 1, height: 56, borderRadius: 100, background: "#4A6741", color: "#fff", border: "none", fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 20px rgba(74,103,65,0.3)" }}
+          >
+            Add to Cart - {fmt(product.price * qty)}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+const OrderSuccessModal = ({ visible, orderId, onDone }) => {
+  if (!visible) return null;
+  return (
+    <Modal
+      open={visible}
+      footer={null}
+      centered
+      closable={false}
+      width={360}
+      bodyStyle={{ padding: 0, borderRadius: 32, overflow: "hidden" }}
+    >
+      <div style={{ padding: "40px 32px", textAlign: "center" }}>
+        <div style={{ width: 80, height: 80, background: "#ECFDF5", color: "#059669", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", animation: "celebrate 1s ease" }}>
+          <Ico.Check s={48} />
+        </div>
+        <h2 className="brand" style={{ fontSize: 26, color: "#1C1C1C", marginBottom: 8 }}>Order Placed!</h2>
+        <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 24 }}>Your coffee is being prepared. Order ID: <b>#{orderId}</b></p>
+
+        <div style={{ background: "#F9FAFB", borderRadius: 20, padding: "20px", marginBottom: 32 }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 12 }}>
+            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#4A6741", animation: "ani-steam 1.5s infinite" }}></div>
+            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#4A6741", animation: "ani-steam 1.5s infinite 0.2s" }}></div>
+            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#4A6741", animation: "ani-steam 1.5s infinite 0.4s" }}></div>
+          </div>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#4A6741", textTransform: "uppercase", letterSpacing: 1 }}>Kitchen Preparing...</p>
+        </div>
+
+        <button
+          onClick={onDone}
+          style={{ width: "100%", height: 56, borderRadius: 100, background: "#4A6741", color: "#fff", border: "none", fontSize: 16, fontWeight: 700, cursor: "pointer" }}
+        >
+          Track My Order
+        </button>
+      </div>
+    </Modal>
+  );
+};
+
+const PaymentModal = ({
+  visible,
+  onCancel,
+  paymentData,
+  selectedShop,
+  isVerifying,
+  onVerify,
+  cart
+}) => {
+  const [step, setStep] = useState(1); // 1: Review, 2: Payment
+  const [orderType, setOrderType] = useState("dine_in"); // dine_in, takeaway
+
+  if (!visible) return null;
+  const amount = paymentData?.total_amount || 0;
+  const formattedAmount = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  const khqrImg = selectedShop?.khqr_image ? Config.getFullImagePath(selectedShop.khqr_image) : null;
+
+  const handleNext = () => {
+    if (step === 1) setStep(2);
+  };
+
+  const handleBack = () => {
+    if (step === 2) setStep(1);
+    else onCancel();
+  };
+
+  return (
+    <Modal
+      open={visible}
+      onCancel={onCancel}
+      footer={null}
+      centered
+      width={400}
+      bodyStyle={{ padding: 0, overflow: 'hidden', borderRadius: 28, background: "#fff" }}
+      className="checkout-modal-premium"
+      closable={false}
+    >
+      <div style={{ padding: "20px" }}>
+        {/* Step Indicator */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 24, height: 24, borderRadius: "50%", background: step >= 1 ? "#4A6741" : "#E5E7EB", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>1</div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: step >= 1 ? "#4A6741" : "#9CA3AF" }}>Review</span>
+          </div>
+          <div style={{ width: 30, height: 2, background: step >= 2 ? "#4A6741" : "#E5E7EB" }}></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 24, height: 24, borderRadius: "50%", background: step >= 2 ? "#4A6741" : "#E5E7EB", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>2</div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: step >= 2 ? "#4A6741" : "#9CA3AF" }}>Payment</span>
+          </div>
+        </div>
+
+        {step === 1 ? (
+          <>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <h2 className="brand" style={{ fontSize: 24, color: "#1C1C1C", marginBottom: 4 }}>Order Summary</h2>
+              <p style={{ fontSize: 13, color: "#8A8070" }}>Please review your order before payment</p>
+            </div>
+
+            {/* Order Type Selector */}
+            <div style={{ display: "flex", background: "#F3F4F6", borderRadius: 12, padding: 4, marginBottom: 20 }}>
+              <button
+                onClick={() => setOrderType("dine_in")}
+                style={{ flex: 1, padding: "8px", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", background: orderType === "dine_in" ? "#fff" : "transparent", color: orderType === "dine_in" ? "#4A6741" : "#6B7280", boxShadow: orderType === "dine_in" ? "0 2px 4px rgba(0,0,0,0.05)" : "none", transition: "all 0.2s" }}
+              >
+                🍽️ Dine In
+              </button>
+              <button
+                onClick={() => setOrderType("takeaway")}
+                style={{ flex: 1, padding: "8px", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", background: orderType === "takeaway" ? "#fff" : "transparent", color: orderType === "takeaway" ? "#4A6741" : "#6B7280", boxShadow: orderType === "takeaway" ? "0 2px 4px rgba(0,0,0,0.05)" : "none", transition: "all 0.2s" }}
+              >
+                🥡 Takeaway
+              </button>
+            </div>
+
+            <div style={{ maxHeight: 220, overflowY: "auto", marginBottom: 20, paddingRight: 4 }} className="noscroll">
+              {cart.map((item, idx) => (
+                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #F3F4F6" }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 8, background: "#F9F7F2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>☕</div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#1C1C1C" }}>{item.name}</div>
+                      <div style={{ fontSize: 11, color: "#9CA3AF" }}>Qty: {item.qty}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#4A6741" }}>{fmt(item.price * item.qty)}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: "#F9F7F2", borderRadius: 16, padding: "16px", marginBottom: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14, color: "#6B7280" }}>
+                <span>Subtotal</span>
+                <span style={{ fontWeight: 600, color: "#1C1C1C" }}>{formattedAmount}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14, color: "#6B7280" }}>
+                <span>Service Fee</span>
+                <span style={{ fontWeight: 600, color: "#059669" }}>FREE</span>
+              </div>
+              <div style={{ height: 1, background: "#E5E7EB", margin: "12px 0" }}></div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: "#1C1C1C" }}>Total</span>
+                <span style={{ fontSize: 22, fontWeight: 900, color: "#4A6741" }}>{formattedAmount}</span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button onClick={onCancel} style={{ flex: 1, height: 52, borderRadius: 100, border: "1px solid #E5E7EB", background: "#fff", color: "#6B7280", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleNext} style={{ flex: 2, height: 52, borderRadius: 100, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(74,103,65,0.2)" }}>Confirm & Pay</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ display: "inline-flex", background: "#FEF3C7", color: "#92400E", padding: "4px 12px", borderRadius: 100, fontSize: 10, fontWeight: 800, marginBottom: 12 }}>
+                STEP 2: PAYMENT
+              </div>
+              <h2 className="brand" style={{ fontSize: 24, color: "#1C1C1C", marginBottom: 4 }}>Scan to Pay</h2>
+              <p style={{ fontSize: 13, color: "#8A8070" }}>Transfer exactly <b>{formattedAmount}</b> via KHQR</p>
+            </div>
+
+            {/* QR Card */}
+            <div style={{ background: "#fff", padding: "24px", borderRadius: 24, boxShadow: "0 8px 30px rgba(0,0,0,0.08)", border: "1px solid #F3F4F6", textAlign: "center", marginBottom: 24 }}>
+              {khqrImg ? (
+                <div style={{ position: "relative", display: "inline-block" }}>
+                  <img src={khqrImg} style={{ width: 220, height: 220, borderRadius: 16, objectFit: "contain" }} alt="KHQR" />
+                  <div style={{ position: "absolute", inset: 0, border: "2px solid #4A6741", borderRadius: 16, opacity: 0.1 }}></div>
+                </div>
+              ) : (
+                <div style={{ width: 220, height: 220, background: "#F9FAFB", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
+                  <p style={{ fontSize: 12, color: "#9CA3AF" }}>QR Code Unavailable</p>
+                </div>
+              )}
+
+              <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 8 }}>
+                <div style={{ background: "#ECFDF5", color: "#065F46", padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700 }}>{orderType === "dine_in" ? "Dine In" : "Takeaway"}</div>
+                <div style={{ background: "#EFF6FF", color: "#1E40AF", padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700 }}>Table: {selectedShop?.table_no || paymentData?.table_no || "N/A"}</div>
+              </div>
+            </div>
+
+            <button
+              onClick={onVerify}
+              disabled={isVerifying}
+              style={{
+                width: "100%", height: 56, borderRadius: 100, background: "#4A6741", color: "#fff", border: "none", fontWeight: 700, fontSize: 16, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 6px 20px rgba(74,103,65,0.3)"
+              }}
+            >
+              {isVerifying ? <Spin size="small" /> : <><Ico.Check s={20} /> I've Paid Successfully</>}
+            </button>
+
+            <button
+              onClick={handleBack}
+              style={{ width: "100%", marginTop: 12, background: "none", border: "none", color: "#9CA3AF", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+            >
+              ← Back to Summary
+            </button>
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+};
 
 const CoffeeMenuApp = () => {
   const navigate = useNavigate();
@@ -696,6 +908,9 @@ const CoffeeMenuApp = () => {
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isPaymentVisible, setIsPaymentVisible] = useState(false);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
   const [cat, setCat] = useState("all");
   const [activeOrder, setActiveOrder] = useState(null); // Existing bill for table
   const [q, setQ] = useState("");
@@ -783,7 +998,7 @@ const CoffeeMenuApp = () => {
   const handleGoogleLogin = async (credentialResponse) => {
     setLoginLoading(true);
     try {
-      const payload = credentialResponse.isCustom 
+      const payload = credentialResponse.isCustom
         ? { isCustom: true, profile: credentialResponse.profile, business_id: bizId }
         : { token: credentialResponse.credential, business_id: bizId };
 
@@ -902,7 +1117,7 @@ const CoffeeMenuApp = () => {
   const [orderHistory, setOrderHistory] = useState([]);
   const [selectedHistoryOrder, setSelectedHistoryOrder] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
-    
+
   useEffect(() => {
     let interval;
     if (orderId) {
@@ -975,7 +1190,7 @@ const CoffeeMenuApp = () => {
         setLoading(true);
         try {
           const [cRes, pRes] = await Promise.all([
-            request("category", "get", { business_id: selectedShop.business_id }), 
+            request("category", "get", { business_id: selectedShop.business_id }),
             request("product", "get", { business_id: selectedShop.business_id, branch_id: selectedShop.id })
           ]);
           if (cRes?.list) setCategories([{ id: "all", name: "All" }, ...cRes.list]);
@@ -996,13 +1211,19 @@ const CoffeeMenuApp = () => {
 
   useEffect(() => {
     const bizId = searchParams.get('biz');
+    const branchId = searchParams.get('br') || searchParams.get('branch');
     if (bizId) {
-      request("business/public-config", "get", { business_id: bizId })
+      request("business/public-config", "get", { business_id: bizId, branch_id: branchId })
         .then(res => {
           if (res?.config) {
-            setSelectedShop(prev => ({ ...prev, ...res.config }));
+            setSelectedShop(prev => ({ 
+              ...prev, 
+              ...res.config,
+              business_id: parseInt(bizId),
+              id: parseInt(branchId)
+            }));
           }
-        }).catch(() => {});
+        }).catch(() => { });
     }
   }, [searchParams]);
 
@@ -1014,7 +1235,7 @@ const CoffeeMenuApp = () => {
       setCart([]);
       localStorage.removeItem('coffee_pos_cart');
     }
-    
+
     // Prevent saving empty cart back to storage IF we just cleared it during checkout
     if (!isPlacingOrder.current) {
       localStorage.setItem('coffee_pos_cart', JSON.stringify(cart));
@@ -1027,15 +1248,20 @@ const CoffeeMenuApp = () => {
     if (!selectedShop?.id || !selectedTable || selectedTable === "Web") return;
     try {
       const res = await request(`order-web/active?branch_id=${selectedShop.id}&table_no=${selectedTable}`, "get");
-      if (res && res.order) {
-        setActiveOrder(res.order);
+      if (res?.success) {
+        // Only update if data actually changed to prevent DOM flicker
+        const newStr = JSON.stringify(res.data);
+        const oldStr = JSON.stringify(activeOrder);
+        if (newStr !== oldStr) {
+          setActiveOrder(res.data);
+        }
       } else {
         setActiveOrder(null);
       }
     } catch (err) {
       console.error("Failed to fetch active order:", err);
     }
-  }, [selectedShop?.id, selectedTable]);
+  }, [selectedShop?.id, selectedTable, activeOrder]);
 
   useEffect(() => {
     fetchActive();
@@ -1056,13 +1282,32 @@ const CoffeeMenuApp = () => {
   const removeItem = (cid) => setCart(prev => prev.filter(i => i.cid !== cid));
   const toggleStar = (p) => setStarred(prev => { const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; });
 
-  const handleCheckout = async () => {
+  const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+
+  const showDetail = (p) => {
+    setSelectedProduct(p);
+    setIsDetailModalVisible(true);
+  };
+
+  const handleAddToCart = (product, qty = 1, note = "") => {
+    const existing = cart.find(i => i.id === product.id && i.custom === note);
+    if (existing) {
+      updateQty(existing.cid, qty);
+    } else {
+      setCart(prev => [...prev, { ...product, qty, custom: note, cid: Math.random().toString(36).slice(2) }]);
+    }
+    message.success(`${product.name} added!`);
+  };
+
+  const handleCheckout = async (isConfirmed = false) => {
     if (loading || cart.length === 0) return;
     if (selectedTable === "Web") {
       message.warning("Please scan the QR code on your table to place an order.");
       return;
     }
-    
+
     setLoading(true);
     isPlacingOrder.current = true;
     try {
@@ -1080,28 +1325,36 @@ const CoffeeMenuApp = () => {
 
       const sub = cart.reduce((s, i) => s + (i.price * i.qty), 0);
       const profile = member || getGuestProfile();
-      
+
       // Explicitly map fresh items from current cart state
-      const itemsToSend = cart.map(i => ({ 
-        product_id: i.id, 
-        qty: i.qty, 
-        price: i.price, 
-        note: i.custom 
+      const itemsToSend = cart.map(i => ({
+        product_id: i.id,
+        qty: i.qty,
+        price: i.price,
+        note: i.custom
       }));
 
       const data = {
-        business_id: selectedShop.business_id, 
-        branch_id: selectedShop.id, 
+        business_id: selectedShop.business_id,
+        branch_id: selectedShop.id,
         table_no: selectedTable,
-        customer_id: profile?.id || null, 
-        sub_total: sub, 
-        total_amount: sub, 
-        payment_method: "Unpaid (Web QR)", 
+        customer_id: profile?.id || null,
+        sub_total: sub,
+        total_amount: sub,
+        payment_method: "KHQR",
         order_type: "dine_in",
-        lat, 
+        lat,
         lng,
         cart_items: itemsToSend
       };
+
+      // Mandatory Payment Check - MUST be explicitly true (not an event object)
+      if (isConfirmed !== true) {
+        setPaymentData(data);
+        setIsPaymentVisible(true);
+        setLoading(false);
+        return;
+      }
 
       const res = await request("order-web", "post", data);
       if (res?.success) {
@@ -1112,18 +1365,16 @@ const CoffeeMenuApp = () => {
         setTransactionId(Math.random().toString(36).slice(2)); // Change transaction ID
         setOrderId(res.order_id);
         localStorage.setItem('last_order_id', res.order_id);
-        setCartOpen(false); 
-        setTab("status"); 
-        message.success(t.order_success_msg);
-        fetchHistory(); 
-        fetchActive(); 
-        
-        // HARD RESET: Reload to ensure clean slate for next order
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        setIsPaymentVisible(false);
+        setPaymentData(null);
+        setOrderId(res.order_id);
+        localStorage.setItem('last_order_id', res.order_id);
+        setIsSuccessModalVisible(true); // Show success animation modal
+        fetchHistory();
+        fetchActive();
       } else {
         isPlacingOrder.current = false;
+        setIsPaymentVisible(false); // Close modal on error too so user can retry
         message.error(res?.message || t.order_failed_msg);
       }
     } catch (err) {
@@ -1135,10 +1386,60 @@ const CoffeeMenuApp = () => {
     }
   };
 
-  if (!selectedShop?.id) return <div className="app-container" style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:40, textAlign:"center" }}><div><h2 className="brand" style={{ fontSize:32, marginBottom:16 }}>Please Scan QR</h2><p>Please scan the QR code on your table to browse the menu.</p></div></div>;
+  if (!selectedShop?.id) return <div className="app-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 40, textAlign: "center" }}><div><h2 className="brand" style={{ fontSize: 32, marginBottom: 16 }}>Please Scan QR</h2><p>Please scan the QR code on your table to browse the menu.</p></div></div>;
 
   return (
     <div className="app-container">
+      <ProductDetailModal
+        visible={isDetailModalVisible}
+        product={selectedProduct}
+        onCancel={() => setIsDetailModalVisible(false)}
+        onAddToCart={handleAddToCart}
+        selectedShop={selectedShop}
+      />
+
+      <OrderSuccessModal
+        visible={isSuccessModalVisible}
+        orderId={orderId}
+        onDone={() => {
+          setIsSuccessModalVisible(false);
+          setTab("status");
+          setCartOpen(false);
+          // Hard clear and refresh
+          setTimeout(() => window.location.reload(), 500);
+        }}
+      />
+
+      <OrderSuccessModal
+        visible={isSuccessModalVisible}
+        orderId={orderId}
+        onDone={() => {
+          setIsSuccessModalVisible(false);
+          setTab("status");
+          setCartOpen(false);
+          // Hard clear and refresh
+          setTimeout(() => window.location.reload(), 500);
+        }}
+      />
+
+      <PaymentModal
+        visible={isPaymentVisible}
+        onCancel={() => {
+          setIsPaymentVisible(false);
+          setPaymentData(null);
+        }}
+        paymentData={paymentData}
+        selectedShop={selectedShop}
+        isVerifying={isVerifyingPayment}
+        onVerify={() => {
+          setIsVerifyingPayment(true);
+          setTimeout(() => {
+            setIsVerifyingPayment(false);
+            handleCheckout(true); // Proceed with order (Confirmed)
+          }, 1500);
+        }}
+        cart={cart}
+      />
       <style>{`${CSS}
         @keyframes pulse-gold {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(200, 149, 42, 0.4); }
@@ -1168,24 +1469,24 @@ const CoffeeMenuApp = () => {
         .ani-celebrate { animation: celebrate 1s infinite ease-in-out; }
       `}</style>
       <div className="app-root" style={{ minHeight: "100vh" }}>
-        <div className="main-col" style={{ 
-          minHeight: "100vh", 
-          overflowY: "auto", 
+        <div className="main-col" style={{
+          minHeight: "100vh",
+          overflowY: "auto",
           WebkitOverflowScrolling: "touch",
           display: "flex",
           flexDirection: "column"
         }}>
           {/* Header & Navigation */}
           {!isMobile && (
-            <div style={{ background:"#fff", borderBottom:"1px solid #EDE8DF", padding:"0 28px", display:"flex", alignItems:"center", justifyContent:"space-between", height:64, position:"sticky", top:0, zIndex:100 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:32 }}>
-                <span className="brand" style={{ fontSize:20, fontWeight:700, color:"#1C1C1C", textTransform:"uppercase" }}>{selectedShop.business_name || "AURORA"}</span>
-                <div style={{ display:"flex", gap:4 }}>
-                  {["home", "search", "status", "profile"].map(id => <button key={id} onClick={() => setTab(id)} style={{ padding:"6px 14px", borderRadius:10, fontSize:12, fontWeight:700, background: tab === id ? "#4A6741" : "transparent", color: tab === id ? "#fff" : "#8A8070", textTransform:"uppercase", border:"none", cursor:"pointer" }}>{id}</button>)}
+            <div style={{ background: "#fff", borderBottom: "1px solid #EDE8DF", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, position: "sticky", top: 0, zIndex: 100 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+                <span className="brand" style={{ fontSize: 20, fontWeight: 700, color: "#1C1C1C", textTransform: "uppercase" }}>{selectedShop.business_name || "AURORA"}</span>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {["home", "search", "status", "profile"].map(id => <button key={id} onClick={() => setTab(id)} style={{ padding: "6px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, background: tab === id ? "#4A6741" : "transparent", color: tab === id ? "#fff" : "#8A8070", textTransform: "uppercase", border: "none", cursor: "pointer" }}>{id}</button>)}
                 </div>
               </div>
-              <button onClick={() => setCartOpen(true)} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 18px", borderRadius:10, border:"1.5px solid #EDE8DF", background:"#FAFAF8", color:"#4A6741", fontSize:12, fontWeight:700, cursor:"pointer" }}>
-                <Ico.Bag s={18}/> Cart {cart.length > 0 && <span style={{ background:"#4A6741", color:"#fff", borderRadius:"50%", width:18, height:18, display:"flex", alignItems:"center", justifyContent:"center" }}>{cart.length}</span>}
+              <button onClick={() => setCartOpen(true)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 18px", borderRadius: 10, border: "1.5px solid #EDE8DF", background: "#FAFAF8", color: "#4A6741", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                <Ico.Bag s={18} /> Cart {cart.length > 0 && <span style={{ background: "#4A6741", color: "#fff", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>{cart.length}</span>}
               </button>
             </div>
           )}
@@ -1195,16 +1496,16 @@ const CoffeeMenuApp = () => {
             <div className="fade-in">
               {/* Header Mobile (Only on Home) */}
               {(isMobile && tab === 'home' && !q) && (
-                <div style={{ padding:"16px 16px 6px", textAlign:"center" }}>
-                  <h1 className="brand" style={{ fontSize:18, fontWeight:700, letterSpacing:".05em", color:"#1C1C1C", textTransform:"uppercase" }}>{selectedShop.name || "AURORA BREW CO."}</h1>
-                  <div style={{ fontSize:9, fontWeight:800, color:"#4A6741", marginTop:1, letterSpacing:1 }}>TABLE {selectedTable}</div>
+                <div style={{ padding: "16px 16px 6px", textAlign: "center" }}>
+                  <h1 className="brand" style={{ fontSize: 18, fontWeight: 700, letterSpacing: ".05em", color: "#1C1C1C", textTransform: "uppercase" }}>{selectedShop.name || "AURORA BREW CO."}</h1>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: "#4A6741", marginTop: 1, letterSpacing: 1 }}>TABLE {selectedTable}</div>
                 </div>
               )}
 
               {/* Promo Banner */}
               {tab === 'home' && !q && selectedShop?.promo_is_active && (
                 <div style={{ padding: "0 20px 24px" }}>
-                  <div style={{ 
+                  <div style={{
                     position: "relative",
                     height: 200,
                     borderRadius: 32,
@@ -1212,26 +1513,26 @@ const CoffeeMenuApp = () => {
                     boxShadow: "0 15px 35px rgba(0,0,0,0.15)",
                     background: "#1C1C1C"
                   }}>
-                    <img 
-                      src={selectedShop?.promo_image || "https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=1000&auto=format&fit=crop"} 
-                      style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.6 }} 
+                    <img
+                      src={selectedShop?.promo_image || "https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=1000&auto=format&fit=crop"}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.6 }}
                     />
-                    <div style={{ 
-                      position: "absolute", top: 0, left: 0, right: 0, bottom: 0, 
+                    <div style={{
+                      position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
                       background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)",
                       padding: 24, display: "flex", flexDirection: "column", justifyContent: "flex-end"
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                        <span style={{ 
-                          background: selectedShop?.promo_tag_color || "#C8952A", 
-                          color: "#fff", padding: "4px 12px", borderRadius: 100, 
+                        <span style={{
+                          background: selectedShop?.promo_tag_color || "#C8952A",
+                          color: "#fff", padding: "4px 12px", borderRadius: 100,
                           fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: 1
                         }}>
                           {selectedShop?.promo_tag || "SPECIAL OFFER"}
                         </span>
                         {(selectedShop?.promo_start_date || selectedShop?.promo_end_date) && (
                           <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: 600 }}>
-                             {dayjs(selectedShop.promo_start_date).format('DD/MM')} - {dayjs(selectedShop.promo_end_date).format('DD/MM')}
+                            {dayjs(selectedShop.promo_start_date).format('DD/MM')} - {dayjs(selectedShop.promo_end_date).format('DD/MM')}
                           </span>
                         )}
                       </div>
@@ -1253,25 +1554,32 @@ const CoffeeMenuApp = () => {
 
               {/* Search Bar (Only on Search Tab) */}
               {tab === 'search' && (
-                <div className="search-wrap" style={!isMobile ? { padding:"12px 20px", margin:0 } : { marginTop: 60, margin: "0 16px 12px" }}>
-                  <div className="search-icon"><Ico.Search s={18}/></div>
+                <div className="search-wrap" style={!isMobile ? { padding: "12px 20px", margin: 0 } : { marginTop: 60, margin: "0 16px 12px" }}>
+                  <div className="search-icon"><Ico.Search s={18} /></div>
                   <input ref={searchInputRef} className="search-inp" type="text" placeholder="Search menu items..." value={q} onChange={e => setQ(e.target.value)} />
-                  {q && <button onClick={() => setQ("")} style={{ position:"absolute", right:14, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#B0A496" }}><Ico.X s={14} /></button>}
+                  {q && <button onClick={() => setQ("")} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#B0A496" }}><Ico.X s={14} /></button>}
                 </div>
               )}
 
               {/* Categories (Only Home) */}
               {(tab === 'home' && !q) && (
-                <div style={{ padding:"4px 0 2px", overflowX:"auto" }} className="noscroll">
-                  <div style={{ display:"flex", gap:10, paddingLeft:16, paddingRight:16 }}>
+                <div style={{ padding: "4px 0 2px", overflowX: "auto" }} className="noscroll">
+                  <div style={{ display: "flex", gap: 12, padding: "4px 16px", overflowX: "auto", scrollbarWidth: "none" }} className="noscroll">
+                    <button
+                      className={`cpill ${!cat ? "on" : "off"}`}
+                      onClick={() => setCat(null)}
+                      style={{ padding: "8px 20px", borderRadius: 100, border: "1.5px solid", borderColor: !cat ? "#4A6741" : "#E5E7EB", background: !cat ? "#4A6741" : "#fff", color: !cat ? "#fff" : "#6B7280", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
+                    >
+                      All
+                    </button>
                     {categories.map(c => (
-                      <button 
-                        key={c.id} 
-                        className={`cpill ${cat == c.id ? "on" : "off"}`} 
+                      <button
+                        key={c.id}
+                        className={`cpill ${cat == c.id ? "on" : "off"}`}
                         onClick={() => setCat(c.id)}
-                        style={{ padding: "10px 20px", height: "auto" }}
+                        style={{ padding: "8px 20px", borderRadius: 100, border: "1.5px solid", borderColor: cat == c.id ? "#4A6741" : "#E5E7EB", background: cat == c.id ? "#4A6741" : "#fff", color: cat == c.id ? "#fff" : "#6B7280", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all 0.2s", whiteSpace: "nowrap" }}
                       >
-                        <span style={{ fontSize: 11 }}>{c.name}</span>
+                        {c.name}
                       </button>
                     ))}
                   </div>
@@ -1279,13 +1587,13 @@ const CoffeeMenuApp = () => {
               )}
 
               {/* Product Grid */}
-              <div style={{ padding:"4px 14px", paddingBottom: isMobile ? 0 : 30 }}>
+              <div style={{ padding: "4px 14px", paddingBottom: isMobile ? 0 : 30 }}>
                 {q && <div style={{ padding: "0 4px 10px", fontSize: 11, fontWeight: 700, color: "#8A8070" }}>Found {products.length} results</div>}
-                {loading ? <div style={{ textAlign:"center", padding:40 }}><Spin /></div> : (
-                  <div style={{ display:"flex", flexDirection: "column", gap: 0 }}>
+                {loading ? <div style={{ textAlign: "center", padding: 40 }}><Spin /></div> : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                     {products.map(p => (
-                      <ProductCard 
-                        key={p.id} p={p} starred={starred.has(p.id)} onStar={toggleStar} onOpen={setModalProd} 
+                      <ProductCard
+                        key={p.id} p={p} starred={starred.has(p.id)} onStar={toggleStar} onOpen={setModalProd}
                         selectedShop={selectedShop}
                       />
                     ))}
@@ -1301,10 +1609,10 @@ const CoffeeMenuApp = () => {
                     <div style={{ fontSize: 80, marginBottom: 20 }}>✨</div>
                     <h2 className="brand" style={{ fontSize: 32, color: "#1C1C1C" }}>Enjoy your brew!</h2>
                     <p style={{ fontSize: 15, color: "#9A9083", marginTop: 12, lineHeight: 1.5 }}>
-                      Thank you for choosing Aurora Brew Co. <br/>
+                      Thank you for choosing Aurora Brew Co. <br />
                       Your order has been served. Have a wonderful day!
                     </p>
-                    <div style={{ marginTop: 40, display:"flex", flexDirection:"column", gap:12 }}>
+                    <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 12 }}>
                       <button onClick={() => setTab('home')} style={{ width: "100%", height: 54, borderRadius: 100, background: "#4A6741", color: "#fff", border: "none", fontWeight: 700 }}>Order Again</button>
                       <button onClick={() => setTab('profile')} style={{ width: "100%", height: 54, borderRadius: 100, background: "#fff", color: "#4A6741", border: "1.5px solid #EDE8DF", fontWeight: 700 }}>View History</button>
                     </div>
@@ -1312,11 +1620,11 @@ const CoffeeMenuApp = () => {
                 ) : (
                   <>
                     <div style={{ textAlign: "center", marginBottom: 40 }}>
-                       <div style={{ display:"inline-flex", background:"#FEF3C7", color:"#92400E", padding:"6px 20px", borderRadius:100, fontSize:12, fontWeight:800, marginBottom:10 }}>
-                          {['preparing', 'cooking'].includes(orderStatus) ? 'PREPARING' : orderStatus === 'served' ? 'SERVED' : 'ORDER RECEIVED'}
-                       </div>
-                       <h2 className="brand" style={{ fontSize: 28, color: "#1C1C1C" }}>Order Tracking</h2>
-                       <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Order #{orderId || activeOrder?.order_no || activeOrder?.id || 'N/A'}</p>
+                      <div style={{ display: "inline-flex", background: "#FEF3C7", color: "#92400E", padding: "6px 20px", borderRadius: 100, fontSize: 12, fontWeight: 800, marginBottom: 10 }}>
+                        {['preparing', 'cooking'].includes(orderStatus) ? 'PREPARING' : orderStatus === 'served' ? 'SERVED' : 'ORDER RECEIVED'}
+                      </div>
+                      <h2 className="brand" style={{ fontSize: 28, color: "#1C1C1C" }}>Order Tracking</h2>
+                      <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Order #{orderId || activeOrder?.order_no || activeOrder?.id || 'N/A'}</p>
                     </div>
 
                     <div style={{ padding: "0 20px" }}>
@@ -1332,18 +1640,18 @@ const CoffeeMenuApp = () => {
                         let currentStepIdx = 0;
                         if (currentIdxRaw >= 3) currentStepIdx = 2;
                         else if (currentIdxRaw >= 1) currentStepIdx = 1;
-                        
+
                         const isDone = i < currentStepIdx;
                         const isCurrent = i === currentStepIdx;
-                        
+
                         return (
                           <div key={step.key} style={{ display: "flex", gap: 20, marginBottom: 40, position: "relative" }}>
                             {i < arr.length - 1 && (
                               <div style={{ position: "absolute", left: 24, top: 50, width: 2, height: 40, background: isDone || isCurrent ? "#C8952A" : "#EDE8DF" }} />
                             )}
-                            <div className={`step-circle ${isCurrent ? "pulse-gold" : ""}`} style={{ 
-                              width: 50, height: 50, 
-                              borderColor: isCurrent || isDone ? "#C8952A" : "#DDD8CF", 
+                            <div className={`step-circle ${isCurrent ? "pulse-gold" : ""}`} style={{
+                              width: 50, height: 50,
+                              borderColor: isCurrent || isDone ? "#C8952A" : "#DDD8CF",
                               background: isCurrent || isDone ? "#FEF3C7" : "#FAFAF8",
                               display: "flex", alignItems: "center", justifyContent: "center",
                               borderRadius: "50%", border: "2px solid", transition: "all 0.5s ease",
@@ -1369,13 +1677,13 @@ const CoffeeMenuApp = () => {
               <div style={{ padding: "40px 20px" }}>
                 {member?.id ? (
                   /* PREMIUM DIGITAL MEMBER CARD */
-                  <div style={{ 
+                  <div style={{
                     position: "relative",
-                    background: member.tier_id >= 3 ? "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)" : 
-                                member.tier_id === 2 ? "linear-gradient(135deg, #757F9A, #D7DDE8)" : 
-                                "linear-gradient(135deg, #134E5E, #71B280)",
-                    borderRadius: 24, 
-                    padding: 24, 
+                    background: member.tier_id >= 3 ? "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)" :
+                      member.tier_id === 2 ? "linear-gradient(135deg, #757F9A, #D7DDE8)" :
+                        "linear-gradient(135deg, #134E5E, #71B280)",
+                    borderRadius: 24,
+                    padding: 24,
                     color: member.tier_id >= 2 ? "#1C1C1C" : "#fff",
                     boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
                     marginBottom: 32,
@@ -1383,12 +1691,12 @@ const CoffeeMenuApp = () => {
                   }}>
                     {/* Glossy Overlay */}
                     <div style={{ position: "absolute", top: "-50%", left: "-50%", width: "200%", height: "200%", background: "radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%)", pointerEvents: "none" }} />
-                    
+
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", zIndex: 1 }}>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2, opacity: 0.8, textTransform: "uppercase" }}>{member.tier_name} MEMBER</div>
                         <h2 style={{ fontSize: 24, fontWeight: 800, marginTop: 4 }}>{member.name}</h2>
-                        <button 
+                        <button
                           onClick={() => {
                             setRegName(member.name);
                             setRegPhone(member.phone);
@@ -1402,10 +1710,10 @@ const CoffeeMenuApp = () => {
                       </div>
                       <div style={{ background: "#fff", padding: 8, borderRadius: 12, boxShadow: "0 4px 10px rgba(0,0,0,0.1)" }}>
                         <div style={{ width: 60, height: 60, background: "#eee", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8 }}>
-                           {/* Simplified QR Placeholder */}
-                           <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:2 }}>
-                              {[...Array(16)].map((_, i) => <div key={i} style={{ width:8, height:8, background: Math.random() > 0.5 ? "#000" : "#fff" }} />)}
-                           </div>
+                          {/* Simplified QR Placeholder */}
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 2 }}>
+                            {[...Array(16)].map((_, i) => <div key={i} style={{ width: 8, height: 8, background: Math.random() > 0.5 ? "#000" : "#fff" }} />)}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1445,9 +1753,9 @@ const CoffeeMenuApp = () => {
                           <span style={{ fontSize: 11, fontWeight: 700, color: "#4A6741" }}>{member.next_tier.min_points - member.points} stars to go</span>
                         </div>
                         <div style={{ height: 8, background: "#F5F0E8", borderRadius: 100, overflow: "hidden" }}>
-                          <div style={{ 
-                            height: "100%", 
-                            background: "#C8952A", 
+                          <div style={{
+                            height: "100%",
+                            background: "#C8952A",
                             width: `${Math.min(100, (member.points / member.next_tier.min_points) * 100)}%`,
                             transition: "width 1s ease-out"
                           }} />
@@ -1479,7 +1787,7 @@ const CoffeeMenuApp = () => {
                           <div key={gift.name} style={{ flexShrink: 0, width: 120, background: "#fff", padding: 12, borderRadius: 16, border: "1px solid #EDE8DF", textAlign: "center" }}>
                             <div style={{ fontSize: 24, marginBottom: 8 }}>{gift.img}</div>
                             <div style={{ fontSize: 11, fontWeight: 700, color: "#1C1C1C", marginBottom: 4 }}>{gift.name}</div>
-                            <button 
+                            <button
                               disabled={!member || member.points < gift.cost}
                               onClick={() => handleRedeemReward(gift)}
                               style={{ width: "100%", padding: "4px 0", borderRadius: 8, border: "none", background: (member && member.points >= gift.cost) ? "#4A6741" : "#EDE8DF", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}
@@ -1492,14 +1800,14 @@ const CoffeeMenuApp = () => {
                     </div>
 
                     {member?.id ? (
-                      <button 
+                      <button
                         onClick={handleLogoutMember}
                         style={{ marginTop: 24, background: "#FEF2F2", border: "none", width: "100%", height: 48, borderRadius: 12, fontSize: 13, color: "#E8534A", fontWeight: 700, cursor: "pointer" }}
                       >
                         Logout Membership
                       </button>
                     ) : (
-                      <button 
+                      <button
                         onClick={() => setIsRegisterModalVisible(true)}
                         style={{ marginTop: 24, background: "#4A6741", border: "none", width: "100%", height: 48, borderRadius: 12, fontSize: 13, color: "#fff", fontWeight: 700, cursor: "pointer" }}
                       >
@@ -1530,7 +1838,7 @@ const CoffeeMenuApp = () => {
 
                 <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 12 }}>
                   {["Language", "Settings", "Help Center"].map(item => (
-                    <button key={item} style={{ background: "#fff", padding: 18, borderRadius: 18, textAlign: "left", fontSize: 14, fontWeight: 600, color: "#4B5563", border: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between", cursor:"pointer" }}>
+                    <button key={item} style={{ background: "#fff", padding: 18, borderRadius: 18, textAlign: "left", fontSize: 14, fontWeight: 600, color: "#4B5563", border: "1px solid #EDE8DF", display: "flex", justifyContent: "space-between", cursor: "pointer" }}>
                       {item} <span style={{ color: "#D1D5DB" }}>→</span>
                     </button>
                   ))}
@@ -1543,10 +1851,10 @@ const CoffeeMenuApp = () => {
         {/* Sidebar Desktop */}
         {!isMobile && (
           <div className="sidebar">
-            <CartPanel 
-              cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} 
-              onRemove={removeItem} onCheckout={handleCheckout} asSidebar 
-              selectedShop={selectedShop} loading={loading} 
+            <CartPanel
+              cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty}
+              onRemove={removeItem} onCheckout={handleCheckout} asSidebar
+              selectedShop={selectedShop} loading={loading}
               activeOrder={activeOrder}
             />
           </div>
@@ -1578,8 +1886,8 @@ const CoffeeMenuApp = () => {
         <div className="overlay fade-in" onClick={() => setCartOpen(false)}>
           <div className="modal-sheet slide-up" onClick={e => e.stopPropagation()}>
             <div className="drag-handle" />
-            <CartPanel 
-              cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeItem} onCheckout={handleCheckout} 
+            <CartPanel
+              cart={cart} onClose={() => setCartOpen(false)} onQty={updateQty} onRemove={removeItem} onCheckout={handleCheckout}
               selectedShop={selectedShop} loading={loading}
               activeOrder={activeOrder}
             />
@@ -1591,25 +1899,25 @@ const CoffeeMenuApp = () => {
         <div className="overlay fade-in" onClick={() => setSelectedHistoryOrder(null)}>
           <div className="modal-sheet center-modal slide-up" onClick={e => e.stopPropagation()} style={{ padding: 24, maxWidth: 400 }}>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
-               <h3 style={{ fontSize: 18, fontWeight: 800 }}>Order Receipt</h3>
-               <p style={{ fontSize: 12, color: "#9A9083" }}>Order #{selectedHistoryOrder.order.order_no || selectedHistoryOrder.order.id}</p>
+              <h3 style={{ fontSize: 18, fontWeight: 800 }}>Order Receipt</h3>
+              <p style={{ fontSize: 12, color: "#9A9083" }}>Order #{selectedHistoryOrder.order.order_no || selectedHistoryOrder.order.id}</p>
             </div>
-            
+
             <div style={{ borderTop: "1px dashed #EDE8DF", borderBottom: "1px dashed #EDE8DF", padding: "16px 0", marginBottom: 20 }}>
-               {selectedHistoryOrder.details.map((item, idx) => (
-                 <div key={idx} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13 }}>
-                   <div style={{ color: "#4B5563" }}>
-                      <span style={{ fontWeight: 700 }}>{item.qty}x</span> {item.product_name}
-                      {item.note && <div style={{ fontSize: 10, color: "#9CA3AF" }}>{item.note}</div>}
-                   </div>
-                   <div style={{ fontWeight: 600 }}>{fmt(item.price * item.qty)}</div>
-                 </div>
-               ))}
+              {selectedHistoryOrder.details.map((item, idx) => (
+                <div key={idx} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13 }}>
+                  <div style={{ color: "#4B5563" }}>
+                    <span style={{ fontWeight: 700 }}>{item.qty}x</span> {item.product_name}
+                    {item.note && <div style={{ fontSize: 10, color: "#9CA3AF" }}>{item.note}</div>}
+                  </div>
+                  <div style={{ fontWeight: 600 }}>{fmt(item.price * item.qty)}</div>
+                </div>
+              ))}
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
-               <span style={{ fontWeight: 700, fontSize: 16 }}>Total Amount</span>
-               <span style={{ fontWeight: 800, fontSize: 18, color: "#4A6741" }}>{fmt(selectedHistoryOrder.order.total_amount)}</span>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Total Amount</span>
+              <span style={{ fontWeight: 800, fontSize: 18, color: "#4A6741" }}>{fmt(selectedHistoryOrder.order.total_amount)}</span>
             </div>
 
             <button onClick={() => setSelectedHistoryOrder(null)} style={{ width: "100%", height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Close</button>
@@ -1628,12 +1936,12 @@ const CoffeeMenuApp = () => {
                   <h3 style={{ fontSize: 20, fontWeight: 800 }}>Member Login</h3>
                   <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Enter your Phone number or Card ID to receive a verification code.</p>
                 </div>
-                
+
                 <div style={{ marginBottom: 24 }}>
-                  <input 
-                    type="text" 
-                    className="search-inp" 
-                    placeholder="Phone or Card ID" 
+                  <input
+                    type="text"
+                    className="search-inp"
+                    placeholder="Phone or Card ID"
                     style={{ paddingLeft: 16 }}
                     value={loginValue}
                     onChange={e => setLoginValue(e.target.value)}
@@ -1643,8 +1951,8 @@ const CoffeeMenuApp = () => {
 
                 <div style={{ display: "flex", gap: 12 }}>
                   <button onClick={() => setIsLoginModalVisible(false)} style={{ flex: 1, height: 48, borderRadius: 12, border: "1.5px solid #EDE8DF", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-                  <button 
-                    onClick={handleLinkMember} 
+                  <button
+                    onClick={handleLinkMember}
                     disabled={loginLoading}
                     style={{ flex: 1, height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer", opacity: loginLoading ? 0.7 : 1 }}
                   >
@@ -1659,13 +1967,13 @@ const CoffeeMenuApp = () => {
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "center" }}>
-                   <GoogleOAuthProvider clientId="222467462843-3mc4kb1636gcpugur0cgmb4mbdgfpbfl.apps.googleusercontent.com">
-                      <CustomGoogleButton 
-                        onSuccess={handleGoogleLogin} 
-                        loading={loginLoading}
-                        bizId={bizId}
-                      />
-                   </GoogleOAuthProvider>
+                  <GoogleOAuthProvider clientId="222467462843-3mc4kb1636gcpugur0cgmb4mbdgfpbfl.apps.googleusercontent.com">
+                    <CustomGoogleButton
+                      onSuccess={handleGoogleLogin}
+                      loading={loginLoading}
+                      bizId={bizId}
+                    />
+                  </GoogleOAuthProvider>
                 </div>
               </>
             ) : (
@@ -1677,12 +1985,12 @@ const CoffeeMenuApp = () => {
                   <h3 style={{ fontSize: 20, fontWeight: 800 }}>Verify Code</h3>
                   <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>We've sent a 6-digit code to your email. Please enter it below.</p>
                 </div>
-                
+
                 <div style={{ marginBottom: 24 }}>
-                  <input 
-                    type="text" 
-                    className="search-inp" 
-                    placeholder="000000" 
+                  <input
+                    type="text"
+                    className="search-inp"
+                    placeholder="000000"
                     maxLength={6}
                     style={{ paddingLeft: 16, textAlign: "center", fontSize: 24, letterSpacing: 8, fontWeight: 800 }}
                     value={otpValue}
@@ -1692,8 +2000,8 @@ const CoffeeMenuApp = () => {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <button 
-                    onClick={handleVerifyOtp} 
+                  <button
+                    onClick={handleVerifyOtp}
                     disabled={loginLoading}
                     style={{ height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer", opacity: loginLoading ? 0.7 : 1 }}
                   >
@@ -1703,10 +2011,10 @@ const CoffeeMenuApp = () => {
                 </div>
               </>
             )}
-            
+
             <div style={{ marginTop: 16, textAlign: "center" }}>
-               <Text type="secondary" style={{ fontSize: 12 }}>Don't have an account? </Text>
-               <button onClick={() => { setIsLoginModalVisible(false); setIsRegisterModalVisible(true); setIsOtpStep(false); }} style={{ background: "none", border: "none", color: "#4A6741", fontWeight: 700, cursor: "pointer", padding: 0 }}>Join Now</button>
+              <Text type="secondary" style={{ fontSize: 12 }}>Don't have an account? </Text>
+              <button onClick={() => { setIsLoginModalVisible(false); setIsRegisterModalVisible(true); setIsOtpStep(false); }} style={{ background: "none", border: "none", color: "#4A6741", fontWeight: 700, cursor: "pointer", padding: 0 }}>Join Now</button>
             </div>
           </div>
         </div>
@@ -1723,28 +2031,28 @@ const CoffeeMenuApp = () => {
               <h3 style={{ fontSize: 20, fontWeight: 800 }}>Join Loyalty Program</h3>
               <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Earn stars, get discounts, and enjoy exclusive perks!</p>
             </div>
-            
+
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
-              <input 
-                type="text" 
-                className="search-inp" 
-                placeholder="Full Name" 
+              <input
+                type="text"
+                className="search-inp"
+                placeholder="Full Name"
                 style={{ paddingLeft: 16 }}
                 value={regName}
                 onChange={e => setRegName(e.target.value)}
               />
-              <input 
-                type="tel" 
-                className="search-inp" 
-                placeholder="Phone Number" 
+              <input
+                type="tel"
+                className="search-inp"
+                placeholder="Phone Number"
                 style={{ paddingLeft: 16 }}
                 value={regPhone}
                 onChange={e => setRegPhone(e.target.value)}
               />
-              <input 
-                type="email" 
-                className="search-inp" 
-                placeholder="Email Address (Optional)" 
+              <input
+                type="email"
+                className="search-inp"
+                placeholder="Email Address (Optional)"
                 style={{ paddingLeft: 16 }}
                 value={regEmail}
                 onChange={e => setRegEmail(e.target.value)}
@@ -1753,8 +2061,8 @@ const CoffeeMenuApp = () => {
 
             <div style={{ display: "flex", gap: 12 }}>
               <button onClick={() => setIsRegisterModalVisible(false)} style={{ flex: 1, height: 48, borderRadius: 12, border: "1.5px solid #EDE8DF", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-              <button 
-                onClick={handleRegister} 
+              <button
+                onClick={handleRegister}
                 disabled={loginLoading}
                 style={{ flex: 1, height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer", opacity: loginLoading ? 0.7 : 1 }}
               >
@@ -1762,51 +2070,51 @@ const CoffeeMenuApp = () => {
               </button>
             </div>
             <div style={{ marginTop: 16, textAlign: "center" }}>
-               <Text type="secondary" style={{ fontSize: 12 }}>Already a member? </Text>
-               <button onClick={() => { setIsRegisterModalVisible(false); setIsLoginModalVisible(true); }} style={{ background: "none", border: "none", color: "#4A6741", fontWeight: 700, cursor: "pointer", padding: 0 }}>Link Account</button>
+              <Text type="secondary" style={{ fontSize: 12 }}>Already a member? </Text>
+              <button onClick={() => { setIsRegisterModalVisible(false); setIsLoginModalVisible(true); }} style={{ background: "none", border: "none", color: "#4A6741", fontWeight: 700, cursor: "pointer", padding: 0 }}>Link Account</button>
             </div>
           </div>
         </div>
       )}
-        {/* EDIT PROFILE MODAL */}
-        {isEditProfileVisible && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-            <div style={{ background: "#fff", width: "100%", maxWidth: 400, borderRadius: 32, padding: 32, textAlign: "center", position: "relative" }}>
-               <div style={{ marginBottom: 24 }}>
-                 <h3 style={{ fontSize: 20, fontWeight: 800 }}>Edit Your Profile</h3>
-                 <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Update your contact information</p>
-               </div>
-               
-               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
-                 <div style={{ textAlign: "left" }}>
-                   <label style={{ fontSize: 11, fontWeight: 800, color: "#9A9083", marginLeft: 16 }}>FULL NAME</label>
-                   <input type="text" className="search-inp" value={regName} onChange={e => setRegName(e.target.value)} style={{ paddingLeft: 16, marginTop: 4 }} />
-                 </div>
-                 <div style={{ textAlign: "left" }}>
-                   <label style={{ fontSize: 11, fontWeight: 800, color: "#9A9083", marginLeft: 16 }}>EMAIL ADDRESS</label>
-                   <input type="email" className="search-inp" value={regEmail} onChange={e => setRegEmail(e.target.value)} style={{ paddingLeft: 16, marginTop: 4 }} />
-                 </div>
-                 <div style={{ textAlign: "left" }}>
-                   <label style={{ fontSize: 11, fontWeight: 800, color: "#9A9083", marginLeft: 16 }}>PHONE (Read-only)</label>
-                   <input type="text" className="search-inp" value={regPhone} disabled style={{ paddingLeft: 16, marginTop: 4, background: "#f9f9f9" }} />
-                 </div>
-               </div>
+      {/* EDIT PROFILE MODAL */}
+      {isEditProfileVisible && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", width: "100%", maxWidth: 400, borderRadius: 32, padding: 32, textAlign: "center", position: "relative" }}>
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: 20, fontWeight: 800 }}>Edit Your Profile</h3>
+              <p style={{ fontSize: 13, color: "#9A9083", marginTop: 4 }}>Update your contact information</p>
+            </div>
 
-               <div style={{ display: "flex", gap: 12 }}>
-                 <button onClick={() => setIsEditProfileVisible(false)} style={{ flex: 1, height: 48, borderRadius: 12, border: "1.5px solid #EDE8DF", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-                 <button 
-                   onClick={handleUpdateProfile}
-                   disabled={loginLoading}
-                   style={{ flex: 1, height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer", opacity: loginLoading ? 0.7 : 1 }}
-                 >
-                   {loginLoading ? "Saving..." : "Save Changes"}
-                 </button>
-               </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+              <div style={{ textAlign: "left" }}>
+                <label style={{ fontSize: 11, fontWeight: 800, color: "#9A9083", marginLeft: 16 }}>FULL NAME</label>
+                <input type="text" className="search-inp" value={regName} onChange={e => setRegName(e.target.value)} style={{ paddingLeft: 16, marginTop: 4 }} />
+              </div>
+              <div style={{ textAlign: "left" }}>
+                <label style={{ fontSize: 11, fontWeight: 800, color: "#9A9083", marginLeft: 16 }}>EMAIL ADDRESS</label>
+                <input type="email" className="search-inp" value={regEmail} onChange={e => setRegEmail(e.target.value)} style={{ paddingLeft: 16, marginTop: 4 }} />
+              </div>
+              <div style={{ textAlign: "left" }}>
+                <label style={{ fontSize: 11, fontWeight: 800, color: "#9A9083", marginLeft: 16 }}>PHONE (Read-only)</label>
+                <input type="text" className="search-inp" value={regPhone} disabled style={{ paddingLeft: 16, marginTop: 4, background: "#f9f9f9" }} />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button onClick={() => setIsEditProfileVisible(false)} style={{ flex: 1, height: 48, borderRadius: 12, border: "1.5px solid #EDE8DF", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button
+                onClick={handleUpdateProfile}
+                disabled={loginLoading}
+                style={{ flex: 1, height: 48, borderRadius: 12, border: "none", background: "#4A6741", color: "#fff", fontWeight: 700, cursor: "pointer", opacity: loginLoading ? 0.7 : 1 }}
+              >
+                {loginLoading ? "Saving..." : "Save Changes"}
+              </button>
             </div>
           </div>
-        )}
-      </div>
-    );
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default CoffeeMenuApp;

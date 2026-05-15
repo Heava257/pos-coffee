@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space,
     Typography, DatePicker, Select, InputNumber,
-    Badge, Tooltip, Empty, Statistic, Divider
+    Badge, Tooltip, Empty, Statistic, Divider,
+    Avatar, ConfigProvider, Progress
 } from "antd";
 import {
     PlusOutlined,
@@ -16,25 +17,36 @@ import {
     FileTextOutlined,
     TagOutlined,
     PieChartOutlined,
-    AccountBookOutlined
+    AccountBookOutlined,
+    ShoppingOutlined,
+    AuditOutlined,
+    ArrowRightOutlined,
+    InfoCircleOutlined,
+    HistoryOutlined
 } from "@ant-design/icons";
+import { 
+  Wallet, Receipt, Calculator, Briefcase, 
+  Package, ShoppingCart, Activity, Filter,
+  ArrowUpRight, ArrowDownLeft, Database
+} from "lucide-react";
 import { request } from "../../util/helper";
 import moment from "moment";
-
 import { useLanguage, translations } from "../../store/language.store";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
+// Executive Color Palette
 const COLORS = {
-    primary: "#1e4a2d",    // Executive Green
-    secondary: "#d4af37",  // Executive Gold
-    dark: "#0b2615",
-    cogs: "#cf1322",       // Red for COGS
-    opex: "#1677ff",       // Blue for OpEx
-    admin: "#722ed1",      // Purple for Admin
-    lightBg: "#f4f1eb",
+    primary: "#0f172a",    // Slate 900
+    secondary: "#c2a45b",  // Professional Gold
+    accent: "#3b82f6",     // Blue 500
+    cogs: "#ef4444",       // Rose 500
+    opex: "#10b981",       // Emerald 500
+    admin: "#8b5cf6",      // Violet 500
+    background: "#f8fafc",
+    cardBg: "rgba(255, 255, 255, 0.9)",
 };
 
 const ExpensePage = () => {
@@ -102,6 +114,10 @@ const ExpensePage = () => {
     };
 
     const onClickEdit = (item) => {
+        if (item.description?.includes("(Ref: PO") || item.description?.includes("(PO Ref:")) {
+            message.info("This is a system-generated expense from a Purchase. Please manage it via the Purchase module.");
+            return;
+        }
         setEditId(item.id);
         form.setFieldsValue({
             ...item,
@@ -110,72 +126,115 @@ const ExpensePage = () => {
         setVisible(true);
     };
 
-    const onClickDelete = (id) => {
+    const onClickDelete = (id, description) => {
+        if (description?.includes("(Ref: PO") || description?.includes("(PO Ref:")) {
+            message.warning("System-generated records cannot be deleted manually here.");
+            return;
+        }
         Modal.confirm({
-            title: "Delete Expense?",
-            content: "This will remove the record from financial reports.",
-            okText: "Delete",
+            title: <span style={{ fontWeight: 800, fontSize: 18 }}>Void Expense Entry?</span>,
+            icon: <InfoCircleOutlined style={{ color: '#ff4d4f' }} />,
+            content: "This action will permanently remove this record from all financial reports.",
+            okText: "Yes, Void Record",
             okType: "danger",
+            centered: true,
+            styles: { content: { borderRadius: 20 } },
             onOk: async () => {
                 const res = await request("expense", "delete", { id });
                 if (res) {
-                    message.success("Record deleted");
+                    message.success("Record voided successfully");
                     getList();
                 }
             }
         });
     };
 
+    const totals = useMemo(() => {
+        const cogs = list.filter(i => i.category_class === 'COGS').reduce((s, i) => s + parseFloat(i.amount), 0);
+        const opex = list.filter(i => i.category_class === 'Operational').reduce((s, i) => s + parseFloat(i.amount), 0);
+        const admin = list.filter(i => i.category_class === 'Administrative').reduce((s, i) => s + parseFloat(i.amount), 0);
+        const total = cogs + opex + admin;
+        return { cogs, opex, admin, total };
+    }, [list]);
+
     const columns = [
         {
-            title: "Date",
+            title: "LEDGER DATE",
             dataIndex: "expense_date",
-            width: 150,
+            width: 140,
             render: (date) => (
-                <Space>
-                    <CalendarOutlined style={{ color: COLORS.primary }} />
-                    <Text strong>{moment(date).format("DD MMM YYYY")}</Text>
+                <Space direction="vertical" size={0}>
+                    <Text strong style={{ fontSize: 13 }}>{moment(date).format("DD MMM, YYYY")}</Text>
+                    <Text type="secondary" style={{ fontSize: 10 }}>{moment(date).fromNow()}</Text>
                 </Space>
             )
         },
         {
-            title: "Classification",
+            title: "CLASSIFICATION",
             dataIndex: "category_class",
             width: 150,
             render: (v) => {
-                let color = "blue";
-                if (v === 'COGS') color = "red";
-                if (v === 'Administrative') color = "purple";
-                return <Tag color={color} style={{ borderRadius: 10, fontWeight: 700 }}>{v?.toUpperCase()}</Tag>
+                let color = "#3b82f6";
+                let icon = <Activity size={12} />;
+                if (v === 'COGS') { color = COLORS.cogs; icon = <Package size={12} />; }
+                if (v === 'Administrative') { color = COLORS.admin; icon = <AuditOutlined style={{fontSize: 10}} />; }
+                return (
+                  <Tag color={v === 'COGS' ? 'error' : v === 'Administrative' ? 'purple' : 'processing'} 
+                       style={{ borderRadius: 6, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6, width: 'fit-content' }}>
+                    {icon} {v?.toUpperCase()}
+                  </Tag>
+                );
             }
         },
         {
-            title: t.categories,
-            dataIndex: "type_name",
-            render: (text) => <Text style={{ fontWeight: 600 }}>{text}</Text>
-        },
-        {
-            title: t.description,
-            dataIndex: "description",
-            ellipsis: true,
-        },
-        {
-            title: t.amount,
-            dataIndex: "amount",
-            align: 'right',
-            render: (amount) => (
-                <Text strong style={{ color: COLORS.secondary, fontSize: '16px' }}>
-                    ${parseFloat(amount).toFixed(2)}
-                </Text>
+            title: "NATURE OF EXPENSE",
+            key: "details",
+            render: (record) => (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <Text strong style={{ fontSize: 14 }}>{record.type_name}</Text>
+                <Text type="secondary" style={{ fontSize: 11 }}>{record.description || "No specific details provided"}</Text>
+                {(record.description?.includes("(Ref: PO") || record.description?.includes("(PO Ref:")) && (
+                  <Tag style={{ width: 'fit-content', marginTop: 4, borderRadius: 4, background: '#f0fdf4', color: '#166534', border: 'none', fontSize: 10 }}>
+                    <Database size={10} style={{marginRight: 4}} /> SYSTEM GENERATED (PROCUREMENT)
+                  </Tag>
+                )}
+              </div>
             )
         },
         {
-            title: t.action,
+          title: "METHOD",
+          dataIndex: "payment_method",
+          width: 120,
+          render: (method) => (
+            <Tag style={{ borderRadius: 6, fontWeight: 700 }}>{method || "Cash"}</Tag>
+          )
+        },
+        {
+            title: "AMOUNT",
+            dataIndex: "amount",
             align: 'right',
+            width: 150,
+            render: (amount) => (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                <Text strong style={{ color: COLORS.primary, fontSize: 17 }}>
+                    ${parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </Text>
+                <Text type="secondary" style={{ fontSize: 11 }}>{ (amount * 4100).toLocaleString() } ៛</Text>
+              </div>
+            )
+        },
+        {
+            title: "MGMT",
+            align: 'right',
+            width: 100,
             render: (record) => (
                 <Space>
-                    <Button type="text" icon={<EditOutlined />} onClick={() => onClickEdit(record)} />
-                    <Button type="text" danger icon={<DeleteOutlined />} onClick={() => onClickDelete(record.id)} />
+                    <AntTooltip title="Edit Entry">
+                      <Button type="text" shape="circle" icon={<EditOutlined />} onClick={() => onClickEdit(record)} />
+                    </AntTooltip>
+                    <AntTooltip title="Void Transaction">
+                      <Button type="text" shape="circle" danger icon={<DeleteOutlined />} onClick={() => onClickDelete(record.id, record.description)} />
+                    </AntTooltip>
                 </Space>
             )
         }
@@ -186,97 +245,172 @@ const ExpensePage = () => {
         (item.description && item.description.toLowerCase().includes(searchText.toLowerCase()))
     );
 
-    const totalCOGS = filteredList.filter(i => i.category_class === 'COGS').reduce((s, i) => s + parseFloat(i.amount), 0);
-    const totalOpEx = filteredList.filter(i => i.category_class === 'Operational').reduce((s, i) => s + parseFloat(i.amount), 0);
-    const totalAll = filteredList.reduce((s, i) => s + parseFloat(i.amount), 0);
-
     return (
-        <div style={{ padding: '24px', background: COLORS.lightBg, minHeight: '100vh' }}>
-            <Card bordered={false} style={{ borderRadius: 20, marginBottom: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-                <Row justify="space-between" align="middle">
-                    <Col>
-                        <Title level={2} style={{ margin: 0, color: COLORS.secondary, display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <AccountBookOutlined /> Professional Expense Ledger
-                        </Title>
-                        <Text type="secondary">Categorize operational costs vs. cost of goods sold (COGS)</Text>
-                    </Col>
-                    <Col>
-                        <Space size="middle">
-                            <RangePicker
-                                value={dateRange}
-                                onChange={(dates) => setDateRange(dates || [null, null])}
-                                style={{ borderRadius: 8 }}
-                            />
-                            <Button icon={<FilterOutlined />} onClick={getList}>Apply Filter</Button>
-                            <Button
-                                type="primary"
-                                icon={<PlusOutlined />}
-                                onClick={() => {
-                                    setEditId(null);
-                                    form.resetFields();
-                                    form.setFieldsValue({ expense_date: moment(), category_class: 'Operational' });
-                                    setVisible(true);
-                                }}
-                                style={{ background: COLORS.primary, borderColor: COLORS.primary, height: 40, borderRadius: 10, fontWeight: 700 }}
-                            >
-                                {t.add_expense_btn}
-                            </Button>
-                        </Space>
-                    </Col>
-                </Row>
-            </Card>
+        <div style={{ 
+          padding: '24px', 
+          background: COLORS.background, 
+          minHeight: '100vh',
+          animation: 'fadeIn 0.6s ease-out'
+        }}>
+            {/* --- HEADER SECTION --- */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
+                <div>
+                  <Space align="center" style={{ marginBottom: 8 }}>
+                    <div style={{ 
+                      width: 44, height: 44, borderRadius: 14, 
+                      background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 8px 16px rgba(15, 23, 42, 0.2)'
+                    }}>
+                      <Calculator size={22} color="#fff" />
+                    </div>
+                    <Title level={2} style={{ margin: 0, fontWeight: 900, letterSpacing: '-0.8px' }}>Professional Expense Ledger</Title>
+                  </Space>
+                  <Text type="secondary" style={{ fontSize: 16 }}>Enterprise-grade operational cost & COGS management</Text>
+                </div>
 
-            <Row gutter={24} style={{ marginBottom: 24 }}>
-                <Col span={8}>
-                    <Card style={{ borderRadius: 15, borderLeft: `6px solid ${COLORS.cogs}` }}>
-                        <Statistic title={t.cogs} value={totalCOGS} prefix="$" valueStyle={{ color: COLORS.cogs, fontWeight: 800 }} />
+                <Space size="middle">
+                    <RangePicker
+                        value={dateRange}
+                        onChange={(dates) => setDateRange(dates || [null, null])}
+                        style={{ borderRadius: 12, height: 44, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}
+                        format="DD MMM, YYYY"
+                    />
+                    <Button 
+                        icon={<HistoryOutlined />} 
+                        onClick={getList}
+                        style={{ height: 44, borderRadius: 12, fontWeight: 600 }}
+                    >
+                      Sync Data
+                    </Button>
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => {
+                            setEditId(null);
+                            form.resetFields();
+                            form.setFieldsValue({ expense_date: moment(), category_class: 'Operational' });
+                            setVisible(true);
+                        }}
+                        style={{ 
+                          background: COLORS.primary, border: 'none', 
+                          height: 44, borderRadius: 12, fontWeight: 700,
+                          padding: '0 24px', boxShadow: '0 8px 16px rgba(15, 23, 42, 0.2)'
+                        }}
+                    >
+                        NEW ENTRY
+                    </Button>
+                </Space>
+            </div>
+
+            {/* --- SUMMARY METRICS --- */}
+            <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card hoverable style={{ borderRadius: 24, border: 'none', boxShadow: '0 10px 20px rgba(0,0,0,0.03)' }}>
+                        <Statistic 
+                          title={<Text strong style={{ color: COLORS.textSecondary, fontSize: 12 }}>COGS (PURCHASES)</Text>} 
+                          value={totals.cogs} 
+                          prefix="$" 
+                          valueStyle={{ color: COLORS.cogs, fontWeight: 900, fontSize: 28 }} 
+                        />
+                        <Progress percent={(totals.cogs / (totals.total || 1)) * 100} showInfo={false} strokeColor={COLORS.cogs} size="small" />
                     </Card>
                 </Col>
-                <Col span={8}>
-                    <Card style={{ borderRadius: 15, borderLeft: `6px solid ${COLORS.opex}` }}>
-                        <Statistic title={t.operational} value={totalOpEx} prefix="$" valueStyle={{ color: COLORS.opex, fontWeight: 800 }} />
+                <Col xs={24} sm={12} lg={6}>
+                    <Card hoverable style={{ borderRadius: 24, border: 'none', boxShadow: '0 10px 20px rgba(0,0,0,0.03)' }}>
+                        <Statistic 
+                          title={<Text strong style={{ color: COLORS.textSecondary, fontSize: 12 }}>OPERATIONAL (OPEX)</Text>} 
+                          value={totals.opex} 
+                          prefix="$" 
+                          valueStyle={{ color: COLORS.opex, fontWeight: 900, fontSize: 28 }} 
+                        />
+                        <Progress percent={(totals.opex / (totals.total || 1)) * 100} showInfo={false} strokeColor={COLORS.opex} size="small" />
                     </Card>
                 </Col>
-                <Col span={8}>
-                    <Card style={{ borderRadius: 15, borderLeft: `6px solid ${COLORS.secondary}`, background: COLORS.secondary }}>
-                        <Statistic title={<span style={{ color: 'rgba(255,255,255,0.7)' }}>{t.total_expenses}</span>} value={totalAll} prefix="$" valueStyle={{ color: '#fff', fontWeight: 900 }} />
+                <Col xs={24} sm={12} lg={6}>
+                    <Card hoverable style={{ borderRadius: 24, border: 'none', boxShadow: '0 10px 20px rgba(0,0,0,0.03)' }}>
+                        <Statistic 
+                          title={<Text strong style={{ color: COLORS.textSecondary, fontSize: 12 }}>ADMINISTRATIVE</Text>} 
+                          value={totals.admin} 
+                          prefix="$" 
+                          valueStyle={{ color: COLORS.admin, fontWeight: 900, fontSize: 28 }} 
+                        />
+                        <Progress percent={(totals.admin / (totals.total || 1)) * 100} showInfo={false} strokeColor={COLORS.admin} size="small" />
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card hoverable style={{ borderRadius: 24, border: 'none', background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}>
+                        <Statistic 
+                          title={<span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontSize: 12 }}>TOTAL EXPENDITURE</span>} 
+                          value={totals.total} 
+                          prefix="$" 
+                          valueStyle={{ color: '#fff', fontWeight: 900, fontSize: 28 }} 
+                        />
+                        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 4 }}>Across all classifications</div>
                     </Card>
                 </Col>
             </Row>
 
-            <div style={{ marginBottom: 20 }}>
-                <Input
-                    prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                    placeholder={t.search}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    style={{ height: 50, borderRadius: 15, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}
-                />
-            </div>
-
-            <Card style={{ borderRadius: 20, overflow: 'hidden', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }} bodyStyle={{ padding: 0 }}>
+            {/* --- LEDGER TABLE SECTION --- */}
+            <Card style={{ 
+              borderRadius: 28, border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', overflow: 'hidden'
+            }} styles={{ body: { padding: 0 } }}>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Title level={4} style={{ margin: 0, fontWeight: 800 }}>Ledger Transaction Logs</Title>
+                  <Input
+                      prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+                      placeholder="Search ledger entries..."
+                      onChange={(e) => setSearchText(e.target.value)}
+                      style={{ width: 300, borderRadius: 10, background: '#f8fafc', border: 'none' }}
+                  />
+                </div>
                 <Table
                     columns={columns}
                     dataSource={filteredList}
                     rowKey="id"
                     loading={loading}
-                    pagination={{ pageSize: 12 }}
+                    pagination={{ pageSize: 12, showSizeChanger: false }}
+                    style={{ background: '#fff' }}
                 />
             </Card>
 
+            {/* --- DATA ENTRY MODAL --- */}
             <Modal
-                title={<Title level={4} style={{ margin: 0 }}><PlusOutlined /> {editId ? "Update Expense Record" : "New Financial Entry"}</Title>}
+                title={
+                  <Space style={{ padding: '10px 0' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <FileTextOutlined style={{ color: COLORS.primary }} />
+                    </div>
+                    <Title level={4} style={{ margin: 0, fontWeight: 800 }}>{editId ? "Update Ledger Entry" : "New Financial Record"}</Title>
+                  </Space>
+                }
                 open={visible}
                 onCancel={() => setVisible(false)}
                 onOk={() => form.submit()}
-                width={550}
+                width={580}
                 centered
-                styles={{ content: { borderRadius: 24, padding: 30 } }}
+                footer={[
+                  <Button key="back" onClick={() => setVisible(false)} style={{ borderRadius: 8 }}>Cancel</Button>,
+                  <Button key="submit" type="primary" onClick={() => form.submit()} style={{ background: COLORS.primary, border: 'none', borderRadius: 8, fontWeight: 700, padding: '0 24px' }}>
+                    Commit Transaction
+                  </Button>
+                ]}
+                styles={{ content: { borderRadius: 28, padding: 24 } }}
             >
+                <div style={{ background: '#f8fafc', padding: 16, borderRadius: 16, marginBottom: 24 }}>
+                  <Space align="start">
+                    <InfoCircleOutlined style={{ color: COLORS.accent, marginTop: 4 }} />
+                    <Text type="secondary" style={{ fontSize: 13 }}>
+                      Ensure accurate classification for better tax and profit reports. System-generated procurement expenses are managed automatically.
+                    </Text>
+                  </Space>
+                </div>
+
                 <Form form={form} layout="vertical" onFinish={onFinish}>
-                    <Row gutter={16}>
+                    <Row gutter={20}>
                         <Col span={12}>
-                            <Form.Item name="category_class" label="Accounting Class" rules={[{ required: true }]}>
-                                <Select size="large">
+                            <Form.Item name="category_class" label={<Text strong style={{fontSize: 12}}>ACCOUNTING CLASS</Text>} rules={[{ required: true }]}>
+                                <Select size="large" style={{ borderRadius: 10 }}>
                                     <Option value="COGS">📦 COGS (Raw Materials)</Option>
                                     <Option value="Operational">🏢 Operational (OpEx)</Option>
                                     <Option value="Administrative">⚖️ Administrative</Option>
@@ -284,32 +418,62 @@ const ExpensePage = () => {
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item name="expense_date" label="Date" rules={[{ required: true }]}>
-                                <DatePicker style={{ width: '100%' }} size="large" />
+                            <Form.Item name="expense_date" label={<Text strong style={{fontSize: 12}}>ENTRY DATE</Text>} rules={[{ required: true }]}>
+                                <DatePicker style={{ width: '100%', borderRadius: 10 }} size="large" />
                             </Form.Item>
                         </Col>
                     </Row>
 
-                    <Row gutter={16}>
+                    <Row gutter={20}>
                         <Col span={14}>
-                            <Form.Item name="expense_type_id" label="Expense Category" rules={[{ required: true }]}>
-                                <Select placeholder="Pick category" size="large">
+                            <Form.Item name="expense_type_id" label={<Text strong style={{fontSize: 12}}>GENERAL LEDGER CATEGORY</Text>} rules={[{ required: true }]}>
+                                <Select placeholder="Pick financial category" size="large" style={{ borderRadius: 10 }}>
                                     {types.map(t => <Option key={t.id} value={t.id}>{t.name}</Option>)}
                                 </Select>
                             </Form.Item>
                         </Col>
                         <Col span={10}>
-                            <Form.Item name="amount" label="Amount (USD)" rules={[{ required: true }]}>
-                                <InputNumber style={{ width: '100%' }} precision={2} prefix="$" size="large" />
+                            <Form.Item name="amount" label={<Text strong style={{fontSize: 12}}>AMOUNT (USD)</Text>} rules={[{ required: true }]}>
+                                <InputNumber style={{ width: '100%', borderRadius: 10 }} precision={2} prefix="$" size="large" />
                             </Form.Item>
                         </Col>
                     </Row>
 
-                    <Form.Item name="description" label="Nature of Expense / Description">
-                        <Input.TextArea placeholder="Describe the transaction..." rows={3} style={{ borderRadius: 12 }} />
+                    <Form.Item name="payment_method" label={<Text strong style={{fontSize: 12}}>PAYMENT METHOD</Text>}>
+                        <Select size="large" defaultValue="Cash">
+                          <Option value="Cash">💵 Cash</Option>
+                          <Option value="KHQR">🇰🇭 KHQR / Mobile</Option>
+                          <Option value="Transfer">🏦 Bank Transfer</Option>
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item name="description" label={<Text strong style={{fontSize: 12}}>DESCRIPTION / NOTES</Text>}>
+                        <Input.TextArea placeholder="Enter transaction memo or reference..." rows={3} style={{ borderRadius: 12 }} />
                     </Form.Item>
                 </Form>
             </Modal>
+
+            <style>{`
+              @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+              .ant-table-thead > tr > th {
+                background: #f8fafc !important;
+                color: #64748b !important;
+                font-size: 11px !important;
+                font-weight: 800 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.5px !important;
+                padding: 16px 24px !important;
+              }
+              .ant-table-row:hover {
+                background: #fdfcff !important;
+              }
+              .ant-modal-mask {
+                backdrop-filter: blur(4px);
+              }
+            `}</style>
         </div>
     );
 };

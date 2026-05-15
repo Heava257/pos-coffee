@@ -9,4 +9,7 @@ module.exports = (app) => {
 
     app.get("/api/system_module/:id/permissions", authMiddleware(), controller.getPermissions);
     app.post("/api/system_module/:id/permissions", authMiddleware(), controller.savePermissions);
+
+    app.get("/api/permission_matrix", authMiddleware(), controller.getMatrix);
+    app.post("/api/permission_matrix", authMiddleware(), controller.saveMatrix);
 };

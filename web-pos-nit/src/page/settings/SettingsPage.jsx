@@ -70,6 +70,9 @@ const SettingsPage = () => {
     const { lang } = useLanguage();
     const t = translations[lang];
 
+    const profile = getProfile();
+    const isAdmin = profile?.business_id === 1;
+
     useEffect(() => {
         fetchSettings();
     }, []);
@@ -112,13 +115,15 @@ const SettingsPage = () => {
                 }
             }
 
-            // Also fetch categories and products for the selective promo UI
-            const [catRes, prodRes] = await Promise.all([
-                request("category", "get"),
-                request("product", "get", { is_list_all: 1 })
-            ]);
-            if (catRes && catRes.list) setCategories(catRes.list);
-            if (prodRes && prodRes.list) setProducts(prodRes.list);
+            // Only fetch categories and products for regular shop admins, not platform super admins
+            if (!isAdmin) {
+                const [catRes, prodRes] = await Promise.all([
+                    request("category", "get"),
+                    request("product", "get", { is_list_all: 1 })
+                ]);
+                if (catRes && catRes.list) setCategories(catRes.list);
+                if (prodRes && prodRes.list) setProducts(prodRes.list);
+            }
 
         } catch (error) {
             console.error("Fetch settings error:", error);
@@ -233,9 +238,6 @@ const SettingsPage = () => {
             </div>
         );
     }
-
-    const profile = getProfile();
-    const isAdmin = profile?.business_id === 1;
 
     return (
         <div style={{ padding: "32px", background: "#f4f1eb", minHeight: "100vh" }}>
@@ -496,14 +498,14 @@ const SettingsPage = () => {
                                     </div>
                                 )
                             },
-                            {
+                            !isAdmin && {
                                 key: "printer",
                                 label: <span><PrinterOutlined /> {t.printer_settings || 'Printer'}</span>,
                                 children: (
                                     <PrinterSettingsTab />
                                 )
                             },
-                            (profile?.plan_id >= 5) && {
+                            (!isAdmin && profile?.plan_id >= 5) && {
                                 key: "promo",
                                 label: <span><MobileOutlined /> {t.mobile_app_promo_tab}</span>,
                                 forceRender: true, // Ensure fields are registered

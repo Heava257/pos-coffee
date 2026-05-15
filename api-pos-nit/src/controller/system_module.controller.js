@@ -100,3 +100,93 @@ exports.savePermissions = async (req, res) => {
         logError("system_module.savePermissions", error, res);
     }
 };
+
+exports.getMatrix = async (req, res) => {
+    try {
+        if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
+
+        // 1. Get all Permissions
+        const [perms] = await db.query("SELECT id, name, route_key FROM permissions ORDER BY id ASC");
+        
+        // 2. Get all Plans
+        const [plans] = await db.query("SELECT id, name FROM subscription_plans ORDER BY id ASC");
+        
+        // 3. Get all Modules
+        const [modules] = await db.query("SELECT id, name, code FROM system_modules ORDER BY id ASC");
+        
+        // 4. Get Plan-Permission mappings
+        const [planPerms] = await db.query("SELECT plan_id, permission_id FROM plan_permissions");
+        
+        // 5. Get Module-Permission mappings
+        const [modulePerms] = await db.query("SELECT module_id, permission_id FROM module_permissions");
+
+        res.json({
+            permissions: perms,
+            plans: plans,
+            modules: modules,
+            plan_permissions: planPerms,
+            module_permissions: modulePerms,
+            success: true
+        });
+    } catch (error) {
+        logError("system_module.getMatrix", error, res);
+    }
+};
+
+exports.saveMatrix = async (req, res) => {
+    try {
+        if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
+        const { plan_mappings, module_mappings } = req.body; 
+
+        const conn = await db.getConnection();
+        try {
+            await conn.beginTransaction();
+
+            // Handle Plan Mappings
+            if (plan_mappings) {
+                await conn.query("DELETE FROM plan_permissions");
+                const values = [];
+                Object.keys(plan_mappings).forEach(plan_id => {
+                    plan_mappings[plan_id].forEach(p_id => {
+                        values.push([plan_id, p_id]);
+                    });
+                });
+                if (values.length > 0) {
+                    await conn.query("INSERT INTO plan_permissions (plan_id, permission_id) VALUES ?", [values]);
+                }
+            }
+
+            // Handle Module Mappings
+            if (module_mappings) {
+                await conn.query("DELETE FROM module_permissions");
+                const values = [];
+                Object.keys(module_mappings).forEach(module_id => {
+                    module_mappings[module_id].forEach(p_id => {
+                        values.push([module_id, p_id]);
+                    });
+                });
+                if (values.length > 0) {
+                    await conn.query("INSERT INTO module_permissions (module_id, permission_id) VALUES ?", [values]);
+                }
+            }
+
+            await conn.commit();
+            
+            // 🚀 HYPER-SYNC: Clear Backend Cache so changes take effect immediately
+            try {
+                require("../middleware/auth.middleware").clearCache();
+            } catch (e) {
+                console.error("Cache clear error:", e);
+            }
+
+            res.json({ success: true, message: "Permission Matrix saved successfully" });
+        } catch (err) {
+            await conn.rollback();
+            throw err;
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        logError("system_module.saveMatrix", error, res);
+    }
+};

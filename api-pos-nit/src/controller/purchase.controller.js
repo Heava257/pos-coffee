@@ -134,13 +134,13 @@ exports.create = async (req, res) => {
 
         await conn.commit();
 
-        // 3. 🚀 AUTO-EXPENSE AUTOMATION: If paid_amount > 0, record it as an expense automatically
-        if (Number(paid_amount) > 0) {
+        // 3. 🚀 AUTO-EXPENSE AUTOMATION: Only if status is Received and paid_amount > 0
+        if (status === 'Received' && Number(paid_amount) > 0) {
             try {
-                await db.query(
-                    `INSERT INTO expense (business_id, branch_id, expense_type_id, amount, expense_date, description, payment_method) 
-                     VALUES (?, ?, 1, ?, ?, ?, ?)`,
-                    [business_id, branch_id, Number(paid_amount), purchase_date || new Date(), `Purchase Payment (Ref: ${ref})`, payment_method || 'Cash']
+                await conn.query(
+                    `INSERT INTO expense (business_id, branch_id, expense_type_id, amount, expense_date, description, payment_method, category_class) 
+                     VALUES (?, ?, 1, ?, ?, ?, ?, 'COGS')`,
+                    [business_id, branch_id, Number(paid_amount), purchase_date || new Date(), `Purchase Received & Paid (Ref: ${ref})`, payment_method || 'Cash']
                 );
             } catch (expErr) {
                 console.error("Auto-Expense Link Fail:", expErr.message);
@@ -250,6 +250,22 @@ exports.receive = async (req, res) => {
         else if (isSome) newStatus = 'Partial';
 
         await conn.query("UPDATE purchase SET status = ? WHERE id = ?", [newStatus, purchase_id]);
+
+        // 3. 🚀 AUTO-EXPENSE AUTOMATION: When items are received, record the value as an expense
+        // Calculate total value received in this batch
+        const totalReceivedValue = items.reduce((acc, curr) => acc + (Number(curr.receive_now || 0) * Number(curr.cost || 0)), 0);
+        
+        if (totalReceivedValue > 0) {
+            try {
+                await conn.query(
+                    `INSERT INTO expense (business_id, branch_id, expense_type_id, amount, expense_date, description, payment_method, category_class) 
+                     VALUES (?, ?, 1, ?, NOW(), ?, 'Cash', 'COGS')`,
+                    [business_id, branch_id, totalReceivedValue, `Inventory Received (PO Ref: ${ref})`]
+                );
+            } catch (expErr) {
+                console.error("Auto-Expense on Receive Fail:", expErr.message);
+            }
+        }
 
         await conn.commit();
         res.json({ success: true, message: "Purchase items received and stock updated!" });

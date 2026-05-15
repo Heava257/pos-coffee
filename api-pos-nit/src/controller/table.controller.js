@@ -16,11 +16,11 @@ exports.getList = async (req, res) => {
             LEFT JOIN (
                 SELECT * FROM orders 
                 WHERE status = 'unpaid' 
-                AND id IN (SELECT MAX(id) FROM orders WHERE status = 'unpaid' GROUP BY table_no, branch_id)
+                AND id IN (SELECT MAX(id) FROM orders WHERE status = 'unpaid' AND business_id = ? GROUP BY table_no, branch_id)
             ) o ON t.table_name = o.table_no AND t.branch_id = o.branch_id
             WHERE t.business_id = ?
         `;
-        let params = [business_id];
+        let params = [business_id, business_id];
 
         if (branch_id) {
             sql += " AND t.branch_id = ?";

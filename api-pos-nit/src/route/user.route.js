@@ -11,4 +11,5 @@ module.exports = (app) => {
 
     // Compat aliases
     app.get("/api/auth/get-user-list", authMiddleware(), user.getList);
+    app.get("/api/user-switch-list", authMiddleware(), user.getStaffSwitchList);
 };

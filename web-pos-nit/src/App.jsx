@@ -2,7 +2,7 @@
 import "./App.css";
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
 import HomePage from "./page/home/HomePage";
-import LogingPage from "./page/auth/LogingPage";
+import LoginPage from "./page/auth/LoginPage";
 import RegisterPage from "./page/auth/RegisterPage";
 import ScanPage from "./page/auth/ScanPage";
 import VerifyEmailPage from "./page/auth/VerifyEmailPage";
@@ -107,6 +107,7 @@ function App() {
             <Route path="/plans" element={<PlanPage />} />
             <Route path="/business" element={<BusinessPage />} />
             <Route path="/service-blueprints" element={<ModuleConfigPage />} />
+            <Route path="/system-subscriptions" element={<PlanPage />} />
             <Route path="/system-modules" element={<SystemModulePage />} />
             <Route path="/my-plan" element={<MyPlanPage />} />
             <Route path="/payment/result" element={<PaymentResultPage />} />
@@ -133,7 +134,7 @@ function App() {
             <Route path="*" element={<Navigate to="/customer" replace />} />
           </Route>
 
-          <Route path="/login" element={<LogingPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/register" element={<RegisterPage />} />

@@ -116,7 +116,7 @@ export const request = (url = "", method = "get", data = {}) => {
           message.error(errorMessage || "Access Denied: You don't have permission for this action.");
         } else if (status >= 500) {
           message.error("Server Error: " + (errorMessage || "Please try again later."));
-        } else if (status !== 401) {
+        } else {
           message.error(errorMessage);
         }
         

@@ -43,7 +43,7 @@ const generateKHQR = (merchantId, name, amount, orderNo, currency = "USD") => {
   return payload + CRC16(payload);
 };
 
-const QRPaymentModal = ({ visible, onClose, paymentLink, orderNo, total, branchInfo }) => {
+const QRPaymentModal = ({ open, onClose, paymentLink, orderNo, total, branchInfo }) => {
   const [copying, setCopying] = useState(false);
 
   const staticQR = branchInfo?.khqr_image;
@@ -85,7 +85,7 @@ const QRPaymentModal = ({ visible, onClose, paymentLink, orderNo, total, branchI
           <span style={{ fontWeight: 700, fontSize: 16 }}>Payment QR Code</span>
         </div>
       }
-      open={visible}
+      open={open}
       onCancel={onClose}
       footer={[
         (paymentLink || dynamicKHQR) && (
@@ -99,7 +99,7 @@ const QRPaymentModal = ({ visible, onClose, paymentLink, orderNo, total, branchI
       ]}
       width={dynamicKHQR || staticQR || paymentLink ? 560 : 420}
       centered
-      bodyStyle={{ padding: '24px' }}
+      styles={{ body: { padding: '24px' } }}
     >
       <div style={{ padding: '4px 0' }}>
         {dynamicKHQR ? (

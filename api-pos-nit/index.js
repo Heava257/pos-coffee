@@ -63,6 +63,7 @@ require("./src/route/business_category.route")(app);
 require("./src/route/modular_package.route")(app);
 require("./src/route/system_module.route")(app);
 require("./src/route/stock_transfer.route")(app);
+require("./src/route/waste.route")(app);
 
 app.use((err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
@@ -168,6 +169,22 @@ app.listen(PORT, async () => {
     } catch (tierErr) {
       console.log("Migration (Seeding Tiers) skipped:", tierErr.message);
     }
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS waste (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        business_id INT NOT NULL,
+        branch_id INT NOT NULL,
+        product_id INT NULL,
+        raw_material_id INT NULL,
+        qty DECIMAL(10, 2) NOT NULL,
+        reason TEXT,
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+      )
+    `);
+    console.log("Migration: 'waste' table is ready");
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS customer_redeems (

@@ -138,11 +138,31 @@ const KdsPage = () => {
             >
                 <div className="order-items-list">
                     {items.map((item, idx) => {
-                        const [qty, ...nameParts] = item.split(' x ');
+                        const [displayStr, servings, stock, type] = item.split('||');
+                        const [qty, ...nameParts] = (displayStr || "").split(' x ');
+                        const itemName = nameParts.join(' x ');
+                        
+                        const isLow = type === 'recipe' ? servings < 20 : stock < 10;
+
                         return (
-                            <div key={idx} className="order-item-row">
-                                <span className="item-qty">{qty}x</span>
-                                <span className="item-name">{nameParts.join(' x ')}</span>
+                            <div key={idx} className="order-item-row" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                                <div style={{ display: 'flex', gap: 12, alignItems: 'center', width: '100%' }}>
+                                    <span className="item-qty">{qty}x</span>
+                                    <span className="item-name" style={{ flex: 1 }}>{itemName}</span>
+                                </div>
+                                <div style={{ paddingLeft: 42, marginTop: -4 }}>
+                                    {type === 'recipe' ? (
+                                        <Tag color={isLow ? 'error' : 'processing'} style={{ fontSize: 10, borderRadius: 4, border: 'none' }}>
+                                            {isLow ? <WarningOutlined style={{ fontSize: 10 }} /> : <CoffeeOutlined style={{ fontSize: 10 }} />}
+                                            <span style={{ marginLeft: 4 }}>~{servings} {t.cups || 'cups'} left</span>
+                                        </Tag>
+                                    ) : (
+                                        <Tag color={isLow ? 'warning' : 'default'} style={{ fontSize: 10, borderRadius: 4, border: 'none' }}>
+                                            {isLow ? <WarningOutlined style={{ fontSize: 10 }} /> : <ThunderboltOutlined style={{ fontSize: 10 }} />}
+                                            <span style={{ marginLeft: 4 }}>{stock} in stock</span>
+                                        </Tag>
+                                    )}
+                                </div>
                             </div>
                         );
                     })}
