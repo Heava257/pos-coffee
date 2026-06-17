@@ -9,12 +9,14 @@
 body {
     background-color: #f4f6f8;
     font-family: 'Battambang', system-ui, sans-serif !important;
-    
+
     /* App-like settings */
-    overscroll-behavior-y: contain; /* Prevents pull-to-refresh in some browsers */
+    overscroll-behavior-y: contain;
+    /* Prevents pull-to-refresh in some browsers */
     -webkit-tap-highlight-color: transparent;
-    user-select: none; /* Prevents text selection globally (can override for inputs) */
-    
+    user-select: none;
+    /* Prevents text selection globally (can override for inputs) */
+
     /* Padding for iOS notch / Home indicator */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
@@ -23,35 +25,40 @@ body {
 }
 
 /* Re-enable selection for inputs and textareas */
-input, textarea {
+input,
+textarea {
     user-select: text !important;
 }
 
 .summary-card {
     border: none !important;
     border-radius: 16px !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
     transition: all 0.3s ease !important;
 }
 
 .summary-card:hover {
     transform: translateY(-5px) !important;
-    box-shadow: 0 12px 24px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1) !important;
 }
 
-.ant-table-row {
-    transition: background 0.2s !important;
-}
-
-.ant-table-row:hover {
-    background-color: #f8fafc !important;
-}
 
 /* Animations */
 @keyframes blink {
-    0% { opacity: 0.4; transform: scale(0.9); }
-    50% { opacity: 1; transform: scale(1.1); }
-    100% { opacity: 0.4; transform: scale(0.9); }
+    0% {
+        opacity: 0.4;
+        transform: scale(0.9);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    100% {
+        opacity: 0.4;
+        transform: scale(0.9);
+    }
 }
 
 .status-dot-blink {

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'child_process'
+import path from 'path'
 
 // Get current git commit hash (short)
 let gitHash = 'development'
@@ -13,6 +14,11 @@ try {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   define: {
     'import.meta.env.VITE_GIT_HASH': JSON.stringify(gitHash),
   },

@@ -1,0 +1,1 @@
+const r = require("../../src/controller/report.controller"); const d = require("../../src/controller/dashboard.controller"); module.exports = { ...r, ...d };

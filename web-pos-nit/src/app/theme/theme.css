@@ -1,0 +1,1043 @@
+:root {
+  --theme-milk-bg: #f4f1eb;
+  --theme-cream-card-bg: #faf9f6;
+  --theme-dark-green: #1e4a2d;
+  --theme-accent-green: #2d6a42;
+  --theme-glass-bg: rgba(244, 241, 235, 0.7);
+  --theme-border-color: rgba(30, 74, 45, 0.2);
+  --theme-card-border-radius: 16px;
+  --theme-btn-border-radius: 12px;
+  --theme-modal-border-radius: 20px;
+}
+
+/* --- Milk Color Theme & Dark Green Borders --- */
+body,
+.ant-layout,
+.ant-layout-sider,
+.ant-layout-content {
+  background-color: var(--theme-milk-bg) !important;
+}
+
+/* Card custom styling with dark green border */
+.ant-card,
+.card,
+.pos-card,
+.premium-card {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: var(--theme-card-border-radius) !important;
+  background-color: var(--theme-cream-card-bg) !important;
+  /* light cream inside card */
+  box-shadow: 0 4px 12px rgba(30, 74, 45, 0.04) !important;
+  transition: all 0.3s ease !important;
+}
+
+.ant-card:hover,
+.card:hover,
+.pos-card:hover {
+  box-shadow: 0 6px 16px rgba(30, 74, 45, 0.08) !important;
+  transform: translateY(-2px);
+}
+
+/* Button custom styling with dark green border - applied to all buttons without exception */
+.ant-btn,
+.btn,
+.ant-btn-text,
+.ant-btn-link {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: var(--theme-btn-border-radius) !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Primary buttons should be solid dark green with white text */
+.ant-btn-primary {
+  background-color: var(--theme-dark-green) !important;
+  border-color: var(--theme-dark-green) !important;
+  color: #ffffff !important;
+}
+
+.ant-btn-primary:hover {
+  background-color: var(--theme-accent-green) !important;
+  border-color: var(--theme-accent-green) !important;
+  color: #ffffff !important;
+}
+
+.ant-btn-text:hover,
+.ant-btn-link:hover {
+  background-color: rgba(30, 74, 45, 0.05) !important;
+  color: var(--theme-dark-green) !important;
+}
+
+/* Modal custom styling with dark green border */
+.ant-modal-content {
+  border: 2px solid var(--theme-dark-green) !important;
+  border-radius: var(--theme-modal-border-radius) !important;
+  background-color: var(--theme-milk-bg) !important;
+  /* milk color */
+  box-shadow: 0 12px 36px rgba(30, 74, 45, 0.15) !important;
+}
+
+.ant-modal-header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(30, 74, 45, 0.1) !important;
+  padding-bottom: 12px !important;
+}
+
+.ant-modal-footer {
+  border-top: 1px solid rgba(30, 74, 45, 0.1) !important;
+  padding-top: 12px !important;
+  background: transparent !important;
+}
+
+/* Active menu item style - white pill background, borderless, subtle shadow (like Picture 2) */
+.ant-menu-item-selected {
+  background: #ffffff !important;
+  color: var(--theme-dark-green) !important;
+  border-radius: 30px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(30, 74, 45, 0.06) !important;
+}
+
+.ant-menu-item-selected .ant-menu-item-icon {
+  color: var(--theme-dark-green) !important;
+}
+
+.ant-menu-item-selected .ant-menu-title-content {
+  color: var(--theme-dark-green) !important;
+  font-weight: 700 !important;
+}
+
+/* Forms, inputs, and selects with dark green borders all around */
+.ant-input,
+.ant-select-selector,
+.ant-input-number,
+.ant-picker,
+.ant-input-affix-wrapper,
+textarea,
+.ant-modal-content .ant-input,
+.ant-modal-content .ant-select-selector,
+.ant-modal-content .ant-input-affix-wrapper,
+.ant-modal-content textarea {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 10px !important;
+  background-color: var(--theme-cream-card-bg) !important;
+  transition: all 0.2s ease !important;
+}
+
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper-focused,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused,
+.ant-modal-content .ant-input:focus,
+.ant-modal-content .ant-input-focused,
+.ant-modal-content .ant-input-affix-wrapper-focused,
+.ant-modal-content .ant-select-focused .ant-select-selector,
+.ant-modal-content .ant-picker-focused {
+  border-color: var(--theme-accent-green) !important;
+  box-shadow: 0 0 0 2px rgba(45, 106, 66, 0.15) !important;
+}
+
+/* Ensure inner inputs inside affix wrappers or selects do not have their own borders */
+.ant-input-affix-wrapper>.ant-input,
+.ant-select-selection-search-input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Checkboxes and Radios */
+.ant-checkbox-inner {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 4px !important;
+}
+
+.ant-checkbox-checked .ant-checkbox-inner {
+  background-color: var(--theme-dark-green) !important;
+  border-color: var(--theme-dark-green) !important;
+}
+
+.ant-radio-inner {
+  border: 1.5px solid var(--theme-dark-green) !important;
+}
+
+.ant-radio-checked .ant-radio-inner {
+  border-color: var(--theme-dark-green) !important;
+  background-color: var(--theme-dark-green) !important;
+}
+
+/* Switch Component */
+.ant-switch.ant-switch-checked {
+  background: var(--theme-dark-green) !important;
+}
+
+/* Force direct page container div to be transparent to inherit milk background */
+.admin-body>div {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Modern Sidebar Styling */
+
+/* Main sidebar container */
+.ant-layout-sider {
+  background: var(--theme-milk-bg) !important;
+  border-right: 1.5px solid var(--theme-dark-green) !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+}
+
+.admin-header-g1 {
+  min-height: 100px;
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Logo section styling */
+.demo-logo-vertical {
+  height: 80px;
+  margin: 20px;
+  background: linear-gradient(135deg, var(--primary-color, #1e4a2d), var(--accent-color, #2d6a42));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: var(--primary-shadow, 0 4px 12px rgba(30, 74, 45, 0.2));
+}
+
+/* Profile Container */
+.profile-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-left: auto;
+  /* Pushes to the right */
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.profile-container:hover {
+  background-color: #f8f9fa;
+}
+
+/* Profile Image */
+.img-user {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e9ecef;
+  transition: border-color 0.2s ease;
+}
+
+.profile-container:hover .img-user {
+  border-color: #dee2e6;
+}
+
+/* Dropdown Arrow */
+.dropdown-arrow {
+  margin-left: 8px;
+  color: #6c757d;
+  font-size: 12px;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.profile-container:hover .dropdown-arrow {
+  color: #495057;
+  transform: translateY(1px);
+}
+
+/* If you need to position within a header/navbar */
+.header-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* Alternative positioning using absolute positioning */
+.profile-absolute {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .img-user {
+    width: 32px;
+  }
+
+  .profile-container {
+    padding: 6px 10px;
+  }
+}
+
+/* Active/Selected State */
+.profile-container.active {
+  background-color: #e3f2fd;
+  border-radius: 8px;
+}
+
+.profile-container.active .img-user {
+  border-color: #2196f3;
+}
+
+.profile-container.active .dropdown-arrow {
+  color: #2196f3;
+  transform: rotate(180deg);
+}
+
+.demo-logo-vertical::before {
+  content: 'K';
+  color: white;
+  font-size: 32px;
+  font-weight: 700;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Menu container */
+.ant-menu {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 12px;
+}
+
+.ant-layout-sider-collapsed .ant-menu {
+  padding: 0 !important;
+}
+
+/* Version item styling */
+.version-item {
+  margin-bottom: 24px !important;
+  padding: 0 !important;
+}
+
+.ant-menu-item,
+.ant-menu-submenu-title,
+.ant-menu-submenu-arrow,
+.ant-menu-item-icon,
+.ant-menu-title-content,
+.ant-menu-item-group-title,
+.ant-menu-item *,
+.ant-menu-submenu-title * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Kill Ant Design v5 click ripple (Wave) */
+.ant-menu-item::after,
+.ant-menu-submenu-title::after {
+  display: none !important;
+  content: none !important;
+}
+
+.version-item .ant-menu-item-selected {
+  background: transparent !important;
+}
+
+.version-item .ant-tag {
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin: 0 auto;
+  display: block;
+  width: fit-content;
+}
+
+.ant-menu-item-selected {
+  background: #ffffff !important;
+  color: var(--theme-dark-green) !important;
+  border-radius: 30px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(30, 74, 45, 0.06) !important;
+}
+
+.ant-menu-item-selected .ant-menu-item-icon {
+  color: var(--theme-dark-green) !important;
+}
+
+.ant-menu-item:hover,
+.ant-menu-submenu>.ant-menu-submenu-title:hover {
+  background: rgba(255, 255, 255, 0.6) !important;
+  color: var(--theme-dark-green) !important;
+  border-radius: 30px !important;
+}
+
+.ant-menu-item-selected:hover {
+  background: #ffffff !important;
+  color: var(--theme-dark-green) !important;
+  box-shadow: 0 6px 16px rgba(30, 74, 45, 0.10) !important;
+}
+
+/* Menu Group Styling */
+.ant-menu-item-group-title {
+  color: var(--primary-color, #1e4a2d) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  padding: 20px 24px 8px !important;
+  opacity: 0.6;
+  border-top: 1px solid rgba(0, 0, 0, 0.03);
+  margin-top: 8px !important;
+}
+
+.ant-menu-item-group:first-child .ant-menu-item-group-title {
+  border-top: none;
+  margin-top: 0 !important;
+}
+
+.ant-layout-sider-collapsed .ant-menu-item-group-title {
+  padding: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  overflow: hidden;
+  opacity: 0;
+}
+
+/* Submenu styling */
+.ant-menu-submenu {
+  background: transparent !important;
+}
+
+.ant-menu-submenu-title {
+  background: transparent !important;
+}
+
+.ant-menu-submenu-arrow {
+  color: #6c757d !important;
+  right: 16px !important;
+  font-size: 12px !important;
+}
+
+.ant-menu-submenu-open>.ant-menu-submenu-title {
+  background: #e9ecef !important;
+  color: #495057 !important;
+}
+
+/* Submenu children */
+.ant-menu-sub {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  margin-left: 0 !important;
+  padding-left: 20px !important;
+}
+
+.ant-menu-sub .ant-menu-item {
+  height: 44px !important;
+  line-height: 44px !important;
+  font-size: 14px !important;
+  color: #868e96 !important;
+  padding-left: 48px !important;
+}
+
+.ant-menu-sub .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.6) !important;
+  color: var(--theme-dark-green) !important;
+  border-radius: 30px !important;
+}
+
+.ant-menu-sub .ant-menu-item-selected {
+  background: #ffffff !important;
+  color: var(--theme-dark-green) !important;
+  border-radius: 30px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(30, 74, 45, 0.06) !important;
+}
+
+/* Menu text styling */
+.ant-menu-title-content {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.2px !important;
+}
+
+.ant-layout-sider-collapsed .demo-logo-vertical {
+  margin: 20px 8px;
+}
+
+.ant-layout-sider-collapsed .demo-logo-vertical::before {
+  font-size: 24px;
+}
+
+.ant-layout-sider-collapsed .version-item {
+  display: none;
+}
+
+/* Scrollbar styling for sidebar */
+.ant-layout-sider::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ant-layout-sider::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ant-layout-sider::-webkit-scrollbar-thumb {
+  background: #dee2e6;
+  border-radius: 2px;
+}
+
+.ant-layout-sider::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ant-layout-sider {
+    position: fixed !important;
+    height: 100vh !important;
+    z-index: 1000 !important;
+  }
+}
+
+/* Active state enhancement */
+.ant-menu-item-active {
+  background: #f8f9fa !important;
+}
+
+/* Focus states for accessibility */
+.ant-menu-item:focus,
+.ant-menu-submenu-title:focus {
+  outline: 2px solid #1e4a2d !important;
+  outline-offset: 2px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ADMIN HEADER — IT SrukSrae Premium Design System
+   ═══════════════════════════════════════════════════════════ */
+
+/* Main header bar */
+.admin-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  background: transparent !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 999 !important;
+}
+
+/* Glassmorphism background element that fades out smoothly at the bottom */
+.admin-header-bg {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.0) 100%) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.95) 40%, rgba(0, 0, 0, 0) 100%) !important;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.95) 40%, rgba(0, 0, 0, 0) 100%) !important;
+}
+
+/* Header right section containing profile */
+.admin-header-g2 {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-left: auto !important;
+}
+
+/* ─── Profile Pill Container ──────────────────────────────── */
+.profile-container {
+  display: flex !important;
+  align-items: center !important;
+  cursor: pointer !important;
+  padding: 5px 16px 5px 5px !important;
+  border-radius: 50px !important;
+  transition: all 0.25s ease !important;
+  background: #ffffff !important;
+  border: 1.5px solid var(--theme-dark-green) !important;
+  box-shadow: 0 2px 10px rgba(30, 74, 45, 0.1) !important;
+  gap: 8px !important;
+}
+
+.profile-container:hover {
+  background: #ffffff !important;
+  border-color: var(--theme-accent-green) !important;
+  box-shadow: 0 4px 18px rgba(30, 74, 45, 0.18) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ─── Profile Avatar ──────────────────────────────────────── */
+.img-user {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  border: 2px solid var(--theme-dark-green) !important;
+  transition: all 0.25s ease !important;
+  flex-shrink: 0 !important;
+}
+
+.profile-container:hover .img-user {
+  border-color: var(--theme-accent-green) !important;
+  transform: scale(1.05) !important;
+}
+
+/* ─── Dropdown Arrow ──────────────────────────────────────── */
+.dropdown-arrow {
+  margin-left: 2px !important;
+  color: #94a3b8 !important;
+  font-size: 10px !important;
+  transition: all 0.25s ease !important;
+  user-select: none !important;
+}
+
+.profile-container:hover .dropdown-arrow {
+  color: var(--theme-dark-green) !important;
+  transform: translateY(2px) !important;
+}
+
+/* ─── Username Text ───────────────────────────────────────── */
+.txt-username {
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+/* ─── Notification & Email Icons ──────────────────────────── */
+.icon-email,
+.icon-notify {
+  font-size: 20px !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  transition: all 0.25s ease !important;
+  padding: 8px !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.icon-email:hover,
+.icon-notify:hover {
+  background: rgba(30, 74, 45, 0.08) !important;
+  color: var(--theme-dark-green) !important;
+  transform: scale(1.1) !important;
+}
+
+/* ─── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-header-g2 {
+    gap: 8px !important;
+  }
+
+  .img-user {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .profile-container {
+    padding: 4px 10px 4px 4px !important;
+  }
+
+  .txt-username {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .icon-email,
+  .icon-notify {
+    font-size: 16px !important;
+    padding: 5px !important;
+  }
+}
+
+/* ─── Focus / Active States ───────────────────────────────── */
+.profile-container:focus {
+  outline: 2px solid var(--theme-dark-green) !important;
+  outline-offset: 2px !important;
+}
+
+.profile-container:active {
+  transform: scale(0.98) !important;
+}
+
+.ant-dropdown-open .profile-container {
+  background: #ffffff !important;
+  border-color: rgba(30, 74, 45, 0.2) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+}
+
+.ant-dropdown-open .dropdown-arrow {
+  transform: rotate(180deg) !important;
+  color: var(--theme-dark-green) !important;
+}
+
+/* ─── Header Icon Buttons (Lang + Bell) ──────────────────── */
+.header-icon-btn:hover {
+  background: rgba(30, 74, 45, 0.05) !important;
+  border-color: var(--theme-accent-green) !important;
+  box-shadow: 0 4px 14px rgba(30, 74, 45, 0.16) !important;
+  transform: translateY(-1px);
+}
+
+/* Language Switcher Neo Styling */
+.lang-switcher-container {
+  display: flex !important;
+  align-items: center !important;
+  background: #f0f2f5 !important;
+  padding: 4px !important;
+  border-radius: 50px !important;
+  box-shadow: inset 3px 3px 6px #cbd1d9, inset -3px -3px 6px #ffffff !important;
+  cursor: pointer;
+  position: relative;
+  width: 100px !important;
+  height: 40px !important;
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.lang-toggle-handle {
+  position: absolute;
+  width: 48px !important;
+  height: 32px !important;
+  background: #ffffff !important;
+  border-radius: 50px !important;
+  top: 4px !important;
+  left: 4px !important;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1), -1px -1px 5px #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 2;
+}
+
+.lang-toggle-handle.kh {
+  left: 48px !important;
+}
+
+.lang-labels {
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+  justify-content: space-around !important;
+  align-items: center !important;
+  z-index: 1;
+}
+
+.lang-label {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #a0a0a0 !important;
+  transition: color 0.3s;
+  flex: 1;
+  text-align: center;
+  line-height: 1 !important;
+}
+
+.lang-label.active {
+  color: #1e4a2d !important;
+}
+
+.lang-flag-emoji {
+  font-size: 18px !important;
+  line-height: 1 !important;
+  justify-content: center !important;
+}
+
+.lang-switcher-container:active {
+  transform: scale(0.95);
+}
+
+/* Premium Header Enhancements */
+.premium-upgrade-btn {
+  background: var(--primary-color, #1e4a2d) !important;
+  border: none !important;
+  border-radius: 50px !important;
+  font-weight: 800 !important;
+  font-size: 11px !important;
+  height: 36px !important;
+  padding: 0 20px !important;
+  color: #fff !important;
+  box-shadow: var(--primary-shadow, 0 4px 15px rgba(30, 74, 45, 0.2)) !important;
+  transition: all 0.3s ease !important;
+  letter-spacing: 0.8px !important;
+}
+
+.premium-upgrade-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(30, 74, 45, 0.3) !important;
+  filter: brightness(1.15);
+}
+
+.icon-action-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  color: #636e72;
+}
+
+.icon-action-btn:hover {
+  background: #fff;
+  color: #1e4a2d;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.img-user-premium {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.profile-wrapper:hover .img-user-premium {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 768px) {
+  .img-user-premium {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+}
+
+/* --- Comprehensive Theme Overrides for Cards, Buttons, and Inputs --- */
+
+/* Ensure ALL raw html buttons and inputs have the dark green border */
+button,
+input,
+select,
+textarea {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 10px !important;
+}
+
+/* Custom dashboard cards styling in HomePage.jsx */
+.owner-stat-card.analytical,
+.op-mini-card,
+.tech-inventory-card {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 20px !important;
+  background-color: var(--theme-cream-card-bg) !important;
+  box-shadow: 0 4px 12px rgba(30, 74, 45, 0.04) !important;
+}
+
+/* POS specific component overrides */
+.pos-product-card {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 18px !important;
+  background-color: var(--theme-cream-card-bg) !important;
+}
+
+.pos-search-shift-container {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 14px !important;
+}
+
+.pos-category-btn {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 20px !important;
+}
+
+.pos-place-order-btn {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 12px !important;
+}
+
+/* Active menu hover overrides */
+.pos-category-btn:hover {
+  background-color: rgba(30, 74, 45, 0.05) !important;
+}
+
+/* --- All Pages Background Standardization (Milk & Cream) --- */
+
+/* Force the main layout content area and top-level page containers to inherit the milk background */
+.admin-body {
+  background-color: var(--theme-milk-bg) !important;
+  background: var(--theme-milk-bg) !important;
+}
+
+.admin-body>div,
+.admin-body>form,
+.admin-body>.page-container,
+.admin-body>.main-container {
+  background-color: var(--theme-milk-bg) !important;
+  background: var(--theme-milk-bg) !important;
+}
+
+/* Override all hardcoded white inline backgrounds on elements to use the theme cream color */
+.admin-body div[style*="#fff"],
+.admin-body div[style*="#ffffff"],
+.admin-body div[style*="white"],
+.admin-body div[style*="rgb(255, 255, 255)"],
+.admin-body form[style*="#fff"],
+.admin-body form[style*="#ffffff"],
+.admin-body form[style*="white"],
+.admin-body form[style*="rgb(255, 255, 255)"],
+.admin-body section[style*="#fff"],
+.admin-body section[style*="#ffffff"],
+.admin-body section[style*="white"],
+.admin-body section[style*="rgb(255, 255, 255)"] {
+  background-color: var(--theme-cream-card-bg) !important;
+  background: var(--theme-cream-card-bg) !important;
+}
+
+/* Also make sure standard page layouts/cards from Ant Design follow the cream card bg */
+.ant-card {
+  background-color: var(--theme-cream-card-bg) !important;
+}
+
+/* Ensure OrderPage/Daily closing dashboard cards get the exact standard dark green border and cream background */
+.op-mini-card {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 20px !important;
+  background-color: var(--theme-cream-card-bg) !important;
+  box-shadow: 0 4px 15px rgba(30, 74, 45, 0.05) !important;
+  min-height: 110px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
+/* Custom Order Page tab buttons style */
+.op-tab-btn {
+  padding: 8px 20px !important;
+  border-radius: 25px !important;
+  border: 1.5px solid var(--theme-dark-green) !important;
+  background: transparent !important;
+  color: var(--theme-dark-green) !important;
+  cursor: pointer !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.op-tab-btn.active {
+  background: var(--theme-dark-green) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 10px rgba(30, 74, 45, 0.2) !important;
+}
+
+/* Force border-radius and standard border on all buttons and inputs inside dashboard/pos/order pages */
+.admin-body button,
+.admin-body input,
+.admin-body select,
+.admin-body .ant-input-group-wrapper,
+.admin-body .ant-input-wrapper,
+.admin-body .ant-input-affix-wrapper,
+.admin-body .ant-picker,
+.admin-body .ant-select-selector {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 10px !important;
+}
+
+/* Fix search button and clear button background inside search components */
+.admin-body .ant-input-search-button {
+  background-color: var(--theme-dark-green) !important;
+  color: #fff !important;
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 0 8px 8px 0 !important;
+}
+
+.admin-body .ant-input-search-button:hover {
+  background-color: var(--theme-accent-green) !important;
+  border-color: var(--theme-accent-green) !important;
+}
+
+/* Custom Global Table Styling - Match Dark Green Header & Surrounding Border */
+.ant-table-wrapper {
+  background: transparent !important;
+}
+
+.ant-table {
+  background: var(--theme-cream-card-bg) !important;
+  border-radius: 12px !important;
+}
+
+.ant-table-container {
+  border: 1.5px solid var(--theme-dark-green) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+/* Header cells */
+.ant-table-thead>tr>th {
+  background-color: var(--theme-dark-green) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border-bottom: none !important;
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.3) !important;
+  text-align: left !important;
+  padding: 4px 10px !important;
+  /* Ultra-compact vertical padding */
+  line-height: 1.2 !important;
+}
+
+/* Remove vertical divider for the last header column */
+.ant-table-thead>tr>th:last-child {
+  border-inline-end: none !important;
+}
+
+/* Align text to center/right if explicitly defined by column config */
+.ant-table-thead>tr>th.ant-table-cell-align-center {
+  text-align: center !important;
+}
+
+.ant-table-thead>tr>th.ant-table-cell-align-right {
+  text-align: right !important;
+}
+
+/* Body cells */
+.ant-table-tbody>tr>td {
+  background: var(--theme-cream-card-bg) !important;
+  border-bottom: 1.5px solid rgba(30, 74, 45, 0.1) !important;
+  color: #1e293b !important;
+  padding: 6px 10px !important;
+  /* Ultra-compact vertical padding */
+  line-height: 1.2 !important;
+}
+
+/* Row hover highlight using subtle brand accent */
+.ant-table-tbody>tr.ant-table-row:hover>td,
+.ant-table-tbody>tr>td.ant-table-cell-row-hover {
+  background: rgba(30, 74, 45, 0.05) !important;
+}
+
+/* Pagination container styling */
+.ant-table-wrapper .ant-pagination {
+  margin: 16px 0 !important;
+}
+
+/* Style active pagination button to match green brand */
+.ant-pagination-item-active {
+  border-color: var(--theme-dark-green) !important;
+  background-color: var(--theme-dark-green) !important;
+}
+
+.ant-pagination-item-active a {
+  color: #ffffff !important;
+}

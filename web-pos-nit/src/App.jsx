@@ -1,66 +1,68 @@
 
-import "./App.css";
+import "@/App.css";
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
-import HomePage from "./page/home/HomePage";
-import LoginPage from "./page/auth/LoginPage";
-import RegisterPage from "./page/auth/RegisterPage";
-import ScanPage from "./page/auth/ScanPage";
-import VerifyEmailPage from "./page/auth/VerifyEmailPage";
-import ForgotPasswordPage from "./page/auth/ForgotPasswordPage";
-import ResetPasswordPage from "./page/auth/ResetPasswordPage";
+import HomePage from "@/modules/dashboard/pages/HomePage";
+import LoginPage from "@/modules/auth/pages/LoginPage";
+import RegisterPage from "@/modules/auth/pages/RegisterPage";
+import ScanPage from "@/modules/auth/pages/ScanPage";
+import VerifyEmailPage from "@/modules/auth/pages/VerifyEmailPage";
+import ForgotPasswordPage from "@/modules/auth/pages/ForgotPasswordPage";
+import ResetPasswordPage from "@/modules/auth/pages/ResetPasswordPage";
 
-import MainLayout from "./component/layout/MainLayout";
-import MainLayoutAuth from "./component/layout/MainLayoutAuth";
-import EmployeePage from "./page/employee/EmployeePage";
-import CoffeeMenuApp from "./page/CoffeeMenuApp/CoffeeMenuApp";
-import UserPage from "./page/user/UserPage";
-import CategoryPage from "./page/category/CategoryPage";
-import GlobalCategoryPage from "./page/category/GlobalCategoryPage";
-import RolePage from "./page/role/RolePage";
-import PermissionPage from "./page/role/PermissionPage";
-import PlanPage from "./page/plans/PlanPage";
-import SupplierPage from "./page/purchase/SupplierPage";
-import ProductPage_single from "./page/product/ProductPage_single";
-import OrderPage from "./page/orderPage/OrderPage";
-import ReportSale_Summary from "./page/report/ReportSale_Summary";
-import ReportExpense_Summary from "./page/report/ReportExpense_Summary";
-import ReportCustomer_Summary from "./page/report/ReportCustomer_Summary";
-import ReportPurchase_Summary from "./page/report/ReportPurchase_Summary";
-import Top_Sales from "./page/top_sale/Top_Sales";
-import ProfilePage from "./page/user/ProfilePage";
-import PosPage from "./page/pos/PosPage";
-import { ExchangeRateProvider } from "./component/pos/ExchangeRateContext";
-import ExchangeRatePage from "./page/ExchangeRatePage/ExchangeRatePage";
-import BranchPage from "./page/branch/BranchPage";
-import ExpensePage from "./page/expense/ExpensePage";
-import BusinessPage from "./page/business/BusinessPage";
-// import SmartProductEntry from "./page/product/ProductPage";
-// import ChatPage from "./component/chat/ChatPage";
-import RawMaterialPage from "./page/raw_material/RawMaterialPage";
-import WastePage from "./page/inventory/WastePage";
-import IngredientForecastPage from "./page/inventory/IngredientForecastPage";
-import MarketingDashboard from "./page/marketing/MarketingDashboard";
-import EmployeePerformancePage from "./page/employee/EmployeePerformancePage";
-import PurchasePage from "./page/purchase/PurchasePage";
-import StockPage from "./page/stock/StockPage";
-import MyPlanPage from "./page/plans/MyPlanPage";
-import PaymentResultPage from "./page/plans/PaymentResultPage";
-import TablePage from "./page/table/TablePage";
-import SettingsPage from "./page/settings/SettingsPage";
-import KdsPage from "./page/pos/KdsPage";
-import RecipePage from "./page/recipe/RecipePage";
-import DigitalReceiptPage from "./page/pos/DigitalReceiptPage";
-import CustomerPortalPage from "./page/pos/CustomerPortalPage";
-import LoyaltySearchPage from "./page/pos/LoyaltySearchPage";
-import DigitalMenuBoard from "./page/pos/DigitalMenuBoard";
-import ModuleConfigPage from "./page/modular_package/ModuleConfigPage";
-import SystemModulePage from "./page/modular_package/SystemModulePage";
-import StockTransferPage from "./page/stock/StockTransferPage";
-import { getProfile } from "./store/profile.store";
+import MainLayout from "@/app/layouts/MainLayout";
+import MainLayoutAuth from "@/app/layouts/MainLayoutAuth";
+import EmployeePage from "@/modules/administration/user/pages/EmployeePage";
+import CoffeeMenuApp from "@/modules/pos/pages/CoffeeMenuApp";
+import UserPage from "@/modules/administration/user/pages/UserPage";
+import CategoryPage from "@/modules/catalog/category/pages/CategoryPage";
+import GlobalCategoryPage from "@/modules/catalog/category/pages/GlobalCategoryPage";
+import RolePage from "@/modules/administration/role/pages/RolePage";
+import PermissionPage from "@/modules/administration/role/pages/PermissionPage";
+import PlanPage from "@/modules/platform/plan/pages/PlanPage";
+import SupplierPage from "@/modules/purchasing/supplier/pages/SupplierPage";
+import ProductPage_single from "@/modules/catalog/product/pages/ProductPage_single";
+import OrderPage from "@/modules/pos/pages/OrderPage";
+import ReportSale_Summary from "@/modules/reports/pages/ReportSale_Summary";
+import ReportExpense_Summary from "@/modules/reports/pages/ReportExpense_Summary";
+import ReportCustomer_Summary from "@/modules/reports/pages/ReportCustomer_Summary";
+import ReportPurchase_Summary from "@/modules/reports/pages/ReportPurchase_Summary";
+import Top_Sales from "@/modules/reports/pages/Top_Sales";
+import ProfilePage from "@/modules/administration/user/pages/ProfilePage";
+import PosPage from "@/modules/pos/pages/PosPage";
+import { ExchangeRateProvider } from "@/app/providers/ExchangeRateProvider";
+import ExchangeRatePage from "@/modules/finance/payment/pages/ExchangeRatePage";
+import BranchPage from "@/modules/administration/branch/pages/BranchPage";
+import ExpensePage from "@/modules/finance/expense/pages/ExpensePage";
+import BusinessPage from "@/modules/administration/branch/pages/BusinessPage";
+// import SmartProductEntry from "@/page/product/ProductPage";
+// import ChatPage from "@/modules/dashboard/pages/ChatPage";
+import RawMaterialPage from "@/modules/inventory/raw-material/pages/RawMaterialPage";
+import WastePage from "@/modules/inventory/waste/pages/WastePage";
+import IngredientForecastPage from "@/modules/inventory/forecast/pages/IngredientForecastPage";
+import MarketingDashboard from "@/modules/crm/marketing/pages/MarketingDashboard";
+import EmployeePerformancePage from "@/modules/administration/user/pages/EmployeePerformancePage";
+import PurchasePage from "@/modules/purchasing/purchase-order/pages/PurchasePage";
+import StockPage from "@/modules/inventory/stock/pages/StockPage";
+import MyPlanPage from "@/modules/platform/subscription/pages/MyPlanPage";
+import PaymentResultPage from "@/modules/platform/subscription/pages/PaymentResultPage";
+import TablePage from "@/modules/administration/branch/pages/TablePage";
+import SettingsPage from "@/modules/administration/user/pages/SettingsPage";
+import KdsPage from "@/modules/pos/pages/KdsPage";
+import RecipePage from "@/modules/catalog/recipe/pages/RecipePage";
+import DigitalReceiptPage from "@/modules/pos/pages/DigitalReceiptPage";
+import CustomerPortalPage from "@/modules/pos/pages/CustomerPortalPage";
+import LoyaltySearchPage from "@/modules/pos/pages/LoyaltySearchPage";
+import DigitalMenuBoard from "@/modules/pos/pages/DigitalMenuBoard";
+import ModuleConfigPage from "@/modules/platform/module/pages/ModuleConfigPage";
+import SystemModulePage from "@/modules/platform/module/pages/SystemModulePage";
+import StockTransferPage from "@/modules/inventory/transfer/pages/StockTransferPage";
+import { getProfile } from "@/app/store/profile.store";
+import SaasLandingPage from "@/modules/platform/pages/SaasLandingPage";
+import LegalPage from "@/modules/platform/pages/LegalPage";
 
 const RootRedirect = () => {
   const profile = getProfile();
-  if (!profile) return <Navigate to="/customer" replace />;
+  if (!profile) return <SaasLandingPage />;
 
   const isAdmin = profile.is_super_admin === 1 ||
     ['Owner', 'Executive', 'Admin'].includes(profile.role_name);
@@ -139,6 +141,13 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/terms" element={<LegalPage />} />
+          <Route path="/privacy" element={<LegalPage />} />
+          <Route path="/cookies" element={<LegalPage />} />
+          <Route path="/refund-policy" element={<LegalPage />} />
+          <Route path="/acceptable-use" element={<LegalPage />} />
+          <Route path="/contact" element={<LegalPage />} />
+          <Route path="/about" element={<LegalPage />} />
           <Route path="/" element={<RootRedirect />} />
         </Routes>
       </BrowserRouter>
