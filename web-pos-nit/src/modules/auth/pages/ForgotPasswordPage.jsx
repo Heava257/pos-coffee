@@ -163,7 +163,7 @@ export default function ForgotPasswordPage() {
             <form onSubmit={handleVerifyOTP}>
               <div style={{ marginBottom: 24 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)", letterSpacing: 0.8, textTransform: "uppercase", display: "block", marginBottom: 8 }}>{t.otp_code}</label>
-                <input type="text" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value)} onFocus={() => setFocusedField("otp")} onBlur={() => setFocusedField("")} placeholder={t.enter_6_digit} style={{ ...inputStyle("otp"), textAlign: "center", fontSize: 24, letterSpacing: 10, fontWeight: 800 }} required />
+                <input type="text" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value)} onFocus={() => setFocusedField("otp")} onBlur={() => setFocusedField("")} placeholder={t.enter_6_digit} style={{ ...inputStyle("otp"), textAlign: "center", fontSize: otp ? 24 : 14, letterSpacing: otp ? 10 : "normal", fontWeight: otp ? 800 : 400 }} required />
               </div>
               <button type="submit" disabled={loading} style={{ width: "100%", height: 50, borderRadius: 100, border: "none", background: loading ? "rgba(255,255,255,0.4)" : "#c0a060", color: "#1a1a1a", fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", transition: "all 0.2s", marginBottom: 24 }}>
                 {loading ? "Verifying..." : "Verify OTP →"}

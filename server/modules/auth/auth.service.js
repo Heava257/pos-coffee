@@ -429,9 +429,10 @@ class AuthService {
 
     await authRepository.updateResetToken(user.id, otpCode, expiry);
 
-    sendPasswordResetEmail(email, user.name, otpCode).catch(err => {
-      console.error("[BACKGROUND EMAIL ERROR] Forgot Password:", err.message);
-    });
+    const emailSent = await sendPasswordResetEmail(email, user.name, otpCode);
+    if (!emailSent) {
+      throw new Error("Failed to deliver OTP email. Please check configuration or try again.");
+    }
 
     return true;
   }

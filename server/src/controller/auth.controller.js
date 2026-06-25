@@ -664,10 +664,11 @@ exports.forgotPassword = async (req, res) => {
 
     const { sendPasswordResetEmail } = require("../util/email");
 
-    // 🔥 Send email in background to avoid UI hang
-    sendPasswordResetEmail(email, user.name, otpCode).catch(err => {
-      console.error("[BACKGROUND EMAIL ERROR] Forgot Password:", err.message);
-    });
+    // Await email sending to guarantee delivery status
+    const emailSent = await sendPasswordResetEmail(email, user.name, otpCode);
+    if (!emailSent) {
+      return res.status(500).json({ success: false, message: "Failed to deliver OTP email. Please check configuration." });
+    }
 
     res.json({
       success: true,
