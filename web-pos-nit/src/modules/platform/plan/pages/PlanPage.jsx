@@ -17,7 +17,8 @@ import {
     Divider,
     Select,
     DatePicker,
-    Tooltip
+    Tooltip,
+    Upload
 } from "antd";
 import {
     CreditCardOutlined,
@@ -41,7 +42,6 @@ import { request } from "@/shared/utils/helper";
 import { Tabs, Checkbox } from "antd";
 import { Config } from "@/shared/utils/config";
 import dayjs from "dayjs";
-import { Upload } from "lucide-react";
 import { useLocation } from "react-router-dom";
 const { TabPane } = Tabs;
 
