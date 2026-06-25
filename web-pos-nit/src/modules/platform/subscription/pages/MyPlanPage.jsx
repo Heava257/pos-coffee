@@ -784,7 +784,9 @@ const handleDownloadInvoice = async (tranId) => {
                 )}
             </Modal>
 
-            {/* ══ MODAL 4 — PayWay Payment ══════════════════════════ */}
+            {/* ══════════════════════════════════════════════════════════
+                MODAL 4 — PayWay Payment
+            ══════════════════════════════════════════════════════════ */}
             <Modal
                 title={
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -795,7 +797,7 @@ const handleDownloadInvoice = async (tranId) => {
                 open={isPaymentModalVisible}
                 onCancel={() => setIsPaymentModalVisible(false)}
                 footer={null}
-                width={440}
+                width={400}
                 centered
             >
                 {paymentSession && (() => {
@@ -818,46 +820,46 @@ const handleDownloadInvoice = async (tranId) => {
                     }
 
                     return (
-                        <div style={{ textAlign: "center", padding: "8px 0" }}>
+                        <div style={{ textAlign: "center", padding: "0" }}>
                             <div style={{
                                 background: "linear-gradient(135deg, #1e4a2d, #2d6a3e)",
-                                borderRadius: 16, padding: "20px",
-                                color: "white", marginBottom: 20,
+                                borderRadius: 12, padding: "12px 16px",
+                                color: "white", marginBottom: 12,
                             }}>
-                                <Title level={4} style={{ color: "white", margin: "0 0 4px" }}>
+                                <Title level={5} style={{ color: "white", margin: "0 0 2px", fontSize: 16 }}>
                                     {paymentSession.plan_name}
                                 </Title>
-                                <div style={{ fontSize: 32, fontWeight: 800, color: "#c0a060" }}>
+                                <div style={{ fontSize: 26, fontWeight: 800, color: "#c0a060" }}>
                                     ${paymentSession.amount}
                                 </div>
-                                <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>30-Day Subscription Upgrade</Text>
+                                <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>30-Day Subscription Upgrade</Text>
                             </div>
 
                             {dynamicKHQR ? (
-                                <div style={{ marginBottom: 24 }}>
+                                <div style={{ marginBottom: 12 }}>
                                     <div style={{
                                         background: '#fff',
-                                        padding: '16px',
-                                        borderRadius: '16px',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                        padding: '10px',
+                                        borderRadius: '12px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
                                         display: 'inline-block',
                                         border: '1px solid #f0f0f0'
                                     }}>
-                                        <QRCode value={dynamicKHQR} size={220} />
+                                        <QRCode value={dynamicKHQR} size={170} />
                                     </div>
-                                    <div style={{ marginTop: 12 }}>
-                                        <Text strong style={{ display: 'block', color: '#1e4a2d' }}>Scan to Pay ${paymentSession.amount}</Text>
-                                        <Text type="secondary" style={{ fontSize: 11 }}>{receiverName}</Text>
+                                    <div style={{ marginTop: 8 }}>
+                                        <Text strong style={{ display: 'block', color: '#1e4a2d', fontSize: 13 }}>Scan to Pay ${paymentSession.amount}</Text>
+                                        <Text type="secondary" style={{ fontSize: 10 }}>{receiverName}</Text>
                                     </div>
                                 </div>
                             ) : staticQR ? (
-                                <div style={{ marginBottom: 24 }}>
+                                <div style={{ marginBottom: 12 }}>
                                     <AntImage
                                         src={Config.getFullImagePath(staticQR)}
-                                        style={{ width: '100%', maxWidth: 220, borderRadius: 12, border: '1px solid #eee' }}
+                                        style={{ width: '100%', maxWidth: 170, borderRadius: 10, border: '1px solid #eee' }}
                                     />
-                                    <div style={{ marginTop: 12 }}>
-                                        <Text strong style={{ display: 'block', color: '#1e4a2d' }}>Scan to Pay</Text>
+                                    <div style={{ marginTop: 6 }}>
+                                        <Text strong style={{ display: 'block', color: '#1e4a2d', fontSize: 13 }}>Scan to Pay</Text>
                                     </div>
                                 </div>
                             ) : null}
@@ -865,21 +867,21 @@ const handleDownloadInvoice = async (tranId) => {
                             {merchantId ? (
                                 <Button
                                     type="primary" size="large" block
-                                    style={{ background: "#c0392b", border: "none", borderRadius: 12, height: 52, fontWeight: 700, fontSize: 16, marginBottom: 12 }}
+                                    style={{ background: "#c0392b", border: "none", borderRadius: 10, height: 44, fontWeight: 700, fontSize: 15, marginBottom: 12 }}
                                     onClick={handleProceedToPayWay}
                                 >
                                     🏦 Checkout with ABA PayWay
                                 </Button>
                             ) : (
-                                <div style={{ marginBottom: 20, textAlign: 'left', background: '#f9f9f9', padding: '16px', borderRadius: '12px', border: '1px solid #eee' }}>
-                                    <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '10px' }}>
+                                <div style={{ marginBottom: 12, textAlign: 'left', background: '#f9f9f9', padding: '10px 14px', borderRadius: '10px', border: '1px solid #eee' }}>
+                                    <Text type="secondary" style={{ fontSize: '11.5px', display: 'block', marginBottom: '8px', lineHeight: '1.4' }}>
                                         📌 <strong>ចំណាំ៖</strong> សូមផ្ទេរប្រាក់ឱ្យបានត្រឹមត្រូវទៅតាម QR Code ខាងលើ។ ប្រព័ន្ធនឹងស្កេនអ៊ីមែល និងធ្វើការ Upgrade គម្រោងជូនលោកអ្នកស្វ័យប្រវត្តក្នុងរយៈពេល ១ ទៅ ២ នាទី។
                                     </Text>
                                     <Button
                                         type="primary"
-                                        size="large"
+                                        size="middle"
                                         block
-                                        style={{ background: '#24a1de', border: 'none', borderRadius: '12px', height: 48, fontWeight: 700 }}
+                                        style={{ background: '#24a1de', border: 'none', borderRadius: '10px', height: 42, fontWeight: 700, fontSize: '13.5px' }}
                                         onClick={() => {
                                             const cleanLink = telegramLink.startsWith("http") ? telegramLink : `https://t.me/${telegramLink.replace("@", "")}`;
                                             const textMsg = `សួស្តីបង! ខ្ញុំបានបង់ប្រាក់សម្រាប់គម្រោង ${paymentSession.plan_name} ចំនួន $${paymentSession.amount} រួចហើយ។\n\nនេះជាលេខកូដប្រតិបត្តិការរបស់ខ្ញុំ៖ ${paymentSession.tran_id}`;
@@ -891,27 +893,30 @@ const handleDownloadInvoice = async (tranId) => {
                                 </div>
                             )}
 
-                            <div style={{ background: "#f8fdf9", borderRadius: 10, padding: "8px 16px", marginBottom: 16, fontSize: 11 }}>
+                            <div style={{ background: "#f8fdf9", borderRadius: 8, padding: "6px 12px", marginBottom: 12, fontSize: 11 }}>
                                 <Text type="secondary">Trans ID: </Text>
                                 <Text code style={{ fontSize: 10 }}>{paymentSession.tran_id}</Text>
                             </div>
 
-                            <Divider plain style={{ color: "#999", fontSize: 12 }}>Developer Testing</Divider>
+                            {import.meta.env.DEV && (
+                                <>
+                                    <Divider plain style={{ color: "#999", fontSize: 11, margin: "10px 0" }}>Developer Testing</Divider>
+                                    <Button
+                                        block type="dashed"
+                                        style={{ borderRadius: 10, height: 36, marginBottom: 12 }}
+                                        onClick={handleSimulatePayment}
+                                    >
+                                        🧪 Simulate Success
+                                    </Button>
+                                </>
+                            )}
 
-                            <Button
-                                block type="dashed"
-                                style={{ borderRadius: 12, height: 40, marginBottom: 16 }}
-                                onClick={handleSimulatePayment}
-                            >
-                                🧪 Simulate Success
-                            </Button>
-
-                            <Button type="link" block
+                            <Button type="link" block style={{ fontSize: 13, padding: 0 }}
                                 onClick={() => { setIsPaymentModalVisible(false); setIsConfirmModalVisible(true); }}>
                                 ← Back to Selection
                             </Button>
                         </div>
-                    )
+                    );
                 })()}
             </Modal>
 
