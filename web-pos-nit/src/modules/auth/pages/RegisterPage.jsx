@@ -1,462 +1,411 @@
-import React, { useState, useEffect } from "react";
-import { message, Spin } from "antd";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { message } from "antd";
 import { request } from "@/shared/utils/helper";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import { useLanguage, translations } from "@/app/store/language.store";
+import "./AuthPremium.css";
 
-// Import Wizard Steps
-import StepAccountInfo from "../components/registration/StepAccountInfo";
-import StepSelectService from "../components/registration/StepSelectService";
-import StepShopDetails from "../components/registration/StepShopDetails";
-import StepSelectPlan from "../components/registration/StepSelectPlan";
-import StepReview from "../components/registration/StepReview";
+/* ── helpers ── */
+const getStrength = p => {
+  let s = 0;
+  if (p.length >= 8) s++;
+  if (/[A-Z]/.test(p)) s++;
+  if (/[0-9]/.test(p)) s++;
+  if (/[^A-Za-z0-9]/.test(p)) s++;
+  return s;
+};
+const STRENGTH_LABELS = ["","Weak","Fair","Good","Strong"];
+const STRENGTH_COLORS = ["","#ef4444","#f97316","#eab308","#22C55E"];
 
-const CoffeeIllustration = ({ size = 180 }) => (
-  <svg viewBox="0 0 280 320" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: size, height: "auto" }}>
-    <path d="M95 60 Q90 45 95 30 Q100 15 95 5" stroke="#2a2a2a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-    <path d="M115 65 Q108 48 113 32 Q118 16 113 4" stroke="#2a2a2a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-    <path d="M135 60 Q130 44 135 28 Q140 14 135 3" stroke="#2a2a2a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-    <path d="M68 105 L78 215 Q80 225 90 225 L178 225 Q188 225 190 215 L200 105 Z" fill="#2a2a2a" rx="4" />
-    <rect x="62" y="93" width="144" height="18" rx="9" fill="#1a1a1a" />
-    <ellipse cx="134" cy="165" rx="22" ry="28" fill="#3a2a1a" opacity="0.9" />
-    <path d="M200 120 Q228 120 228 148 Q228 176 200 176" stroke="#2a2a2a" strokeWidth="9" strokeLinecap="round" fill="none" />
+const EyeIcon = ({ open }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    {open
+      ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+      : <><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><line x1="1" y1="1" x2="23" y2="23"/></>}
   </svg>
 );
 
-const WaveDivider = () => (
-  <svg viewBox="0 0 120 700" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" className="wave-divider" style={{ position: "absolute", left: "calc(40% - 60px)", top: 0, bottom: 0, height: "100%", width: 120, zIndex: 2, filter: "drop-shadow(4px 0 12px rgba(0,0,0,0.18))" }}>
-    <path d="M60 0 C80 70, 30 140, 60 210 C90 280, 25 350, 55 420 C85 490, 30 560, 60 630 C90 700, 60 700, 60 700 L120 700 L120 0 Z" fill="#1a1a1a" />
-  </svg>
-);
+const STEPS = ["Account","Company","Location","Plan","Verify"];
+const PLANS = [
+  { id:"starter",  name:"Starter",    price:0,   yr:0,    feats:["1 Branch","5 Users","Basic POS","Email Support"] },
+  { id:"business", name:"Business",   price:49,  yr:39,   feats:["10 Branches","50 Users","Advanced Modules","Priority Support"], popular:true },
+  { id:"enterprise",name:"Enterprise",price:149, yr:119,  feats:["Unlimited Branches","Unlimited Users","White Label","API Access","Dedicated Manager"] },
+];
+const BIZ_TYPES = ["Retail","Restaurant","Wholesale","Pharmacy","Hotel","Education","Manufacturing","Healthcare","Service Company"];
+const COUNTRIES  = ["Cambodia","Thailand","Vietnam","Singapore","Malaysia"];
+const CURRENCIES = ["USD","KHR","THB","VND","SGD"];
+const LANGUAGES  = ["English","Khmer","Thai","Vietnamese"];
+const TIMEZONES  = ["Asia/Phnom_Penh (UTC+7)","Asia/Bangkok (UTC+7)","Asia/Ho_Chi_Minh (UTC+7)","Asia/Singapore (UTC+8)","Asia/Kuala_Lumpur (UTC+8)"];
 
-function RegisterPage() {
-  const [loading, setLoading] = useState(false);
-  const [fetchingData, setFetchingData] = useState(true);
+export default function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
-  const initialPlanId = searchParams.get("plan_id");
-  const initialServiceCode = searchParams.get("service_code") || searchParams.get("service");
+  const [step, setStep] = useState(1);
+  const [yearly, setYearly] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [showPass2, setShowPass2] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const otpRefs = [useRef(),useRef(),useRef(),useRef(),useRef(),useRef()];
 
-  const { lang, setLang } = useLanguage();
-  const t = translations[lang] || translations.en;
+  // Step 1 – Account
+  const [acc, setAcc] = useState({ firstName:"", lastName:"", username:"", email:"", phone:"", password:"", confirm:"" });
+  // Step 2 – Company
+  const [biz, setBiz] = useState({ name:"", type:"", email:"", phone:"", tax:"", website:"", logo:null });
+  // Step 3 – Location
+  const [loc, setLoc] = useState({ country:"Cambodia", province:"", city:"", address:"", timezone:TIMEZONES[0], currency:"USD", language:"English" });
+  // Step 4 – Plan
+  const [plan, setPlan] = useState("business");
+  // Step 5 – OTP
+  const [otp, setOtp] = useState(["","","","","",""]);
+  const [agreed, setAgreed] = useState(false);
+  const [privacyOk, setPrivacyOk] = useState(false);
 
-  // Wizard state
-  const [currentStep, setCurrentStep] = useState(1);
-  const [packages, setPackages] = useState([]);
-  const [plans, setPlans] = useState([]);
+  const strength = getStrength(acc.password);
+  const progress = ((step - 1) / (STEPS.length - 1)) * 100;
 
-  // Form State
-  const [formData, setFormData] = useState({
-    business_name: "",
-    owner_name: "",
-    email: "",
-    password: "",
-    phone: "",
-    shop_size: "",
-    business_nature: "",
-    province: "",
-    district: ""
-  });
+  const Field = ({ label, children, half }) => (
+    <div className={`ap-field${half ? "" : ""}`}>{label && <label className="ap-label">{label}</label>}{children}</div>
+  );
 
-  const [selectedPackage, setSelectedPackage] = useState(null);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  const Inp = ({ val, onChange, type="text", ph, icon }) => (
+    <div className="ap-input-wrap">
+      <input className="ap-input" type={type} value={val} onChange={onChange} placeholder={ph} style={icon ? { paddingRight:40 } : {}} />
+      {icon && <button className="ap-input-icon" onClick={icon.fn}><icon.C open={icon.open} /></button>}
+    </div>
+  );
 
-  useEffect(() => {
-    fetchSaaSData();
-  }, []);
-
-  const fetchSaaSData = async () => {
-    setFetchingData(true);
-    try {
-      // 1. Fetch dynamic active packages
-      const pkgRes = await request("subscription/packages/public", "get");
-      let activePkgs = [];
-      if (pkgRes && pkgRes.success && pkgRes.list) {
-        activePkgs = pkgRes.list;
-        setPackages(activePkgs);
-      }
-
-      // 2. Fetch dynamic active plans
-      const planRes = await request("plans/public", "get");
-      let activePlans = [];
-      if (planRes && planRes.success && planRes.plans) {
-        activePlans = planRes.plans.filter(p => p.is_active !== 0);
-        setPlans(activePlans);
-      }
-
-      // Pre-select plan if plan_id passed in URL
-      if (initialPlanId && activePlans.length > 0) {
-        const matchedPlan = activePlans.find(p => String(p.id) === String(initialPlanId));
-        if (matchedPlan) setSelectedPlan(matchedPlan);
-      } else if (activePlans.length > 0) {
-        // Default to Free Plan (id 1 or first one)
-        const defaultPlan = activePlans.find(p => p.id === 1) || activePlans[0];
-        setSelectedPlan(defaultPlan);
-      }
-
-      // Pre-select package/service if passed in URL
-      if (initialServiceCode && activePkgs.length > 0) {
-        const matchedPkg = activePkgs.find(p => p.code === initialServiceCode || p.industry_code === initialServiceCode);
-        if (matchedPkg) setSelectedPackage(matchedPkg);
-      } else if (activePkgs.length > 0) {
-        // Default to first package (usually Coffee shop)
-        setSelectedPackage(activePkgs[0]);
-      }
-
-    } catch (err) {
-      console.error("Failed to load registration configurations:", err);
-      message.error("Failed to initialize registration services.");
-    } finally {
-      setFetchingData(false);
+  const validateStep = () => {
+    if (step === 1) {
+      if (!acc.firstName || !acc.lastName || !acc.email || !acc.password) { message.warning("Fill all required fields"); return false; }
+      if (!/\S+@\S+\.\S+/.test(acc.email)) { message.warning("Enter a valid email"); return false; }
+      if (acc.password.length < 8) { message.warning("Password must be 8+ characters"); return false; }
+      if (acc.password !== acc.confirm) { message.warning("Passwords do not match"); return false; }
     }
+    if (step === 2 && !biz.name) { message.warning("Company name is required"); return false; }
+    return true;
   };
 
-  const handleNext = () => {
-    if (currentStep === 1) {
-      if (!formData.business_name || !formData.owner_name || !formData.phone || !formData.email || !formData.password) {
-        message.warning(lang === 'kh' ? "សូមបំពេញព័ត៌មានដែលចាំបាច់ទាំងអស់" : "Please fill in all mandatory fields");
-        return;
-      }
-      // Simple email validation
-      if (!/\S+@\S+\.\S+/.test(formData.email)) {
-        message.warning(lang === 'kh' ? "សូមបញ្ចូលអាសយដ្ឋានអ៊ីមែលត្រឹមត្រូវ" : "Please enter a valid email address");
-        return;
-      }
-      if (formData.password.length < 6) {
-        message.warning(lang === 'kh' ? "លេខសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ ខ្ទង់" : "Password must be at least 6 characters");
-        return;
-      }
-      if (initialServiceCode && selectedPackage) {
-        setCurrentStep(3);
-        return;
-      }
-    }
+  const next = () => { if (validateStep()) setStep(s => s + 1); };
+  const back = () => setStep(s => s - 1);
 
-    if (currentStep === 2) {
-      if (!selectedPackage || selectedPackage.status !== 'active') {
-        message.warning(lang === 'kh' ? "សូមជ្រើសរើសប្រភេទសេវាកម្មអាជីវកម្មដែលសកម្ម" : "Please select an active industry service package");
-        return;
-      }
-    }
-
-    if (currentStep === 3) {
-      if (!formData.shop_size || !formData.business_nature || !formData.province || !formData.district) {
-        message.warning(lang === 'kh' ? "សូមបំពេញព័ត៌មានលម្អិត និងទីតាំងអាសយដ្ឋានហាងរបស់អ្នក" : "Please complete all shop details and select location address");
-        return;
-      }
-    }
-
-    if (currentStep === 4 && !selectedPlan) {
-      message.warning(lang === 'kh' ? "សូមជ្រើសរើសគម្រោងបង់ប្រាក់" : "Please select a pricing plan");
-      return;
-    }
-
-    setCurrentStep(currentStep + 1);
-  };
-
-  const handlePrev = () => {
-    if (currentStep > 1) {
-      if (currentStep === 3 && initialServiceCode && selectedPackage) {
-        setCurrentStep(1);
-      } else {
-        setCurrentStep(currentStep - 1);
-      }
-    }
+  const handleOtp = (i, v) => {
+    if (!/^\d?$/.test(v)) return;
+    const next2 = [...otp]; next2[i] = v; setOtp(next2);
+    if (v && i < 5) otpRefs[i + 1].current?.focus();
   };
 
   const onSubmit = async () => {
+    if (!agreed || !privacyOk) { message.warning("Please accept terms and privacy policy"); return; }
     setLoading(true);
     try {
       const payload = {
-        business_name: formData.business_name,
-        owner_name: formData.owner_name,
-        email: formData.email,
-        password: formData.password,
-        phone: formData.phone,
-        package_id: selectedPackage?.id,
-        shop_size: formData.shop_size,
-        business_nature: formData.business_nature,
-        plan_id: selectedPlan?.id,
-        plan_type: selectedPlan?.id === 1 ? 'basic' : selectedPlan?.id === 2 ? 'standard' : 'premium',
-        active_modules: selectedPackage?.code === 'coffee_cafe' ? 'POS' : selectedPackage?.code,
-        province: formData.province,
-        district: formData.district
+        business_name: biz.name,
+        owner_name: `${acc.firstName} ${acc.lastName}`,
+        email: acc.email,
+        password: acc.password,
+        phone: acc.phone,
+        plan_type: plan,
+        province: loc.province,
+        district: loc.city,
       };
-      
       const res = await request("auth/register", "post", payload);
-      if (res && res.success) {
-        message.success(lang === 'kh' ? "ការចុះឈ្មោះអាជីវកម្មបានជោគជ័យ! សូមចូលប្រព័ន្ធ។" : "Business Registered Successfully! Please Login.");
-        navigate("/login");
+      if (res?.success) {
+        setSuccess(true);
+        setTimeout(() => navigate("/login"), 4000);
       } else {
-        message.error(res.message || "Registration failed. Try again.");
+        message.error(res?.message || "Registration failed");
       }
-    } catch (err) {
-      // Handled globally
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* global */ }
+    finally { setLoading(false); }
   };
 
-  const getStepTitle = () => {
-    switch (currentStep) {
-      case 1: return lang === 'kh' ? "គណនីម្ចាស់" : "Account Info";
-      case 2: return lang === 'kh' ? "រើសសេវាកម្ម" : "Select Service";
-      case 3: return lang === 'kh' ? "ព័ត៌មានហាង" : "Shop Details";
-      case 4: return lang === 'kh' ? "រើសគម្រោង" : "Choose Plan";
-      case 5: return lang === 'kh' ? "ពិនិត្យឡើងវិញ" : "Review";
-      default: return "";
-    }
-  };
-
-  return (
+  /* ── STEP RENDERERS ── */
+  const renderStep1 = () => (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');
-        *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-        body { overflow-x: hidden; background: #2a2a2a; font-family: 'DM Sans', sans-serif; }
-        
-        .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; }
-        .main-card { position: relative; z-index: 10; width: 960px; max-width: 95vw; min-height: 620px; border-radius: 28px; overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,0.6); display: flex; background: #1a1a1a; }
-        .left-panel { width: 40%; background: #F0EAD8; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; position: relative; z-index: 1; flex-shrink: 0; }
-        .right-panel { flex: 1; background: #1a1a1a; display: flex; flex-direction: column; justify-content: space-between; padding: 36px 44px 36px 76px; position: relative; z-index: 1; }
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .step-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.1);
-          transition: all 0.3s;
-        }
-        .step-dot.active {
-          background: #c0a060;
-          box-shadow: 0 0 8px #c0a060;
-          transform: scale(1.3);
-        }
-        .step-dot.completed {
-          background: #10b981;
-        }
-
-        @media (max-width: 850px) {
-          .main-card { width: 100% !important; max-width: 100% !important; min-height: 100vh !important; border-radius: 0 !important; flex-direction: column !important; margin: 0 !important; box-shadow: none !important; }
-          .left-panel { width: 100% !important; padding: 15px 20px !important; min-height: 80px !important; flex-direction: row !important; justify-content: flex-start !important; gap: 15px !important; }
-          .left-panel h2, .left-panel p { display: none !important; }
-          .right-panel { width: 100% !important; padding: 25px 20px !important; flex: 1 !important; border-top: 1px solid rgba(255,255,255,0.05); }
-          .wave-divider, .bg-blobs { display: none !important; }
-        }
-
-        .lang-switcher { position: fixed; top: 15px; right: 15px; z-index: 100; display: flex; gap: 4px; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 100px; backdrop-filter: blur(10px); }
-        .lang-btn { padding: 5px 10px; border-radius: 100px; border: none; font-size: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-      `}</style>
-
-      <div className="login-container">
-        <div className="bg-blobs">
-          <div style={{ position: "absolute", top: "-10%", left: "-5%", width: "40vw", height: "40vw", borderRadius: "50%", background: "#222", zIndex: 0 }} />
-          <div style={{ position: "absolute", bottom: "-10%", right: "-5%", width: "45vw", height: "45vw", borderRadius: "50%", background: "#1f1f1f", zIndex: 0 }} />
+      <div className="ap-row">
+        <Field label="First Name *">
+          <input className="ap-input" placeholder="John" value={acc.firstName}
+            onChange={e => setAcc({...acc, firstName:e.target.value})} />
+        </Field>
+        <Field label="Last Name *">
+          <input className="ap-input" placeholder="Doe" value={acc.lastName}
+            onChange={e => setAcc({...acc, lastName:e.target.value})} />
+        </Field>
+      </div>
+      <Field label="Username">
+        <input className="ap-input" placeholder="johndoe" value={acc.username}
+          onChange={e => setAcc({...acc, username:e.target.value})} />
+      </Field>
+      <Field label="Email Address *">
+        <input className="ap-input" type="email" placeholder="you@company.com" value={acc.email}
+          onChange={e => setAcc({...acc, email:e.target.value})} />
+      </Field>
+      <Field label="Phone Number">
+        <input className="ap-input" placeholder="+855 xxx xxx xxx" value={acc.phone}
+          onChange={e => setAcc({...acc, phone:e.target.value})} />
+      </Field>
+      <Field label="Password *">
+        <div className="ap-input-wrap">
+          <input className="ap-input" type={showPass?"text":"password"} placeholder="Min 8 characters"
+            style={{paddingRight:40}} value={acc.password}
+            onChange={e => setAcc({...acc, password:e.target.value})} />
+          <button className="ap-input-icon" onClick={() => setShowPass(!showPass)}><EyeIcon open={showPass}/></button>
         </div>
-
-        <div className="lang-switcher">
-          <button className="lang-btn" onClick={() => setLang("en")} style={{ background: lang === "en" ? "#c0a060" : "transparent", color: lang === "en" ? "#000" : "#fff" }}>EN</button>
-          <button className="lang-btn" onClick={() => setLang("kh")} style={{ background: lang === "kh" ? "#c0a060" : "transparent", color: lang === "kh" ? "#000" : "#fff" }}>KH</button>
-        </div>
-
-        <div className="main-card">
-          <div className="left-panel">
-            <div className="mobile-only-svg" style={{ display: "none" }}>
-              <CoffeeIllustration size={50} />
+        {acc.password && (
+          <>
+            <div className="ap-strength">
+              {[1,2,3,4].map(i => <div key={i} className={`ap-strength-bar${i<=strength?` s${strength}`:""}`}/>)}
             </div>
-            <div className="desktop-only-svg">
-              <CoffeeIllustration size={180} />
+            <div className="ap-strength-label" style={{color:STRENGTH_COLORS[strength]}}>
+              {STRENGTH_LABELS[strength]}
             </div>
-            <style>{`
-              @media (max-width: 850px) {
-                .mobile-only-svg { display: block !important; }
-                .desktop-only-svg { display: none !important; }
-              }
-            `}</style>
-            <h2 style={{ fontSize: 24, fontWeight: 800, color: "#1a1a1a", marginTop: 20, textAlign: "center" }}>
-              {lang === 'kh' ? "ចុះឈ្មោះសមាជិក" : "SaaS Onboarding"}
-            </h2>
-            <p style={{ fontSize: 13, color: "#444", textAlign: "center", marginTop: 8, lineHeight: 1.4 }}>
-              {lang === 'kh' 
-                ? "បង្កើតគណនី និងរៀបចំប្រព័ន្ធគ្រប់គ្រងហាងរបស់អ្នកម្តងមួយជំហានៗ" 
-                : "Create your tenant account and configure your business environment step-by-step"}
-            </p>
-          </div>
-
-          <WaveDivider />
-
-          <div className="right-panel">
-            {fetchingData ? (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
-                <Spin size="large" />
-                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>
-                  Initializing Dynamic Service Configurations...
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Header of steps */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                  <div>
-                    <span style={{ fontSize: 10, color: "#c0a060", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
-                      {(() => {
-                        if (initialServiceCode && selectedPackage) {
-                          const stepMapping = { 1: 1, 3: 2, 4: 3, 5: 4 };
-                          const displayStep = stepMapping[currentStep] || 1;
-                          return lang === 'kh' ? `ជំហានទី ${displayStep} នៃ ៤` : `Step ${displayStep} of 4`;
-                        }
-                        return lang === 'kh' ? `ជំហានទី ${currentStep} នៃ ៥` : `Step ${currentStep} of 5`;
-                      })()}
-                    </span>
-                    <h3 style={{ color: "white", fontSize: 18, fontWeight: 800, marginTop: 2 }}>
-                      {getStepTitle()}
-                    </h3>
-                  </div>
-                  {/* Step dots */}
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {(initialServiceCode && selectedPackage ? [1, 3, 4, 5] : [1, 2, 3, 4, 5]).map((step) => (
-                      <div 
-                        key={step} 
-                        className={`step-dot ${currentStep === step ? 'active' : currentStep > step ? 'completed' : ''}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Form Wrapper */}
-                <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, marginBottom: 20 }}>
-                  {currentStep === 1 && (
-                    <StepAccountInfo 
-                      formData={formData} 
-                      setFormData={setFormData} 
-                      lang={lang} 
-                      t={t} 
-                    />
-                  )}
-                  {currentStep === 2 && (
-                    <StepSelectService 
-                      packages={packages} 
-                      selectedPackage={selectedPackage} 
-                      onSelect={(pkg) => {
-                        setSelectedPackage(pkg);
-                        // Reset shop details when package changes
-                        setFormData(prev => ({ ...prev, shop_size: "", business_nature: "", province: "", district: "" }));
-                      }}
-                      lang={lang} 
-                    />
-                  )}
-                  {currentStep === 3 && (
-                    <StepShopDetails 
-                      selectedPackage={selectedPackage}
-                      formData={formData}
-                      setFormData={setFormData}
-                      lang={lang}
-                    />
-                  )}
-                  {currentStep === 4 && (
-                    <StepSelectPlan 
-                      plans={plans}
-                      selectedPlan={selectedPlan}
-                      onSelect={setSelectedPlan}
-                      lang={lang}
-                    />
-                  )}
-                  {currentStep === 5 && (
-                    <StepReview 
-                      formData={formData}
-                      selectedPackage={selectedPackage}
-                      selectedPlan={selectedPlan}
-                      lang={lang}
-                    />
-                  )}
-                </div>
-
-                {/* Footer Buttons */}
-                <div style={{ display: "flex", gap: 12, borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 18 }}>
-                  {currentStep > 1 && (
-                    <button
-                      type="button"
-                      onClick={handlePrev}
-                      style={{
-                        flex: 1,
-                        height: 44,
-                        borderRadius: 12,
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        background: "transparent",
-                        color: "white",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        transition: "0.2s"
-                      }}
-                    >
-                      {lang === 'kh' ? "ថយក្រោយ" : "Back"}
-                    </button>
-                  )}
-                  
-                  {currentStep < 5 ? (
-                    <button
-                      type="button"
-                      onClick={handleNext}
-                      style={{
-                        flex: 2,
-                        height: 44,
-                        borderRadius: 12,
-                        border: "none",
-                        background: "#c0a060",
-                        color: "#1a1a1a",
-                        fontSize: 13,
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        transition: "0.2s"
-                      }}
-                    >
-                      {lang === 'kh' ? "បន្តទៅមុខ" : "Continue"}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={onSubmit}
-                      disabled={loading}
-                      style={{
-                        flex: 2,
-                        height: 44,
-                        borderRadius: 12,
-                        border: "none",
-                        background: loading ? "#444" : "#10b981",
-                        color: "#1a1a1a",
-                        fontSize: 13,
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        transition: "0.2s"
-                      }}
-                    >
-                      {loading ? "..." : (lang === 'kh' ? "បង្កើតអាជីវកម្ម" : "Establish Business")}
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-
-            {!fetchingData && currentStep === 1 && (
-              <p style={{ textAlign: "center", fontSize: "12px", color: "rgba(255,255,255,0.4)", marginTop: 12 }}>
-                {lang === 'kh' ? "មានគណនីរួចហើយ?" : "Already have a branch?"}{" "}
-                <Link to="/login" style={{ color: "#c0a060", fontWeight: 700, textDecoration: "none" }}>
-                  {lang === 'kh' ? "ចូលប្រើប្រាស់" : "Sign In"}
-                </Link>
-              </p>
-            )}
-          </div>
+          </>
+        )}
+      </Field>
+      <Field label="Confirm Password *">
+        <div className="ap-input-wrap">
+          <input className="ap-input" type={showPass2?"text":"password"} placeholder="Repeat password"
+            style={{paddingRight:40}} value={acc.confirm}
+            onChange={e => setAcc({...acc, confirm:e.target.value})} />
+          <button className="ap-input-icon" onClick={() => setShowPass2(!showPass2)}><EyeIcon open={showPass2}/></button>
         </div>
+        {acc.confirm && acc.password !== acc.confirm && (
+          <div style={{fontSize:11,color:"#ef4444",marginTop:4}}>Passwords do not match</div>
+        )}
+      </Field>
+    </>
+  );
+
+  const renderStep2 = () => (
+    <>
+      <Field label="Company Name *">
+        <input className="ap-input" placeholder="Acme Corporation" value={biz.name}
+          onChange={e => setBiz({...biz, name:e.target.value})} />
+      </Field>
+      <Field label="Business Type">
+        <select className="ap-input" value={biz.type} onChange={e => setBiz({...biz, type:e.target.value})}>
+          <option value="">Select type…</option>
+          {BIZ_TYPES.map(t => <option key={t}>{t}</option>)}
+        </select>
+      </Field>
+      <div className="ap-row">
+        <Field label="Company Email">
+          <input className="ap-input" type="email" placeholder="info@company.com" value={biz.email}
+            onChange={e => setBiz({...biz, email:e.target.value})} />
+        </Field>
+        <Field label="Company Phone">
+          <input className="ap-input" placeholder="+855…" value={biz.phone}
+            onChange={e => setBiz({...biz, phone:e.target.value})} />
+        </Field>
+      </div>
+      <div className="ap-row">
+        <Field label="Tax / VAT Number">
+          <input className="ap-input" placeholder="K001-XXXX" value={biz.tax}
+            onChange={e => setBiz({...biz, tax:e.target.value})} />
+        </Field>
+        <Field label="Website">
+          <input className="ap-input" placeholder="https://company.com" value={biz.website}
+            onChange={e => setBiz({...biz, website:e.target.value})} />
+        </Field>
+      </div>
+      <Field label="Company Logo">
+        <div className="ap-upload">
+          <div className="ap-upload-icon">🖼️</div>
+          <div className="ap-upload-text">Click or drag logo here · PNG, JPG, SVG · Max 2MB</div>
+        </div>
+      </Field>
+    </>
+  );
+
+  const renderStep3 = () => (
+    <>
+      <div className="ap-row">
+        <Field label="Country">
+          <select className="ap-input" value={loc.country} onChange={e => setLoc({...loc, country:e.target.value})}>
+            {COUNTRIES.map(c => <option key={c}>{c}</option>)}
+          </select>
+        </Field>
+        <Field label="Province / State">
+          <input className="ap-input" placeholder="Phnom Penh" value={loc.province}
+            onChange={e => setLoc({...loc, province:e.target.value})} />
+        </Field>
+      </div>
+      <div className="ap-row">
+        <Field label="City">
+          <input className="ap-input" placeholder="City" value={loc.city}
+            onChange={e => setLoc({...loc, city:e.target.value})} />
+        </Field>
+        <Field label="Timezone">
+          <select className="ap-input" value={loc.timezone} onChange={e => setLoc({...loc, timezone:e.target.value})}>
+            {TIMEZONES.map(t => <option key={t}>{t}</option>)}
+          </select>
+        </Field>
+      </div>
+      <Field label="Full Address">
+        <input className="ap-input" placeholder="Street, Building No…" value={loc.address}
+          onChange={e => setLoc({...loc, address:e.target.value})} />
+      </Field>
+      <div className="ap-row">
+        <Field label="Currency">
+          <select className="ap-input" value={loc.currency} onChange={e => setLoc({...loc, currency:e.target.value})}>
+            {CURRENCIES.map(c => <option key={c}>{c}</option>)}
+          </select>
+        </Field>
+        <Field label="Language">
+          <select className="ap-input" value={loc.language} onChange={e => setLoc({...loc, language:e.target.value})}>
+            {LANGUAGES.map(l => <option key={l}>{l}</option>)}
+          </select>
+        </Field>
       </div>
     </>
   );
-}
 
-export default RegisterPage;
+  const renderStep4 = () => (
+    <>
+      <div style={{textAlign:"center", marginBottom:4}}>
+        <div className="ap-plan-toggle">
+          {["Monthly","Yearly"].map(v => (
+            <button key={v} className={`ap-plan-toggle-btn${(v==="Yearly"?yearly:!yearly)?" active":""}`}
+              onClick={() => setYearly(v==="Yearly")}>
+              {v} {v==="Yearly" && <span style={{fontSize:10,marginLeft:4,opacity:.7}}>Save 20%</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="ap-plan-cards">
+        {PLANS.map(p => (
+          <div key={p.id} className={`ap-plan-card${plan===p.id?" selected":""}`} onClick={() => setPlan(p.id)}>
+            {p.popular && <div className="ap-plan-badge">⭐ Recommended</div>}
+            <div className="ap-plan-name">{p.name}</div>
+            <div className="ap-plan-price">
+              ${yearly ? p.yr : p.price}<span>/mo</span>
+            </div>
+            <ul className="ap-plan-feats">
+              {p.feats.map(f => <li key={f}>{f}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {yearly && <div style={{textAlign:"center",fontSize:11,color:"#22C55E",marginBottom:8}}>🎉 2 months free with annual plan</div>}
+    </>
+  );
+
+  const renderStep5 = () => (
+    <>
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.7)",marginBottom:8}}>
+          📧 Email Verification Code
+        </div>
+        <div style={{fontSize:12,color:"rgba(255,255,255,0.4)",marginBottom:12}}>
+          Sent to {acc.email || "your email"}
+        </div>
+        <div className="ap-otp-row">
+          {otp.map((v, i) => (
+            <input key={i} ref={otpRefs[i]} className="ap-otp-input"
+              maxLength={1} value={v}
+              onChange={e => handleOtp(i, e.target.value)}
+              onKeyDown={e => e.key === "Backspace" && !v && i > 0 && otpRefs[i-1].current?.focus()} />
+          ))}
+        </div>
+        <button style={{background:"none",border:"none",color:"#22C55E",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+          Resend code
+        </button>
+      </div>
+      <div style={{marginBottom:16,padding:"12px 14px",background:"rgba(255,255,255,0.02)",borderRadius:12,border:"1px solid rgba(255,255,255,0.06)"}}>
+        <div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.7)",marginBottom:6}}>📱 SMS Verification</div>
+        <input className="ap-input" placeholder="Enter SMS code" style={{marginBottom:0}} />
+      </div>
+      <div className="ap-check-row" style={{marginBottom:10}}>
+        <input type="checkbox" id="terms" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
+        <label htmlFor="terms" style={{fontSize:12}}>
+          I agree to the{" "}
+          <a href="#" style={{color:"#22C55E",textDecoration:"none"}}>Terms and Conditions</a>
+        </label>
+      </div>
+      <div className="ap-check-row">
+        <input type="checkbox" id="priv" checked={privacyOk} onChange={e => setPrivacyOk(e.target.checked)} />
+        <label htmlFor="priv" style={{fontSize:12}}>
+          I have read the{" "}
+          <a href="#" style={{color:"#22C55E",textDecoration:"none"}}>Privacy Policy</a>
+        </label>
+      </div>
+    </>
+  );
+
+  if (success) return (
+    <div className="ap-root" style={{alignItems:"center",justifyContent:"center"}}>
+      <div className="ap-card" style={{textAlign:"center",maxWidth:440}}>
+        <div className="ap-success">
+          <div className="ap-success-anim">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5">
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+          </div>
+          <div className="ap-success-title">Account Created! 🎉</div>
+          <div className="ap-success-sub">Your workspace is being set up. Redirecting to login in a moment…</div>
+          <div style={{fontSize:12,color:"rgba(255,255,255,0.3)"}}>Check your email to verify your account before logging in.</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="ap-root" style={{alignItems:"center",justifyContent:"center",minHeight:"100vh",padding:"32px 20px"}}>
+      <div className="ap-card" style={{maxWidth:520}}>
+        {/* Logo */}
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:24}}>
+          <div className="ap-logo-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                stroke="#020c05" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="ap-logo-name">SaaS<span style={{color:"#22C55E"}}>Platform</span></div>
+        </div>
+
+        {/* Progress */}
+        <div className="ap-step-bar-wrap">
+          <div className="ap-step-label">
+            <span>Step <strong>{step}</strong> of {STEPS.length} — <strong style={{color:"rgba(255,255,255,0.7)"}}>{STEPS[step-1]}</strong></span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="ap-step-track"><div className="ap-step-fill" style={{width:`${progress}%`}}/></div>
+          <div className="ap-step-dots">
+            {STEPS.map((_,i) => (
+              <div key={i} className={`ap-step-dot${i+1<step?" done":i+1===step?" active":""}`}/>
+            ))}
+          </div>
+        </div>
+
+        {/* Title */}
+        <div style={{marginBottom:20}}>
+          <div className="ap-card-title">{STEPS[step-1]}</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.45)"}}>
+            {["Fill in your account credentials","Tell us about your business","Where is your business located?","Choose the right plan for you","Verify your identity to finish"][step-1]}
+          </div>
+        </div>
+
+        {/* Step content */}
+        {step===1 && renderStep1()}
+        {step===2 && renderStep2()}
+        {step===3 && renderStep3()}
+        {step===4 && renderStep4()}
+        {step===5 && renderStep5()}
+
+        {/* Navigation */}
+        <div className="ap-btn-group" style={{marginTop:20}}>
+          {step > 1
+            ? <button className="ap-btn ap-btn-ghost" onClick={back}>← Back</button>
+            : <Link to="/login" className="ap-btn ap-btn-ghost">Sign In</Link>
+          }
+          {step < 5
+            ? <button className="ap-btn ap-btn-green" onClick={next}>Continue →</button>
+            : <button className={`ap-btn ap-btn-green${loading?" ap-btn-disabled":""}`} onClick={onSubmit}>
+                {loading ? "Creating Workspace…" : "🚀 Create Workspace"}
+              </button>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}

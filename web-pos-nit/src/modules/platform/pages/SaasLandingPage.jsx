@@ -138,7 +138,7 @@ const SaasLandingPage = () => {
             </a>
           </div>
           <div className="pl-hero-perks">
-            {["No Credit Card","14 Days Free Trial","Cancel Anytime","Setup in 5 Minutes"].map(p => (
+            {["No Credit Card","30 Days Free Trial","Cancel Anytime","Setup in 5 Minutes"].map(p => (
               <span key={p} className="pl-perk"><CheckIcon />{p}</span>
             ))}
           </div>

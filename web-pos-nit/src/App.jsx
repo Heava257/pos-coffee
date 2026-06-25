@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom
 import HomePage from "@/modules/dashboard/pages/HomePage";
 import LoginPage from "@/modules/auth/pages/LoginPage";
 import RegisterPage from "@/modules/auth/pages/RegisterPage";
+import WorkspaceSetupPage from "@/modules/auth/pages/WorkspaceSetupPage";
 import ScanPage from "@/modules/auth/pages/ScanPage";
 import VerifyEmailPage from "@/modules/auth/pages/VerifyEmailPage";
 import ForgotPasswordPage from "@/modules/auth/pages/ForgotPasswordPage";
@@ -142,6 +143,7 @@ function App() {
           <Route path="/forgot" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/workspace-setup" element={<WorkspaceSetupPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/terms" element={<LegalPage />} />
           <Route path="/privacy" element={<LegalPage />} />
