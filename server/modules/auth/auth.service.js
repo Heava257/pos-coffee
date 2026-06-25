@@ -341,7 +341,7 @@ class AuthService {
 
     const isStaff = user.role_code !== 'owner' && user.role_code !== 'super_admin';
     if (user.is_verified === 0 && !isStaff) {
-      return { unverified: true, email: user.email };
+      throw new Error("Your email is not verified yet! Please check your inbox to verify your account first.");
     }
 
     if (user.business_status !== 'active') {
