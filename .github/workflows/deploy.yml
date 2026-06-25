@@ -38,6 +38,7 @@ jobs:
       - name: Deploy Backend to EC2
         run: |
           rsync -avz --delete \
+            --exclude '.env' \
             --exclude 'node_modules' \
             --exclude 'logs' \
             --exclude '.git' \
