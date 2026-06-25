@@ -204,6 +204,15 @@ function LoginPageInner() {
             </div>
 
             <GoogleBtn onSuccess={onGoogle} loading={googleLoading} t={t} />
+
+            <div style={{ marginTop: 24, textAlign: "center" }}>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
+                {lang === 'kh' ? "មិនទាន់មានគណនីមែនទេ? " : "Don't have an account? "}
+              </span>
+              <Link to="/register" style={{ fontSize: 13, color: "#c0a060", textDecoration: "none", fontWeight: 600, transition: "color 0.2s" }} onMouseEnter={(e) => e.target.style.color = "#d0b070"} onMouseLeave={(e) => e.target.style.color = "#c0a060"}>
+                {lang === 'kh' ? "ចុះឈ្មោះនៅទីនេះ" : "Register here"}
+              </Link>
+            </div>
           </div>
         </div>
       </div>

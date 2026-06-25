@@ -74,7 +74,7 @@ const SaasLandingPage = () => {
           color: #f3f4f6;
           font-family: 'Plus Jakarta Sans', sans-serif;
           min-height: 100vh;
-          overflow-x: hidden;
+          overflow-x: clip;
           position: relative;
         }
 
@@ -108,7 +108,7 @@ const SaasLandingPage = () => {
           top: 0;
           z-index: 1000;
           backdrop-filter: blur(16px);
-          background-color: rgba(11, 15, 25, 0.7);
+          background-color: #0b0f19;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
