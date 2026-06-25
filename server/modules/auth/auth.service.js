@@ -135,7 +135,9 @@ class AuthService {
           pp.plan_id IS NOT NULL
           OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', ''))
           OR (
-              NOT EXISTS (SELECT 1 FROM plan_permissions WHERE permission_id = p.id)
+              -- Truly Core: Only for Platform Admins (Business ID 1)
+              b.id = 1
+              AND NOT EXISTS (SELECT 1 FROM plan_permissions WHERE permission_id = p.id)
               AND NOT EXISTS (SELECT 1 FROM module_permissions WHERE permission_id = p.id)
           )
       )
@@ -167,7 +169,12 @@ class AuthService {
       password,
       phone,
       plan_type,
-      active_modules
+      active_modules,
+      package_id,
+      shop_size,
+      business_nature,
+      province,
+      district
     } = body;
 
     const conn = await db.getConnection();
@@ -188,8 +195,8 @@ class AuthService {
       const finalModules = Array.isArray(active_modules) ? active_modules.join(",") : (active_modules || 'POS');
 
       const [business] = await conn.query(
-        "INSERT INTO businesses (name, owner_name, email, phone, plan_type, plan_id, active_modules) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [business_name, owner_name, email, phone, finalPlanType, planId, finalModules]
+        "INSERT INTO businesses (name, owner_name, email, phone, plan_type, plan_id, active_modules, package_id, shop_size, business_nature, province, district) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [business_name, owner_name, email, phone, finalPlanType, planId, finalModules, package_id || null, shop_size || null, business_nature || null, province || null, district || null]
       );
       const business_id = business.insertId;
 
@@ -221,7 +228,10 @@ class AuthService {
         const [existing] = await conn.query("SELECT id FROM roles WHERE business_id = ? AND code = 'owner' LIMIT 1", [business_id]);
         owner_role_id = existing[0].id;
       }
-      await conn.query("INSERT IGNORE INTO role_permissions (role_id, permission_id) SELECT ?, id FROM permissions", [owner_role_id]);
+      await conn.query(`
+        INSERT IGNORE INTO role_permissions (role_id, permission_id, can_view, can_create, can_edit, can_delete) 
+        SELECT ?, id, 1, 1, 1, 1 FROM permissions
+      `, [owner_role_id]);
 
       const [managerRes] = await conn.query(
         "INSERT IGNORE INTO roles (business_id, name, code) VALUES (?, ?, ?)",
@@ -233,8 +243,8 @@ class AuthService {
         manager_role_id = existing[0].id;
       }
       await conn.query(`
-        INSERT IGNORE INTO role_permissions (role_id, permission_id)
-        SELECT ?, id FROM permissions 
+        INSERT IGNORE INTO role_permissions (role_id, permission_id, can_view, can_create, can_edit, can_delete)
+        SELECT ?, id, 1, 1, 1, 1 FROM permissions 
         WHERE route_key IN ('/invoices', '/order', '/category', '/product', '/stock', '/supplier', '/purchase', '/report_Sale_Summary', '/profile', '/table', '/expense')
       `, [manager_role_id]);
 
@@ -248,8 +258,8 @@ class AuthService {
         sale_role_id = existing[0].id;
       }
       await conn.query(`
-        INSERT IGNORE INTO role_permissions (role_id, permission_id)
-        SELECT ?, id FROM permissions 
+        INSERT IGNORE INTO role_permissions (role_id, permission_id, can_view, can_create, can_edit, can_delete)
+        SELECT ?, id, 1, 1, 1, 0 FROM permissions 
         WHERE route_key IN ('/invoices', '/order', '/category', '/product', '/table', '/profile')
       `, [sale_role_id]);
 
@@ -260,10 +270,25 @@ class AuthService {
         [business_id, branch_id, owner_role_id, owner_name, email, hashedPassword, 'active', 0, verifyToken, '1234']
       );
 
+      // Resolve package industry mapping to activate only relevant categories
+      let targetIndustry = "coffee_cafe"; // Default fallback
+      if (package_id) {
+        const [pkgRows] = await conn.query("SELECT code, industry_code FROM modular_packages WHERE id = ?", [package_id]);
+        if (pkgRows.length > 0) {
+          const pkg = pkgRows[0];
+          const code = pkg.code;
+          if (code === "mart" || pkg.industry_code === "retail") {
+            targetIndustry = "mart";
+          } else {
+            targetIndustry = pkg.industry_code || code || "coffee_cafe";
+          }
+        }
+      }
+
       await conn.query(`
         INSERT INTO business_categories (business_id, category_id, is_active)
-        SELECT ?, id, 1 FROM categories WHERE business_id = 1
-      `, [business_id]);
+        SELECT ?, id, IF(industry_code = ?, 1, 0) FROM categories WHERE business_id = 1
+      `, [business_id, targetIndustry]);
 
       await conn.commit();
 

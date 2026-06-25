@@ -65,7 +65,8 @@ const RootRedirect = () => {
   if (!profile) return <SaasLandingPage />;
 
   const isAdmin = profile.is_super_admin === 1 ||
-    ['Owner', 'Executive', 'Admin'].includes(profile.role_name);
+    profile.business_id === 1 ||
+    ['Owner', 'Executive', 'Admin', 'PlatForm Owner', 'Platform Owner'].includes(profile.role_name);
 
   if (isAdmin) {
     return <Navigate to="/dashboard" replace />;
@@ -97,7 +98,8 @@ function App() {
             <Route path="/dashboard" element={<HomePage />} />
             <Route path="/invoices" element={<PosPage />} />
             <Route path="/table" element={<TablePage />} />
-            <Route path="/category" element={<GlobalCategoryPage />} />
+            <Route path="/category" element={<CategoryPage />} />
+            <Route path="/global-category" element={<GlobalCategoryPage />} />
             <Route path="/shop_managment" element={<BranchPage />} />
             <Route path="/expense" element={<ExpensePage />} />
             {/* <Route path="/total_due" element={<SmartProductEntry />} /> */}

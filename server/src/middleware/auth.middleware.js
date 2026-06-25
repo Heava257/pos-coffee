@@ -63,7 +63,11 @@ const authMiddleware = (permission_name) => {
                          WHERE (
                             pp.plan_id IS NOT NULL -- Permission is in the Plan
                             OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', '')) -- Permission is in an active Module
-                            OR mp.permission_id IS NULL -- Legacy/Core Permission (not in any plan/module)
+                            OR (
+                                -- Truly Core: Only for Platform Admins (Business ID 1)
+                                b.id = 1
+                                AND mp.permission_id IS NULL
+                            )
                          )`,
                         [req.business_id, req.role_id]
                     );

@@ -654,7 +654,7 @@ const StockPage = () => {
                             />
                         </div>
                     </Col>
-                    {Number(profile?.plan_id) > 5 && (
+                    {Number(profile?.plan_id) >= 2 && (
                         <Col xs={24} sm={12} lg={6}>
                             <div className="op-mini-card" style={{ padding: "15px 20px", position: 'relative', overflow: 'hidden' }}>
                                 <MdHistory size={80} style={{ position: 'absolute', right: -10, top: -10, color: 'rgba(30, 74, 45, 0.05)' }} />
@@ -678,11 +678,11 @@ const StockPage = () => {
                             />
                         </div>
                     </Col>
-                    <Col xs={24} sm={12} lg={Number(profile?.plan_id) > 5 ? 6 : 12}>
+                    <Col xs={24} sm={12} lg={Number(profile?.plan_id) >= 2 ? 6 : 12}>
                         <div className="op-mini-card" style={{ padding: "15px 20px", position: 'relative', overflow: 'hidden' }}>
                             <MdTrendingDown size={80} style={{ position: 'absolute', right: -10, top: -10, color: 'rgba(0,0,0,0.05)' }} />
                             <Statistic 
-                                title={<span style={{ color: lowStockMaterials > 0 ? '#fa8c16' : '#64748b', fontSize: 13, fontWeight: 700 }}>{Number(profile?.plan_id) > 5 ? t.ingredient_alerts : t.stock_alerts_general || "STOCK ALERTS"}</span>}
+                                title={<span style={{ color: lowStockMaterials > 0 ? '#fa8c16' : '#64748b', fontSize: 13, fontWeight: 700 }}>{Number(profile?.plan_id) >= 2 ? t.ingredient_alerts : t.stock_alerts_general || "STOCK ALERTS"}</span>}
                                 value={lowStockMaterials + lowStockProducts}
                                 valueStyle={{ color: lowStockMaterials > 0 ? '#fa8c16' : 'var(--theme-dark-green)', fontWeight: 900, fontSize: 32 }}
                                 suffix={<span style={{ fontSize: 14, marginLeft: 8 }}>{t.items_low}</span>}
@@ -759,7 +759,7 @@ const StockPage = () => {
                                             onChange={(v) => setFilters(f => ({ ...f, item_type: v }))}
                                         >
                                             <Option value="product">☕ {t.product}</Option>
-                                            {Number(profile?.plan_id) > 5 && <Option value="raw_material">🌿 {t.raw_material}</Option>}
+                                            {Number(profile?.plan_id) >= 2 && <Option value="raw_material">🌿 {t.raw_material}</Option>}
                                         </Select>
                                         <Select
                                             placeholder={t.transaction}
@@ -841,7 +841,7 @@ const StockPage = () => {
                                             >
                                                 {t.audit_product_title || "Audit Products"}
                                             </Button>
-                                            {Number(profile?.plan_id) > 5 && (
+                                            {Number(profile?.plan_id) >= 2 && (
                                                 <Button 
                                                     size="large" 
                                                     icon={<MdOutlineRotateLeft />}
@@ -1495,7 +1495,7 @@ const StockPage = () => {
                 ].filter(item => {
                     // Plan Restrictions:
                     // Plan <= 5 (Web Ordering / Basic) can only see Ledger (1) and Physical Audit (2)
-                    if (Number(profile?.plan_id) <= 5) {
+                    if (Number(profile?.plan_id) < 2) {
                         return ["1", "2"].includes(item.key);
                     }
                     return true;
@@ -1528,10 +1528,10 @@ const StockPage = () => {
                 <Form layout="vertical" form={form} onFinish={onFinish}>
                     <Row gutter={16}>
                         <Col span={12}>
-                            <Form.Item name="item_type" label={<span style={{ fontWeight: 700, fontSize: 13 }}>{t.inventory_item_type || "ITEM TYPE"}</span>} rules={[{ required: true }]} initialValue={Number(profile?.plan_id) <= 5 ? "product" : undefined}>
+                            <Form.Item name="item_type" label={<span style={{ fontWeight: 700, fontSize: 13 }}>{t.inventory_item_type || "ITEM TYPE"}</span>} rules={[{ required: true }]} initialValue={Number(profile?.plan_id) < 2 ? "product" : undefined}>
                                 <Select placeholder={t.select_item_type || "Pick level"} size="large" style={{ borderRadius: 10 }} onChange={() => form.setFieldValue("item_id", undefined)}>
                                     <Option value="product">☕ {t.finished_product_opt || "Finished Product"}</Option>
-                                    {Number(profile?.plan_id) > 5 && <Option value="raw_material">🌿 {t.raw_material_opt || "Raw Ingredient"}</Option>}
+                                    {Number(profile?.plan_id) >= 2 && <Option value="raw_material">🌿 {t.raw_material_opt || "Raw Ingredient"}</Option>}
                                 </Select>
                             </Form.Item>
                         </Col>

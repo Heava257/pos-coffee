@@ -58,8 +58,8 @@ const CategoryManageTab = ({ targetBusinessId }) => {
     setLoading(true);
     try {
       const url = targetBusinessId 
-        ? `business-categories?business_id=${targetBusinessId}` 
-        : "business-categories";
+        ? `category/business-categories?business_id=${targetBusinessId}` 
+        : "category/business-categories";
       const res = await request(url, "get");
       if (res && res.list) {
         setCategories(res.list.map(c => ({ ...c, is_active: !!c.is_active })));
@@ -90,7 +90,7 @@ const CategoryManageTab = ({ targetBusinessId }) => {
         selections 
       };
 
-      const res = await request("business-categories/bulk", "post", payload);
+      const res = await request("category/business-categories/bulk", "post", payload);
       if (res && res.success) {
         message.success("✅ Category settings saved! Please refresh to see changes in the product form.");
       } else {

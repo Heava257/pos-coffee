@@ -37,6 +37,7 @@ import PrintKitchenTicket from "@/modules/pos/components/PrintKitchenTicket";
 import PrintShiftReport from "@/modules/pos/components/PrintShiftReport";
 import PrintLabel from "@/modules/pos/components/PrintLabel";
 import QRPaymentModal from "@/modules/pos/components/QRPaymentModal";
+import { OpenShiftModal, CloseShiftModal } from "@/modules/pos/components/ShiftModal";
 import { PriceDisplay, useExchangeRate } from "@/app/providers/ExchangeRateProvider";
 import { useNavigate } from "react-router-dom";
 import {
@@ -223,18 +224,12 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
   return (
     <div
       className="pos-product-card"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       onClick={() => !isOOS && onAdd(product)}
       style={{
         background: COLORS.white,
         borderRadius: 18,
         padding: "14px 14px 12px",
-        boxShadow: hovered
-          ? "0 8px 28px rgba(30,74,45,0.15)"
-          : "0 2px 10px rgba(0,0,0,0.06)",
-        transform: hovered ? "translateY(-3px)" : "none",
-        transition: "all 0.25s ease",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
         cursor: isOOS ? "default" : "pointer",
         opacity: isOOS ? 0.55 : 1,
         position: "relative",
@@ -244,18 +239,7 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
         gap: 8,
       }}
     >
-      {/* progress shimmer effect placeholder */}
-      {!isImgLoaded && imgUrl && (
-        <div style={{
-          position: "absolute",
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: "linear-gradient(90deg, #f0ede6 25%, #f8f7f2 50%, #f0ede6 75%)",
-          backgroundSize: "200% 100%",
-          animation: "shimmer 1.5s infinite",
-          borderRadius: 18,
-          zIndex: 1
-        }} />
-      )}
+
 
       {/* price calculation logic */}
       {(() => {
@@ -375,7 +359,7 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
                     objectFit: "cover",
                     opacity: isImgLoaded ? 1 : 0,
                     transform: hovered ? "scale(1.1)" : "scale(1)",
-                    transition: "opacity 0.4s ease, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
+                    
                   }}
                 />
               ) : (
@@ -483,24 +467,19 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
           boxShadow: hovered && !isOOS
             ? `0 4px 12px ${COLORS.darkGreen}33`
             : "0 2px 6px rgba(0,0,0,0.05)",
-          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          
           transform: hovered && !isOOS ? "scale(1.1)" : "scale(1)",
           zIndex: 3
         }}
       >
         <PlusOutlined style={{
           fontSize: 15,
-          transition: "transform 0.4s ease",
+          
           transform: hovered ? "rotate(90deg)" : "rotate(0deg)"
         }} />
       </div>
       {/* styles */}
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-      `}</style>
+
     </div>
   );
 });
@@ -575,7 +554,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
             return (
               <tr
                 onClick={() => !isOOS && onAdd(p)}
-                style={{ borderBottom: `1px solid ${COLORS.softBorder}`, cursor: isOOS ? 'default' : 'pointer', transition: 'all 0.2s', opacity: isOOS ? 0.6 : 1 }}
+                style={{ borderBottom: `1px solid ${COLORS.softBorder}`, cursor: isOOS ? 'default' : 'pointer',  opacity: isOOS ? 0.6 : 1 }}
                 onMouseEnter={e => !isOOS && (e.currentTarget.style.background = '#fcfbf7')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
@@ -645,7 +624,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
                         alignItems: "center",
                         justifyContent: "center",
                         cursor: isOOS ? "not-allowed" : "pointer",
-                        transition: "all 0.3s ease",
+                        
                         opacity: isOOS ? 0.5 : 1,
                         transform: "scale(1)",
                         boxShadow: "0 2px 5px rgba(30,74,45,0.2)"
@@ -761,7 +740,7 @@ const TableSelectorModal = ({ open, onCancel, onSelect, branchId, COLORS, t, hel
                     padding: '16px 12px',
                     textAlign: 'center',
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    
                     position: 'relative',
                     boxShadow: isOccupied ? '0 4px 15px rgba(232,93,93,0.1)' : '0 2px 8px rgba(0,0,0,0.04)'
                   }}
@@ -828,12 +807,15 @@ const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove, onEdi
   return (
     <div
       style={{
-        padding: "10px 0",
-        borderBottom: `1px solid #f0f0f0`,
+        padding: "10px 12px",
+        marginBottom: 8,
+        border: `1.5px solid rgba(30, 74, 45, 0.12)`,
+        borderRadius: 12,
         display: "flex",
         alignItems: "center",
         gap: 10,
-        animation: 'fadeIn 0.2s ease-out'
+        background: "#fafaf9",
+        
       }}
     >
       {/* 1. Compact Thumbnail */}
@@ -922,6 +904,7 @@ function PosPage() {
   const t = translations[lang];
   const { profile, permissions } = useProfileStore(); // Reactive profile
   const hasTablePerm = permissions?.some(p => p.route_key?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'table');
+  const hasKdsPerm = permissions?.some(p => p.route_key?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'kds');
   const { isFullScreen, toggleFullScreen } = useUIStore();
   const [isDisabled, setIsDisabled] = useState(false);
   const [managerApprovalVisible, setManagerApprovalVisible] = useState(false);
@@ -988,10 +971,10 @@ function PosPage() {
   const baseLayout = LAYOUTS[layoutType] || LAYOUTS.coffee;
   const layoutConfig = {
     ...baseLayout,
-    hasTables: baseLayout.hasTables && Number(profile?.plan_id) > 4,
-    hasOrderTypes: baseLayout.hasOrderTypes && Number(profile?.plan_id) > 4,
-    hasDrafts: baseLayout.hasDrafts && Number(profile?.plan_id) > 4,
-    hasKitchen: baseLayout.hasKitchen && Number(profile?.plan_id) > 4,
+    hasTables: baseLayout.hasTables && Number(profile?.plan_id) >= 2,
+    hasOrderTypes: baseLayout.hasOrderTypes && Number(profile?.plan_id) >= 2,
+    hasDrafts: baseLayout.hasDrafts && Number(profile?.plan_id) >= 2,
+    hasKitchen: baseLayout.hasKitchen && Number(profile?.plan_id) >= 2 && hasKdsPerm,
   };
   const isRetail = layoutConfig.hasSidebar;
   const primaryColor = layoutConfig.primaryColor || COLORS.darkGreen;
@@ -1293,8 +1276,13 @@ function PosPage() {
         if (res && res.success) {
           message.success(res.message);
           handleClearCart(true, true); // Force hard clear of everything (cart, table, etc)
+          setOpenShiftModalVisible(false);
         } else {
           message.warning(res.message);
+          if (res?.message?.toLowerCase().includes("already have") || res?.message?.toLowerCase().includes("បើកវេន") || res?.message?.toLowerCase().includes("open shift")) {
+            setOpenShiftModalVisible(false);
+            checkShiftStatus();
+          }
         }
       } catch (error) {
         console.error(error);
@@ -1746,6 +1734,14 @@ function PosPage() {
       const selectedSizeObj = sizes.find(s => s.label === tempOptions.size);
       if (selectedSizeObj && Number(selectedSizeObj.price) > 0) {
         adjustedPrice = Number(selectedSizeObj.price); // 🚀 OVERRIDE: Use size price as the total price
+      }
+    }
+
+    if (product.moods && tempOptions.mood) {
+      const moodsList = safeParse(product.moods) || [];
+      const selectedMoodObj = moodsList.find(m => (typeof m === 'object' ? (m.value === tempOptions.mood || m.label === tempOptions.mood) : m === tempOptions.mood));
+      if (selectedMoodObj && typeof selectedMoodObj === 'object' && Number(selectedMoodObj.price) > 0) {
+        adjustedPrice = Number(selectedMoodObj.price); // 🚀 OVERRIDE: Use mood price as the total price
       }
     }
 
@@ -2427,8 +2423,8 @@ function PosPage() {
     const currentPlan = profile?.plan_name?.toLowerCase();
     const planId = Number(profile?.plan_id || 0);
 
-    // Assuming Plan IDs for Pro/Business are > 4 based on earlier code observations
-    if (planId <= 4 && profile?.role_name !== 'super_admin') {
+    // Assuming Plan IDs for Pro/Business are >= 2 based on earlier code observations
+    if (planId < 2 && profile?.role_name !== 'super_admin') {
       Modal.confirm({
         title: "💎 Pro Feature Required",
         content: "Voice Command is a premium feature. Please upgrade your plan to access hands-free ordering.",
@@ -2697,7 +2693,7 @@ function PosPage() {
     const planId = Number(profile?.plan_id || 0);
     const role = profile?.role_name?.toLowerCase();
 
-    if (cmd.pro && planId <= 4 && role !== 'super_admin') {
+    if (cmd.pro && planId < 2 && role !== 'super_admin') {
       showUpgradeModal(cmd.label);
       return false;
     }
@@ -2970,6 +2966,7 @@ function PosPage() {
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div
+      className="pos-page-root"
       style={{
         background: COLORS.bg,
         minHeight: "100vh",
@@ -3080,7 +3077,7 @@ function PosPage() {
                     cursor: "pointer",
                     background: isSelected ? `${catColor}15` : "transparent",
                     color: isSelected ? catColor : COLORS.textPrimary,
-                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    
                     border: `1px solid ${isSelected ? `${catColor}30` : "transparent"}`,
                     position: "relative",
                   }}
@@ -3116,7 +3113,7 @@ function PosPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     filter: isSelected ? 'grayscale(0)' : 'grayscale(0.4)',
-                    transition: 'all 0.3s'
+                    
                   }}>
                     {cat.icon}
                   </div>
@@ -3177,7 +3174,7 @@ function PosPage() {
                   fontSize: 13,
                   fontWeight: 800,
                   color: COLORS.redBadge,
-                  transition: "all 0.25s",
+                  
                   whiteSpace: "nowrap",
                   boxShadow: "0 4px 10px rgba(232,93,93,0.15)"
                 }}
@@ -3311,7 +3308,7 @@ function PosPage() {
                     fontSize: 13,
                     fontWeight: 700,
                     color: COLORS.textPrimary,
-                    transition: "all 0.25s",
+                    
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -3341,7 +3338,7 @@ function PosPage() {
                   cursor: 'pointer',
                   fontSize: 12,
                   fontWeight: 700,
-                  transition: 'all 0.2s'
+                  
                 }}
               >
                 Grid
@@ -3357,7 +3354,7 @@ function PosPage() {
                   cursor: 'pointer',
                   fontSize: 12,
                   fontWeight: 700,
-                  transition: 'all 0.2s'
+                  
                 }}
               >
                 List
@@ -3381,7 +3378,7 @@ function PosPage() {
                     fontSize: 13,
                     fontWeight: 700,
                     color: pendingCount > 0 ? "#fff" : COLORS.textPrimary,
-                    transition: "all 0.25s",
+                    
                     whiteSpace: "nowrap",
                     boxShadow: pendingCount > 0 ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
                   }}
@@ -3412,7 +3409,7 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: isSoundEnabled ? "#fff" : COLORS.textPrimary,
-                transition: "all 0.25s",
+                
                 whiteSpace: "nowrap",
                 boxShadow: isSoundEnabled ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
               }}
@@ -3440,7 +3437,7 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: COLORS.textPrimary,
-                transition: "all 0.25s",
+                
                 whiteSpace: "nowrap"
               }}
             >
@@ -3462,7 +3459,7 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: isFullScreen ? "#fff" : COLORS.textPrimary,
-                transition: "all 0.25s",
+                
                 whiteSpace: "nowrap",
                 boxShadow: isFullScreen ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
               }}
@@ -3487,7 +3484,7 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: COLORS.textPrimary,
-                transition: "all 0.25s",
+                
                 whiteSpace: "nowrap"
               }}
               onMouseEnter={(e) => {
@@ -3523,7 +3520,7 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: COLORS.textPrimary,
-                transition: "all 0.25s",
+                
                 whiteSpace: "nowrap"
               }}
               onMouseEnter={(e) => {
@@ -3576,7 +3573,7 @@ function PosPage() {
                       borderRadius: 20,
                       background: isSelected ? COLORS.darkGreen : COLORS.white,
                       cursor: "pointer",
-                      transition: "all 0.2s ease",
+                      
                       boxShadow: isSelected ? "0 4px 10px rgba(30,74,45,0.2)" : "0 2px 4px rgba(0,0,0,0.02)",
                       flexShrink: 0,
                       fontSize: 13,
@@ -3662,10 +3659,12 @@ function PosPage() {
             width: 420,
             flexShrink: 0,
             background: COLORS.white,
-            borderLeft: `1px solid ${COLORS.softBorder}`,
+            border: "1.5px solid rgba(30, 74, 45, 0.2)",
+            borderRadius: "16px",
             display: "flex",
             flexDirection: "column",
-            height: "100%",
+            height: "calc(100% - 40px)",
+            margin: "20px 20px 20px 0",
             overflow: "hidden", // Control scroll behavior manually
           }}
         >
@@ -3777,7 +3776,7 @@ function PosPage() {
                       flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
                       background: orderType === key ? (key === 'take_away' ? '#e65100' : COLORS.darkGreen) : "transparent",
                       color: orderType === key ? "#fff" : COLORS.textSecondary,
-                      fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "all 0.2s",
+                      fontWeight: 700, fontSize: 12, cursor: "pointer",
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
                     }}
                   >
@@ -3801,7 +3800,7 @@ function PosPage() {
                         style={{
                           width: "100%", border: `1px solid ${COLORS.softBorder}`, borderRadius: 10,
                           padding: "8px 12px", fontSize: 13, background: "#fafafa", textAlign: 'center', cursor: 'pointer', fontWeight: 800, color: COLORS.textPrimary,
-                          animation: (!tableNo && state.cart_list.length > 0) ? 'pulse-border 1.5s infinite' : 'none'
+                          
                         }}
                       >
                         {tableNo ? (
@@ -3954,26 +3953,50 @@ function PosPage() {
               </div>
             </div>
 
-            {/* Payment method Selection */}
+            {/* Payment method Selection - Card Style */}
             <div style={{ marginBottom: 8 }}>
-              <Select
-                size="middle"
-                style={{ width: "100%", height: 38 }}
-                placeholder={<span style={{ color: COLORS.textPrimary, opacity: 0.7, fontWeight: 500, fontSize: 12 }}>{t.select_payment}</span>}
-                value={objSummary.payment_method}
-                className="custom-select-checkout-compact"
-                onChange={(v) => setObjSummary((p) => ({ ...p, payment_method: v }))}
-                options={[
-                  { label: "💵 Cash (សាច់ប្រាក់)", value: "Cash" },
-                  { label: "📱 Wing Pay", value: "Wing" },
-                  { label: "🏦 ABA Pay", value: "ABA" },
-                  { label: "💳 Credit Card", value: "Card" },
-                  { label: `❤️ Other Methods`, value: "Other" },
-                ]}
-              />
+              {/* Card buttons row — compact single row of 5 */}
+              <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
+                {[
+                  { label: "Cash", icon: "💵", value: "Cash" },
+                  { label: "Wing", icon: "📱", value: "Wing" },
+                  { label: "ABA", icon: "🏦", value: "ABA" },
+                  { label: "Card", icon: "💳", value: "Card" },
+                  { label: "Other", icon: "❤️", value: "Other" },
+                ].map((method) => {
+                  const isActive = objSummary.payment_method === method.value;
+                  return (
+                    <div
+                      key={method.value}
+                      onClick={() => setObjSummary((p) => ({ ...p, payment_method: method.value }))}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '5px 2px',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        border: isActive ? `2px solid ${primaryColor}` : '1.5px solid #e8e3d8',
+                        background: isActive ? `${primaryColor}12` : '#fafaf9',
+                        
+                        gap: 1,
+                      }}
+                    >
+                      <span style={{ fontSize: 14, lineHeight: 1 }}>{method.icon}</span>
+                      <span style={{
+                        fontSize: 9,
+                        fontWeight: isActive ? 800 : 600,
+                        color: isActive ? primaryColor : COLORS.textPrimary,
+                      }}>{method.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
 
               {objSummary.payment_method === "Cash" && (
-                <div style={{ marginTop: 10, padding: "10px 14px", background: '#f8f9fa', borderRadius: 12, border: `1px solid #eee` }}>
+                <div style={{ marginTop: 8, padding: "10px 14px", background: '#f8f9fa', borderRadius: 12, border: `1px solid #eee` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span style={{ fontSize: 10, fontWeight: 800, color: COLORS.textPrimary }}>CASH COLLECTED</span>
                     <Button size="small" type="link" style={{ height: 18, padding: 0, fontSize: 10, fontWeight: 700 }} onClick={() => setCashPaymentModalVisible(true)}>Calc</Button>
@@ -4004,7 +4027,7 @@ function PosPage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                animation: 'slideUp 0.3s ease-out',
+                
                 boxShadow: '0 4px 15px rgba(0,0,0,0.04)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -4088,7 +4111,7 @@ function PosPage() {
                   flex: 1, height: 44, borderRadius: 12,
                   background: isDisabled || state.cart_list.length === 0 || !objSummary.payment_method ? "#eff1f3" : primaryColor,
                   color: isDisabled || state.cart_list.length === 0 || !objSummary.payment_method ? "#bcc1c7" : "#fff",
-                  fontWeight: 800, fontSize: 15, transition: "all 0.3s",
+                  fontWeight: 800, fontSize: 15, 
                   boxShadow: state.cart_list.length > 0 && objSummary.payment_method ? `0 6px 15px ${primaryColor}30` : "none",
                   cursor: isDisabled || state.cart_list.length === 0 || !objSummary.payment_method ? "not-allowed" : "pointer",
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
@@ -4279,6 +4302,7 @@ function PosPage() {
                   {(safeParse(selectedProductForOptions.moods) || []).map(m => {
                     const mLabel = typeof m === 'object' ? (m.label || m.value) : m;
                     const mValue = typeof m === 'object' ? (m.value || m.label) : m;
+                    const mPrice = typeof m === 'object' && m.price ? Number(m.price) : 0;
                     return (
                       <Radio.Button
                         key={mValue}
@@ -4291,7 +4315,7 @@ function PosPage() {
                           color: tempOptions.mood === mValue ? '#fff' : 'inherit'
                         }}
                       >
-                        {mLabel}
+                        {mLabel} {mPrice > 0 ? `($${mPrice.toFixed(2)})` : ''}
                       </Radio.Button>
                     );
                   })}
@@ -4359,7 +4383,7 @@ function PosPage() {
                       padding: '8px 12px',
                       borderRadius: 10,
                       border: `1px solid ${tempOptions.addons.includes(a.label) ? COLORS.darkGreen : '#e2e8f0'}`,
-                      transition: 'all 0.2s'
+                      
                     }}>
                       <ConfigProvider theme={{ token: { colorPrimary: COLORS.darkGreen } }}>
                         <Checkbox value={a.label}>
@@ -4421,7 +4445,7 @@ function PosPage() {
                   cursor: 'pointer',
                   padding: '16px 24px',
                   borderBottom: `1px solid ${COLORS.softBorder}`,
-                  transition: 'all 0.2s',
+                  
                   background: isTableOccupied ? '#fff1f0' : 'inherit'
                 }}
                 className="pending-order-item"
@@ -4647,263 +4671,22 @@ function PosPage() {
           </div>
         </div>
       </Modal>
-      {/* 🚀 Premium Close Shift Modal */}
-      <Modal
-        title={
-          <div style={{ textAlign: 'center', padding: '15px 0' }}>
-            <div style={{
-              background: `${COLORS.darkGreen}10`,
-              width: 50, height: 50, borderRadius: 15,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 10px', color: COLORS.darkGreen
-            }}>
-              <LogoutOutlined style={{ fontSize: 24 }} />
-            </div>
-            <Typography.Title level={4} style={{ margin: 0, fontWeight: 800 }}>{t.shift_audit_title}</Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t.shift_report_summary}</Typography.Text>
-          </div>
-        }
+      {/* 🚀 Step-by-Step Close Shift Modal */}
+      <CloseShiftModal
         open={closeShiftModalVisible}
-        onCancel={() => setCloseShiftModalVisible(false)}
-        footer={null}
-        width={800}
-        centered
-        styles={{ content: { borderRadius: 24, padding: '10px 24px 24px' } }}
-      >
-        <Form layout="vertical" onFinish={onCloseShift}>
-          <Row gutter={32}>
-            {/* Left Column: Financial Audit */}
-            <Col span={11}>
-              <div style={{ background: '#f8fafc', padding: 24, borderRadius: 20, height: '100%', border: '1px solid #edf2f7' }}>
-                <Typography.Title level={5} style={{ marginBottom: 20, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b' }}>
-                  {t.shift_report_summary}
-                </Typography.Title>
-
-                <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Text style={{ color: '#64748b' }}>{t.opening_cash_label}</Text>
-                    <Text strong>${shiftSummary?.opening_cash_usd?.toFixed(2)}</Text>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Text style={{ color: '#64748b' }}>{t.total_sales_cash}</Text>
-                    <Text strong>${shiftSummary?.total_cash_usd?.toFixed(2)}</Text>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Text style={{ color: '#64748b' }}>{t.total_sales_online}</Text>
-                    <Text strong>${(shiftSummary?.total_aba_usd + shiftSummary?.total_wing_usd)?.toFixed(2)}</Text>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Text type="danger">{t.total_expenses_label}</Text>
-                    <Text strong type="danger">-${shiftSummary?.total_expense_usd?.toFixed(2)}</Text>
-                  </div>
-
-                  <Divider style={{ margin: '8px 0' }} />
-
-                  <div style={{
-                    background: COLORS.darkGreen,
-                    padding: '16px 20px',
-                    borderRadius: 15,
-                    color: '#fff',
-                    boxShadow: '0 4px 12px rgba(30,74,45,0.2)'
-                  }}>
-                    <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 600 }}>{t.expected_cash_label}</div>
-                    <div style={{ fontSize: 28, fontWeight: 900 }}>${shiftSummary?.expected_cash_usd?.toFixed(2)}</div>
-                  </div>
-                </Space>
-              </div>
-            </Col>
-
-            {/* Right Column: Physical Counting */}
-            <Col span={13}>
-              <div style={{ padding: '8px 0' }}>
-                <Typography.Title level={5} style={{ marginBottom: 20, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b' }}>
-                  {t.actual_cash_label}
-                </Typography.Title>
-
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Form.Item label={<span style={{ fontWeight: 700 }}>$ USD</span>}>
-                      <InputNumber
-                        placeholder="0.00"
-                        size="large"
-                        style={{ width: '100%', borderRadius: 12 }}
-                        value={actualCashUSD}
-                        onChange={setActualCashUSD}
-                        min={0}
-                        prefix={<span style={{ color: '#94a3b8' }}>$</span>}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item label={<span style={{ fontWeight: 700 }}>៛ KHR</span>}>
-                      <InputNumber
-                        placeholder="0"
-                        size="large"
-                        style={{ width: '100%', borderRadius: 12 }}
-                        value={actualCashKHR}
-                        onChange={setActualCashKHR}
-                        min={0}
-                        step={100}
-                        prefix={<span style={{ color: '#94a3b8' }}>៛</span>}
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-
-                {/* Variance Live Feedback */}
-                {actualCashUSD !== null && (
-                  <div style={{
-                    marginTop: 5,
-                    padding: '15px 20px',
-                    borderRadius: 15,
-                    background: '#fff',
-                    border: '2px dashed #e2e8f0',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>{t.cash_variance_label}</div>
-                      {(() => {
-                        const totalActual = (actualCashUSD || 0) + ((actualCashKHR || 0) / (shiftSummary?.exchange_rate || exchangeRate));
-                        const variance = totalActual - (shiftSummary?.expected_cash_usd || 0);
-                        const isSafe = Math.abs(variance) < 0.01;
-                        const isOver = variance >= 0.01;
-
-                        return (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{
-                              fontSize: 22,
-                              fontWeight: 900,
-                              color: isSafe ? COLORS.darkGreen : (isOver ? '#10b981' : '#ef4444')
-                            }}>
-                              {isOver ? '+' : ''}{variance.toFixed(2)}$
-                            </div>
-                            <Tag color={isSafe ? "success" : (isOver ? "processing" : "error")} style={{ borderRadius: 6, fontWeight: 800 }}>
-                              {isSafe ? "BALANCED" : (isOver ? "OVER" : "SHORTAGE")}
-                            </Tag>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 12,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: '#f1f5f9', color: '#64748b'
-                    }}>
-                      <SyncOutlined spin={actualCashUSD === null} />
-                    </div>
-                  </div>
-                )}
-
-                <Form.Item name="remark" label={<span style={{ fontWeight: 700, marginTop: 20, display: 'block' }}>{t.remark_reason}</span>}>
-                  <Input.TextArea
-                    placeholder={t.closing_note_placeholder}
-                    rows={3}
-                    style={{ borderRadius: 12 }}
-                  />
-                </Form.Item>
-
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  block
-                  size="large"
-                  style={{
-                    height: 55,
-                    borderRadius: 15,
-                    background: COLORS.darkGreen,
-                    fontSize: 16,
-                    fontWeight: 800,
-                    boxShadow: '0 8px 20px rgba(30,74,45,0.2)',
-                    marginTop: 10
-                  }}
-                >
-                  {t.close_shift_title}
-                </Button>
-              </div>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
-
+        onClose={() => setCloseShiftModalVisible(false)}
+        onSuccess={() => setCloseShiftModalVisible(false)}
+        currentShift={currentShift}
+        onPrint={handlePrintShiftReport}
+        profile={profile}
+      />
       {/* 🚀 Premium Open Shift Modal */}
-      <Modal
-        title={
-          <div style={{ textAlign: 'center', padding: '15px 0' }}>
-            <div style={{
-              background: `${COLORS.darkGreen}10`,
-              width: 50, height: 50, borderRadius: 15,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 10px', color: COLORS.darkGreen
-            }}>
-              <ShoppingOutlined style={{ fontSize: 24 }} />
-            </div>
-            <Typography.Title level={4} style={{ margin: 0, fontWeight: 800 }}>{t.open_shift_title || "Start New Shift"}</Typography.Title>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t.opening_cash_label}</Typography.Text>
-          </div>
-        }
+      <OpenShiftModal
         open={openShiftModalVisible}
-        footer={null}
-        width={450}
-        closable={false}
-        maskClosable={false}
-        centered
-        styles={{ content: { borderRadius: 24, padding: '10px 30px 30px' } }}
-      >
-        <Form layout="vertical" onFinish={onOpenShift}>
-          <div style={{ background: '#f8fafc', padding: '24px 30px', borderRadius: 20, marginBottom: 24, border: '1px solid #edf2f7' }}>
-            <Form.Item
-              name="opening_cash_usd"
-              label={<span style={{ fontWeight: 700, color: '#475569' }}>$ USD</span>}
-              initialValue={0}
-            >
-              <InputNumber
-                style={{ width: '100%', borderRadius: 12 }}
-                size="large"
-                prefix={<span style={{ color: '#94a3b8' }}>$</span>}
-                min={0}
-              />
-            </Form.Item>
-            <Form.Item
-              name="opening_cash_khr"
-              label={<span style={{ fontWeight: 700, color: '#475569' }}>៛ KHR</span>}
-              initialValue={0}
-            >
-              <InputNumber
-                style={{ width: '100%', borderRadius: 12 }}
-                size="large"
-                prefix={<span style={{ color: '#94a3b8' }}>៛</span>}
-                min={0}
-                step={100}
-              />
-            </Form.Item>
-          </div>
-
-          <div style={{ textAlign: 'center', marginBottom: 20, padding: '12px', background: '#f1f5f9', borderRadius: 12 }}>
-            <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>
-              👤 Authorized Staff: <Typography.Text strong style={{ color: COLORS.darkGreen }}>{profile?.name}</Typography.Text>
-            </Typography.Text>
-          </div>
-
-          <Button
-            type="primary"
-            htmlType="submit"
-            block
-            size="large"
-            style={{
-              height: 55,
-              borderRadius: 15,
-              background: COLORS.darkGreen,
-              fontSize: 16,
-              fontWeight: 800,
-              boxShadow: '0 8px 20px rgba(30,74,45,0.2)'
-            }}
-          >
-            {t.open_shift_now_btn}
-          </Button>
-        </Form>
-      </Modal>
+        onClose={() => setOpenShiftModalVisible(false)}
+        onSuccess={() => { checkShiftStatus(); handleClearCart(true, true); }}
+        profile={profile}
+      />
       {/* ── Spotlight Command Palette 2.0 ── */}
       <Modal
         open={isCommandPaletteVisible}
@@ -4959,7 +4742,7 @@ function PosPage() {
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             cursor: 'pointer',
-                            transition: 'all 0.2s',
+                            
                           }}
                           className="spotlight-item"
                         >
@@ -5056,7 +4839,7 @@ function PosPage() {
                 borderRadius: 16,
                 border: `2px solid #f0f0f0`,
                 cursor: 'pointer',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',

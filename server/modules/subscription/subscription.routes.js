@@ -4,6 +4,7 @@ const c = require("./subscription.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 
 // Relative to /api/v1/subscriptions
+router.get("/packages/public", c.getListPackagesPublic);
 router.get("/packages", authMiddleware(), c.getListPackages);
 router.post("/packages", authMiddleware(), c.createPackage);
 router.put("/packages", authMiddleware(), c.updatePackage);

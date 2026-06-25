@@ -38,7 +38,7 @@ export default function MainPage({ children, loading }) {
   }
   return (
     <div>
-      <Spin spinning={loading}>{children}</Spin>
+      <Spin spinning={!!loading}>{children}</Spin>
     </div>
   );
 }

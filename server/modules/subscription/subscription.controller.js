@@ -3,6 +3,7 @@ const sm = require("../../src/controller/system_module.controller");
 
 module.exports = {
     getListPackages: mp.getList,
+    getListPackagesPublic: mp.getListPublic,
     createPackage: mp.create,
     updatePackage: mp.update,
     getPackagePermissions: mp.getPermissions,

@@ -264,6 +264,25 @@ app.listen(PORT, async () => {
     if (!err.message.includes("Duplicate")) console.log("Migration (customers Google columns) skipped:", err.message);
   }
 
+  // ✅ Migration: Add Loyalty and Membership columns to customers table
+  const customerCols = [
+    { name: "tier_id", type: "INT DEFAULT NULL" },
+    { name: "points", type: "INT DEFAULT 0" },
+    { name: "total_spent", type: "DOUBLE DEFAULT 0" },
+    { name: "card_number", type: "VARCHAR(50) DEFAULT NULL" },
+    { name: "wallet_balance", type: "DOUBLE DEFAULT 0" },
+    { name: "otp_code", type: "VARCHAR(10) DEFAULT NULL" },
+    { name: "otp_expiry", type: "DATETIME DEFAULT NULL" }
+  ];
+  for (const col of customerCols) {
+    try {
+      await db.query(`ALTER TABLE customers ADD COLUMN ${col.name} ${col.type}`);
+      console.log(`Migration: Added 'customers.${col.name}'`);
+    } catch (err) {
+      if (!err.message.includes("Duplicate")) console.log(`Migration (customers.${col.name}) skipped:`, err.message);
+    }
+  }
+
   // Migration Fix: Add missing categories once
   try {
     const bizId = 5;

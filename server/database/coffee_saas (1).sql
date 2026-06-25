@@ -384,7 +384,7 @@ INSERT INTO `categories` (`id`, `business_id`, `name`, `image`, `created_at`, `d
 (32, 1, 'Vitamins & Supplements / វីតាមីន និងអាហារបំប៉ន', NULL, '2026-04-02 01:55:54', 'Morning, After Meal, Take with water', 'Bottle, Jar, Pouch', 'Not for treatment, Store at room temp', 'pharmacy'),
 (33, 1, 'Skincare & Personal Care / ថែរក្សាស្បែក និងរាងកាយ', NULL, '2026-04-02 01:55:54', 'After Wash, Morning/Evening, External use', 'Tube, Bottle, Sachet', 'Avoid eyes, Stop if irritation', 'pharmacy'),
 (34, 1, 'Medical Equipment / ឧបករណ៍វេជ្ជសាស្ត្រ', NULL, '2026-04-02 01:55:54', 'Single use, Emergency, Sterile', 'Piece, Set, Pack', 'Professional only, Discard after use', 'pharmacy'),
-(35, 1, 'Baby & Mom Care / ផលិតផលសម្រាប់ម្តាយ និងទារក', NULL, '2026-04-02 01:58:27', 'Daily use, Gentle, Morning/Night', 'Bottle, Pack, Piece', 'For sensitive skin, Keep away from heat', 'pharmacy'),
+(35, 1, 'Baby & Mom Care / ផលិតផលសម្រាប់ម្តាយ និងទារក', NULL, '2026-04-02 01:58:27', 'Daily use, Gentle, Morning/Night', 'Bottle, Pack, Piece', 'For sensitive skin, Keep away from heat', 'mart'),
 (36, 1, 'Seafood / គ្រឿងសមុទ្រ', NULL, '2026-04-02 04:11:27', NULL, '[{\"label\":\"Small\",\"value\":\"small\",\"price\":0},{\"label\":\"Large\",\"value\":\"large\",\"price\":5},{\"label\":\"1kg\",\"value\":\"1kg\",\"price\":15}]', NULL, 'restaurant'),
 (37, 1, 'Soup / សម្ល', NULL, '2026-04-02 04:11:27', NULL, '[{\"label\":\"Small Bowl\",\"value\":\"small\",\"price\":0},{\"label\":\"Large Bowl\",\"value\":\"large\",\"price\":3}]', NULL, 'restaurant'),
 (38, 1, 'Stir-Fry / ម្ហូបឆា', NULL, '2026-04-02 04:11:27', NULL, '[{\"label\":\"Normal\",\"value\":\"normal\",\"price\":0},{\"label\":\"Large\",\"value\":\"large\",\"price\":2}]', NULL, 'restaurant'),

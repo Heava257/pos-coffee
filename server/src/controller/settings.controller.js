@@ -86,6 +86,7 @@ exports.updateSettings = async (req, res) => {
 
 exports.testTelegramNotification = async (req, res) => {
     try {
+        const { business_id } = req;
         const { telegram_token, telegram_chat_id, telegram_mode, telegram_webhook_url } = req.body;
 
         if (!telegram_token || !telegram_chat_id) {

@@ -171,7 +171,7 @@ function MyPlanPage() {
     };
 const handleDownloadInvoice = async (tranId) => {
     try {
-        const token = localStorage.getItem("token"); // ឬ key ដែលអ្នកប្រើក្នុង auth
+        const token = localStorage.getItem("access_token");
         const response = await fetch(
             `${Config.base_url}payment/invoice/${tranId}`,
             {
@@ -279,19 +279,19 @@ const handleDownloadInvoice = async (tranId) => {
             render: (s) => <StatusTag status={s} />,
         },
         {
-    title: "Action",
-    key: "action",
-    render: (_, record) => (
-       <Button
-    type="link"
-    icon={<FilePdfOutlined />}
-    disabled={record.status !== "paid" && record.status !== "active"}
-    onClick={() => handleDownloadInvoice(record.tran_id)}
->
-    Invoice
-</Button>
-    ),
-},
+            title: "Action",
+            key: "action",
+            render: (_, record) => (
+                <Button
+                    type="link"
+                    icon={<FilePdfOutlined />}
+                    disabled={record.status !== "paid" && record.status !== "active"}
+                    onClick={() => handleDownloadInvoice(record.tran_id || `SUB-${record.id}`)}
+                >
+                    Invoice
+                </Button>
+            ),
+        },
     ];
 
     // ─────────────────────────────────────────────────────────────
@@ -337,14 +337,14 @@ const handleDownloadInvoice = async (tranId) => {
                     <Row gutter={[24, 24]} style={{ marginTop: 16 }}>
                         {/* Plan Card */}
                         <Col xs={24} lg={10}>
-                            <Card
+                            <div
                                 style={{
                                     borderRadius: "24px",
                                     background: "linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)",
                                     color: "white",
-                                    border: "none",
                                     boxShadow: "0 10px 30px rgba(30,74,45,0.2)",
                                     height: "100%",
+                                    padding: "24px",
                                 }}
                             >
                                 <Space direction="vertical" style={{ width: "100%" }} size="large">
@@ -404,7 +404,7 @@ const handleDownloadInvoice = async (tranId) => {
                                         {t.upgrade_plan}
                                     </Button>
                                 </Space>
-                            </Card>
+                            </div>
                         </Col>
 
                         {/* Usage Stats */}
@@ -436,7 +436,7 @@ const handleDownloadInvoice = async (tranId) => {
                             <Card style={{ marginTop: 20, borderRadius: "16px", border: "none", background: "#f8fdf9" }}>
                                 <Space>
                                     <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                                    <Text type="secondary">{t.need_more_capacity}</Text>
+                                    <Text style={{ color: "#2d6a3e", fontWeight: 500 }}>{t.need_more_capacity}</Text>
                                     <Button type="link" onClick={() => setIsUpgradeModalVisible(true)}>{t.compare_plans}</Button>
                                 </Space>
                             </Card>

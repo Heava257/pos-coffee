@@ -17,5 +17,6 @@ router.get("/insights", authMiddleware(), c.getInsights);
 router.put("/plan", authMiddleware(), c.updatePlan);
 router.put("/status", authMiddleware(), c.updateStatus);
 router.get("/public-config", c.getPublicConfig);
+router.get("/smtp-health", authMiddleware(), c.getSMTPHealth);
 
 module.exports = router;

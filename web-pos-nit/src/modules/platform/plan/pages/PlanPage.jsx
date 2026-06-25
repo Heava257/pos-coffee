@@ -64,6 +64,8 @@ const PlanPage = () => {
     useEffect(() => {
         if (location.pathname === "/system-subscriptions") {
             setActiveTab("monitoring");
+        } else if (location.pathname === "/plans") {
+            setActiveTab("plans");
         }
     }, [location.pathname]);
 

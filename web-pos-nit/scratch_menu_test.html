@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Green Grounds POS - Curved Outside Sidebar Navigation</title>
+  <style>
+    /* ── Import Premium Font ── */
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+    /* ── Custom Properties / Tokens ── */
+    :root {
+      --primary-color: #1e4a2d;      /* Default Forest Green */
+      --milk-bg: #f4f1eb;            /* Milk/Cream Page Background */
+      --sidebar-text-muted: rgba(255, 255, 255, 0.7);
+      --sidebar-text-active: #1e4a2d; /* Matches primary color dynamically */
+      --transition-speed: 0.3s;
+    }
+
+    /* ── Base Reset ── */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      background-color: var(--milk-bg);
+      overflow-x: hidden;
+    }
+
+    /* ── SIDEBAR CONTAINER ── */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 280px;
+      background-color: var(--primary-color);
+      display: flex;
+      flex-direction: column;
+      transition: width var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
+      overflow: visible; /* CRITICAL: Must be visible to allow notch overflow */
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Collapsed Sidebar State */
+    .sidebar.collapsed {
+      width: 72px;
+    }
+
+    /* ── Brand Section ── */
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 24px 20px;
+      height: 80px;
+      flex-shrink: 0;
+      color: #ffffff;
+    }
+
+    .sidebar.collapsed .brand-section {
+      justify-content: center;
+      padding: 24px 0;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .brand-name {
+      font-size: 16px;
+      font-weight: 700;
+      white-space: nowrap;
+      opacity: 1;
+      transition: opacity var(--transition-speed);
+    }
+
+    .sidebar.collapsed .brand-name {
+      opacity: 0;
+      width: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    /* ── Menu List & Containers ── */
+    .menu-container {
+      flex-grow: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-bottom: 24px;
+    }
+
+    /* Hide scrollbar for menu container */
+    .menu-container::-webkit-scrollbar {
+      width: 0px;
+    }
+
+    .menu-group-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 1.5px;
+      padding: 16px 24px 8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transition: opacity var(--transition-speed);
+    }
+
+    .sidebar.collapsed .menu-group-title {
+      opacity: 0;
+    }
+
+    .menu-list {
+      list-style: none;
+      width: 100%;
+    }
+
+    .menu-item {
+      position: relative;
+      width: 100%;
+      margin: 4px 0;
+    }
+
+    /* ── Menu Item Links ── */
+    .menu-link {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      color: var(--sidebar-text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      height: 48px;
+      padding-left: 24px;
+      transition: color 0.2s ease;
+      position: relative;
+      z-index: 5;
+    }
+
+    .sidebar.collapsed .menu-link {
+      padding-left: 14px;
+    }
+
+    /* Icon Wrapper Styles */
+    .menu-icon-wrapper {
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      margin-right: 12px;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+    }
+
+    .menu-icon-wrapper svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .menu-text {
+      white-space: nowrap;
+      transition: opacity var(--transition-speed);
+    }
+
+    .sidebar.collapsed .menu-text {
+      opacity: 0;
+      width: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    /* Hover States for Inactive Items */
+    .menu-item:not(.active) .menu-link:hover {
+      color: #ffffff;
+    }
+
+    .menu-item:not(.active) .menu-link:hover .menu-icon-wrapper {
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    /* ── ACTIVE ITEM STYLING (Curved Outside) ── */
+    .menu-item.active .menu-link {
+      background-color: var(--milk-bg);
+      color: var(--primary-color);
+      border-radius: 24px 0 0 24px;
+      margin-left: 12px;
+      z-index: 10;
+    }
+
+    .sidebar.collapsed .menu-item.active .menu-link {
+      margin-left: 8px;
+      border-radius: 24px 0 0 24px;
+    }
+
+    /* Icon Wrapper inside Active Item */
+    .menu-item.active .menu-icon-wrapper {
+      background-color: var(--primary-color);
+      color: #ffffff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Notch ABOVE the active item */
+    .menu-item.active::before {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: -32px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      box-shadow: 16px 16px 0 0 var(--milk-bg);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Notch BELOW the active item */
+    .menu-item.active::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: -32px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      box-shadow: 16px -16px 0 0 var(--milk-bg);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* ── Sidebar Footer ── */
+    .sidebar-footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 8px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .footer-link {
+      display: flex;
+      align-items: center;
+      height: 44px;
+      padding-left: 24px;
+      text-decoration: none;
+      color: var(--sidebar-text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .sidebar.collapsed .footer-link {
+      padding-left: 14px;
+    }
+
+    .footer-link .menu-icon-wrapper {
+      width: 36px;
+      height: 36px;
+      margin-right: 12px;
+    }
+
+    .footer-link:hover {
+      color: #ffffff;
+    }
+
+    .logout-btn {
+      color: #ef4444 !important;
+    }
+
+    .logout-btn:hover {
+      background-color: rgba(239, 68, 68, 0.08);
+    }
+
+    /* ── MAIN WRAPPER ── */
+    .main-wrapper {
+      flex-grow: 1;
+      margin-left: 280px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: margin-left var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+      background-color: var(--milk-bg);
+    }
+
+    /* Adjust layout when sidebar collapsed */
+    .sidebar.collapsed + .main-wrapper {
+      margin-left: 72px;
+    }
+
+    /* ── Top Header ── */
+    .top-header {
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(8px);
+      border-bottom: 1.5px solid rgba(30, 74, 45, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 900;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .toggle-btn {
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      cursor: pointer;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: background-color 0.2s;
+    }
+
+    .toggle-btn:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+
+    .toggle-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .header-title-wrapper {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+
+    .business-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--primary-color);
+      letter-spacing: 0.5px;
+    }
+
+    .current-date {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* Header Right */
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background-color: rgba(34, 197, 94, 0.08);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #15803d;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background-color: #22c55e;
+      border-radius: 50%;
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+      }
+    }
+
+    .profile-avatar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .profile-avatar img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--primary-color);
+      object-fit: cover;
+    }
+
+    .profile-info {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .username {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .role {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: capitalize;
+    }
+
+    /* ── CONTENT CONTAINER ── */
+    .content-container {
+      flex-grow: 1;
+      padding: 24px;
+    }
+
+    .content-body {
+      background-color: transparent;
+      border-radius: 16px;
+      border: 1.5px solid rgba(30, 74, 45, 0.2);
+      padding: 32px;
+      min-height: calc(100vh - 140px);
+    }
+
+    .content-body h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary-color);
+      margin-bottom: 12px;
+    }
+
+    .content-desc {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #475569;
+      max-width: 700px;
+      margin-bottom: 30px;
+    }
+
+    /* Theme Color Picker Section */
+    .color-picker-section {
+      background: white;
+      border: 1.5px solid rgba(30, 74, 45, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 400px;
+    }
+
+    .color-picker-section h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .color-swatches {
+      display: flex;
+      gap: 12px;
+    }
+
+    .swatch {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .swatch:hover {
+      transform: scale(1.1);
+    }
+
+    .swatch.active {
+      border-color: #ffffff;
+      outline: 2px solid #1e293b;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── SIDEBAR CONTAINER ── -->
+  <aside id="sidebar" class="sidebar">
+    <!-- Top Brand Area -->
+    <div class="brand-section">
+      <div class="brand-logo">G</div>
+      <span class="brand-name">Green Grounds</span>
+    </div>
+
+    <!-- Navigation Menu Wrapper -->
+    <div class="menu-container">
+      <!-- Group 1: Main Operations -->
+      <div class="menu-group-title">MAIN OPERATIONS</div>
+      <ul class="menu-list">
+        <li class="menu-item active" data-page="dashboard">
+          <a href="#" class="menu-link">
+            <span class="menu-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="9" />
+                <rect x="14" y="3" width="7" height="5" />
+                <rect x="14" y="12" width="7" height="9" />
+                <rect x="3" y="16" width="7" height="5" />
+              </svg>
+            </span>
+            <span class="menu-text">Dashboard</span>
+          </a>
+        </li>
+        <li class="menu-item" data-page="pos">
+          <a href="#" class="menu-link">
+            <span class="menu-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+            </span>
+            <span class="menu-text">POS / Invoices</span>
+          </a>
+        </li>
+        <li class="menu-item" data-page="orders">
+          <a href="#" class="menu-link">
+            <span class="menu-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </span>
+            <span class="menu-text">Order History</span>
+          </a>
+        </li>
+      </ul>
+
+      <!-- Group 2: Management -->
+      <div class="menu-group-title">MANAGEMENT</div>
+      <ul class="menu-list">
+        <li class="menu-item" data-page="inventory">
+          <a href="#" class="menu-link">
+            <span class="menu-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+            </span>
+            <span class="menu-text">Inventory</span>
+          </a>
+        </li>
+        <li class="menu-item" data-page="staff">
+          <a href="#" class="menu-link">
+            <span class="menu-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </span>
+            <span class="menu-text">Staff & Roles</span>
+          </a>
+        </li>
+        <li class="menu-item" data-page="settings">
+          <a href="#" class="menu-link">
+            <span class="menu-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </span>
+            <span class="menu-text">Settings</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+      <a href="#" class="footer-link support-btn">
+        <span class="menu-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </span>
+        <span class="menu-text">Support Chat</span>
+      </a>
+      <a href="#" class="footer-link logout-btn">
+        <span class="menu-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
+        </span>
+        <span class="menu-text">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── MAIN WRAPPER ── -->
+  <div class="main-wrapper">
+    <!-- Header Section -->
+    <header class="top-header">
+      <div class="header-left">
+        <button id="toggle-sidebar" class="toggle-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <div class="header-title-wrapper">
+          <span class="business-name">IT SRUKSRAE COFFEE</span>
+          <span class="current-date">Thursday, 18 June 2026</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="status-badge">
+          <span class="pulse-dot"></span>
+          <span>SYSTEM ONLINE</span>
+        </div>
+        <div class="profile-avatar">
+          <img src="https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png" alt="User Avatar">
+          <div class="profile-info">
+            <span class="username">Admin User</span>
+            <span class="role">Owner</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="content-container">
+      <div class="content-body">
+        <h1 id="content-title">Dashboard Overview</h1>
+        <p class="content-desc">This high-fidelity prototype demonstrates the <strong>"Curved Outside" (Concave Notch)</strong> sidebar active design system. The styling fully overrides default patterns to deliver a clean integration with the cream-colored content layout.</p>
+        
+        <div class="color-picker-section">
+          <h3>Try Changing Theme Styles</h3>
+          <div class="color-swatches">
+            <button class="swatch active" style="background: #1e4a2d;" data-primary="#1e4a2d" title="Forest Green"></button>
+            <button class="swatch" style="background: #e65100;" data-primary="#e65100" title="Warm Orange"></button>
+            <button class="swatch" style="background: #2196f3;" data-primary="#2196f3" title="Ocean Blue"></button>
+            <button class="swatch" style="background: #5e4dc8;" data-primary="#5e4dc8" title="Royal Purple"></button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const sidebar = document.getElementById("sidebar");
+      const toggleBtn = document.getElementById("toggle-sidebar");
+      const menuItems = document.querySelectorAll(".menu-item");
+      const contentTitle = document.getElementById("content-title");
+      const swatches = document.querySelectorAll(".swatch");
+
+      // 1. Sidebar Collapse Toggle
+      toggleBtn.addEventListener("click", () => {
+        sidebar.classList.toggle("collapsed");
+      });
+
+      // 2. Navigation Clicking Logic
+      menuItems.forEach((item) => {
+        item.addEventListener("click", (e) => {
+          e.preventDefault();
+
+          // Remove active class from all menu items
+          menuItems.forEach((mi) => mi.classList.remove("active"));
+
+          // Add active class to clicked item
+          item.classList.add("active");
+
+          // Update content title dynamically
+          const pageName = item.querySelector(".menu-text").innerText;
+          contentTitle.innerText = `${pageName} Overview`;
+        });
+      });
+
+      // 3. Theme Dynamic Switching Swatches
+      swatches.forEach((swatch) => {
+        swatch.addEventListener("click", () => {
+          // Remove active state from all swatches
+          swatches.forEach((s) => s.classList.remove("active"));
+
+          // Add active state to selected swatch
+          swatch.classList.add("active");
+
+          // Get color code and set to CSS Custom Properties
+          const selectedColor = swatch.getAttribute("data-primary");
+          document.documentElement.style.setProperty("--primary-color", selectedColor);
+          document.documentElement.style.setProperty("--sidebar-text-active", selectedColor);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

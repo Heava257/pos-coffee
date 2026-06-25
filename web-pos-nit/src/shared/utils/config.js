@@ -24,9 +24,9 @@ const getDynamicBaseUrl = () => {
       const apiHost = host.replace("-web", "-api");
       return `https://${apiHost}/api/`;
     }
-    // Fallback for local testing with other devices on same network
+    // Fallback for local testing and deployment
     if (host !== 'localhost' && host !== '127.0.0.1') {
-      return `http://${host}:8080/api/`;
+      return window.location.origin + "/api/";
     }
   }
   return import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8080/api/";

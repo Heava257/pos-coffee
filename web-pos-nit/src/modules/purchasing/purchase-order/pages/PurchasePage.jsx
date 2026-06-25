@@ -223,7 +223,7 @@ function PurchasePage() {
     const onClickEdit = async (item) => {
         setState(p => ({ ...p, loading: true }));
         try {
-            const res = await request("purchase-details", "get", { id: item.id });
+            const res = await request("purchases/details", "get", { id: item.id });
             if (res && !res.error) {
                 const items = res.list.map(i => ({
                     ...i,
@@ -259,7 +259,7 @@ function PurchasePage() {
 
     const onClickReceive = async (item) => {
         setState(p => ({ ...p, loading: true }));
-        const res = await request("purchase-details", "get", { id: item.id });
+        const res = await request("purchases/details", "get", { id: item.id });
         if (res && !res.error) {
             setState(p => ({
                 ...p,

@@ -83,13 +83,31 @@ const ProductItem = ({
   const discountedPrice = getDiscountedPrice(displayPrice);
 
   const getFinalPrice = () => {
+    let finalPrice = displayPrice;
+    
+    // Size override
     if (isCoffeeProduct && sizes.length > 0) {
       const sizeObj = sizes.find((s) => s.label === selectedSize);
-      const sizePrice = sizeObj ? parseFloat(sizeObj.price) : 0;
-      const basePrice = getDiscountedPrice(displayPrice);
-      return (basePrice + sizePrice).toFixed(2);
+      if (sizeObj && Number(sizeObj.price) > 0) {
+        finalPrice = Number(sizeObj.price);
+      }
     }
-    return getDiscountedPrice(displayPrice).toFixed(2);
+
+    // Mood override
+    if (otherProps.moods) {
+      const parseJSON = (val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) return val;
+        try { return JSON.parse(val); } catch { return []; }
+      };
+      const moodsList = parseJSON(otherProps.moods);
+      const selectedMoodObj = moodsList.find(m => (typeof m === 'object' ? (m.value === selectedMood || m.label === selectedMood) : m === selectedMood));
+      if (selectedMoodObj && typeof selectedMoodObj === 'object' && Number(selectedMoodObj.price) > 0) {
+        finalPrice = Number(selectedMoodObj.price);
+      }
+    }
+
+    return getDiscountedPrice(finalPrice).toFixed(2);
   };
 
   const sugarOptions = [

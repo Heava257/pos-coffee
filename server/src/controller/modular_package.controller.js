@@ -18,6 +18,21 @@ exports.getList = async (req, res) => {
     }
 };
 
+// Get active modular packages publicly
+exports.getListPublic = async (req, res) => {
+    try {
+        const sql = `
+            SELECT id, name, code, description, icon, ui_layout, status, industry_code
+            FROM modular_packages 
+            ORDER BY id ASC
+        `;
+        const [list] = await db.query(sql);
+        res.json({ list, success: true });
+    } catch (error) {
+        logError("modular_package.getListPublic", error, res);
+    }
+};
+
 // 2. Create new package
 exports.create = async (req, res) => {
     try {

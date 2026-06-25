@@ -256,8 +256,9 @@ const generateLoginResponse = async (user) => {
             pp.plan_id IS NOT NULL -- Belongs to active plan
             OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', '')) -- Belongs to active module
             OR (
-                -- Truly Core: No mapping to ANY plan and NO mapping to ANY module
-                NOT EXISTS (SELECT 1 FROM plan_permissions WHERE permission_id = p.id)
+                -- Truly Core: Only for Platform Admins (Business ID 1)
+                b.id = 1
+                AND NOT EXISTS (SELECT 1 FROM plan_permissions WHERE permission_id = p.id)
                 AND NOT EXISTS (SELECT 1 FROM module_permissions WHERE permission_id = p.id)
             )
         )
@@ -500,8 +501,9 @@ exports.getProfile = async (req, res) => {
             pp.plan_id IS NOT NULL -- Belongs to active plan
             OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', '')) -- Belongs to active module
             OR (
-                -- Truly Core: No mapping to ANY plan and NO mapping to ANY module
-                NOT EXISTS (SELECT 1 FROM plan_permissions WHERE permission_id = p.id)
+                -- Truly Core: Only for Platform Admins (Business ID 1)
+                b.id = 1
+                AND NOT EXISTS (SELECT 1 FROM plan_permissions WHERE permission_id = p.id)
                 AND NOT EXISTS (SELECT 1 FROM module_permissions WHERE permission_id = p.id)
             )
         )

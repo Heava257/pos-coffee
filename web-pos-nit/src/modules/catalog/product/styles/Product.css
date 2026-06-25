@@ -71,16 +71,16 @@
   border: 1.5px solid #eee !important;
 }
 
-.ant-checkbox-wrapper-checked .custom-mood-checkbox div {
+.custom-mood-checkbox.ant-checkbox-wrapper-checked div {
   border-color: var(--secondary-executive) !important;
   background-color: #f0fdf4 !important;
-  box-shadow: 0 8px 20px rgba(45, 106, 66, 0.12);
+  box-shadow: 0 8px 20px rgba(45, 106, 66, 0.12) !important;
   transform: scale(1.02);
 }
 
-.ant-checkbox-wrapper:hover .custom-mood-checkbox div {
+.custom-mood-checkbox:hover div {
   border-color: var(--secondary-executive) !important;
-  background: #fff;
+  background: #ffffff !important;
 }
 
 /* ─── Typography & Utilities ──────────────────────────────────────────────── */

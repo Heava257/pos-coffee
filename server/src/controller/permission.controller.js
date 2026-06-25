@@ -89,6 +89,15 @@ exports.updateRolePermissions = async (req, res) => {
 
 
         await conn.commit();
+
+        // Clear permission cache to apply changes immediately
+        try {
+            require("../middleware/auth.middleware").clearCache();
+        } catch (e) {}
+        try {
+            require("../../middlewares/auth.middleware").clearCache();
+        } catch (e) {}
+
         res.json({ success: true, message: "Permissions updated successfully!" });
     } catch (error) {
         await conn.rollback();

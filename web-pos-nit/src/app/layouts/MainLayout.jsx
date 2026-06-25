@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Breadcrumb, Button, Dropdown, Input, Layout, Menu, Tag, theme, Drawer, Divider, Space, Alert, Tooltip, Select, Modal, Typography, Avatar, message } from "antd";
+import { Breadcrumb, Button, ConfigProvider, Dropdown, Input, Layout, Menu, Tag, theme, Drawer, Divider, Space, Alert, Tooltip, Select, Modal, Typography, Avatar, message } from "antd";
 const { Title, Text } = Typography;
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import "@/app/theme/theme.css";
 import packageJson from "@/../package.json";
 import logo from "@/assets/business_default_logo.png";
 import ImgUser from "@/assets/profile.png";
-import { MdOutlineMarkEmailUnread, MdRestaurantMenu, MdCompareArrows } from "react-icons/md";
+import { MdOutlineMarkEmailUnread, MdRestaurantMenu, MdCompareArrows, MdInventory2, MdWarningAmber, MdNotifications, MdCampaign } from "react-icons/md";
 import { IoMdNotificationsOutline } from "react-icons/io";
 import {
   CoffeeOutlined,
@@ -64,6 +64,7 @@ import { clsx } from 'clsx';
 function cn(...inputs) { return twMerge(clsx(inputs)); }
 import { Config } from "@/shared/utils/config";
 import { FaHistory } from "react-icons/fa";
+import { RiShareForward2Fill } from "react-icons/ri";
 import dayjs from "dayjs";
 import { useLanguage, translations } from "@/app/store/language.store";
 const { Header, Content, Footer, Sider } = Layout;
@@ -82,12 +83,12 @@ const MENU_STRUCTURE = [
       {
         key: "invoices",
         labelKey: "pos",
-        icon: <MdRestaurantMenu />,
+        icon: <span className="anticon react-icon"><MdRestaurantMenu /></span>,
       },
       {
         key: "order",
         labelKey: "order_detail",
-        icon: <FaHistory />,
+        icon: <span className="anticon react-icon"><FaHistory /></span>,
       },
       {
         key: "kds",
@@ -128,7 +129,7 @@ const MENU_STRUCTURE = [
           { key: "raw_material", labelKey: "raw_material", icon: <FileProtectOutlined /> },
           { key: "recipe", labelKey: "recipe", icon: <SolutionOutlined /> },
           { key: "stock", labelKey: "stock", icon: <FileProtectOutlined /> },
-          { key: "stock-transfer", labelKey: "stock_transfer", icon: <MdCompareArrows /> },
+          { key: "stock-transfer", labelKey: "stock_transfer", icon: <span className="anticon react-icon"><MdCompareArrows /></span> },
           { key: "waste", labelKey: "waste_label", icon: <DeleteOutlined /> },
           { key: "inventory/forecast", labelKey: "forecast_label", icon: <ThunderboltOutlined /> },
         ]
@@ -143,7 +144,7 @@ const MENU_STRUCTURE = [
       {
         key: "shop_managment",
         labelKey: "shop_managment",
-        icon: <FaShop />,
+        icon: <span className="anticon react-icon"><FaShop /></span>,
       },
       {
         key: "table",
@@ -214,9 +215,9 @@ const MENU_STRUCTURE = [
         icon: <PartitionOutlined />,
       },
       {
-        key: "system-subscriptions",
-        labelKey: "system_subscriptions",
-        icon: <SafetyCertificateOutlined />,
+        key: "global-category",
+        labelKey: "global_category",
+        icon: <SolutionOutlined />,
       },
       {
         key: "system-modules",
@@ -256,6 +257,7 @@ const MainLayout = () => {
   const [totalOrders, setTotalOrders] = useState(0);
   const [notifCount, setNotifCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -370,16 +372,32 @@ const MainLayout = () => {
 
     const layout = getLayoutType();
     const themes = {
-      pharmacy: { primary: "#2196f3", accent: "#64b5f6", shadow: "0 4px 12px rgba(33, 150, 243, 0.3)" },
-      restaurant: { primary: "#e65100", accent: "#fb8c00", shadow: "0 4px 12px rgba(230, 81, 0, 0.3)" },
-      retail: { primary: "#1e4a2d", accent: "#2d6a42", shadow: "0 4px 12px rgba(30, 74, 45, 0.3)" },
-      coffee: { primary: "#1e4a2d", accent: "#2d6a42", shadow: "0 4px 12px rgba(30, 74, 45, 0.3)" }
+      pharmacy: { primary: "#2196f3", accent: "#64b5f6", activeIconBg: "#0084ff", shadow: "0 4px 12px rgba(33, 150, 243, 0.3)", sidebarBg: "#2196f3" },
+      restaurant: { primary: "#e65100", accent: "#fb8c00", activeIconBg: "#ff3d00", shadow: "0 4px 12px rgba(230, 81, 0, 0.3)", sidebarBg: "#e65100" },
+      retail: { primary: "#1e4a2d", accent: "#2d6a42", activeIconBg: "#00932a", shadow: "0 4px 12px rgba(30, 74, 45, 0.3)", sidebarBg: "#00932a" },
+      coffee: { primary: "#1e4a2d", accent: "#2d6a42", activeIconBg: "#00932a", shadow: "0 4px 12px rgba(30, 74, 45, 0.3)", sidebarBg: "#00932a" }
     };
 
     const theme = themes[layout] || themes.coffee;
     document.documentElement.style.setProperty('--primary-color', theme.primary);
     document.documentElement.style.setProperty('--accent-color', theme.accent);
     document.documentElement.style.setProperty('--primary-shadow', theme.shadow);
+    
+    // Custom style overrides from settings panel
+    const customSidebarBg = localStorage.getItem('theme_sidebar_bg');
+    const customPageBg = localStorage.getItem('theme_page_bg');
+    const customActiveText = localStorage.getItem('theme_active_text_color');
+    const customInactiveText = localStorage.getItem('theme_inactive_text_color');
+    const customActiveIconBg = localStorage.getItem('theme_active_icon_bg');
+    const customActiveIconColor = localStorage.getItem('theme_active_icon_color');
+
+    document.documentElement.style.setProperty('--sidebar-bg-color', customSidebarBg || theme.sidebarBg || theme.primary);
+    document.documentElement.style.setProperty('--active-icon-bg', customSidebarBg || theme.activeIconBg || theme.primary);
+    document.documentElement.style.setProperty('--theme-milk-bg', customPageBg || '#f4f1eb');
+    document.documentElement.style.setProperty('--sidebar-active-text', customActiveText || theme.primary);
+    document.documentElement.style.setProperty('--sidebar-inactive-text', customInactiveText || 'rgba(255, 255, 255, 0.75)');
+    document.documentElement.style.setProperty('--sidebar-active-icon-bg', customActiveIconBg || customSidebarBg || theme.activeIconBg || theme.primary);
+    document.documentElement.style.setProperty('--sidebar-active-icon-color', customActiveIconColor || '#ffffff');
   }, [profile]);
 
   useEffect(() => {
@@ -495,6 +513,7 @@ const MainLayout = () => {
         '/business',
         '/plans',
         '/service-blueprints',
+        '/global-category',
         '/system-subscriptions',
         '/system-modules',
         '/module-registry',
@@ -568,6 +587,7 @@ const MainLayout = () => {
         'business',
         'plans',
         'service-blueprints',
+        'global-category',
         'system-subscriptions',
         'system-modules',
         'module-registry',
@@ -618,8 +638,8 @@ const MainLayout = () => {
         }
 
         // Hide full reports / analytics for staff (keep only my shift)
-        if (newItem.key === "reports" && !canSeeAllReports) return null;
-        if (newItem.key === "dashboard" && !canSeeAllReports) return null;
+        if (newItem.key === "reports" && !canSeeAllReports && profile?.business_id !== 1) return null;
+        if (newItem.key === "dashboard" && !canSeeAllReports && profile?.business_id !== 1) return null;
 
         // 1. Super Admin (Platform Owner) Filter
         // Strictly hide Shop groups and only allow Administration & Dashboard
@@ -643,7 +663,7 @@ const MainLayout = () => {
         }
 
         // 2. Platform Admin Exceptions (Critical Security)
-        const platformAdminModules = ["plans", "business", "service-blueprints", "system-modules", "permission", "role", "system-subscriptions", "modular_package"];
+        const platformAdminModules = ["plans", "business", "service-blueprints", "system-modules", "permission", "role", "system-subscriptions", "modular_package", "global-category"];
         if (platformAdminModules.includes(newItem.key)) {
           // These modules are strictly for the SaaS owner
           if (profile?.business_id !== 1) return null;
@@ -767,21 +787,21 @@ const MainLayout = () => {
     return '24px';
   };
 
-  // Sidebar color constants - Updated to Milk/Cream color
+  // Sidebar color constants - Updated to Dark Slate theme matching Picture 2
   const SB = {
-    bg: "#f4f1eb",
-    text: "#64748b",
-    textActive: COLORS.darkGreen,
-    activeBg: "rgba(30, 74, 45, 0.08)",
-    hoverBg: "rgba(30, 74, 45, 0.04)",
-    border: "rgba(30, 74, 45, 0.1)",
+    bg: "var(--sidebar-bg-color, var(--primary-color, #1e4a2d))",
+    text: "var(--sidebar-inactive-text, rgba(255, 255, 255, 0.75))",
+    textActive: "var(--sidebar-active-text, #ffffff)",
+    activeBg: "var(--sidebar-active-pill-bg, var(--theme-milk-bg, #f4f1eb))",
+    hoverBg: "rgba(255, 255, 255, 0.08)",
+    border: "rgba(255, 255, 255, 0.08)",
   };
 
   return (
     <Layout
       style={{
         minHeight: "100vh",
-        background: "#f4f1eb",
+        background: "#5E4DC8",
       }}
     >
       {/* Desktop Sidebar */}
@@ -793,7 +813,7 @@ const MainLayout = () => {
           trigger={null}
           style={{
             background: SB.bg,
-            borderRight: "1px solid rgba(30, 74, 45, 0.15)",
+            borderRight: "none",
             position: "fixed",
             height: "100vh",
             left: 0,
@@ -824,7 +844,7 @@ const MainLayout = () => {
               <div style={{
                 width: 36, height: 36,
                 borderRadius: 10,
-                background: COLORS.darkGreen,
+                background: "rgba(255, 255, 255, 0.15)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0,
                 fontSize: 16, fontWeight: 900, color: "#fff",
@@ -832,38 +852,51 @@ const MainLayout = () => {
                 {(profile?.business_name || "C")[0].toUpperCase()}
               </div>
               {!isSidebarCollapsed && (
-                <span style={{ color: "#1e293b", fontSize: 16, fontWeight: 700 }}>
+                <span style={{ color: "#ffffff", fontSize: 16, fontWeight: 700 }}>
                   {profile?.business_name || "Coffee POS"}
                 </span>
               )}
             </div>
 
             <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", paddingBottom: 8 }} className="sb-scroll">
-              <Menu
-                theme="light"
-                selectedKeys={selectedKeys}
-                openKeys={openKeys}
-                mode="inline"
-                items={items.filter(item => {
-                  if (!menuSearch) return true;
-                  const search = menuSearch.toLowerCase();
-                  if (item.type === 'group') {
-                    return item.children.some(child =>
-                      child.label.toLowerCase().includes(search) ||
-                      (child.children && child.children.some(sub => sub.label.toLowerCase().includes(search)))
-                    );
+              <ConfigProvider theme={{
+                components: {
+                  Menu: {
+                    activeBarBorderWidth: 0,
+                    activeBarWidth: 0,
+                    darkItemBg: "transparent",
+                    darkItemSelectedBg: "transparent",
+                    darkItemHoverBg: "transparent",
+                    darkSubMenuItemBg: "transparent",
                   }
-                  return item.label.toLowerCase().includes(search);
-                })}
-                onClick={onClickMenu}
-                onOpenChange={onOpenChange}
-                inlineCollapsed={isSidebarCollapsed}
-                style={{ background: "transparent", border: "none" }}
-              />
+                }
+              }}>
+                <Menu
+                  theme="dark"
+                  selectedKeys={selectedKeys}
+                  openKeys={openKeys}
+                  mode="inline"
+                  items={items.filter(item => {
+                    if (!menuSearch) return true;
+                    const search = menuSearch.toLowerCase();
+                    if (item.type === 'group') {
+                      return item.children.some(child =>
+                        child.label.toLowerCase().includes(search) ||
+                        (child.children && child.children.some(sub => sub.label.toLowerCase().includes(search)))
+                      );
+                    }
+                    return item.label.toLowerCase().includes(search);
+                  })}
+                  onClick={onClickMenu}
+                  onOpenChange={onOpenChange}
+                  inlineCollapsed={isSidebarCollapsed}
+                  style={{ background: "transparent", border: "none" }}
+                />
+              </ConfigProvider>
             </div>
 
             {/* ── Sidebar Footer ── */}
-            <div style={{ padding: "8px 0", borderTop: "1px solid #f1f5f9", flexShrink: 0 }}>
+            <div style={{ padding: "8px 0", borderTop: `1px solid ${SB.border}`, flexShrink: 0 }}>
               {/* Support */}
               <div
                 style={{
@@ -873,7 +906,7 @@ const MainLayout = () => {
                   alignItems: "center",
                   gap: 10,
                   cursor: "pointer",
-                  color: "#64748b",
+                  color: SB.text,
                   borderRadius: 8,
                   transition: "all 0.2s",
                   justifyContent: isSidebarCollapsed ? "center" : "flex-start"
@@ -975,7 +1008,7 @@ const MainLayout = () => {
       <Layout style={{
         marginLeft: getContentMargin(),
         transition: "margin-left 0.3s",
-        background: "#f4f1eb"
+        background: "var(--theme-milk-bg, #f4f1eb)"
       }}>
         {/* Sidebar Toggle Button (Floating) - Only visible when header is hidden */}
         {!isFullScreen && !isHeaderVisible && !isMobile && (
@@ -987,7 +1020,7 @@ const MainLayout = () => {
               left: isSidebarCollapsed ? 90 : 290,
               zIndex: 9999,
               background: COLORS.white,
-              color: COLORS.darkGreen,
+              color: "var(--primary-color, #1e4a2d)",
               width: 40,
               height: 40,
               borderRadius: "10px",
@@ -1013,7 +1046,7 @@ const MainLayout = () => {
               top: isHeaderVisible ? (isMobile ? 55 : 65) : 0,
               right: 20, // Move to far right
               zIndex: 9999,
-              background: isHeaderVisible ? "rgba(30,74,45,0.6)" : COLORS.darkGreen,
+              background: isHeaderVisible ? "rgba(30,74,45,0.6)" : "var(--primary-color, #1e4a2d)",
               color: "#fff",
               padding: "2px 12px",
               borderRadius: "0 0 8px 8px",
@@ -1153,6 +1186,8 @@ const MainLayout = () => {
               <div id="header-notif-dropdown-anchor" style={{ position: 'relative' }}>
                 <Dropdown
                   trigger={['click']}
+                  open={notifOpen}
+                  onOpenChange={setNotifOpen}
                   getPopupContainer={() => document.getElementById('header-notif-dropdown-anchor')}
                   dropdownRender={() => (
                     <div style={{
@@ -1160,7 +1195,7 @@ const MainLayout = () => {
                       boxShadow: '0 12px 30px rgba(0,0,0,0.12)', width: '320px',
                       border: '1px solid #e2e8f0', zIndex: 10000
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '0 4px' }}>
+                      <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '0 4px' }}>
                         <Text style={{ fontWeight: 800, fontSize: '13px', color: 'var(--theme-dark-green)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           {t.notifications || 'Notifications'} ({notifCount})
                         </Text>
@@ -1180,35 +1215,93 @@ const MainLayout = () => {
 
                       <div style={{ maxHeight: '280px', overflowY: 'auto', padding: '4px 0' }}>
                         {notifications.length > 0 ? (
-                          notifications.map(item => (
-                            <div
-                              key={item.id}
-                              style={{
-                                display: 'flex',
-                                gap: '10px',
-                                padding: '10px',
-                                borderRadius: '10px',
-                                background: item.is_read ? 'transparent' : 'rgba(30, 74, 45, 0.03)',
-                                marginBottom: '6px',
-                                borderLeft: item.is_read ? '3px solid transparent' : '3px solid var(--theme-dark-green)',
-                                transition: 'all 0.2s',
-                              }}
-                            >
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                  <Text style={{ fontSize: '12px', fontWeight: item.is_read ? 600 : 700, color: '#1e293b' }}>
-                                    {item.title}
-                                  </Text>
-                                  <Text style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0, marginLeft: '6px' }}>
-                                    {formatTime(item.created_at)}
-                                  </Text>
+                          notifications.map(item => {
+                            // Determine icon + navigation route based on type
+                            const notifIconColor = item.type === 'inventory' ? '#f59e0b'
+                              : item.type === 'subscription' ? '#ef4444'
+                              : item.type === 'system' ? 'var(--theme-dark-green)'
+                              : '#6366f1';
+                            const NotifIconComp = item.type === 'inventory' ? MdInventory2
+                              : item.type === 'subscription' ? MdWarningAmber
+                              : item.type === 'system' ? MdNotifications
+                              : MdCampaign;
+                            const notifRoute = item.type === 'inventory' ? '/stock'
+                              : item.type === 'subscription' ? '/subscription'
+                              : null;
+                            return (
+                              <div
+                                key={item.id}
+                                onClick={() => {
+                                  if (notifRoute) {
+                                    navigate(notifRoute);
+                                    setNotifOpen(false);
+                                  }
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  gap: '10px',
+                                  padding: '10px 12px',
+                                  borderRadius: '12px',
+                                  background: item.is_read ? '#fafafa' : 'rgba(30, 74, 45, 0.04)',
+                                  marginBottom: '8px',
+                                  border: item.is_read
+                                    ? '1.5px solid #f0f0f0'
+                                    : `1.5px solid ${notifIconColor}40`,
+                                  borderLeft: item.is_read
+                                    ? '3px solid #e2e8f0'
+                                    : `3px solid ${notifIconColor}`,
+                                  cursor: notifRoute ? 'pointer' : 'default',
+                                }}
+                              >
+                                <div style={{
+                                  flexShrink: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 36,
+                                  height: 36,
+                                  borderRadius: 10,
+                                  background: `${notifIconColor}20`,
+                                }}>
+                                  <NotifIconComp size={20} color={notifIconColor} />
                                 </div>
-                                <Text style={{ fontSize: '11px', color: '#64748b', lineHeight: '1.4' }}>
-                                  {item.message}
-                                </Text>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%', minWidth: 0 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <Text style={{ fontSize: '12px', fontWeight: item.is_read ? 600 : 700, color: '#1e293b' }}>
+                                      {item.title}
+                                    </Text>
+                                    <Text style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0, marginLeft: '6px' }}>
+                                      {formatTime(item.created_at)}
+                                    </Text>
+                                  </div>
+                                  <Text style={{ fontSize: '11px', color: '#64748b', lineHeight: '1.4' }}>
+                                    {item.message}
+                                  </Text>
+                                  {notifRoute && (
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                                      <span
+                                        className="notif-navigate-btn"
+                                        title={item.type === 'inventory' ? 'View Stock' : 'View Plan'}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          width: 26,
+                                          height: 26,
+                                          borderRadius: 8,
+                                          background: `${notifIconColor}18`,
+                                          color: notifIconColor,
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        <RiShareForward2Fill size={14} />
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         ) : (
                           <div style={{ padding: '24px 12px', textAlign: 'center', opacity: 0.5 }}>
                             <Text type="secondary" style={{ fontSize: '11px' }}>
@@ -1217,6 +1310,31 @@ const MainLayout = () => {
                           </div>
                         )}
                       </div>
+
+                      {/* See More Footer */}
+                      {notifications.length > 0 && (
+                        <>
+                          <Divider style={{ margin: '8px 0', borderColor: '#f1f5f9' }} />
+                          <div
+                            onClick={() => { navigate('/notifications'); setNotifOpen(false); }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 6,
+                              padding: '6px 0 2px',
+                              cursor: 'pointer',
+                              color: 'var(--theme-dark-green)',
+                              fontWeight: 700,
+                              fontSize: 12,
+                            }}
+                            className="notif-see-more-btn"
+                          >
+                            <span>{t.see_more || 'See More'}</span>
+                            <RiShareForward2Fill size={13} />
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 >
@@ -1239,7 +1357,7 @@ const MainLayout = () => {
                         fontSize: 9, fontWeight: 800,
                         width: 17, height: 17, borderRadius: '50%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: '2px solid #f4f1eb',
+                        border: '2px solid var(--theme-milk-bg, #f4f1eb)',
                       }}>{notifCount > 9 ? '9+' : notifCount}</span>
                     )}
                   </div>
@@ -1252,8 +1370,8 @@ const MainLayout = () => {
                   size="small"
                   onClick={() => navigate('/my-plan')}
                   icon={
-                    (profile?.plan_name?.toLowerCase().includes('enterprise') || Number(profile?.plan_id) >= 6) ? <CrownOutlined /> :
-                      (profile?.plan_name?.toLowerCase().includes('pro') || Number(profile?.plan_id) === 5) ? <StarOutlined /> :
+                    (profile?.plan_name?.toLowerCase().includes('enterprise') || Number(profile?.plan_id) >= 3) ? <CrownOutlined /> :
+                      (profile?.plan_name?.toLowerCase().includes('pro') || Number(profile?.plan_id) === 2) ? <StarOutlined /> :
                         <ShopOutlined />
                   }
                   style={{
@@ -1266,7 +1384,7 @@ const MainLayout = () => {
                     textTransform: 'uppercase',
                   }}
                 >
-                  {profile?.plan_name || (Number(profile?.plan_id) === 4 ? 'Core' : `Plan ${profile?.plan_id}`)}
+                  {profile?.plan_name || (Number(profile?.plan_id) === 1 ? 'Core' : `Plan ${profile?.plan_id}`)}
                 </Button>
               )}
 

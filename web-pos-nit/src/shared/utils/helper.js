@@ -27,6 +27,7 @@ export const request = (url = "", method = "get", data = {}) => {
     url.includes("order-web") ||
     url.includes("business/public-config") ||
     url.includes("plans/public") ||
+    url.includes("subscription/packages/public") ||
     url.includes("system-settings/public") ||
     isPublicMenu;
 

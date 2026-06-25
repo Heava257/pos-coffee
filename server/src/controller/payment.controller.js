@@ -309,7 +309,7 @@ async function _performUpgrade(conn, business_id, plan_id, duration_days, tran_i
 
         await conn.query(
             "INSERT INTO subscriptions (business_id, plan_id, plan_type, start_date, end_date, status, tran_id) VALUES (?, ?, ?, ?, ?, 'active', ?)",
-            [business_id, plan_id, plan_id == 1 ? "free" : "pro", startStr, endStr, tran_id]
+            [business_id, plan_id, plan_id == 1 ? "basic" : plan_id == 2 ? "standard" : "premium", startStr, endStr, tran_id]
         );
 
         // 4. Update owner role permissions
@@ -326,6 +326,15 @@ async function _performUpgrade(conn, business_id, plan_id, duration_days, tran_i
         }
 
         await conn.commit();
+
+        // Clear permission caches so changes take effect immediately
+        try {
+            require("../middleware/auth.middleware").clearCache();
+        } catch (e) {}
+        try {
+            require("../../middlewares/auth.middleware").clearCache();
+        } catch (e) {}
+
         console.log(`[Payment] Plan upgraded for business ${business_id} → plan ${plan_id} (tran: ${tran_id})`);
     } catch (err) {
         await conn.rollback();

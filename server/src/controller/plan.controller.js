@@ -173,7 +173,7 @@ exports.selfUpgrade = async (req, res) => {
         const manualTranId = `MANUAL-${Date.now()}`;
         await conn.query(
             "INSERT INTO subscriptions (business_id, plan_id, plan_type, start_date, end_date, status, tran_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [business_id, plan_id, plan_id == 1 ? 'free' : 'pro', startString, endString, 'active', manualTranId]
+            [business_id, plan_id, plan_id == 1 ? 'basic' : plan_id == 2 ? 'standard' : 'premium', startString, endString, 'active', manualTranId]
         );
 
         // 4. Auto-update Owner role permissions to match the new plan tier
@@ -187,6 +187,15 @@ exports.selfUpgrade = async (req, res) => {
         }
 
         await conn.commit();
+
+        // Clear permission caches so changes take effect immediately
+        try {
+            require("../middleware/auth.middleware").clearCache();
+        } catch (e) {}
+        try {
+            require("../../middlewares/auth.middleware").clearCache();
+        } catch (e) {}
+
         res.json({
             success: true,
             message: "Congratulations! Your plan has been upgraded successfully. Please re-login to activate your new permissions.",
@@ -287,6 +296,15 @@ exports.updateSystemSubscription = async (req, res) => {
         }
 
         await conn.commit();
+
+        // Clear permission caches so changes take effect immediately
+        try {
+            require("../middleware/auth.middleware").clearCache();
+        } catch (e) {}
+        try {
+            require("../../middlewares/auth.middleware").clearCache();
+        } catch (e) {}
+
         res.json({ success: true, message: "Subscription updated successfully by Admin" });
 
     } catch (error) {

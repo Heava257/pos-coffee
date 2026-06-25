@@ -175,9 +175,10 @@ exports.saveMatrix = async (req, res) => {
             // 🚀 HYPER-SYNC: Clear Backend Cache so changes take effect immediately
             try {
                 require("../middleware/auth.middleware").clearCache();
-            } catch (e) {
-                console.error("Cache clear error:", e);
-            }
+            } catch (e) {}
+            try {
+                require("../../middlewares/auth.middleware").clearCache();
+            } catch (e) {}
 
             res.json({ success: true, message: "Permission Matrix saved successfully" });
         } catch (err) {
