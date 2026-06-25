@@ -1,0 +1,65 @@
+name: 🚀 Deploy POS Coffee to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web-pos-nit/package-lock.json
+
+      - name: Build Frontend
+        run: |
+          cd web-pos-nit
+          npm install
+          npm run build
+
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.EC2_SSH_KEY }}
+          known_hosts: 'unnecessary'
+          if_key_exists: replace
+
+      - name: Add Known Hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy Backend to EC2
+        run: |
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude 'logs' \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'web-pos-nit' \
+            server/ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/server/
+
+      - name: Deploy Frontend to EC2
+        run: |
+          rsync -avz --delete \
+            web-pos-nit/dist/ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/app/frontend/dist/
+
+      - name: Post Deployment Command (Restart PM2 & Perms)
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+            cd /home/ubuntu/app/server &&
+            npm install --production &&
+            pm2 restart coffee-api || pm2 start index.js --name 'coffee-api'
+            sudo chmod +x /home/ubuntu
+            sudo chmod +x /home/ubuntu/app
+            sudo chmod +x /home/ubuntu/app/frontend
+            sudo chmod -R +r /home/ubuntu/app/frontend/dist
+          "
