@@ -800,10 +800,17 @@ const handleDownloadInvoice = async (tranId) => {
             >
                 {paymentSession && (() => {
                     const sys = paymentSession.system_settings || {};
-                    const merchantId = sys.payway_merchant_id;
-                    const receiverName = sys.payway_receiver_name || "Platform Subscription";
-                    const staticQR = sys.payway_khqr_image;
-                    const telegramLink = sys.telegram_support_link || "https://t.me/growme_support";
+                    let merchantId = sys.payway_merchant_id;
+                    if (merchantId === "null" || merchantId === "undefined" || !merchantId) merchantId = null;
+
+                    let receiverName = sys.payway_receiver_name;
+                    if (receiverName === "null" || receiverName === "undefined" || !receiverName) receiverName = "Platform Subscription";
+
+                    let staticQR = sys.payway_khqr_image;
+                    if (staticQR === "null" || staticQR === "undefined" || !staticQR) staticQR = null;
+
+                    let telegramLink = sys.telegram_support_link;
+                    if (telegramLink === "null" || telegramLink === "undefined" || !telegramLink) telegramLink = "https://t.me/growme_support";
 
                     let dynamicKHQR = null;
                     if (merchantId && paymentSession.amount > 0) {

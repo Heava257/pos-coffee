@@ -95,9 +95,14 @@ const PlanPage = () => {
         setSysLoading(true);
         const res = await request("system-settings", "get");
         if (res && res.success) {
-            setSystemSettings(res.settings);
-            systemForm.setFieldsValue(res.settings);
-            if (res.settings.payway_khqr_image) {
+            const cleaned = {};
+            Object.keys(res.settings).forEach(key => {
+                const v = res.settings[key];
+                cleaned[key] = (v === "null" || v === "undefined") ? "" : v;
+            });
+            setSystemSettings(cleaned);
+            systemForm.setFieldsValue(cleaned);
+            if (cleaned.payway_khqr_image) {
                 setFileList([{
                     uid: '-1',
                     name: 'khqr.png',
