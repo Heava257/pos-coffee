@@ -1,623 +1,362 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { request } from "@/shared/utils/helper";
 import { getProfile } from "@/app/store/profile.store";
-import { useLanguage, translations } from "@/app/store/language.store";
-import platformLogo from "@/assets/platform_logo.png";
-import { ArrowRight } from "lucide-react";
+import "./PremiumLanding.css";
 
-// Import Refactored Modular Components
-import LandingHeader from "../components/LandingHeader";
-import LandingHero from "../components/LandingHero";
-import LandingStats from "../components/LandingStats";
-import LandingVerticals from "../components/LandingVerticals";
-import LandingFooter from "../components/LandingFooter";
+/* ─── SVG Icons (inline, zero deps) ─── */
+const Icon = ({ d, size = 16, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+const CheckIcon = () => <Icon d="M20 6L9 17l-5-5" color="#22C55E" size={13} />;
+const ArrowIcon = () => <Icon d="M5 12h14M12 5l7 7-7 7" size={14} />;
+const PlayIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="#020c05">
+    <polygon points="5,3 19,12 5,21" />
+  </svg>
+);
 
+/* ─── Bar chart heights for mock dashboard ─── */
+const BARS = [35, 55, 42, 68, 52, 78, 60, 85, 72, 90, 65, 88];
+
+/* ─── Module definitions ─── */
+const MODULES = [
+  { name: "POS", icon: "🏪", bg: "rgba(34,197,94,0.12)", color: "#22C55E" },
+  { name: "ERP", icon: "🏢", bg: "rgba(59,130,246,0.12)", color: "#60a5fa" },
+  { name: "HRM", icon: "👥", bg: "rgba(168,85,247,0.12)", color: "#c084fc" },
+  { name: "CRM", icon: "💼", bg: "rgba(234,179,8,0.12)", color: "#eab308" },
+  { name: "Inventory", icon: "📦", bg: "rgba(249,115,22,0.12)", color: "#fb923c" },
+  { name: "Accounting", icon: "📊", bg: "rgba(236,72,153,0.12)", color: "#f472b6" },
+  { name: "Projects", icon: "🚀", bg: "rgba(20,184,166,0.12)", color: "#2dd4bf" },
+  { name: "Reports", icon: "📈", bg: "rgba(99,102,241,0.12)", color: "#818cf8" },
+];
+
+/* ─── Trusted companies ─── */
+const TRUSTED = ["Petronas","Maybank","AirAsia","99 Speedmart","Grab","Samsung","TM","UOB"];
+
+/* ─── Projects ─── */
+const PROJECTS = [
+  { abbr:"Pe", name:"Petronas Retail System", desc:"Retail & POS Solution", badge:"active", bg:"#15803d", color:"#22C55E" },
+  { abbr:"Mb", name:"Maybank ERP System",     desc:"Enterprise Resource Planning", badge:"progress", bg:"#1d4ed8", color:"#60a5fa" },
+  { abbr:"AA", name:"AirAsia HR Portal",      desc:"Human Resource Management", badge:"done", bg:"#b91c1c", color:"#f87171" },
+  { abbr:"99", name:"99 Speedmart Inventory", desc:"Inventory Management", badge:"active", bg:"#d97706", color:"#fbbf24" },
+  { abbr:"Gr", name:"Grab CRM Platform",      desc:"Customer Relationship Mgmt", badge:"progress", bg:"#047857", color:"#34d399" },
+];
+
+const BADGE_MAP = {
+  active:   { label:"Active",      cls:"pl-badge-green" },
+  progress: { label:"In Progress", cls:"pl-badge-yellow" },
+  done:     { label:"Completed",   cls:"pl-badge-blue"  },
+};
+
+/* ─── Footer nav ─── */
+const FOOTER_COLS = [
+  { title:"Product",    links:["Features","Modules","Pricing","Integrations"] },
+  { title:"Solutions",  links:["Retail","Restaurant","Wholesale","Services"] },
+  { title:"Resources",  links:["Documentation","Help Center","Blog","Guides"] },
+  { title:"Company",    links:["About Us","Careers","Partners","Contact"] },
+];
+
+/* ════════════════════════════════════════════ */
 const SaasLandingPage = () => {
   const navigate = useNavigate();
-  const { lang, setLang } = useLanguage();
-  const t = translations[lang] || translations.en;
-  const profile = getProfile();
-
-  const [packages, setPackages] = useState([]);
-  const [loadingPackages, setLoadingPackages] = useState(true);
-  const [settings, setSettings] = useState({});
+  const profile  = getProfile();
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
-    // If user is already logged in, redirect to appropriate view
     if (profile) {
-      const isAdmin = profile.is_super_admin === 1 ||
-        ["Owner", "Executive", "Admin"].includes(profile.role_name);
-      if (isAdmin) {
-        navigate("/dashboard");
-      } else {
-        navigate("/invoices");
-      }
+      const isAdmin = profile.is_super_admin === 1 || ["Owner","Executive","Admin"].includes(profile.role_name);
+      navigate(isAdmin ? "/dashboard" : "/invoices");
     }
-    fetchPackages();
-    fetchSettings();
   }, [profile]);
 
-  const fetchSettings = async () => {
-    try {
-      const res = await request("system-settings/public", "get");
-      if (res && res.success && res.settings && res.settings.landing_page) {
-        const landingData = JSON.parse(res.settings.landing_page);
-        setSettings(landingData);
-      }
-    } catch (err) {
-      console.error("Failed to load settings:", err);
-    }
-  };
-
-  const fetchPackages = async () => {
-    setLoadingPackages(true);
-    try {
-      const res = await request("subscription/packages/public", "get");
-      if (res && res.success && res.list) {
-        setPackages(res.list);
-      }
-    } catch (err) {
-      console.error("Failed to load packages:", err);
-    } finally {
-      setLoadingPackages(false);
-    }
-  };
-
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap');
-        
-        .saas-container {
-          background-color: #0b0f19;
-          color: #f3f4f6;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          min-height: 100vh;
-          overflow-x: clip;
-          position: relative;
-        }
+    <div style={{ background: "#071018", minHeight: "100vh", fontFamily: "'Inter',system-ui,sans-serif" }}>
 
-        .blur-blob {
-          position: absolute;
-          width: 500px;
-          height: 500px;
-          border-radius: 50%;
-          filter: blur(150px);
-          z-index: 0;
-          opacity: 0.15;
-          pointer-events: none;
-        }
-        .blob-1 {
-          background: #c0a060;
-          top: -100px;
-          left: -100px;
-        }
-        .blob-2 {
-          background: #2e7d32;
-          bottom: 10%;
-          right: -100px;
-        }
+      {/* ── NAVBAR ── */}
+      <header className="pl-nav">
+        <Link to="/" className="pl-logo">
+          <div className="pl-logo-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                stroke="#020c05" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <span className="pl-logo-text">SaaS<span>Platform</span></span>
+        </Link>
 
-        .saas-nav {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 24px 8%;
-          position: sticky;
-          top: 0;
-          z-index: 1000;
-          backdrop-filter: blur(16px);
-          background-color: #0b0f19;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
+        <nav className="pl-navlinks">
+          {["Home","Solutions","Features","Pricing","Resources","Company"].map(n => (
+            <a key={n} href="#" className={`pl-navlink${n==="Home"?" active":""}`}>
+              {n}
+              {(n==="Solutions"||n==="Resources"||n==="Company") && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              )}
+            </a>
+          ))}
+        </nav>
 
-        .nav-logo {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 20px;
-          font-weight: 800;
-          color: #ffffff;
-          text-decoration: none;
-          letter-spacing: -0.5px;
-        }
-        .nav-logo span {
-          color: #c0a060;
-        }
+        <div className="pl-nav-actions">
+          <a href="#demo" className="pl-btn pl-btn-ghost">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentColor"/>
+            </svg>
+            Watch Demo
+          </a>
+          <Link to="/login"    className="pl-btn pl-btn-outline">Login</Link>
+          <Link to="/register" className="pl-btn pl-btn-green">Register</Link>
+        </div>
+      </header>
 
-        .nav-links {
-          display: flex;
-          align-items: center;
-          gap: 32px;
-        }
-        .nav-link {
-          color: rgba(255, 255, 255, 0.7);
-          text-decoration: none;
-          font-size: 14px;
-          font-weight: 600;
-          transition: all 0.3s;
-        }
-        .nav-link:hover {
-          color: #c0a060;
-        }
-
-        .nav-actions {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
-        .btn-secondary {
-          background: transparent;
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          color: #ffffff;
-          padding: 10px 20px;
-          border-radius: 12px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.3s;
-          display: inline-flex;
-          align-items: center;
-          text-decoration: none;
-        }
-        .btn-secondary:hover {
-          background-color: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.25);
-        }
-
-        .btn-primary {
-          background-color: #c0a060;
-          color: #0b0f19;
-          padding: 10px 24px;
-          border-radius: 12px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          border: none;
-          transition: all 0.3s;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          text-decoration: none;
-          box-shadow: 0 4px 14px rgba(192, 160, 96, 0.3);
-        }
-        .btn-primary:hover {
-          background-color: #b09050;
-          box-shadow: 0 6px 20px rgba(192, 160, 96, 0.4);
-          transform: translateY(-1px);
-        }
-
-        .lang-toggle-landing {
-          display: flex;
-          background: rgba(255, 255, 255, 0.05);
-          padding: 4px;
-          border-radius: 8px;
-          gap: 2px;
-        }
-        .lang-toggle-btn {
-          border: none;
-          padding: 4px 8px;
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: 0.2s;
-        }
-
-        .hero-section {
-          display: grid;
-          grid-template-columns: 1.2fr 1fr;
-          gap: 60px;
-          padding: 100px 8% 80px 8%;
-          align-items: center;
-          position: relative;
-          z-index: 10;
-        }
-
-        .hero-content {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-        }
-
-        .hero-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background-color: rgba(192, 160, 96, 0.1);
-          color: #c0a060;
-          padding: 6px 14px;
-          border-radius: 100px;
-          font-size: 12px;
-          font-weight: 700;
-          margin-bottom: 24px;
-          border: 1px solid rgba(192, 160, 96, 0.15);
-        }
-
-        .hero-title {
-          font-size: 56px;
-          font-weight: 800;
-          line-height: 1.15;
-          margin-bottom: 20px;
-          letter-spacing: -1.5px;
-          color: #ffffff;
-        }
-        .hero-title span {
-          color: #c0a060;
-          font-family: 'Playfair Display', serif;
-          font-style: italic;
-          font-weight: 600;
-        }
-
-        .hero-desc {
-          font-size: 18px;
-          color: rgba(255, 255, 255, 0.6);
-          line-height: 1.6;
-          margin-bottom: 40px;
-          max-width: 580px;
-        }
-
-        .hero-ctas {
-          display: flex;
-          gap: 16px;
-        }
-
-        .hero-visual {
-          position: relative;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        
-        .hero-image-wrapper {
-          position: relative;
-          width: 100%;
-          max-width: 480px;
-          border-radius: 24px;
-          overflow: hidden;
-          box-shadow: 0 30px 60px rgba(0,0,0,0.5), 
-                      0 0 0 1px rgba(255,255,255,0.05);
-          transition: all 0.5s ease;
-          aspect-ratio: 1;
-        }
-        .hero-image-wrapper:hover {
-          transform: translateY(-5px) scale(1.01);
-          box-shadow: 0 40px 80px rgba(0,0,0,0.6), 
-                      0 0 0 1px rgba(192, 160, 96, 0.2);
-        }
-        .hero-image {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-        }
-
-        .stats-section {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 24px;
-          padding: 60px 8%;
-          background-color: rgba(255, 255, 255, 0.01);
-          border-top: 1px solid rgba(255, 255, 255, 0.03);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-          position: relative;
-          z-index: 10;
-        }
-        .stat-card {
-          text-align: center;
-          padding: 20px;
-        }
-        .stat-value {
-          font-size: 36px;
-          font-weight: 800;
-          color: #ffffff;
-          margin-bottom: 8px;
-          letter-spacing: -1px;
-        }
-        .stat-label {
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.45);
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .verticals-section {
-          padding: 100px 8%;
-          position: relative;
-          z-index: 10;
-        }
-        .section-header {
-          text-align: center;
-          max-width: 650px;
-          margin: 0 auto 60px auto;
-        }
-        .section-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background-color: rgba(46, 125, 50, 0.1);
-          color: #81c784;
-          padding: 6px 14px;
-          border-radius: 100px;
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          margin-bottom: 16px;
-          border: 1px solid rgba(46, 125, 50, 0.15);
-        }
-        .section-title {
-          font-size: 40px;
-          font-weight: 800;
-          color: #ffffff;
-          margin-bottom: 16px;
-          letter-spacing: -1px;
-        }
-        .section-desc {
-          font-size: 16px;
-          color: rgba(255, 255, 255, 0.5);
-          line-height: 1.6;
-        }
-
-        .verticals-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 32px;
-        }
-        .vertical-card {
-          background-color: rgba(255, 255, 255, 0.01);
-          border: 1px solid rgba(255, 255, 255, 0.04);
-          border-radius: 24px;
-          padding: 36px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-          overflow: hidden;
-        }
-        .vertical-card:hover {
-          background-color: rgba(255, 255, 255, 0.02);
-          border-color: rgba(255, 255, 255, 0.08);
-          transform: translateY(-4px);
-        }
-        .vertical-card.active {
-          border-color: rgba(192, 160, 96, 0.2);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
-        .vertical-icon-wrapper {
-          width: 56px;
-          height: 56px;
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 24px;
-        }
-        .vertical-status {
-          position: absolute;
-          top: 36px;
-          right: 36px;
-          font-size: 10px;
-          font-weight: 800;
-          padding: 4px 10px;
-          border-radius: 100px;
-          letter-spacing: 0.5px;
-        }
-        .vertical-title {
-          font-size: 22px;
-          font-weight: 700;
-          color: #ffffff;
-          margin-bottom: 12px;
-        }
-        .vertical-desc {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.55);
-          line-height: 1.6;
-          margin-bottom: 0;
-        }
-
-        .cta-banner {
-          margin: 0 8% 100px 8%;
-          background: linear-gradient(135deg, rgba(192, 160, 96, 0.1) 0%, rgba(46, 125, 50, 0.05) 100%);
-          border: 1px solid rgba(192, 160, 96, 0.15);
-          border-radius: 32px;
-          padding: 80px 40px;
-          text-align: center;
-          position: relative;
-          overflow: hidden;
-          z-index: 10;
-        }
-
-        .cta-banner-title {
-          font-family: 'Playfair Display', serif;
-          font-size: 40px;
-          color: #ffffff;
-          font-weight: 700;
-          margin-bottom: 16px;
-        }
-        .cta-banner-desc {
-          font-size: 16px;
-          color: rgba(255, 255, 255, 0.6);
-          max-width: 600px;
-          margin: 0 auto 36px auto;
-          line-height: 1.6;
-        }
-
-        .saas-footer {
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-          padding: 60px 8% 40px 8%;
-          position: relative;
-          z-index: 10;
-        }
-
-        .footer-grid {
-          display: grid;
-          grid-template-columns: 1.8fr repeat(6, 1fr);
-          gap: 24px;
-          margin-bottom: 48px;
-        }
-
-        .footer-brand-title {
-          font-size: 18px;
-          font-weight: 800;
-          color: #ffffff;
-          margin-bottom: 16px;
-        }
-        .footer-brand-desc {
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.45);
-          line-height: 1.6;
-          max-width: 280px;
-        }
-
-        .footer-col-title {
-          font-size: 12px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          color: rgba(255, 255, 255, 0.3);
-          margin-bottom: 20px;
-        }
-
-        .footer-links-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .footer-link-item a {
-          color: rgba(255, 255, 255, 0.5);
-          text-decoration: none;
-          font-size: 13px;
-          transition: all 0.3s;
-        }
-        .footer-link-item a:hover {
-          color: #c0a060;
-        }
-
-        .footer-bottom {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-top: 32px;
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.4);
-        }
-
-        @media (max-width: 1200px) {
-          .footer-grid {
-            grid-template-columns: 1.5fr repeat(3, 1fr);
-            gap: 32px;
-          }
-        }
-
-        @media (max-width: 991px) {
-          .hero-section {
-            grid-template-columns: 1fr;
-            text-align: center;
-            gap: 40px;
-            padding-top: 60px;
-          }
-          .hero-content {
-            align-items: center;
-          }
-          .hero-title {
-            font-size: 40px;
-          }
-          .hero-desc {
-            margin-bottom: 30px;
-          }
-          .hero-image-wrapper {
-            transform: none;
-          }
-          .footer-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-          }
-        }
-
-        @media (max-width: 850px) {
-          .footer-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 28px;
-          }
-        }
-
-        @media (max-width: 576px) {
-          .saas-nav {
-            padding: 16px 5%;
-          }
-          .hero-section {
-            padding-left: 5%;
-            padding-right: 5%;
-          }
-          .nav-links {
-            display: none;
-          }
-          .hero-ctas {
-            flex-direction: column;
-            width: 100%;
-          }
-          .hero-ctas .btn-primary, .hero-ctas .btn-secondary {
-            width: 100%;
-            justify-content: center;
-          }
-          .footer-grid {
-            grid-template-columns: 1fr;
-          }
-          .footer-bottom {
-            flex-direction: column;
-            gap: 16px;
-            text-align: center;
-          }
-        }
-      `}</style>
-
-      <div className="saas-container">
-        {/* Decorative Blurred Blobs */}
-        <div className="blur-blob blob-1"></div>
-        <div className="blur-blob blob-2"></div>
-
-        {/* Dynamic Refactored Header */}
-        <LandingHeader 
-          platformLogo={platformLogo} 
-          lang={lang} 
-          setLang={setLang} 
-        />
-
-        {/* Dynamic Refactored Hero Section */}
-        <LandingHero settings={settings} />
-
-        {/* Refactored Stats Section */}
-        <LandingStats />
-
-        {/* Dynamic Verticals/Services Grid Section */}
-        <LandingVerticals 
-          packages={packages} 
-          loading={loadingPackages} 
-          lang={lang} 
-        />
-
-        {/* Bottom CTA Banner */}
-        <section className="cta-banner">
-          <h2 className="cta-banner-title">Ready to digitize your Coffee business?</h2>
-          <p className="cta-banner-desc">
-            Join hundreds of modern merchants scaling their branches with Green Grounds POS. Set up your shop menu, customize options, and sync your inventory today.
+      {/* ── HERO ── */}
+      <section className="pl-hero">
+        {/* Left */}
+        <div>
+          <div className="pl-hero-badge">
+            <span className="pl-hero-badge-dot" />
+            All-in-One Multi-Platform SaaS
+          </div>
+          <h1 className="pl-hero-title">
+            Run Your Business<br />
+            <span className="green-word">Smarter, Faster,</span><br />
+            Better
+          </h1>
+          <p className="pl-hero-desc">
+            One platform to manage POS, ERP, HRM, CRM, Inventory, Accounting and more.
+            Built for modern teams and growing enterprises.
           </p>
-          <Link to="/register" className="btn-primary" style={{ padding: "16px 36px", fontSize: 16 }}>
-            Create Your Account Now
-            <ArrowRight size={18} />
-          </Link>
-        </section>
+          <div className="pl-hero-ctas">
+            <Link to="/register" className="pl-btn pl-btn-green pl-btn-lg">
+              Get Started Free <ArrowIcon />
+            </Link>
+            <a href="#demo" className="pl-btn pl-btn-ghost pl-btn-lg">
+              <PlayIcon /> Watch Demo
+            </a>
+          </div>
+          <div className="pl-hero-perks">
+            {["No Credit Card","14 Days Free Trial","Cancel Anytime","Setup in 5 Minutes"].map(p => (
+              <span key={p} className="pl-perk"><CheckIcon />{p}</span>
+            ))}
+          </div>
+        </div>
 
-        {/* Refactored Footer */}
-        <LandingFooter platformLogo={platformLogo} />
-      </div>
-    </>
+        {/* Right – Dashboard Mockup */}
+        <div className="pl-hero-visual">
+          <div className="pl-dashboard-mockup" style={{position:"relative"}}>
+            <div style={{
+              borderRadius:20,overflow:"hidden",
+              boxShadow:"0 30px 80px rgba(0,0,0,0.7),0 0 60px rgba(34,197,94,0.1)",
+              border:"1px solid rgba(255,255,255,0.07)",
+            }}>
+              <img
+                src="/images/saas_dashboard_mockup.png"
+                alt="Enterprise SaaS Dashboard"
+                style={{width:"100%",display:"block",borderRadius:20}}
+              />
+            </div>
+
+            {/* Floating cards */}
+            <div className="pl-float-card pl-float-card-green"
+              style={{top:10,right:-20,minWidth:130}}>
+              <div className="pl-float-label">Monthly Revenue</div>
+              <div className="pl-float-val green">↑ +24.5%</div>
+            </div>
+            <div className="pl-float-card"
+              style={{bottom:40,left:-20,minWidth:120}}>
+              <div className="pl-float-label">Active Users</div>
+              <div className="pl-float-val">8,654 Online</div>
+            </div>
+            <div className="pl-float-card"
+              style={{bottom:120,right:-24,minWidth:110}}>
+              <div className="pl-float-label">Orders Today</div>
+              <div className="pl-float-val green">142 New</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TRUSTED ── */}
+      <section className="pl-trusted">
+        <p className="pl-trusted-label">Trusted by 10,000+ Companies Worldwide</p>
+        <div className="pl-logos-row">
+          {TRUSTED.map(c => (
+            <div key={c} className="pl-logo-item">{c}</div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── CONTENT GRID ── */}
+      <section className="pl-content-grid">
+
+        {/* Card 1 – Modules */}
+        <div className="pl-card">
+          <div className="pl-card-title">Powerful Modules</div>
+          <div className="pl-modules-grid">
+            {MODULES.map(m => (
+              <div key={m.name} className="pl-module">
+                <div className="pl-module-icon" style={{background:m.bg}}>
+                  <span style={{fontSize:18}}>{m.icon}</span>
+                </div>
+                <div className="pl-module-name" style={{color:m.color}}>{m.name}</div>
+              </div>
+            ))}
+          </div>
+          <button className="pl-view-all">
+            View All Modules <ArrowIcon />
+          </button>
+        </div>
+
+        {/* Card 2 – Demo */}
+        <div className="pl-card" id="demo">
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+            <div className="pl-card-title" style={{margin:0}}>Watch Platform Demo</div>
+            <div className="pl-demo-badge" style={{position:"static",background:"rgba(34,197,94,0.1)",color:"#22C55E",border:"1px solid rgba(34,197,94,0.2)",borderRadius:8,padding:"3px 8px",fontSize:10,fontWeight:700}}>2:45</div>
+          </div>
+          <div className="pl-demo-thumb">
+            {/* Fake waveform bars in background */}
+            <div style={{position:"absolute",inset:0,display:"flex",alignItems:"flex-end",gap:3,padding:"12px 16px",opacity:.3}}>
+              {[20,40,60,35,70,45,80,55,65,50,75,30,85,40,60].map((h,i)=>(
+                <div key={i} style={{flex:1,height:`${h}%`,borderRadius:"3px 3px 0 0",background:"linear-gradient(to top,#16a34a,#22C55E)"}} />
+              ))}
+            </div>
+            <div className="pl-play-btn"><PlayIcon /></div>
+            <div className="pl-demo-badge">2:45 min</div>
+          </div>
+          <p className="pl-demo-desc">
+            See how our platform can transform your business operations and boost productivity across all departments.
+          </p>
+          <a href="#demo" className="pl-btn pl-btn-green" style={{width:"100%",justifyContent:"center"}}>
+            Watch Full Demo <ArrowIcon />
+          </a>
+        </div>
+
+        {/* Card 3 – Projects */}
+        <div className="pl-card">
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div className="pl-card-title" style={{margin:0}}>Recent Projects</div>
+            <a href="#" className="pl-view-all-link" style={{fontSize:11,margin:0}}>View All</a>
+          </div>
+          <div className="pl-project-list">
+            {PROJECTS.map(p => (
+              <div key={p.name} className="pl-project-item">
+                <div className="pl-project-logo"
+                  style={{background:`${p.bg}33`,border:`1px solid ${p.color}30`,color:p.color}}>
+                  {p.abbr}
+                </div>
+                <div className="pl-project-info">
+                  <div className="pl-project-name">{p.name}</div>
+                  <div className="pl-project-desc">{p.desc}</div>
+                </div>
+                <div className={`pl-badge ${BADGE_MAP[p.badge].cls}`}>
+                  {BADGE_MAP[p.badge].label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA BANNER ── */}
+      <section className="pl-cta">
+        <div className="pl-cta-rocket">🚀</div>
+        <div className="pl-cta-content">
+          <h2 className="pl-cta-title">Ready to Transform Your Business?</h2>
+          <p className="pl-cta-desc">
+            Join thousands of companies using our platform to grow faster and work smarter.
+          </p>
+        </div>
+        <div className="pl-cta-actions">
+          <Link to="/register" className="pl-btn pl-btn-green pl-btn-lg">
+            Start Free Trial <ArrowIcon />
+          </Link>
+          <a href="#" className="pl-btn pl-btn-ghost pl-btn-lg">
+            Contact Sales
+          </a>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer className="pl-footer">
+        <div className="pl-footer-top">
+          {/* Brand */}
+          <div>
+            <div className="pl-footer-brand-name">
+              <div className="pl-logo-icon" style={{width:30,height:30,borderRadius:8}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                    stroke="#020c05" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <span style={{fontWeight:800,fontSize:16,color:"#fff"}}>SaaS<span style={{color:"#22C55E"}}>Platform</span></span>
+            </div>
+            <p className="pl-footer-brand-desc">
+              All-in-one business platform for modern companies and growing enterprises worldwide.
+            </p>
+            {/* Newsletter */}
+            <div style={{marginBottom:4,fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.4)",letterSpacing:".5px"}}>
+              STAY UPDATED
+            </div>
+            <div className="pl-footer-newsletter">
+              <input
+                className="pl-footer-input"
+                placeholder="Enter your email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
+              <button className="pl-btn pl-btn-green" style={{padding:"9px 16px",borderRadius:10,flexShrink:0}}>
+                Subscribe
+              </button>
+            </div>
+            {/* Social icons */}
+            <div className="pl-social-row">
+              {[
+                { label:"fb",  d:"M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" },
+                { label:"tw",  d:"M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" },
+                { label:"li",  d:"M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z" },
+                { label:"yt",  d:"M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 00-1.95 1.96A29 29 0 001 12a29 29 0 00.46 5.58 2.78 2.78 0 001.95 1.95C5.12 20 12 20 12 20s6.88 0 8.59-.47a2.78 2.78 0 001.95-1.95A29 29 0 0023 12a29 29 0 00-.46-5.58z M9.75 15.02V8.98L15.5 12l-5.75 3.02z" },
+                { label:"gh",  d:"M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22" },
+              ].map(s => (
+                <a key={s.label} href="#" className="pl-social-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={s.d} />
+                  </svg>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Nav columns */}
+          {FOOTER_COLS.map(col => (
+            <div key={col.title}>
+              <div className="pl-footer-col-title">{col.title}</div>
+              <ul className="pl-footer-links">
+                {col.links.map(l => (
+                  <li key={l}><a href="#">{l}</a></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="pl-footer-bottom">
+          <div>© 2024 SaaSPlatform. All rights reserved.</div>
+          <div className="pl-footer-bottom-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Security</a>
+          </div>
+          <select className="pl-lang-select">
+            <option>🌐 English</option>
+            <option>🇰🇭 Khmer</option>
+          </select>
+        </div>
+      </footer>
+    </div>
   );
 };
 
