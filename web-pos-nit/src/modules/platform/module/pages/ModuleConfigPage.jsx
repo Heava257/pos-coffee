@@ -152,7 +152,7 @@ const ModuleConfigPage = () => {
 
     return (
         <div style={{ padding: '24px', background: 'transparent', minHeight: '100vh' }}>
-            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ width: '100%' }}>
                 <Row gutter={[24, 24]} align="middle" style={{ marginBottom: 32 }}>
                     <Col span={16}>
                         <Title level={2} style={{ color: '#1e4a2d', margin: 0, fontWeight: 700 }}>
