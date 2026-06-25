@@ -341,3 +341,5 @@ async function _performUpgrade(conn, business_id, plan_id, duration_days, tran_i
         throw err;
     }
 }
+
+exports._performUpgrade = _performUpgrade;

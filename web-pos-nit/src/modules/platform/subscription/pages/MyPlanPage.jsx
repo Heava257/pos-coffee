@@ -803,6 +803,7 @@ const handleDownloadInvoice = async (tranId) => {
                     const merchantId = sys.payway_merchant_id;
                     const receiverName = sys.payway_receiver_name || "Platform Subscription";
                     const staticQR = sys.payway_khqr_image;
+                    const telegramLink = sys.telegram_support_link || "https://t.me/growme_support";
 
                     let dynamicKHQR = null;
                     if (merchantId && paymentSession.amount > 0) {
@@ -854,13 +855,34 @@ const handleDownloadInvoice = async (tranId) => {
                                 </div>
                             ) : null}
 
-                            <Button
-                                type="primary" size="large" block
-                                style={{ background: "#c0392b", border: "none", borderRadius: 12, height: 52, fontWeight: 700, fontSize: 16, marginBottom: 12 }}
-                                onClick={handleProceedToPayWay}
-                            >
-                                🏦 Checkout with ABA PayWay
-                            </Button>
+                            {merchantId ? (
+                                <Button
+                                    type="primary" size="large" block
+                                    style={{ background: "#c0392b", border: "none", borderRadius: 12, height: 52, fontWeight: 700, fontSize: 16, marginBottom: 12 }}
+                                    onClick={handleProceedToPayWay}
+                                >
+                                    🏦 Checkout with ABA PayWay
+                                </Button>
+                            ) : (
+                                <div style={{ marginBottom: 20, textAlign: 'left', background: '#f9f9f9', padding: '16px', borderRadius: '12px', border: '1px solid #eee' }}>
+                                    <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '10px' }}>
+                                        📌 <strong>ចំណាំ៖</strong> សូមផ្ទេរប្រាក់ឱ្យបានត្រឹមត្រូវទៅតាម QR Code ខាងលើ។ ប្រព័ន្ធនឹងស្កេនអ៊ីមែល និងធ្វើការ Upgrade គម្រោងជូនលោកអ្នកស្វ័យប្រវត្តក្នុងរយៈពេល ១ ទៅ ២ នាទី។
+                                    </Text>
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        block
+                                        style={{ background: '#24a1de', border: 'none', borderRadius: '12px', height: 48, fontWeight: 700 }}
+                                        onClick={() => {
+                                            const cleanLink = telegramLink.startsWith("http") ? telegramLink : `https://t.me/${telegramLink.replace("@", "")}`;
+                                            const textMsg = `សួស្តីបង! ខ្ញុំបានបង់ប្រាក់សម្រាប់គម្រោង ${paymentSession.plan_name} ចំនួន $${paymentSession.amount} រួចហើយ។\n\nនេះជាលេខកូដប្រតិបត្តិការរបស់ខ្ញុំ៖ ${paymentSession.tran_id}`;
+                                            window.open(`${cleanLink}?text=${encodeURIComponent(textMsg)}`, "_blank");
+                                        }}
+                                    >
+                                        💬 ផ្ញើវិក្កយបត្រទៅកាន់ Telegram
+                                    </Button>
+                                </div>
+                            )}
 
                             <div style={{ background: "#f8fdf9", borderRadius: 10, padding: "8px 16px", marginBottom: 16, fontSize: 11 }}>
                                 <Text type="secondary">Trans ID: </Text>

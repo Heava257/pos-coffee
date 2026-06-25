@@ -434,6 +434,35 @@ const PlanPage = () => {
                                                 <Input.Password prefix={<KeyOutlined />} placeholder="Your Secret API Key" />
                                             </Form.Item>
                                         </Col>
+                                        <Col span={24}>
+                                            <Form.Item name="telegram_support_link" label="Telegram Support Link" tooltip="Link for clients to contact for manual/payment queries (e.g. https://t.me/your_telegram_username)">
+                                                <Input prefix={<MailOutlined />} placeholder="e.g. https://t.me/your_telegram_username" />
+                                            </Form.Item>
+                                        </Col>
+
+                                        <Col span={24}>
+                                            <Divider orientation="left" style={{ fontSize: 13, color: '#999' }}>ABA Personal Account Notification Reader (Gmail IMAP)</Divider>
+                                        </Col>
+                                        <Col span={12}>
+                                            <Form.Item name="payment_imap_user" label="Gmail Address" tooltip="Gmail account that receives ABA transaction email notifications">
+                                                <Input placeholder="e.g. growme.payment@gmail.com" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={12}>
+                                            <Form.Item name="payment_imap_pass" label="Gmail App Password" tooltip="Gmail App Password (16 characters) created in Google Account Settings">
+                                                <Input.Password placeholder="e.g. abcd efgh ijkl mnop" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={12}>
+                                            <Form.Item name="payment_imap_host" label="IMAP Host" tooltip="IMAP server address. Default is imap.gmail.com">
+                                                <Input placeholder="imap.gmail.com" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={12}>
+                                            <Form.Item name="payment_imap_port" label="IMAP Port" tooltip="IMAP port. Default is 993">
+                                                <Input placeholder="993" />
+                                            </Form.Item>
+                                        </Col>
 
                                         <Col span={24}>
                                             <Divider orientation="left" style={{ fontSize: 13, color: '#999' }}>Master KHQR Image (Fallback)</Divider>

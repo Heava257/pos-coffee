@@ -77,6 +77,7 @@ app.listen(PORT, async () => {
     require("./jobs/stockForecast.job").start();
     require("./jobs/salesSummary.job").start();
     require("./jobs/telegram.job").start();
+    require("./jobs/emailPayment.job").start();
     console.log("✨ All modular background jobs registered successfully.");
   } catch (jobErr) {
     console.error("Failed to start modular background jobs:", jobErr.message);
@@ -93,6 +94,22 @@ app.listen(PORT, async () => {
     await db.query("UPDATE users SET status = 'active', is_super_admin = 1 WHERE id = 1");
     await db.query("UPDATE users SET status = 'active' WHERE business_id = 1");
     console.log("Migration: Business 1 and its users are now ACTIVATED");
+
+    // Initialize required system settings keys if they don't exist
+    const requiredSettings = [
+      { key: 'telegram_support_link', val: 'https://t.me/growme_support' },
+      { key: 'payment_imap_host', val: 'imap.gmail.com' },
+      { key: 'payment_imap_port', val: '993' },
+      { key: 'payment_imap_user', val: '' },
+      { key: 'payment_imap_pass', val: '' }
+    ];
+    for (const item of requiredSettings) {
+      await db.query(
+        "INSERT INTO system_settings (sett_key, sett_value) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM system_settings WHERE sett_key = ?)",
+        [item.key, item.val, item.key]
+      );
+    }
+    console.log("Migration: Payment & Support system settings initialized");
 
     // 🚀 EMERGENCY FIX 2: Ensure all existing users are marked as verified so they are not locked out
     try {
