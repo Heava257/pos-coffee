@@ -1,7 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { message } from "antd";
 import { request } from "@/shared/utils/helper";
+import { CAMBODIA_GEO } from "@/shared/utils/cambodia_geo";
 import "./AuthPremium.css";
 
 /* ── helpers ── */
@@ -56,9 +57,9 @@ const LANGUAGES  = ["English","Khmer","Thai","Vietnamese"];
 const TIMEZONES  = ["Asia/Phnom_Penh (UTC+7)","Asia/Bangkok (UTC+7)","Asia/Ho_Chi_Minh (UTC+7)","Asia/Singapore (UTC+8)","Asia/Kuala_Lumpur (UTC+8)"];
 
 const PLANS = [
-  { id:"starter",   name:"Starter",    price:0,   yr:0,   feats:["1 Branch","5 Users","Basic POS","Email Support"] },
-  { id:"business",  name:"Business",   price:49,  yr:39,  feats:["10 Branches","50 Users","Advanced Modules","Priority Support"], popular:true },
-  { id:"enterprise",name:"Enterprise", price:149, yr:119, feats:["Unlimited Branches","Unlimited Users","White Label","API Access","Dedicated Manager"] },
+  { id: 1, name:"Free Plan",  price:0,   cycle:"monthly",  feats:["1 Branch","2 Users","Basic POS","Email Support"] },
+  { id: 2, name:"Pro Plan",   price:30,  cycle:"monthly",  feats:["5 Branches","10 Users","Advanced Modules","Priority Support"], popular:true },
+  { id: 3, name:"Enterprise", price:800, cycle:"lifetime", feats:["Unlimited Branches","Unlimited Users","White Label","API Access","Dedicated Manager"] },
 ];
 
 export default function RegisterPage() {
@@ -73,11 +74,44 @@ export default function RegisterPage() {
 
   const [acc, setAcc] = useState({ firstName:"",lastName:"",username:"",email:"",phone:"",password:"",confirm:"" });
   const [biz, setBiz] = useState({ name:"",type:"",email:"",phone:"",tax:"",website:"" });
-  const [loc, setLoc] = useState({ country:"Cambodia",province:"",city:"",address:"",timezone:TIMEZONES[0],currency:"USD",language:"English" });
-  const [plan, setPlan] = useState("business");
+  const [loc, setLoc] = useState({ country:"Cambodia",province:"Phnom Penh",city:"Chamkar Mon",address:"",timezone:TIMEZONES[0],currency:"USD",language:"English" });
+  const [plan, setPlan] = useState(2); // Pro Plan by default
+  const [dbPlans, setDbPlans] = useState([]);
   const [otp, setOtp]   = useState(["","","","","",""]);
   const [agreed, setAgreed]     = useState(false);
   const [privacyOk, setPrivacy] = useState(false);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const res = await request("plans/public", "get");
+        if (res && res.success && res.plans) {
+          const mapped = res.plans.map(p => {
+            let feats = [];
+            if (p.id === 1) feats = [`${p.max_branches} Branch`, `${p.max_staff} Users`, `Max ${p.max_products} Products`, "Basic POS"];
+            else if (p.id === 2) feats = [`${p.max_branches} Branches`, `${p.max_staff} Users`, `Max ${p.max_products} Products`, "Priority Support"];
+            else feats = ["Unlimited Branches", "Unlimited Users", "White Label & API", "Dedicated Manager"];
+            
+            return {
+              id: p.id,
+              name: p.name,
+              price: parseFloat(p.price) || 0,
+              cycle: p.billing_cycle || "monthly",
+              feats: feats,
+              popular: p.id === 2
+            };
+          });
+          setDbPlans(mapped);
+          const hasPro = mapped.find(p => p.id === 2);
+          if (hasPro) setPlan(2);
+          else if (mapped.length > 0) setPlan(mapped[0].id);
+        }
+      } catch (e) {
+        console.error("Error fetching plans:", e);
+      }
+    };
+    fetchPlans();
+  }, []);
 
   const strength = getStrength(acc.password);
   const progress = ((step-1)/(STEPS.length-1))*100;
@@ -117,7 +151,7 @@ export default function RegisterPage() {
         business_name:biz.name,
         owner_name:`${acc.firstName} ${acc.lastName}`,
         email:acc.email, password:acc.password, phone:acc.phone,
-        plan_type:plan, province:loc.province, district:loc.city,
+        plan_id:plan, province:loc.province, district:loc.city,
       });
       if(res?.success){ setOk(true); setTimeout(()=>navigate("/login"),4000); }
       else message.error(res?.message||"Registration failed");
@@ -219,12 +253,20 @@ export default function RegisterPage() {
           </Sel>
         </F>
         <F label="Province / State">
-          <Inp placeholder="Phnom Penh" value={loc.province} onChange={e=>setLoc({...loc,province:e.target.value})}/>
+          <Sel value={loc.province} onChange={e=>{
+            const prov = e.target.value;
+            const districts = CAMBODIA_GEO[prov] || [];
+            setLoc({...loc, province: prov, city: districts[0] || ""});
+          }}>
+            {Object.keys(CAMBODIA_GEO).map(p=><option key={p} value={p}>{p}</option>)}
+          </Sel>
         </F>
       </div>
       <div className="ap-row">
-        <F label="City">
-          <Inp placeholder="City" value={loc.city} onChange={e=>setLoc({...loc,city:e.target.value})}/>
+        <F label="City / District">
+          <Sel value={loc.city} onChange={e=>setLoc({...loc,city:e.target.value})}>
+            {(CAMBODIA_GEO[loc.province] || []).map(d=><option key={d} value={d}>{d}</option>)}
+          </Sel>
         </F>
         <F label="Timezone">
           <Sel value={loc.timezone} onChange={e=>setLoc({...loc,timezone:e.target.value})}>
@@ -250,31 +292,34 @@ export default function RegisterPage() {
     </>
   );
 
-  const Step4 = () => (
-    <>
-      <div style={{textAlign:"center",marginBottom:20}}>
-        <div className="ap-plan-toggle">
-          {["Monthly","Yearly"].map(v=>(
-            <button key={v} className={`ap-plan-toggle-btn${(v==="Yearly"?yearly:!yearly)?" active":""}`}
-              onClick={()=>setYearly(v==="Yearly")}>
-              {v}{v==="Yearly"&&<span style={{fontSize:10,marginLeft:4,opacity:.7}}>Save 20%</span>}
-            </button>
+  const Step4 = () => {
+    const displayedPlans = dbPlans.length > 0 ? dbPlans : PLANS;
+    return (
+      <>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div className="ap-plan-toggle">
+            {["Monthly","Yearly"].map(v=>(
+              <button key={v} className={`ap-plan-toggle-btn${(v==="Yearly"?yearly:!yearly)?" active":""}`}
+                onClick={()=>setYearly(v==="Yearly")}>
+                {v}{v==="Yearly"&&<span style={{fontSize:10,marginLeft:4,opacity:.7}}>Save 20%</span>}
+              </button>
+            ))}
+          </div>
+          {yearly && <div style={{fontSize:11,color:"#22C55E",marginTop:8}}>🎉 2 months free with annual billing</div>}
+        </div>
+        <div className="ap-plan-cards">
+          {displayedPlans.map(p=>(
+            <div key={p.id} className={`ap-plan-card${plan===p.id?" selected":""}`} onClick={()=>setPlan(p.id)}>
+              {p.popular && <div className="ap-plan-badge">⭐ Recommended</div>}
+              <div className="ap-plan-name">{p.name}</div>
+              <div className="ap-plan-price">${yearly && p.cycle === "monthly" ? Math.round(p.price * 0.8) : p.price}<span>/{p.cycle === "lifetime" ? "lifetime" : "mo"}</span></div>
+              <ul className="ap-plan-feats">{p.feats.map(f=><li key={f}>{f}</li>)}</ul>
+            </div>
           ))}
         </div>
-        {yearly && <div style={{fontSize:11,color:"#22C55E",marginTop:8}}>🎉 2 months free with annual billing</div>}
-      </div>
-      <div className="ap-plan-cards">
-        {PLANS.map(p=>(
-          <div key={p.id} className={`ap-plan-card${plan===p.id?" selected":""}`} onClick={()=>setPlan(p.id)}>
-            {p.popular && <div className="ap-plan-badge">⭐ Recommended</div>}
-            <div className="ap-plan-name">{p.name}</div>
-            <div className="ap-plan-price">${yearly?p.yr:p.price}<span>/mo</span></div>
-            <ul className="ap-plan-feats">{p.feats.map(f=><li key={f}>{f}</li>)}</ul>
-          </div>
-        ))}
-      </div>
-    </>
-  );
+      </>
+    );
+  };
 
   const Step5 = () => (
     <>

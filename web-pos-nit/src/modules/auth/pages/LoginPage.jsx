@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { message } from "antd";
 import { request } from "@/shared/utils/helper";
-import { setProfile } from "@/app/store/profile.store";
+import { setAcccessToken, setProfile, setPermission } from "@/app/store/profile.store";
 import "./AuthPremium.css";
 
 const EyeIcon = ({ open }) => (
@@ -41,8 +41,10 @@ export default function LoginPage() {
     try {
       const res = await request("auth/login", "post", { email, password: pass });
       if (res?.success) {
-        setProfile(res.data);
-        const r = res.data;
+        setAcccessToken(res.access_token);
+        setProfile(res.profile);
+        setPermission(res.permission);
+        const r = res.profile;
         const isAdmin = r.is_super_admin === 1 || ["Owner","Executive","Admin"].includes(r.role_name);
         navigate(isAdmin ? "/dashboard" : "/invoices");
       } else {
