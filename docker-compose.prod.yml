@@ -48,16 +48,8 @@ services:
       dockerfile: Dockerfile
     container_name: pos_server_prod
     restart: unless-stopped
-    environment:
-      APP_ENV: production
-      DB_HOST: mysql
-      DB_USER: prod_user
-      DB_PASSWORD: production_user_pass
-      DB_DATABASE: coffee_saas
-      DB_PORT: 3306
-      REDISHOST: redis
-      REDISPORT: 6379
-      PORT: 8080
+    env_file:
+      - ./server/.env
     depends_on:
       mysql:
         condition: service_healthy
