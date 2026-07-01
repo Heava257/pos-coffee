@@ -1,23 +1,23 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend, Cell, PieChart, Pie
 } from "recharts";
 import { request } from "@/shared/utils/helper";
-import { 
-  Button, DatePicker, Select, Space, Table, Tag, Card, Row, Col, 
+import {
+  Button, DatePicker, Select, Space, Table, Tag, Card, Row, Col,
   Typography, Divider, Statistic, Empty, Skeleton, ConfigProvider,
   Segmented
 } from "antd";
-import { 
-  PrinterOutlined, FilePdfOutlined, 
+import {
+  PrinterOutlined, FilePdfOutlined,
   FilterOutlined, ReloadOutlined, DownloadOutlined,
   CalendarOutlined, DollarOutlined, ShoppingCartOutlined,
   PieChartOutlined, LineChartOutlined, BarChartOutlined,
   ArrowDownOutlined, ArrowUpOutlined, InfoCircleOutlined
 } from '@ant-design/icons';
-import { 
-  Wallet, DollarSign, TrendingDown, Receipt, 
+import {
+  Wallet, DollarSign, TrendingDown, Receipt,
   ArrowRight, Filter, Download, Activity,
   AlertTriangle, Briefcase, Coffee
 } from "lucide-react";
@@ -25,6 +25,8 @@ import dayjs from "dayjs";
 import { configStore } from "@/app/store/configStore";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import logo from "@/assets/business_default_logo.png";
+import { useProfileStore } from "@/app/store/profileStore";
 
 const { Title, Text } = Typography;
 
@@ -43,10 +45,30 @@ const COLORS = {
 };
 
 function ReportExpense_Summary() {
+  const profile = useProfileStore(s => s.profile);
   const { config } = configStore();
   const [loading, setLoading] = useState(false);
   const reportRef = useRef(null);
   const [viewType, setViewType] = useState("trend"); // trend | category
+  const printCell = {
+    onCell: () => ({
+      style: {
+        border: '1px solid #000000',
+        padding: '8px',
+        color: '#000000',
+        background: 'transparent'
+      }
+    }),
+    onHeaderCell: () => ({
+      style: {
+        border: '1px solid #000000',
+        padding: '8px',
+        color: '#000000',
+        background: '#f1f5f9',
+        fontWeight: 'bold'
+      }
+    })
+  };
   const [filter, setFilter] = useState({
     from_date: dayjs().startOf('month'),
     to_date: dayjs().endOf('month'),
@@ -116,8 +138,8 @@ function ReportExpense_Summary() {
   }, [state.list]);
 
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2
     }).format(value || 0);
@@ -144,10 +166,10 @@ function ReportExpense_Summary() {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div style={{ 
-          background: 'rgba(255, 255, 255, 0.95)', 
-          padding: '12px 16px', 
-          border: 'none', 
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          padding: '12px 16px',
+          border: 'none',
           borderRadius: 12,
           boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
           backdropFilter: 'blur(5px)'
@@ -163,18 +185,18 @@ function ReportExpense_Summary() {
   };
 
   return (
-    <div style={{ 
-      padding: '24px', 
-      background: COLORS.background, 
+    <div className="print-layout-container" style={{
+      padding: '24px',
+      background: COLORS.background,
       minHeight: '100vh',
       animation: 'fadeIn 0.6s ease-out'
     }}>
       {/* --- HEADER --- */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
         <div>
           <Space align="center" style={{ marginBottom: 8 }}>
-            <div style={{ 
-              width: 40, height: 40, borderRadius: 12, 
+            <div style={{
+              width: 40, height: 40, borderRadius: 12,
               background: 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 8px 16px rgba(225, 29, 72, 0.2)'
@@ -198,18 +220,12 @@ function ReportExpense_Summary() {
             onChange={setViewType}
             style={{ padding: 4, borderRadius: 12, background: '#fff' }}
           />
-          <Button 
-            icon={<DownloadOutlined />} 
-            onClick={handleDownloadPDF} 
-            style={{ borderRadius: 10, fontWeight: 600, height: 40 }}
-          >
-            Export PDF
-          </Button>
-          <Button 
-            type="primary" 
-            icon={<PrinterOutlined />} 
+
+          <Button
+            type="primary"
+            icon={<PrinterOutlined />}
             onClick={() => window.print()}
-            style={{ 
+            style={{
               borderRadius: 10, height: 40, fontWeight: 600,
               background: COLORS.textPrimary, border: 'none'
             }}
@@ -220,8 +236,8 @@ function ReportExpense_Summary() {
       </div>
 
       {/* --- QUICK FILTERS --- */}
-      <Card style={{ 
-        marginBottom: 32, borderRadius: 20, border: 'none', 
+      <Card className="global-filter-card no-print" style={{
+        marginBottom: 32, borderRadius: 20, border: 'none',
         boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
       }} styles={{ body: { padding: '16px 24px' } }}>
         <Row gutter={24} align="middle">
@@ -252,9 +268,9 @@ function ReportExpense_Summary() {
           <Col>
             <Space>
               <Button onClick={onreset} style={{ borderRadius: 10, height: 40 }}>Reset</Button>
-              <Button 
-                type="primary" 
-                onClick={() => getList()} 
+              <Button
+                type="primary"
+                onClick={() => getList()}
                 loading={loading}
                 style={{ borderRadius: 10, height: 40, background: COLORS.primary, border: 'none', fontWeight: 700, padding: '0 24px' }}
               >
@@ -265,65 +281,162 @@ function ReportExpense_Summary() {
         </Row>
       </Card>
 
-      {/* --- KPI CARDS --- */}
-      <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <div className="op-mini-card" style={{ padding: '20px' }}>
-            <Statistic
-              title={<Text strong style={{ color: COLORS.textSecondary }}>TOTAL EXPENSES</Text>}
-              value={totals.amount}
-              formatter={val => <span style={{ color: COLORS.primary, fontWeight: 900, fontSize: 28 }}>{formatCurrency(val)}</span>}
-              prefix={<Wallet size={24} style={{ marginRight: 12, color: COLORS.primary }} />}
-            />
-            <div style={{ marginTop: 12 }}>
-              <Tag color="error" style={{ borderRadius: 6, border: 'none' }}>
-                <TrendingDown size={12} /> {((totals.amount / 5000) * 100).toFixed(1)}% of Budget
-              </Tag>
-            </div>
-          </div>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <div className="op-mini-card" style={{ padding: '20px' }}>
-            <Statistic
-              title={<Text strong style={{ color: COLORS.textSecondary }}>DAILY AVERAGE</Text>}
-              value={totals.avg}
-              formatter={val => <span style={{ fontWeight: 800, fontSize: 28 }}>{formatCurrency(val)}</span>}
-              prefix={<Activity size={24} style={{ marginRight: 12, color: COLORS.secondary }} />}
-            />
-            <div style={{ marginTop: 12 }}>
-              <Tag style={{ borderRadius: 6, border: 'none' }}>30 Days Window</Tag>
-            </div>
-          </div>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <div className="op-mini-card" style={{ padding: '20px' }}>
-            <Statistic
-              title={<Text strong style={{ color: COLORS.textSecondary }}>HIGHEST SPEND</Text>}
-              value={totals.max}
-              formatter={val => <span style={{ fontWeight: 800, fontSize: 28 }}>{formatCurrency(val)}</span>}
-              prefix={<AlertTriangle size={24} style={{ marginRight: 12, color: COLORS.accent }} />}
-            />
-            <div style={{ marginTop: 12 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>Single Transaction Peak</Text>
-            </div>
-          </div>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <div className="op-mini-card" style={{ padding: '20px', background: 'linear-gradient(135deg, var(--theme-dark-green) 0%, var(--theme-accent-green) 100%)' }}>
-            <Statistic
-              title={<Text strong style={{ color: 'rgba(255,255,255,0.7)' }}>COGS vs OpEx</Text>}
-              value={totals.amount * 0.6}
-              formatter={val => <span style={{ color: '#fff', fontWeight: 900, fontSize: 28 }}>{formatCurrency(val)}</span>}
-              prefix={<Briefcase size={24} style={{ marginRight: 12, color: COLORS.accent }} />}
-            />
-            <div style={{ marginTop: 12 }}>
-              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Estimated COGS Share</Text>
-            </div>
-          </div>
-        </Col>
-      </Row>
-
       <div ref={reportRef}>
+        {/* 🖨️ Printable Header (Visible ONLY during print) */}
+        <div className="print-header" style={{ display: 'none', marginBottom: '20px', fontFamily: 'Inter, sans-serif' }}>
+          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+            <h2 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: 'bold', textTransform: 'uppercase', color: '#000' }}>
+              {profile?.business_name || 'IT SRUK SRAE'}
+            </h2>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: 'bold', color: '#333' }}>
+              របាយការណ៍ចំណាយសរុប (EXPENSE SUMMARY REPORT)
+            </h3>
+          </div>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '12px' }}>
+            <tbody>
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', width: '20%' }}>BUSINESS NAME</td>
+                <td style={{ border: '1px solid #000', padding: '8px', width: '30%' }}>{profile?.business_name || 'IT SRUK SRAE'}</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', width: '20%' }}>REPORT TYPE</td>
+                <td style={{ border: '1px solid #000', padding: '8px', width: '30%', fontWeight: 'bold' }}>EXPENSE SUMMARY REPORT</td>
+              </tr>
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>BRANCH / ADDRESS</td>
+                <td style={{ border: '1px solid #000', padding: '8px' }}>{profile?.branch_name || 'MAIN BRANCH'} {profile?.branch_address && `(${profile.branch_address})`}</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>DATE RANGE</td>
+                <td style={{ border: '1px solid #000', padding: '8px' }}>{dayjs(filter.from_date).format("DD/MM/YYYY")} - {dayjs(filter.to_date).format("DD/MM/YYYY")}</td>
+              </tr>
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>TOTAL EXPENSES</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', color: '#1e4a2d', fontSize: '13px' }}>{formatCurrency(totals.amount)} ({(totals.amount * 4100).toLocaleString()}៛)</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>SPENDING STATS</td>
+                <td style={{ border: '1px solid #000', padding: '8px' }}>Daily Average: {formatCurrency(totals.avg)} | Highest Single Spend: {formatCurrency(totals.max)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* 🖨️ Printable Table (Visible ONLY during print) */}
+        <div className="print-table-container" style={{ display: 'none', marginBottom: '20px', fontFamily: 'Inter, sans-serif' }}>
+          <h3 style={{ margin: '20px 0 10px 0', fontSize: '15px', fontWeight: 'bold', color: '#000' }}>Detailed Transaction Log</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+            <thead>
+              <tr style={{ background: '#f1f5f9' }}>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>TRANSACTION DATE</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>CLASSIFICATION</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>STATUS</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>AMOUNT</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>INTENSITY</th>
+              </tr>
+            </thead>
+            <tbody>
+              {state.list.map((item, idx) => {
+                const pct = ((item.total_amount / (totals.max || 1)) * 100).toFixed(0);
+                return (
+                  <tr key={idx}>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>{item.title}</td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>{Number(item.total_amount) > 100 ? "OpEx Peak" : "Regular"}</td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>COMPLETED</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right' }}>
+                      <div style={{ fontWeight: 'bold' }}>{formatCurrency(item.total_amount)}</div>
+                      <div style={{ fontSize: '10px', color: '#555' }}>{(item.total_amount * 4100).toLocaleString()}៛</div>
+                    </td>
+                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{pct}%</td>
+                  </tr>
+                );
+              })}
+              <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
+                <td style={{ border: '1px solid #000', padding: '8px' }} colSpan={3}>GRAND TOTAL SPENDING</td>
+                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right' }}>
+                  <div style={{ fontWeight: 'bold' }}>{formatCurrency(totals.amount)}</div>
+                  <div style={{ fontSize: '10px', color: '#555' }}>{(totals.amount * 4100).toLocaleString()}៛</div>
+                </td>
+                <td style={{ border: '1px solid #000', padding: '8px' }} />
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* 🖨️ Printable Footer (Visible ONLY during print) */}
+        <div className="print-footer" style={{ display: 'none', marginTop: '20px', fontFamily: 'Inter, sans-serif', pageBreakInside: 'avoid' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 50px 0 50px', marginTop: '10px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '13px', display: 'block', fontWeight: 700, color: '#000' }}>រៀបចំដោយ (Prepared By)</span>
+              <div style={{ height: '35px' }}></div>
+              <span style={{ fontSize: '12px', display: 'block', color: '#000' }}>..........................................</span>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '13px', display: 'block', fontWeight: 700, color: '#000' }}>ពិនិត្យ និងអនុម័តដោយ (Approved By)</span>
+              <div style={{ height: '35px' }}></div>
+              <span style={{ fontSize: '12px', display: 'block', color: '#000' }}>..........................................</span>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid #000', padding: '8px 0', display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginTop: '15px' }}>
+            <div>📍 {profile?.branch_address || 'Phnom Penh, Cambodia'}</div>
+            <div>បោះពុម្ពដោយប្រព័ន្ធ POS៖ {dayjs().format("DD/MM/YYYY HH:mm")}</div>
+          </div>
+        </div>
+
+        {/* --- KPI CARDS --- */}
+        <Row gutter={[24, 24]} style={{ marginBottom: 32 }} className="no-print">
+          <Col xs={24} sm={12} lg={6}>
+            <div className="op-mini-card" style={{ padding: '20px' }}>
+              <Statistic
+                title={<Text strong style={{ color: COLORS.textSecondary }}>TOTAL EXPENSES</Text>}
+                value={totals.amount}
+                formatter={val => <span style={{ color: COLORS.primary, fontWeight: 900, fontSize: 28 }}>{formatCurrency(val)}</span>}
+                prefix={<Wallet size={24} style={{ marginRight: 12, color: COLORS.primary }} />}
+              />
+              <div style={{ marginTop: 12 }}>
+                <Tag color="error" style={{ borderRadius: 6, border: 'none' }}>
+                  <TrendingDown size={12} /> {((totals.amount / 5000) * 100).toFixed(1)}% of Budget
+                </Tag>
+              </div>
+            </div>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <div className="op-mini-card" style={{ padding: '20px' }}>
+              <Statistic
+                title={<Text strong style={{ color: COLORS.textSecondary }}>DAILY AVERAGE</Text>}
+                value={totals.avg}
+                formatter={val => <span style={{ fontWeight: 800, fontSize: 28 }}>{formatCurrency(val)}</span>}
+                prefix={<Activity size={24} style={{ marginRight: 12, color: COLORS.secondary }} />}
+              />
+              <div style={{ marginTop: 12 }}>
+                <Tag style={{ borderRadius: 6, border: 'none' }}>30 Days Window</Tag>
+              </div>
+            </div>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <div className="op-mini-card" style={{ padding: '20px' }}>
+              <Statistic
+                title={<Text strong style={{ color: COLORS.textSecondary }}>HIGHEST SPEND</Text>}
+                value={totals.max}
+                formatter={val => <span style={{ fontWeight: 800, fontSize: 28 }}>{formatCurrency(val)}</span>}
+                prefix={<AlertTriangle size={24} style={{ marginRight: 12, color: COLORS.accent }} />}
+              />
+              <div style={{ marginTop: 12 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>Single Transaction Peak</Text>
+              </div>
+            </div>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <div className="op-mini-card" style={{ padding: '20px', background: 'linear-gradient(135deg, var(--theme-dark-green) 0%, var(--theme-accent-green) 100%)' }}>
+              <Statistic
+                title={<Text strong style={{ color: 'rgba(255,255,255,0.7)' }}>COGS vs OpEx</Text>}
+                value={totals.amount * 0.6}
+                formatter={val => <span style={{ color: '#fff', fontWeight: 900, fontSize: 28 }}>{formatCurrency(val)}</span>}
+                prefix={<Briefcase size={24} style={{ marginRight: 12, color: COLORS.accent }} />}
+              />
+              <div style={{ marginTop: 12 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Estimated COGS Share</Text>
+              </div>
+            </div>
+          </Col>
+        </Row>
+
         <Row gutter={24}>
           {/* --- MAIN CHART --- */}
           <Col span={16}>
@@ -340,32 +453,32 @@ function ReportExpense_Summary() {
                     <AreaChart data={state.Data_Chat}>
                       <defs>
                         <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0}/>
+                          <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.2} />
+                          <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false} 
-                        tickLine={false} 
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
                         tick={{ fill: COLORS.textSecondary, fontSize: 10, fontWeight: 600 }}
                         dy={10}
                       />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
                         tick={{ fill: COLORS.textSecondary, fontSize: 10, fontWeight: 600 }}
                         tickFormatter={val => `$${val}`}
                       />
                       <Tooltip content={<CustomTooltip />} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="amount" 
-                        stroke={COLORS.primary} 
-                        strokeWidth={4} 
-                        fillOpacity={1} 
-                        fill="url(#colorAmt)" 
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        stroke={COLORS.primary}
+                        strokeWidth={4}
+                        fillOpacity={1}
+                        fill="url(#colorAmt)"
                         animationDuration={1500}
                       />
                     </AreaChart>
@@ -413,14 +526,15 @@ function ReportExpense_Summary() {
         </Row>
 
         {/* --- DETAILED TABLE --- */}
-        <Card style={{ 
-          marginTop: 24, borderRadius: 24, border: 'none', 
-          boxShadow: '0 10px 30px rgba(0,0,0,0.04)' 
+        <Card className="no-print" style={{
+          marginTop: 24, borderRadius: 24, border: 'none',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.04)'
         }} styles={{ body: { padding: 0 } }}>
           <div style={{ padding: '24px 24px 12px' }}>
             <Title level={4} style={{ margin: 0, fontWeight: 800 }}>Transaction Logs</Title>
           </div>
           <Table
+            bordered
             loading={loading}
             dataSource={state.list}
             columns={[
@@ -428,6 +542,7 @@ function ReportExpense_Summary() {
                 title: "TRANSACTION DATE",
                 dataIndex: "title",
                 key: "title",
+                ...printCell,
                 render: (val) => (
                   <Space>
                     <CalendarOutlined style={{ color: COLORS.textSecondary }} />
@@ -438,6 +553,7 @@ function ReportExpense_Summary() {
               {
                 title: "CLASSIFICATION",
                 key: "classification",
+                ...printCell,
                 render: (_, record) => (
                   <Tag color={Number(record.total_amount) > 100 ? "volcano" : "blue"} style={{ borderRadius: 6, fontWeight: 700 }}>
                     {Number(record.total_amount) > 100 ? "OpEx Peak" : "Regular"}
@@ -447,6 +563,7 @@ function ReportExpense_Summary() {
               {
                 title: "STATUS",
                 key: "status",
+                ...printCell,
                 render: () => <Tag color="success" style={{ borderRadius: 6, fontWeight: 700 }}>COMPLETED</Tag>
               },
               {
@@ -454,16 +571,18 @@ function ReportExpense_Summary() {
                 dataIndex: "total_amount",
                 key: "totalamount",
                 align: 'right',
+                ...printCell,
                 render: (val) => (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                     <Text strong style={{ fontSize: 16, color: COLORS.primary }}>{formatCurrency(val)}</Text>
-                    <Text type="secondary" style={{ fontSize: 11 }}>{ (val * 4100).toLocaleString() }៛</Text>
+                    <Text type="secondary" style={{ fontSize: 11 }}>{(val * 4100).toLocaleString()}៛</Text>
                   </div>
                 ),
               },
               {
                 title: "INTENSITY",
                 align: 'center',
+                ...printCell,
                 render: (_, record) => {
                   const pct = ((record.total_amount / (totals.max || 1)) * 100).toFixed(0);
                   return (
@@ -481,19 +600,19 @@ function ReportExpense_Summary() {
             summary={(pageData) => (
               <Table.Summary fixed>
                 <Table.Summary.Row style={{ background: '#f8fafc' }}>
-                  <Table.Summary.Cell index={0} colSpan={3}><Text strong style={{ fontSize: 16 }}>GRAND TOTAL SPENDING</Text></Table.Summary.Cell>
-                  <Table.Summary.Cell index={1} align="right">
+                  <Table.Summary.Cell index={0} colSpan={3} style={{ border: '1px solid #000000', padding: '8px', background: '#f8fafc', color: '#000000' }}><Text strong style={{ fontSize: 16 }}>GRAND TOTAL SPENDING</Text></Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="right" style={{ border: '1px solid #000000', padding: '8px', background: '#f8fafc', color: '#000000' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                       <Text strong style={{ fontSize: 20, color: COLORS.primary }}>{formatCurrency(totals.amount)}</Text>
-                      <Text type="secondary" style={{ fontSize: 12 }}>{ (totals.amount * 4100).toLocaleString() }៛</Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>{(totals.amount * 4100).toLocaleString()}៛</Text>
                     </div>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={2} />
+                  <Table.Summary.Cell index={2} style={{ border: '1px solid #000000', padding: '8px', background: '#f8fafc', color: '#000000' }} />
                 </Table.Summary.Row>
               </Table.Summary>
             )}
           />
-        </Card>
+      </Card>
       </div>
 
       <style>{`
@@ -502,8 +621,118 @@ function ReportExpense_Summary() {
           to { opacity: 1; transform: translateY(0); }
         }
         @media print {
-          .ant-btn, .ant-segmented, .ant-card:first-child {
+          /* Hide sidebar, header and other platform UI components completely */
+          .ant-layout-sider,
+          .ant-layout-header,
+          .admin-header,
+          .admin-sider,
+          header,
+          aside,
+          .header-icon-btn,
+          #header-notif-dropdown-anchor,
+          #header-profile-dropdown-anchor,
+          .no-print,
+          .global-filter-card,
+          .ant-btn,
+          .ant-segmented,
+          .ant-select,
+          .ant-picker {
             display: none !important;
+          }
+
+          /* Hide layout footer and pagination */
+          .ant-layout-footer,
+          footer,
+          .ant-table-pagination,
+          .ant-pagination {
+            display: none !important;
+          }
+          
+          /* Force page margins and body resets */
+          .print-layout-container {
+            min-height: auto !important;
+            height: auto !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+          }
+          body, html, .ant-layout, .admin-body, .ant-layout-content, .admin-layout-content {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            box-shadow: none !important;
+          }
+
+          /* Ensure print header and footer show up */
+          .print-header {
+            display: block !important;
+          }
+          .print-table-container {
+            display: block !important;
+          }
+          .print-footer {
+            display: block !important;
+          }
+
+          /* Remove rounded corners and box shadows from wrappers */
+          .ant-card,
+          .ant-card-body,
+          .ant-table-wrapper,
+          .ant-table,
+          .ant-table-container,
+          .ant-table-content,
+          .ant-table-cell {
+            border-radius: 0 !important;
+            box-shadow: none !important;
+          }
+
+          /* Force collapsed thin black border grid on all tables */
+          table {
+            border-collapse: collapse !important;
+            border: 1px solid #000000 !important;
+            width: 100% !important;
+          }
+          
+          th,
+          td,
+          .ant-table-cell,
+          .print-grid-cell,
+          .ant-table-summary tr td {
+            border: 1px solid #000000 !important;
+            padding: 8px !important;
+            color: #000000 !important;
+            border-radius: 0 !important;
+          }
+          
+          th,
+          .ant-table-thead > tr > th {
+            background: #f1f5f9 !important;
+            font-weight: bold !important;
+          }
+
+          /* Make tags render as simple plain text without borders/backgrounds */
+          .ant-tag {
+            border: none !important;
+            background: transparent !important;
+            color: #000000 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            font-weight: normal !important;
+            font-size: inherit !important;
+            text-shadow: none !important;
+          }
+
+          /* Hide icons during print */
+          .anticon,
+          svg {
+            display: none !important;
+          }
+
+          /* Prevent table rows breaking across pages */
+          tr {
+            page-break-inside: avoid !important;
           }
         }
       `}</style>

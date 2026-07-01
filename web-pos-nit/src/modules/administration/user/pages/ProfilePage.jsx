@@ -13,7 +13,8 @@ import {
   Avatar,
   Divider,
   Space,
-  Tag
+  Tag,
+  Progress // Added Progress
 } from "antd";
 import {
   UserOutlined,
@@ -41,6 +42,68 @@ const ProfilePage = () => {
   const [profileData, setProfileData] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [passwordVal, setPasswordVal] = useState("");
+
+  const hasMinLen = passwordVal.length >= 8;
+  const hasUppercase = /[A-Z]/.test(passwordVal);
+  const hasNumber = /[0-9]/.test(passwordVal);
+  const hasSpecial = /[^A-Za-z0-9]/.test(passwordVal);
+
+  const metCount = [hasMinLen, hasUppercase, hasNumber, hasSpecial].filter(Boolean).length;
+  const strengthPercent = metCount * 25;
+
+  let progressColor = "#ff4d4f";
+  if (strengthPercent === 50 || strengthPercent === 75) {
+    progressColor = "#faad14";
+  } else if (strengthPercent === 100) {
+    progressColor = "#52c41a";
+  }
+
+  const renderPasswordStrength = () => {
+    if (!passwordVal) return null;
+
+    return (
+      <Progress 
+        percent={strengthPercent} 
+        strokeColor={progressColor} 
+        showInfo={false} 
+        strokeWidth={3} 
+        style={{ marginTop: 6, marginBottom: 0, position: 'relative', zIndex: 1 }}
+      />
+    );
+  };
+
+  const generateStrongPassword = (e) => {
+    e.preventDefault();
+    const length = 12;
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const symbols = "@$!%*?&";
+    
+    let password = "";
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+    
+    const allChars = uppercase + lowercase + numbers + symbols;
+    for (let i = 4; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    password = password.split('').sort(() => 0.5 - Math.random()).join('');
+    
+    form.setFieldsValue({
+      password: password,
+      confirm_password: password
+    });
+    
+    setPasswordVal(password);
+    
+    navigator.clipboard.writeText(password);
+    message.success(lang === 'kh' ? `លេខសម្ងាត់ខ្លាំងត្រូវបានបង្កើត និងចម្លងរួចរាល់៖ ${password}` : `Strong password generated and copied: ${password}`);
+  };
 
   const { profile: currentUser, setProfile } = useProfileStore();
 
@@ -112,6 +175,7 @@ const ProfilePage = () => {
 
         form.setFieldValue("password", "");
         form.setFieldValue("confirm_password", "");
+        setPasswordVal("");
         setImageFile(null);
       }
     } catch (error) {
@@ -307,16 +371,27 @@ const ProfilePage = () => {
 
                   <Col xs={24} md={12}>
                     <Form.Item
-                      label={<Text strong>{t.new_password}</Text>}
+                      label={
+                        <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                          <Text strong style={{ margin: 0 }}>{t.new_password}</Text>
+                          <a onClick={generateStrongPassword} style={{ fontSize: '11px', color: '#1e4a2d', fontWeight: '500', marginLeft: '12px', textDecoration: 'underline' }}>
+                            {lang === 'kh' ? 'បង្កើតស្វ័យប្រវត្ត' : 'Auto Generate'}
+                          </a>
+                        </span>
+                      }
                       name="password"
-                      rules={[{ min: 6, message: "Minimum 6 characters" }]}
+                      rules={[{ min: 8, message: "Minimum 8 characters" }]}
+                      style={{ marginBottom: passwordVal ? 12 : 24 }}
                     >
                       <Input.Password
                         prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
                         placeholder={t.leave_blank}
                         size="large"
                         style={{ borderRadius: "8px" }}
+                        value={passwordVal}
+                        onChange={(e) => setPasswordVal(e.target.value)}
                       />
+                      {renderPasswordStrength()}
                     </Form.Item>
                   </Col>
 

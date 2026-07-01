@@ -15,7 +15,7 @@ const getStrength = p => {
   return s;
 };
 const STR_LABELS = ["","Weak","Fair","Good","Strong"];
-const STR_COLORS = ["","#ef4444","#f97316","#eab308","#22C55E"];
+const STR_COLORS = ["","#ef4444","#f97316","#eab308","#0A5C36"];
 
 const EyeIcon = ({ open }) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -26,28 +26,107 @@ const EyeIcon = ({ open }) => (
 );
 
 const CHECK = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0A5C36" strokeWidth="2.5">
     <polyline points="20,6 9,17 4,12"/>
   </svg>
 );
 
-const STEPS = ["Account","Company","Location","Plan","Verify"];
+const UserIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const BuildingIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+    <line x1="9" y1="22" x2="9" y2="16" />
+    <line x1="15" y1="22" x2="15" y2="16" />
+    <line x1="9" y1="16" x2="15" y2="16" />
+    <path d="M8 6h.01" /><path d="M16 6h.01" /><path d="M8 10h.01" /><path d="M16 10h.01" />
+  </svg>
+);
+
+const MapPinIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const FileTextIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <polyline points="10 9 9 9 8 9" />
+  </svg>
+);
+
+const POSIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+);
+
+const BoxIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+    <line x1="12" y1="22.08" x2="12" y2="12" />
+  </svg>
+);
+
+const HRMIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+const ChartIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+);
+
+const SecurityIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const RocketIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 2L11 13" />
+    <path d="M22 2l-7 20-4-9-9-4z" />
+  </svg>
+);
+
+const STEPS = ["Account","Company","Location","Agreement"];
 
 const STEP_INFO = [
-  { icon:"👤", title:"Account Info",    sub:"Set up your personal credentials" },
-  { icon:"🏢", title:"Company Info",    sub:"Tell us about your business" },
-  { icon:"📍", title:"Location",        sub:"Where is your business based?" },
-  { icon:"💳", title:"Subscription",    sub:"Choose the right plan" },
-  { icon:"✅", title:"Verification",    sub:"Confirm your identity" },
+  { icon:<UserIcon />, title:"Account Info",    sub:"Set up your personal credentials" },
+  { icon:<BuildingIcon />, title:"Company Info",    sub:"Tell us about your business" },
+  { icon:<MapPinIcon />, title:"Location",        sub:"Where is your business based?" },
+  { icon:<FileTextIcon />, title:"Agreement",       sub:"Accept terms and policies to finish" },
 ];
 
 const LEFT_FEATURES = [
-  { icon:"🏪", label:"Multi-branch POS" },
-  { icon:"📦", label:"Smart Inventory" },
-  { icon:"👥", label:"Team & HR Tools" },
-  { icon:"📊", label:"Live Analytics" },
-  { icon:"🔒", label:"Enterprise Security" },
-  { icon:"🚀", label:"Scalable Platform" },
+  { icon:<POSIcon />, label:"Multi-branch POS" },
+  { icon:<BoxIcon />, label:"Smart Inventory" },
+  { icon:<HRMIcon />, label:"Team & HR Tools" },
+  { icon:<ChartIcon />, label:"Live Analytics" },
+  { icon:<SecurityIcon />, label:"Enterprise Security" },
+  { icon:<RocketIcon />, label:"Scalable Platform" },
 ];
 
 const BIZ_TYPES  = ["Retail","Restaurant","Wholesale","Pharmacy","Hotel","Education","Manufacturing","Healthcare","Service Company"];
@@ -62,8 +141,23 @@ const PLANS = [
   { id: 3, name:"Enterprise", price:800, cycle:"lifetime", feats:["Unlimited Branches","Unlimited Users","White Label","API Access","Dedicated Manager"] },
 ];
 
+const F = ({ label, children, style }) => (
+  <div className="ap-field" style={style}>{label && <label className="ap-label">{label}</label>}{children}</div>
+);
+
+const Inp = (props) => <input className="ap-input" {...props} />;
+const Sel = ({ children, ...props }) => <select className="ap-input" {...props}>{children}</select>;
+
 export default function RegisterPage() {
   const navigate = useNavigate();
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("landing_theme") || "light";
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
   const [step, setStep]     = useState(1);
   const [yearly, setYearly] = useState(false);
   const [loading, setLoad]  = useState(false);
@@ -75,53 +169,46 @@ export default function RegisterPage() {
   const [acc, setAcc] = useState({ firstName:"",lastName:"",username:"",email:"",phone:"",password:"",confirm:"" });
   const [biz, setBiz] = useState({ name:"",type:"",email:"",phone:"",tax:"",website:"" });
   const [loc, setLoc] = useState({ country:"Cambodia",province:"Phnom Penh",city:"Chamkar Mon",address:"",timezone:TIMEZONES[0],currency:"USD",language:"English" });
-  const [plan, setPlan] = useState(2); // Pro Plan by default
-  const [dbPlans, setDbPlans] = useState([]);
+  const [plan, setPlan] = useState(1); // Free Plan by default
   const [otp, setOtp]   = useState(["","","","","",""]);
   const [agreed, setAgreed]     = useState(false);
   const [privacyOk, setPrivacy] = useState(false);
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const res = await request("plans/public", "get");
-        if (res && res.success && res.plans) {
-          const mapped = res.plans.map(p => {
-            let feats = [];
-            if (p.id === 1) feats = [`${p.max_branches} Branch`, `${p.max_staff} Users`, `Max ${p.max_products} Products`, "Basic POS"];
-            else if (p.id === 2) feats = [`${p.max_branches} Branches`, `${p.max_staff} Users`, `Max ${p.max_products} Products`, "Priority Support"];
-            else feats = ["Unlimited Branches", "Unlimited Users", "White Label & API", "Dedicated Manager"];
-            
-            return {
-              id: p.id,
-              name: p.name,
-              price: parseFloat(p.price) || 0,
-              cycle: p.billing_cycle || "monthly",
-              feats: feats,
-              popular: p.id === 2
-            };
-          });
-          setDbPlans(mapped);
-          const hasPro = mapped.find(p => p.id === 2);
-          if (hasPro) setPlan(2);
-          else if (mapped.length > 0) setPlan(mapped[0].id);
-        }
-      } catch (e) {
-        console.error("Error fetching plans:", e);
-      }
-    };
-    fetchPlans();
-  }, []);
-
   const strength = getStrength(acc.password);
   const progress = ((step-1)/(STEPS.length-1))*100;
 
-  const F = ({ label, children, style }) => (
-    <div className="ap-field" style={style}>{label && <label className="ap-label">{label}</label>}{children}</div>
-  );
+  const generateStrongPassword = (e) => {
+    e.preventDefault();
+    const length = 12;
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const symbols = "@$!%*?&";
+    
+    let password = "";
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+    
+    const allChars = uppercase + lowercase + numbers + symbols;
+    for (let i = 4; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    password = password.split('').sort(() => 0.5 - Math.random()).join('');
+    
+    setAcc({
+      ...acc,
+      password: password,
+      confirm: password
+    });
+    
+    navigator.clipboard.writeText(password);
+    message.success(`Strong password generated and copied: ${password}`);
+  };
 
-  const Inp = (props) => <input className="ap-input" {...props} />;
-  const Sel = ({ children, ...props }) => <select className="ap-input" {...props}>{children}</select>;
+
 
   const validate = () => {
     if (step===1) {
@@ -151,7 +238,7 @@ export default function RegisterPage() {
         business_name:biz.name,
         owner_name:`${acc.firstName} ${acc.lastName}`,
         email:acc.email, password:acc.password, phone:acc.phone,
-        plan_id:plan, province:loc.province, district:loc.city,
+        plan_id:plan, province:loc.province, district:loc.city, address:loc.address,
       });
       if(res?.success){ setOk(true); setTimeout(()=>navigate("/login"),4000); }
       else message.error(res?.message||"Registration failed");
@@ -178,18 +265,29 @@ export default function RegisterPage() {
         <Inp type="email" placeholder="you@company.com" value={acc.email} onChange={e=>setAcc({...acc,email:e.target.value})}/>
       </F>
       <div className="ap-row">
-        <F label="Password *">
+        <F label={
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+            <span>Password *</span>
+            <a onClick={generateStrongPassword} style={{ fontSize: '11px', color: '#10b981', fontWeight: '500', textDecoration: 'underline', cursor: 'pointer' }}>
+              Auto Generate
+            </a>
+          </div>
+        }>
           <div className="ap-input-wrap">
             <Inp type={showP?"text":"password"} placeholder="Min 8 characters" style={{paddingRight:40}}
               value={acc.password} onChange={e=>setAcc({...acc,password:e.target.value})}/>
             <button className="ap-input-icon" onClick={()=>setShowP(!showP)}><EyeIcon open={showP}/></button>
           </div>
-          {acc.password && <>
-            <div className="ap-strength" style={{marginTop:6}}>
-              {[1,2,3,4].map(i=><div key={i} className={`ap-strength-bar${i<=strength?` s${strength}`:""}`}/>)}
+          {acc.password && (
+            <div style={{ marginTop: 2, height: '3px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${strength * 25}%`,
+                background: STR_COLORS[strength],
+                transition: 'width 0.3s ease'
+              }} />
             </div>
-            <div className="ap-strength-label" style={{color:STR_COLORS[strength],marginTop:3}}>{STR_LABELS[strength]}</div>
-          </>}
+          )}
         </F>
         <F label="Confirm Password *">
           <div className="ap-input-wrap">
@@ -208,50 +306,55 @@ export default function RegisterPage() {
 
   const Step2 = () => (
     <>
+      <F label="Company Name *">
+        <Inp placeholder="Acme Corporation" value={biz.name} onChange={e=>setBiz({...biz,name:e.target.value})}/>
+      </F>
       <div className="ap-row">
-        <F label="Company Name *">
-          <Inp placeholder="Acme Corporation" value={biz.name} onChange={e=>setBiz({...biz,name:e.target.value})}/>
-        </F>
-        <F label="Business Type">
-          <Sel value={biz.type} onChange={e=>setBiz({...biz,type:e.target.value})}>
-            <option value="">Select type…</option>
-            {BIZ_TYPES.map(t=><option key={t}>{t}</option>)}
-          </Sel>
-        </F>
-      </div>
-      <div className="ap-row">
-        <F label="Company Email">
+        <F label={
+          <div style={{display:"flex",justifyContent:"space-between",width:"100%",alignItems:"center"}}>
+            <span>Company Email</span>
+            {acc.email && (
+              <a href="#" onClick={(e) => {
+                e.preventDefault();
+                setBiz({...biz, email: acc.email});
+              }} style={{fontSize:11,textDecoration:"none",fontWeight:500}}>
+                Use personal email
+              </a>
+            )}
+          </div>
+        }>
           <Inp type="email" placeholder="info@company.com" value={biz.email} onChange={e=>setBiz({...biz,email:e.target.value})}/>
         </F>
-        <F label="Company Phone">
+        <F label={
+          <div style={{display:"flex",justifyContent:"space-between",width:"100%",alignItems:"center"}}>
+            <span>Company Phone</span>
+            {acc.phone && (
+              <a href="#" onClick={(e) => {
+                e.preventDefault();
+                setBiz({...biz, phone: acc.phone});
+              }} style={{fontSize:11,textDecoration:"none",fontWeight:500}}>
+                Use personal phone
+              </a>
+            )}
+          </div>
+        }>
           <Inp placeholder="+855 023 xxx xxx" value={biz.phone} onChange={e=>setBiz({...biz,phone:e.target.value})}/>
         </F>
       </div>
       <div className="ap-row">
-        <F label="Tax / VAT Number">
+        <F label="Tax / VAT Number (Optional)">
           <Inp placeholder="K001-XXXX" value={biz.tax} onChange={e=>setBiz({...biz,tax:e.target.value})}/>
         </F>
-        <F label="Website">
+        <F label="Website (Optional)">
           <Inp placeholder="https://company.com" value={biz.website} onChange={e=>setBiz({...biz,website:e.target.value})}/>
         </F>
       </div>
-      <F label="Company Logo">
-        <div className="ap-upload">
-          <div className="ap-upload-icon">🖼️</div>
-          <div className="ap-upload-text">Click or drag logo here · PNG, JPG, SVG · Max 2MB</div>
-        </div>
-      </F>
     </>
   );
 
   const Step3 = () => (
     <>
       <div className="ap-row">
-        <F label="Country">
-          <Sel value={loc.country} onChange={e=>setLoc({...loc,country:e.target.value})}>
-            {COUNTRIES.map(c=><option key={c}>{c}</option>)}
-          </Sel>
-        </F>
         <F label="Province / State">
           <Sel value={loc.province} onChange={e=>{
             const prov = e.target.value;
@@ -261,100 +364,38 @@ export default function RegisterPage() {
             {Object.keys(CAMBODIA_GEO).map(p=><option key={p} value={p}>{p}</option>)}
           </Sel>
         </F>
-      </div>
-      <div className="ap-row">
         <F label="City / District">
           <Sel value={loc.city} onChange={e=>setLoc({...loc,city:e.target.value})}>
             {(CAMBODIA_GEO[loc.province] || []).map(d=><option key={d} value={d}>{d}</option>)}
-          </Sel>
-        </F>
-        <F label="Timezone">
-          <Sel value={loc.timezone} onChange={e=>setLoc({...loc,timezone:e.target.value})}>
-            {TIMEZONES.map(t=><option key={t}>{t}</option>)}
           </Sel>
         </F>
       </div>
       <F label="Full Address">
         <Inp placeholder="Street, Building No, District…" value={loc.address} onChange={e=>setLoc({...loc,address:e.target.value})}/>
       </F>
-      <div className="ap-row">
-        <F label="Currency">
-          <Sel value={loc.currency} onChange={e=>setLoc({...loc,currency:e.target.value})}>
-            {CURRENCIES.map(c=><option key={c}>{c}</option>)}
-          </Sel>
-        </F>
-        <F label="Default Language">
-          <Sel value={loc.language} onChange={e=>setLoc({...loc,language:e.target.value})}>
-            {LANGUAGES.map(l=><option key={l}>{l}</option>)}
-          </Sel>
-        </F>
-      </div>
     </>
   );
 
-  const Step4 = () => {
-    const displayedPlans = dbPlans.length > 0 ? dbPlans : PLANS;
-    return (
-      <>
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <div className="ap-plan-toggle">
-            {["Monthly","Yearly"].map(v=>(
-              <button key={v} className={`ap-plan-toggle-btn${(v==="Yearly"?yearly:!yearly)?" active":""}`}
-                onClick={()=>setYearly(v==="Yearly")}>
-                {v}{v==="Yearly"&&<span style={{fontSize:10,marginLeft:4,opacity:.7}}>Save 20%</span>}
-              </button>
-            ))}
-          </div>
-          {yearly && <div style={{fontSize:11,color:"#22C55E",marginTop:8}}>🎉 2 months free with annual billing</div>}
-        </div>
-        <div className="ap-plan-cards">
-          {displayedPlans.map(p=>(
-            <div key={p.id} className={`ap-plan-card${plan===p.id?" selected":""}`} onClick={()=>setPlan(p.id)}>
-              {p.popular && <div className="ap-plan-badge">⭐ Recommended</div>}
-              <div className="ap-plan-name">{p.name}</div>
-              <div className="ap-plan-price">${yearly && p.cycle === "monthly" ? Math.round(p.price * 0.8) : p.price}<span>/{p.cycle === "lifetime" ? "lifetime" : "mo"}</span></div>
-              <ul className="ap-plan-feats">{p.feats.map(f=><li key={f}>{f}</li>)}</ul>
-            </div>
-          ))}
-        </div>
-      </>
-    );
-  };
-
-  const Step5 = () => (
+  const Step4 = () => (
     <>
-      <div style={{marginBottom:20,padding:"16px",background:"rgba(34,197,94,0.05)",border:"1px solid rgba(34,197,94,0.15)",borderRadius:14}}>
-        <div style={{fontSize:12,fontWeight:600,color:"#22C55E",marginBottom:8}}>📧 Email Verification</div>
-        <div style={{fontSize:12,color:"rgba(255,255,255,0.45)",marginBottom:12}}>Code sent to: {acc.email||"your email"}</div>
-        <div className="ap-otp-row">
-          {otp.map((v,i)=>(
-            <input key={i} ref={otpRefs[i]} className="ap-otp-input" maxLength={1} value={v}
-              onChange={e=>handleOtp(i,e.target.value)}
-              onKeyDown={e=>e.key==="Backspace"&&!v&&i>0&&otpRefs[i-1].current?.focus()}/>
-          ))}
-        </div>
-        <button style={{background:"none",border:"none",color:"#22C55E",fontSize:12,cursor:"pointer",fontFamily:"inherit",marginTop:4}}>
-          ↺ Resend code
-        </button>
+      <div style={{marginBottom:24,textAlign:"center"}}>
+        <span style={{fontSize:48}}>📄</span>
+        <h3 style={{color:"var(--text)",marginTop:12,fontSize:18,fontWeight:700}}>Review and Confirm</h3>
+        <p style={{color:"var(--muted)",fontSize:13,marginTop:6,lineHeight:1.5}}>
+          Please read and accept our Terms of Service and Privacy Policy to finalize your workspace creation.
+        </p>
       </div>
-      <div style={{marginBottom:16,padding:"14px 16px",background:"rgba(255,255,255,0.02)",borderRadius:12,border:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.7)",marginBottom:8}}>📱 SMS Verification</div>
-        <Inp placeholder="Enter 6-digit SMS code"/>
-        <button style={{background:"none",border:"none",color:"#22C55E",fontSize:12,cursor:"pointer",fontFamily:"inherit",marginTop:6}}>
-          ↺ Resend SMS
-        </button>
-      </div>
-      <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:12,padding:"14px 16px"}}>
-        <div className="ap-check-row" style={{marginBottom:10}}>
+      <div style={{background:"var(--bg)",border:"1px solid var(--border)",borderRadius:12,padding:"18px 20px"}}>
+        <div className="ap-check-row" style={{marginBottom:12}}>
           <input type="checkbox" id="terms" checked={agreed} onChange={e=>setAgreed(e.target.checked)}/>
-          <label htmlFor="terms" style={{fontSize:13}}>
-            I agree to the <a href="#" style={{color:"#22C55E",textDecoration:"none"}}>Terms and Conditions</a>
+          <label htmlFor="terms" style={{fontSize:13,cursor:"pointer"}}>
+            I agree to the <a href="#" style={{color:"var(--green)",textDecoration:"none"}}>Terms and Conditions</a>
           </label>
         </div>
         <div className="ap-check-row" style={{marginBottom:0}}>
           <input type="checkbox" id="priv" checked={privacyOk} onChange={e=>setPrivacy(e.target.checked)}/>
-          <label htmlFor="priv" style={{fontSize:13}}>
-            I have read the <a href="#" style={{color:"#22C55E",textDecoration:"none"}}>Privacy Policy</a>
+          <label htmlFor="priv" style={{fontSize:13,cursor:"pointer"}}>
+            I have read the <a href="#" style={{color:"var(--green)",textDecoration:"none"}}>Privacy Policy</a>
           </label>
         </div>
       </div>
@@ -384,15 +425,15 @@ export default function RegisterPage() {
     <div className="ap-root">
       {/* ── LEFT PANEL ── */}
       <div className="ap-left" style={{justifyContent:"space-between"}}>
-        <div className="ap-logo-row">
+        <Link to="/" className="ap-logo-row" style={{ textDecoration: "none" }}>
           <div className="ap-logo-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
-                stroke="#020c05" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                stroke="#0A5C36" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <div className="ap-logo-name">SaaS<span>Platform</span></div>
-        </div>
+          <div className="ap-logo-name">GrowMe<span>Platform</span></div>
+        </Link>
 
         {/* Step Sidebar Navigation */}
         <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",gap:6,padding:"24px 0"}}>
@@ -405,26 +446,26 @@ export default function RegisterPage() {
             return (
               <div key={n} style={{
                 display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,
-                background:isActive?"rgba(34,197,94,0.08)":isDone?"rgba(34,197,94,0.04)":"transparent",
-                border:isActive?"1px solid rgba(34,197,94,0.2)":"1px solid transparent",
+                background:isActive?"rgba(255,255,255,0.08)":isDone?"rgba(255,255,255,0.04)":"transparent",
+                border:isActive?"1px solid rgba(255,255,255,0.15)":"1px solid transparent",
                 transition:".25s",
               }}>
                 <div style={{
                   width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",
-                  background:isDone?"#22C55E":isActive?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.04)",
-                  border:isDone?"none":isActive?"1px solid rgba(34,197,94,0.4)":"1px solid rgba(255,255,255,0.06)",
+                  background:isDone?"#ffffff":isActive?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.04)",
+                  border:isDone?"none":isActive?"1px solid rgba(255,255,255,0.3)":"1px solid rgba(255,255,255,0.06)",
                   flexShrink:0,fontSize:14,
-                  boxShadow:isDone?"0 0 12px rgba(34,197,94,0.4)":isActive?"0 0 8px rgba(34,197,94,0.2)":"none",
+                  boxShadow:isDone?"0 0 12px rgba(255,255,255,0.2)":isActive?"0 0 8px rgba(255,255,255,0.1)":"none",
                 }}>
                   {isDone
-                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#020c05" strokeWidth="3"><polyline points="20,6 9,17 4,12"/></svg>
+                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A5C36" strokeWidth="3"><polyline points="20,6 9,17 4,12"/></svg>
                     : <span style={{fontSize:13}}>{s.icon}</span>}
                 </div>
                 <div>
-                  <div style={{fontSize:13,fontWeight:isActive?700:500,color:isActive?"#fff":isDone?"rgba(255,255,255,0.6)":"rgba(255,255,255,0.35)",marginBottom:1}}>
+                  <div style={{fontSize:13,fontWeight:isActive?700:500,color:isActive?"#fff":isDone?"rgba(255,255,255,0.8)":"rgba(255,255,255,0.5)",marginBottom:1}}>
                     {s.title}
                   </div>
-                  <div style={{fontSize:11,color:isActive?"rgba(255,255,255,0.45)":"rgba(255,255,255,0.2)"}}>{s.sub}</div>
+                  <div style={{fontSize:11,color:isActive?"rgba(255,255,255,0.6)":"rgba(255,255,255,0.3)"}}>{s.sub}</div>
                 </div>
               </div>
             );
@@ -454,27 +495,26 @@ export default function RegisterPage() {
           {/* Progress bar */}
           <div className="ap-step-bar-wrap" style={{marginBottom:24}}>
             <div className="ap-step-label">
-              <span>Step <strong>{step}</strong> of {STEPS.length} — <strong style={{color:"rgba(255,255,255,0.8)"}}>{STEPS[step-1]}</strong></span>
-              <span style={{color:"#22C55E",fontWeight:700}}>{Math.round(progress)}% complete</span>
+              <span>Step <strong>{step}</strong> of {STEPS.length} — <strong style={{color:"var(--text)"}}>{STEPS[step-1]}</strong></span>
+              <span style={{color:"var(--green)",fontWeight:700}}>{Math.round(progress)}% complete</span>
             </div>
             <div className="ap-step-track"><div className="ap-step-fill" style={{width:`${progress}%`}}/></div>
           </div>
 
           {/* Step header */}
           <div style={{marginBottom:28}}>
-            <h2 style={{fontSize:26,fontWeight:800,color:"#fff",letterSpacing:"-.5px",marginBottom:6}}>
+            <h2 style={{fontSize:26,fontWeight:800,color:"var(--text)",letterSpacing:"-.5px",marginBottom:6}}>
               {STEP_INFO[step-1].icon} {STEP_INFO[step-1].title}
             </h2>
-            <p style={{fontSize:14,color:"rgba(255,255,255,0.45)"}}>{STEP_INFO[step-1].sub}</p>
+            <p style={{fontSize:14,color:"var(--muted)"}}>{STEP_INFO[step-1].sub}</p>
           </div>
 
           {/* Form body */}
-          <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:20,padding:"28px 32px",marginBottom:20}}>
-            {step===1 && <Step1/>}
-            {step===2 && <Step2/>}
-            {step===3 && <Step3/>}
-            {step===4 && <Step4/>}
-            {step===5 && <Step5/>}
+          <div className="ap-card" style={{ maxWidth: "none", padding: "28px 32px", marginBottom: 20 }}>
+            {step===1 && Step1()}
+            {step===2 && Step2()}
+            {step===3 && Step3()}
+            {step===4 && Step4()}
           </div>
 
           {/* Navigation buttons */}
@@ -483,7 +523,7 @@ export default function RegisterPage() {
               ? <button className="ap-btn ap-btn-ghost" style={{flex:1}} onClick={back}>← Back</button>
               : <Link to="/login" className="ap-btn ap-btn-ghost" style={{flex:1,textAlign:"center"}}>← Sign In</Link>
             }
-            {step<5
+            {step<4
               ? <button className="ap-btn ap-btn-green" style={{flex:2}} onClick={next}>Continue →</button>
               : <button className={`ap-btn ap-btn-green${loading?" ap-btn-disabled":""}`} style={{flex:2}} onClick={onSubmit}>
                   {loading?"Creating Workspace…":"🚀 Create Workspace"}
@@ -491,9 +531,9 @@ export default function RegisterPage() {
             }
           </div>
 
-          <div style={{textAlign:"center",marginTop:16,fontSize:12,color:"rgba(255,255,255,0.3)"}}>
+          <div style={{textAlign:"center",marginTop:16,fontSize:12,color:"var(--dim)"}}>
             Already have an account?{" "}
-            <Link to="/login" style={{color:"#22C55E",fontWeight:600,textDecoration:"none"}}>Sign in</Link>
+            <Link to="/login" style={{color:"var(--green)",fontWeight:600,textDecoration:"none"}}>Sign in</Link>
           </div>
         </div>
       </div>

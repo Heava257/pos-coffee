@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AuthPremium.css";
 
@@ -22,6 +22,14 @@ const STEPS = ["Branch","Team","Modules","Import","Complete"];
 
 export default function WorkspaceSetupPage() {
   const navigate = useNavigate();
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("landing_theme") || "light";
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
   const [step, setStep] = useState(1);
 
   // Step 1

@@ -15,6 +15,7 @@ import {
     Tag,
     Typography,
     Upload,
+    Alert
 } from "antd";
 
 const { Text } = Typography;
@@ -32,12 +33,13 @@ const getBase64 = (file) =>
     });
 
 import { useLanguage, translations } from "@/app/store/language.store";
-import { AlertCircle, TrendingUp } from "lucide-react";
+import { AlertCircle, TrendingUp, HelpCircle } from "lucide-react";
 
 function RawMaterialPage() {
     const { lang } = useLanguage();
     const t = translations[lang];
     const [form] = Form.useForm();
+    const [showGuide, setShowGuide] = useState(false);
     const [state, setState] = useState({
         list: [],
         loading: false,
@@ -312,8 +314,27 @@ function RawMaterialPage() {
     return (
         <MainPage loading={state.loading}>
             <div className="pageHeader">
-                <Space>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>{t.raw_material_list}</div>
+                <Space style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>{t.raw_material_list}</span>
+                        <Button
+                            type="text"
+                            icon={<HelpCircle size={15} style={{ color: "#2d6a42", marginRight: 4 }} />}
+                            onClick={() => setShowGuide(!showGuide)}
+                            style={{
+                                background: showGuide ? "rgba(45, 106, 66, 0.15)" : "rgba(45, 106, 66, 0.08)",
+                                color: "#2d6a42",
+                                borderRadius: 8,
+                                fontWeight: 700,
+                                fontSize: 12,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                height: 32,
+                            }}
+                        >
+                            {showGuide ? "លាក់ការណែនាំ" : "របៀបប្រើប្រាស់"}
+                        </Button>
+                    </div>
                     <Input.Search
                         onChange={(event) =>
                             setFilter((p) => ({ ...p, txt_search: event.target.value }))
@@ -336,10 +357,27 @@ function RawMaterialPage() {
                         }}
                     />
                 </Space>
-                <Button type="primary" onClick={onBtnNew} icon={<MdAdd />}>
+                <Button type="primary" className="tour-raw-material-add-btn" onClick={onBtnNew} icon={<MdAdd />}>
                     {t.add_new_material}
                 </Button>
             </div>
+
+            {showGuide && (
+                <Alert
+                    message={<strong>💡 របៀបគ្រប់គ្រងវត្ថុធាតុដើម និងគ្រឿងផ្សំ (Raw Materials Guide)</strong>}
+                    description={
+                        <div style={{ fontSize: 13, marginTop: 4, color: '#333' }}>
+                            <p style={{ margin: '3px 0' }}>1. <strong>ចុះឈ្មោះវត្ថុធាតុដើម (Add Material)៖</strong> ចុចប៊ូតុង <strong>[+ Add New Material]</strong> ដើម្បីបញ្ចូលឈ្មោះវត្ថុធាតុដើម (ដូចជា គ្រាប់កាហ្វេ, ទឹកដោះគោខាប់, ស្ករស) ដោយកំណត់ឯកតារាប់ (Unit) និងកម្រិតស្តុកអប្បបរមា (Min Stock) សម្រាប់ដាស់តឿន។</p>
+                            <p style={{ margin: '3px 0' }}>2. <strong>ការប្តូរឯកតាទិញ និងឯកតាប្រើប្រាស់ (UOM & Conversion Rate)៖</strong> បងអាចកំណត់ឯកតាទិញជា "បាវ / កេស" និងឯកតាប្រើប្រាស់ជា "ក្រាម / កំប៉ុង" រួមជាមួយអត្រាបំលែង (Conversion Rate) ដើម្បីឱ្យប្រព័ន្ធគណនាដោយស្វ័យប្រវត្តិនៅពេលទិញចូល។</p>
+                            <p style={{ margin: '3px 0' }}>3. <strong>តំណភ្ជាប់ទៅរូបមន្ត (Recipes)៖</strong> គ្រឿងផ្សំទាំងនេះ នឹងបង្ហាញសម្រាប់ការជ្រើសរើសនៅពេលបងបង្កើតរូបមន្តផលិតផល (Recipes) នៅក្នុងទំព័រផលិតផល ដើម្បីកាត់ស្តុកស្វ័យប្រវត្តិតាមការលក់។</p>
+                        </div>
+                    }
+                    type="info"
+                    closable
+                    onClose={() => setShowGuide(false)}
+                    style={{ borderRadius: 16, marginBottom: 24, border: '1px solid #bae7ff', background: '#e6f7ff' }}
+                />
+            )}
 
             <Table
                 rowKey="id"

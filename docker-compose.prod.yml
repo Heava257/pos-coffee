@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  # ─── MySQL Database ───────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: pos_mysql_prod
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: production_root_pass
+      MYSQL_DATABASE: coffee_saas
+      MYSQL_USER: prod_user
+      MYSQL_PASSWORD: production_user_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_prod_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - pos_prod_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "prod_user", "-pproduction_user_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─── Redis Cache ──────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: pos_redis_prod
+    restart: unless-stopped
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - pos_prod_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── Node.js API Server ───────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: pos_server_prod
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DB_HOST: mysql
+      DB_USER: prod_user
+      DB_PASSWORD: production_user_pass
+      DB_DATABASE: coffee_saas
+      DB_PORT: 3306
+      REDISHOST: redis
+      REDISPORT: 6379
+      PORT: 8080
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pos_prod_network
+
+  # ─── React Frontend & Proxy ───────────────────────────────────
+  web:
+    build:
+      context: ./web-pos-nit
+      dockerfile: Dockerfile
+    container_name: pos_web_prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - server
+    networks:
+      - pos_prod_network
+
+volumes:
+  mysql_prod_data:
+    driver: local
+  redis_prod_data:
+    driver: local
+
+networks:
+  pos_prod_network:
+    driver: bridge

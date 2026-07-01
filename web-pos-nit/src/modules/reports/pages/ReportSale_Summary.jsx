@@ -23,6 +23,8 @@ import dayjs from "dayjs";
 import { configStore } from "@/app/store/configStore";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import logo from "@/assets/business_default_logo.png";
+import { useProfileStore } from "@/app/store/profileStore";
 
 const { Title, Text } = Typography;
 
@@ -37,9 +39,29 @@ const COLORS = {
 };
 
 function ReportSale_Summary() {
+  const profile = useProfileStore(s => s.profile);
   const { config } = configStore();
   const [loading, setLoading] = useState(false);
   const reportRef = useRef(null);
+  const printCell = {
+    onCell: () => ({
+      style: {
+        border: '1px solid #000000',
+        padding: '8px',
+        color: '#000000',
+        background: 'transparent'
+      }
+    }),
+    onHeaderCell: () => ({
+      style: {
+        border: '1px solid #000000',
+        padding: '8px',
+        color: '#000000',
+        background: '#f1f5f9',
+        fontWeight: 'bold'
+      }
+    })
+  };
   const [filter, setFilter] = useState({
     from_date: dayjs().subtract(29, "d"),
     to_date: dayjs(),
@@ -192,9 +214,9 @@ function ReportSale_Summary() {
   };
 
   return (
-    <div style={{ padding: "0 0 40px 0" }}>
+    <div className="print-layout-container" style={{ padding: "0 0 40px 0" }}>
       {/* 🚀 Header & Main Controls */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", flexWrap: 'wrap', gap: 16 }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", flexWrap: 'wrap', gap: 16 }}>
         <div>
           <Title level={2} style={{ margin: 0, fontWeight: 900, color: COLORS.primary, letterSpacing: '-1px' }}>
             Sales Intelligence
@@ -204,7 +226,7 @@ function ReportSale_Summary() {
           </Text>
         </div>
         <Space size={12}>
-          <Button
+           <Button
             size="large"
             icon={<PrinterOutlined />}
             onClick={handlePrint}
@@ -212,20 +234,12 @@ function ReportSale_Summary() {
           >
             Print Report
           </Button>
-          <Button
-            size="large"
-            type="primary"
-            icon={<FilePdfOutlined />}
-            onClick={handleDownloadPDF}
-            style={{ borderRadius: 12, background: COLORS.primary, border: 'none', fontWeight: 600, boxShadow: '0 8px 16px rgba(30,74,45,0.2)' }}
-          >
-            Export as PDF
-          </Button>
         </Space>
       </div>
 
       {/* 🔍 Global Filters Section */}
       <Card 
+        className="global-filter-card no-print"
         bordered={false} 
         style={{ 
           marginBottom: "32px", 
@@ -301,8 +315,104 @@ function ReportSale_Summary() {
       </Card>
 
       <div ref={reportRef}>
+        {/* 🖨️ Printable Header (Visible ONLY during print) */}
+        <div className="print-header" style={{ display: 'none', marginBottom: '20px', fontFamily: 'Inter, sans-serif' }}>
+          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+            <h2 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: 'bold', textTransform: 'uppercase', color: '#000' }}>
+              {profile?.business_name || 'IT SRUK SRAE'}
+            </h2>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: 'bold', color: '#333' }}>
+              របាយការណ៍លក់សរុប (SALES SUMMARY REPORT)
+            </h3>
+          </div>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '12px' }}>
+            <tbody>
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', width: '20%' }}>BUSINESS NAME</td>
+                <td style={{ border: '1px solid #000', padding: '8px', width: '30%' }}>{profile?.business_name || 'IT SRUK SRAE'}</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', width: '20%' }}>REPORT TYPE</td>
+                <td style={{ border: '1px solid #000', padding: '8px', width: '30%', fontWeight: 'bold' }}>SALES SUMMARY REPORT</td>
+              </tr>
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>BRANCH / ADDRESS</td>
+                <td style={{ border: '1px solid #000', padding: '8px' }}>{profile?.branch_name || 'MAIN BRANCH'} {profile?.branch_address && `(${profile.branch_address})`}</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>DATE RANGE</td>
+                <td style={{ border: '1px solid #000', padding: '8px' }}>{dayjs(filter.from_date).format("DD/MM/YYYY")} - {dayjs(filter.to_date).format("DD/MM/YYYY")}</td>
+              </tr>
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>TOTAL REVENUE</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', color: '#1e4a2d', fontSize: '13px' }}>{formatCurrency(totals.amount)} ({ (totals.amount * 4100).toLocaleString() }៛)</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>TOTAL ITEMS & ORDERS</td>
+                <td style={{ border: '1px solid #000', padding: '8px' }}>{totals.qty} Units ({totals.orderCount} Orders)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* 🖨️ Printable Table (Visible ONLY during print) */}
+        <div className="print-table-container" style={{ display: 'none', marginBottom: '20px', fontFamily: 'Inter, sans-serif' }}>
+          <h3 style={{ margin: '20px 0 10px 0', fontSize: '15px', fontWeight: 'bold', color: '#000' }}>Detailed Transaction Log</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+            <thead>
+              <tr style={{ background: '#f1f5f9' }}>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>PERIOD / DATE</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>VOLUME</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>REVENUE</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>PERFORMANCE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {state.list.map((item, idx) => {
+                const pct = ((item.total_amount / (totals.amount || 1)) * 100).toFixed(1);
+                return (
+                  <tr key={idx}>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>{dayjs(item.order_date).format("DD MMM YYYY")}</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{item.total_qty?.toLocaleString()} Items</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right' }}>
+                      <div style={{ fontWeight: 'bold' }}>{formatCurrency(item.total_amount)}</div>
+                      <div style={{ fontSize: '10px', color: '#555' }}>{(item.total_amount * 4100).toLocaleString()}៛</div>
+                    </td>
+                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>SHARE {pct}%</td>
+                  </tr>
+                );
+              })}
+              <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
+                <td style={{ border: '1px solid #000', padding: '8px' }}>GRAND TOTAL</td>
+                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{totals.qty?.toLocaleString()} Units</td>
+                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right' }}>
+                  <div style={{ fontWeight: 'bold' }}>{formatCurrency(totals.amount)}</div>
+                  <div style={{ fontSize: '10px', color: '#555' }}>{(totals.amount * 4100).toLocaleString()}៛</div>
+                </td>
+                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>100% SHARE</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* 🖨️ Printable Footer (Visible ONLY during print) */}
+        <div className="print-footer" style={{ display: 'none', marginTop: '20px', fontFamily: 'Inter, sans-serif', pageBreakInside: 'avoid' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 50px 0 50px', marginTop: '10px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '13px', display: 'block', fontWeight: 700, color: '#000' }}>រៀបចំដោយ (Prepared By)</span>
+              <div style={{ height: '35px' }}></div>
+              <span style={{ fontSize: '12px', display: 'block', color: '#000' }}>..........................................</span>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '13px', display: 'block', fontWeight: 700, color: '#000' }}>ពិនិត្យ និងអនុម័តដោយ (Approved By)</span>
+              <div style={{ height: '35px' }}></div>
+              <span style={{ fontSize: '12px', display: 'block', color: '#000' }}>..........................................</span>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid #000', padding: '8px 0', display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginTop: '15px' }}>
+            <div>📍 {profile?.branch_address || 'Phnom Penh, Cambodia'}</div>
+            <div>បោះពុម្ពដោយប្រព័ន្ធ POS៖ {dayjs().format("DD/MM/YYYY HH:mm")}</div>
+          </div>
+        </div>
+
         {/* 📊 High-Impact Summary Cards */}
-        <Row gutter={[24, 24]} style={{ marginBottom: "32px" }}>
+        <Row gutter={[24, 24]} style={{ marginBottom: "32px" }} className="no-print">
           <Col xs={24} sm={12} lg={6}>
             <div className="op-mini-card" style={{ padding: '20px', background: COLORS.primary, color: '#fff', position: 'relative' }}>
               <div style={{ position: 'absolute', right: -10, top: -10, opacity: 0.1 }}><DollarSign size={80} /></div>
@@ -363,7 +473,7 @@ function ReportSale_Summary() {
         </Row>
 
         {/* 📈 Visualization Area */}
-        <Row gutter={[24, 24]} style={{ marginBottom: "32px" }}>
+        <Row className="no-print" gutter={[24, 24]} style={{ marginBottom: "32px" }}>
           <Col xs={24} lg={16}>
             <Card 
               bordered={false} 
@@ -471,12 +581,13 @@ function ReportSale_Summary() {
 
         {/* 📋 Data Detail Table */}
         <Card 
+          className="no-print"
           bordered={false} 
           style={{ borderRadius: 24, boxShadow: '0 10px 30px rgba(0,0,0,0.03)', padding: '10px' }}
           title={<Space><FileText size={18} /> <span style={{ fontWeight: 800 }}>Detailed Transaction Log</span></Space>}
-          extra={<Button type="link" icon={<DownloadOutlined />}>Export to Excel</Button>}
         >
           <Table
+            bordered
             loading={loading}
             dataSource={state.list}
             rowKey="order_date"
@@ -484,6 +595,7 @@ function ReportSale_Summary() {
               {
                 title: "PERIOD / DATE",
                 dataIndex: "order_date",
+                ...printCell,
                 render: (val) => (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ background: '#f1f5f9', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -497,6 +609,7 @@ function ReportSale_Summary() {
                 title: "VOLUME",
                 dataIndex: "total_qty",
                 align: 'center',
+                ...printCell,
                 render: (val) => (
                   <Tag color={val > 50 ? "green" : "default"} style={{ borderRadius: 8, fontWeight: 800, padding: '4px 12px' }}>
                     {val.toLocaleString()} Items
@@ -507,6 +620,7 @@ function ReportSale_Summary() {
                 title: "REVENUE",
                 dataIndex: "total_amount",
                 align: 'right',
+                ...printCell,
                 render: (val) => (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                     <Text strong style={{ fontSize: 16, color: COLORS.primary }}>{formatCurrency(val)}</Text>
@@ -517,6 +631,7 @@ function ReportSale_Summary() {
               {
                 title: "PERFORMANCE",
                 align: 'center',
+                ...printCell,
                 render: (_, record) => {
                   const pct = ((record.total_amount / (totals.amount || 1)) * 100).toFixed(1);
                   return (
@@ -537,27 +652,27 @@ function ReportSale_Summary() {
             summary={(pageData) => (
               <Table.Summary fixed>
                 <Table.Summary.Row style={{ background: '#f8fafc' }}>
-                  <Table.Summary.Cell index={0}><Text strong style={{ fontSize: 16 }}>GRAND TOTAL</Text></Table.Summary.Cell>
-                  <Table.Summary.Cell index={1} align="center">
+                  <Table.Summary.Cell index={0} style={{ border: '1px solid #000000', padding: '8px', background: '#f8fafc', color: '#000000' }}><Text strong style={{ fontSize: 16 }}>GRAND TOTAL</Text></Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="center" style={{ border: '1px solid #000000', padding: '8px', background: '#f8fafc', color: '#000000' }}>
                     <Text strong style={{ fontSize: 16 }}>{totals.qty.toLocaleString()} Units</Text>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={2} align="right">
+                  <Table.Summary.Cell index={2} align="right" style={{ border: '1px solid #000000', padding: '8px', background: '#f8fafc', color: '#000000' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                       <Text strong style={{ fontSize: 20, color: COLORS.primary }}>{formatCurrency(totals.amount)}</Text>
                       <Text type="secondary" style={{ fontSize: 12 }}>{ (totals.amount * 4100).toLocaleString() }៛</Text>
                     </div>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={3} align="center">
+                  <Table.Summary.Cell index={3} align="center" style={{ border: '1px solid #000000', padding: '8px', background: '#f8fafc', color: '#000000' }}>
                     <Tag color="gold" style={{ fontWeight: 900, borderRadius: 6 }}>100% SHARE</Tag>
                   </Table.Summary.Cell>
                 </Table.Summary.Row>
               </Table.Summary>
             )}
           />
-        </Card>
+      </Card>
       </div>
 
-      <style jsx global>{`
+      <style>{`
         .ant-table-row:hover {
           background-color: #f8fafc !important;
         }
@@ -573,8 +688,118 @@ function ReportSale_Summary() {
           to { opacity: 1; transform: translateY(0); }
         }
         @media print {
-          .ant-btn, .ant-segmented, .ant-select, .ant-picker {
+          /* Hide sidebar, header and other platform UI components completely */
+          .ant-layout-sider,
+          .ant-layout-header,
+          .admin-header,
+          .admin-sider,
+          header,
+          aside,
+          .header-icon-btn,
+          #header-notif-dropdown-anchor,
+          #header-profile-dropdown-anchor,
+          .no-print,
+          .global-filter-card,
+          .ant-btn,
+          .ant-segmented,
+          .ant-select,
+          .ant-picker {
             display: none !important;
+          }
+
+          /* Hide layout footer and pagination */
+          .ant-layout-footer,
+          footer,
+          .ant-table-pagination,
+          .ant-pagination {
+            display: none !important;
+          }
+          
+          /* Force page margins and body resets */
+          .print-layout-container {
+            min-height: auto !important;
+            height: auto !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+          }
+          body, html, .ant-layout, .admin-body, .ant-layout-content, .admin-layout-content {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            box-shadow: none !important;
+          }
+
+          /* Ensure print header and footer show up */
+          .print-header {
+            display: block !important;
+          }
+          .print-table-container {
+            display: block !important;
+          }
+          .print-footer {
+            display: block !important;
+          }
+
+          /* Remove rounded corners and box shadows from wrappers */
+          .ant-card,
+          .ant-card-body,
+          .ant-table-wrapper,
+          .ant-table,
+          .ant-table-container,
+          .ant-table-content,
+          .ant-table-cell {
+            border-radius: 0 !important;
+            box-shadow: none !important;
+          }
+
+          /* Force collapsed thin black border grid on all tables */
+          table {
+            border-collapse: collapse !important;
+            border: 1px solid #000000 !important;
+            width: 100% !important;
+          }
+          
+          th,
+          td,
+          .ant-table-cell,
+          .print-grid-cell,
+          .ant-table-summary tr td {
+            border: 1px solid #000000 !important;
+            padding: 8px !important;
+            color: #000000 !important;
+            border-radius: 0 !important;
+          }
+          
+          th,
+          .ant-table-thead > tr > th {
+            background: #f1f5f9 !important;
+            font-weight: bold !important;
+          }
+
+          /* Make tags render as simple plain text without borders/backgrounds */
+          .ant-tag {
+            border: none !important;
+            background: transparent !important;
+            color: #000000 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            font-weight: normal !important;
+            font-size: inherit !important;
+            text-shadow: none !important;
+          }
+
+          /* Hide icons during print */
+          .anticon,
+          svg {
+            display: none !important;
+          }
+
+          /* Prevent table rows breaking across pages */
+          tr {
+            page-break-inside: avoid !important;
           }
         }
       `}</style>

@@ -232,9 +232,15 @@ exports.sendTelegramMessage = async (business_id, messageText, imageUrls = [], k
 };
 
 exports.sendTelegramMessagenewLogin = async (messageText) => {
-  // Login notifications usually go to the platform owner/admin
-  const TELEGRAM_TOKEN = "8046971725:AAFt4UJ-2D9pRdwb-BOUj3we96pwL4vo3vU";
-  const CHAT_ID = "-1002862378477";
+  // C-1 FIX: Token and Chat ID come from environment variables via config — never hardcoded
+  const config = require('./config');
+  const TELEGRAM_TOKEN = config.platform_telegram.token;
+  const CHAT_ID = config.platform_telegram.chat_id;
+
+  if (!TELEGRAM_TOKEN || !CHAT_ID) {
+    console.warn('[Telegram] Platform login notification token not configured. Skipping.');
+    return;
+  }
 
   const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
 
@@ -242,12 +248,13 @@ exports.sendTelegramMessagenewLogin = async (messageText) => {
     await axios.post(url, {
       chat_id: CHAT_ID,
       text: messageText,
-      parse_mode: "HTML",
+      parse_mode: 'HTML',
     });
   } catch (err) {
-    console.error("Telegram Error (Login):", err.message);
+    console.error('Telegram Error (Login):', err.message);
   }
 };
+
 exports.checkPlanLimit = async (business_id, resourceType) => {
   // 1. Get business plan limits
   const [plan] = await connection.query(`

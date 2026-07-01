@@ -4,23 +4,16 @@ require("dotenv").config();
 async function check() {
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
+    charset: 'utf8mb4',
   });
 
-  console.log("--- PERMISSIONS TABLE ---");
-  const [perms] = await connection.execute("SELECT id, name, route_key FROM permissions");
-  console.table(perms);
-
-  console.log("\n--- SUPER ADMIN (ROLE ID 1) PERMISSIONS ---");
-  const [rolePerms] = await connection.execute(`
-    SELECT p.name, p.route_key, rp.can_view, rp.can_create, rp.can_edit, rp.can_delete 
-    FROM role_permissions rp 
-    JOIN permissions p ON rp.permission_id = p.id 
-    WHERE rp.role_id = 1
-  `);
-  console.table(rolePerms);
+  console.log("--- CATEGORIES TABLE (Global) ---");
+  const [rows] = await connection.execute("SELECT id, name, default_moods, default_sizes, default_addons FROM categories WHERE business_id = 1");
+  console.log(JSON.stringify(rows, null, 2));
 
   await connection.end();
 }

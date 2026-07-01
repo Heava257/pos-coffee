@@ -1,0 +1,6 @@
+# Ignore temporary and node files
+node_modules/
+.git/
+dist/
+build/
+*.log

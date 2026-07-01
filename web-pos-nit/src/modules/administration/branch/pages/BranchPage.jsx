@@ -244,7 +244,7 @@ const BranchPage = () => {
                             type="text"
                             icon={<EditOutlined />}
                             onClick={() => onClickEdit(record)}
-                            className="action-btn"
+                            className="tour-branch-edit-btn action-btn"
                             style={{ color: COLORS.darkGreen }}
                         />
                     </Tooltip>
@@ -423,54 +423,6 @@ const BranchPage = () => {
                                 <Input placeholder="e.g. Riverside Coffee, Terminal 2" size="large" style={{ borderRadius: 10 }} />
                             </Form.Item>
 
-                            <Row gutter={16}>
-                                <Col span={12}>
-                                    <Form.Item
-                                        name="province"
-                                        label={<Text strong style={{ fontSize: 13 }}>{t.province_city}</Text>}
-                                        rules={[{ required: true, message: "Required" }]}
-                                        style={{ marginBottom: 20 }}
-                                    >
-                                        <Select
-                                            showSearch
-                                            placeholder="Province"
-                                            size="large"
-                                            style={{ borderRadius: 10 }}
-                                            options={Object.keys(CAMBODIA_GEO).map(p => ({ label: p, value: p }))}
-                                            onChange={() => form.setFieldsValue({ district: undefined })}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item
-                                        noStyle
-                                        shouldUpdate={(prev, curr) => prev.province !== curr.province}
-                                    >
-                                        {({ getFieldValue }) => {
-                                            const province = getFieldValue("province");
-                                            const districts = province ? CAMBODIA_GEO[province] : [];
-                                            return (
-                                                <Form.Item
-                                                    name="district"
-                                                    label={<Text strong style={{ fontSize: 13 }}>{t.district_khan}</Text>}
-                                                    rules={[{ required: true, message: "Required" }]}
-                                                    style={{ marginBottom: 20 }}
-                                                >
-                                                    <Select
-                                                        showSearch
-                                                        placeholder="District"
-                                                        size="large"
-                                                        style={{ borderRadius: 10 }}
-                                                        disabled={!province}
-                                                        options={districts.map(d => ({ label: d, value: d }))}
-                                                    />
-                                                </Form.Item>
-                                            );
-                                        }}
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-
                             <Form.Item
                                 name="location"
                                 label={<Text strong style={{ fontSize: 13 }}>{t.location_address}</Text>}
@@ -518,7 +470,11 @@ const BranchPage = () => {
                                 <Avatar size={40} icon={<SafetyCertificateOutlined />} style={{ backgroundColor: COLORS.accentGreen }} />
                                 <div>
                                     <Text strong style={{ color: COLORS.darkGreen, fontSize: 13 }}>Secure KHQR Integration</Text><br/>
-                                    <Text type="secondary" style={{ fontSize: 11 }}>Setup API gateway for automated settlements.</Text>
+                                    <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4, lineHeight: 1.4 }}>
+                                        {lang === 'kh' 
+                                            ? "បញ្ជាក់៖ ប្រសិនបើបងមិនទាន់មាន Merchant ID ឬ គណនីធនាគារ (Gateway) ទេ បងអាចគ្រាន់តែបង្ហោះរូបភាពកូដ QR (KHQR) នៅខាងក្រោមដើម្បីឱ្យអតិថិជនស្កេនទូទាត់ប្រាក់ក៏បានដែរ។" 
+                                            : "Note: If you do not have a Merchant ID or Gateway account yet, you can simply upload your static QR Code image below to use instead."}
+                                    </Text>
                                 </div>
                             </div>
 

@@ -52,6 +52,7 @@ import {
   setAcccessToken,
   setPermission,
   setProfile,
+  setLogout,
 } from "@/app/store/profile.store";
 import { useProfileStore } from "@/app/store/profileStore"; // Import the new store
 import { request } from "@/shared/utils/helper";
@@ -67,6 +68,8 @@ import { FaHistory } from "react-icons/fa";
 import { RiShareForward2Fill } from "react-icons/ri";
 import dayjs from "dayjs";
 import { useLanguage, translations } from "@/app/store/language.store";
+import OnboardingTour from "@/shared/components/OnboardingTour";
+import { HelpCircle } from "lucide-react";
 const { Header, Content, Footer, Sider } = Layout;
 
 // Menu keys used for mapping translations
@@ -233,6 +236,7 @@ const MainLayout = () => {
   const { lang, setLang } = useLanguage();
   const t = translations[lang];
   const { profile, permissions, setProfile: setProfileStore, setPermissions: setPermissionsStore } = useProfileStore(); // Use reactive profile/permissions from the store
+  const isPlatformOwner = profile?.business_id === 1 || ["PlatForm Owner", "Platform Owner"].includes(profile?.role_name);
   const [subAlert, setSubAlert] = useState(null);
   const { setConfig } = configStore();
   const { isFullScreen, setFullScreen, isHeaderVisible, setHeaderVisible, isSidebarCollapsed, setSidebarCollapsed } = useUIStore();
@@ -258,20 +262,47 @@ const MainLayout = () => {
   const [notifCount, setNotifCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [tourVisible, setTourVisible] = useState(false);
 
   useEffect(() => {
     if (profile) {
       fetchCurrentShift();
       fetchStaffList();
       fetchHeaderData();
+      
+      const completed = localStorage.getItem(`has_completed_tour_v1_plan_${profile.plan_id || 1}_user_${profile.id}`) === "true";
+      if (!completed && !isPlatformOwner) {
+        setTourVisible(true);
+      }
     }
+  }, [profile]);
+
+  // strict active status heartbeat polling
+  useEffect(() => {
+    if (!profile) return;
+    const checkStatus = async () => {
+      try {
+        await request("auth/profile", "get");
+      } catch (err) {
+        // Automatically handled by helper.js Axios interceptor (logout on 403)
+      }
+    };
+    const interval = setInterval(checkStatus, 5000);
+    return () => clearInterval(interval);
   }, [profile]);
 
   useEffect(() => {
     if (profile) {
       fetchHeaderData();
     }
-  }, [location.pathname]);
+    const handleOrderCompleted = () => {
+      fetchHeaderData();
+    };
+    window.addEventListener("order-completed", handleOrderCompleted);
+    return () => {
+      window.removeEventListener("order-completed", handleOrderCompleted);
+    };
+  }, [location.pathname, profile]);
 
   const fetchHeaderData = async () => {
     try {
@@ -282,10 +313,10 @@ const MainLayout = () => {
         setNotifications(notifRes.list);
         setNotifCount(notifRes.list.filter(n => !n.is_read).length);
       }
-      // 2. Fetch Total Orders (Range Summary Order Count)
+      // 2. Fetch Total Orders (Today's Summary Order Count)
       const dashRes = await request("dashboard", "get");
-      if (dashRes && dashRes.range_summary) {
-        setTotalOrders(dashRes.range_summary.order_count || 0);
+      if (dashRes && dashRes.today_summary) {
+        setTotalOrders(dashRes.today_summary.order_count || 0);
       }
     } catch (e) {
       console.error("Error fetching header data:", e);
@@ -730,10 +761,8 @@ const MainLayout = () => {
   };
 
   const onLoginOut = () => {
-    setProfileStore(null); // Updated: Clear Zustand store (which also clears localStorage)
-    setAcccessToken("");
-    localStorage.removeItem("permission");
-    localStorage.removeItem("user_id");
+    setProfileStore(null); // Updated: Clear Zustand store
+    setLogout();
     navigate("/login");
   };
 
@@ -804,6 +833,15 @@ const MainLayout = () => {
         background: "#5E4DC8",
       }}
     >
+      <OnboardingTour 
+        visible={tourVisible} 
+        profile={profile}
+        navigate={navigate}
+        onClose={() => {
+          localStorage.setItem(`has_completed_tour_v1_plan_${profile.plan_id || 1}_user_${profile.id}`, "true");
+          setTourVisible(false);
+        }} 
+      />
       {/* Desktop Sidebar */}
       {!isMobile && !isFullScreen && (
         <Sider
@@ -832,31 +870,8 @@ const MainLayout = () => {
             overflow: "hidden",
           }}>
 
-            {/* ── Logo Row ── */}
-            <div style={{
-              padding: isSidebarCollapsed ? "24px 0" : "24px 20px",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              flexShrink: 0,
-              justifyContent: isSidebarCollapsed ? "center" : "flex-start",
-            }}>
-              <div style={{
-                width: 36, height: 36,
-                borderRadius: 10,
-                background: "rgba(255, 255, 255, 0.15)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0,
-                fontSize: 16, fontWeight: 900, color: "#fff",
-              }}>
-                {(profile?.business_name || "C")[0].toUpperCase()}
-              </div>
-              {!isSidebarCollapsed && (
-                <span style={{ color: "#ffffff", fontSize: 16, fontWeight: 700 }}>
-                  {profile?.business_name || "Coffee POS"}
-                </span>
-              )}
-            </div>
+            {/* Spacer to prevent menu from touching the top edge */}
+            <div style={{ height: 16 }} />
 
             <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", paddingBottom: 8 }} className="sb-scroll">
               <ConfigProvider theme={{
@@ -1160,6 +1175,72 @@ const MainLayout = () => {
                 >
                   {currentShift ? (t.shift_open || 'Open') : (t.shift_closed || 'Closed')}
                 </Button>
+              )}
+
+              {/* ❓ Help / Onboarding Toggle */}
+              {!isPlatformOwner && (
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: "restart_tour",
+                        label: (
+                          <div style={{ padding: "4px 8px" }}>
+                            <div style={{ fontWeight: 800, fontSize: 13, color: "var(--theme-dark-green)" }}>
+                              មើលការណែនាំដំបូង (Welcome Tour)
+                            </div>
+                            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                              Replay the step-by-step onboarding walkthrough
+                            </div>
+                          </div>
+                        ),
+                        onClick: () => {
+                          setTourVisible(true);
+                        }
+                      },
+                      {
+                        type: "divider"
+                      },
+                      {
+                        key: "toggle_guides",
+                        label: (
+                          <div style={{ padding: "4px 8px" }}>
+                            <div style={{ fontWeight: 800, fontSize: 13 }}>
+                              បើកដំណើរការបដាណែនាំឡើងវិញ
+                            </div>
+                            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                              Show all page-level quick guide banners again
+                            </div>
+                          </div>
+                        ),
+                        onClick: () => {
+                          localStorage.removeItem("dismissed_guide_category");
+                          localStorage.removeItem("dismissed_guide_product");
+                          message.success("បដាណែនាំតាមទំព័រត្រូវបានបើកឡើងវិញ! / Page guides reactivated!");
+                          window.location.reload();
+                        }
+                      }
+                    ]
+                  }}
+                  trigger={['click']}
+                  placement="bottomRight"
+                >
+                  <Tooltip title="ជំនួយ & ការណែនាំ / Help & Guides">
+                    <div
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: 38, height: 38, borderRadius: '50%', cursor: 'pointer',
+                        background: 'rgba(255,255,255,0.4)',
+                        border: '1.5px solid var(--theme-dark-green)',
+                        boxShadow: '0 2px 10px rgba(30, 74, 45, 0.1)',
+                        color: 'var(--theme-dark-green)', transition: 'all 0.2s',
+                      }}
+                      className="header-icon-btn"
+                    >
+                      <HelpCircle size={18} strokeWidth={2.2} />
+                    </div>
+                  </Tooltip>
+                </Dropdown>
               )}
 
               {/* 🌐 Language Toggle */}

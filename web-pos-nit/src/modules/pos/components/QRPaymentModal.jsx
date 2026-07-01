@@ -3,6 +3,9 @@ import { Modal, Button, message, Spin, Image } from 'antd';
 import QRCode from 'react-qr-code';
 import { QrcodeOutlined, CopyOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { Config } from '@/shared/utils/config';
+import { useLanguage, translations } from '@/app/store/language.store';
+import { useProfileStore } from '@/app/store/profileStore';
+
 
 const CRC16 = (data) => {
   let crc = 0xFFFF;
@@ -44,6 +47,11 @@ const generateKHQR = (merchantId, name, amount, orderNo, currency = "USD") => {
 };
 
 const QRPaymentModal = ({ open, onClose, paymentLink, orderNo, total, branchInfo }) => {
+  const { lang } = useLanguage();
+  const t = translations[lang] || {};
+  const { permissions } = useProfileStore();
+  const hasShopMgmtPerm = permissions?.some(p => p.route_key?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'shop_managment');
+
   const [copying, setCopying] = useState(false);
 
   const staticQR = branchInfo?.khqr_image;
@@ -183,19 +191,43 @@ const QRPaymentModal = ({ open, onClose, paymentLink, orderNo, total, branchInfo
               <WarningOutlined style={{ fontSize: 32, color: '#faad14' }} />
             </div>
             <div style={{ fontWeight: 700, fontSize: 17, color: '#262626', marginBottom: 8 }}>
-              QR Payment Not Configured
+              {lang === 'kh' ? 'មិនទាន់បានកំណត់ការទូទាត់ QR' : 'QR Payment Not Configured'}
             </div>
             <div style={{ fontSize: 14, color: '#8c8c8c', marginBottom: 24 }}>
-              Branch: <b>{branchName}</b> has no payment settings.
+              {lang === 'kh' ? (
+                <>សាខា៖ <b>{branchName}</b> មិនទាន់មានការកំណត់គណនីទូទាត់ប្រាក់នៅឡើយទេ។</>
+              ) : (
+                <>Branch: <b>{branchName}</b> has no payment settings.</>
+              )}
             </div>
             <div style={{
               background: '#fff7e6', border: '1px solid #ffd591',
               borderRadius: 12, padding: '16px', fontSize: 13, color: '#d46b08', textAlign: 'left'
             }}>
-              <div style={{ fontWeight: 700, marginBottom: 4 }}>How to fix:</div>
-              1. Go to <b>Shop Management → Branch</b><br />
-              2. Edit <b>{branchName}</b><br />
-              3. Set a <b>Merchant ID</b> or upload <b>KHQR Image</b>.
+              <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                {lang === 'kh' ? 'របៀបដោះស្រាយ៖' : 'How to fix:'}
+              </div>
+              {hasShopMgmtPerm ? (
+                lang === 'kh' ? (
+                  <>
+                    ១. ចូលទៅកាន់ <b>ការគ្រប់គ្រងហាង → សាខា</b><br />
+                    ២. កែសម្រួលសាខា <b>{branchName}</b><br />
+                    ៣. បញ្ចូល <b>Merchant ID</b> ឬ បង្ហោះរូបភាព <b>KHQR</b>
+                  </>
+                ) : (
+                  <>
+                    1. Go to <b>Shop Management → Branch</b><br />
+                    2. Edit <b>{branchName}</b><br />
+                    3. Set a <b>Merchant ID</b> or upload <b>KHQR Image</b>.
+                  </>
+                )
+              ) : (
+                lang === 'kh' ? (
+                  <span>សូមទាក់ទងអ្នកគ្រប់គ្រងប្រព័ន្ធ (Admin) ឬអ្នកចាត់ការទូទៅ (Manager) ដើម្បីបញ្ចូលគណនី និងរូបភាព QR សម្រាប់ទូទាត់ប្រាក់នៅសាខា <b>{branchName}</b>។</span>
+                ) : (
+                  <span>Please contact your system administrator or manager to configure QR payment settings for <b>{branchName}</b>.</span>
+                )
+              )}
             </div>
           </div>
         ) : paymentLink ? (

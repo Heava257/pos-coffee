@@ -4,7 +4,8 @@ import {
     Modal, Form, message, Tag, Space,
     Typography, DatePicker, Select, InputNumber,
     Badge, Tooltip, Empty, Statistic, Divider,
-    Avatar, ConfigProvider, Progress
+    Avatar, ConfigProvider, Progress,
+    Alert
 } from "antd";
 import {
     PlusOutlined,
@@ -22,16 +23,18 @@ import {
     AuditOutlined,
     ArrowRightOutlined,
     InfoCircleOutlined,
-    HistoryOutlined
+    HistoryOutlined,
+    PrinterOutlined
 } from "@ant-design/icons";
 import { 
   Wallet, Receipt, Calculator, Briefcase, 
   Package, ShoppingCart, Activity, Filter,
-  ArrowUpRight, ArrowDownLeft, Database
+  ArrowUpRight, ArrowDownLeft, Database, HelpCircle
 } from "lucide-react";
 import { request } from "@/shared/utils/helper";
 import moment from "moment";
 import { useLanguage, translations } from "@/app/store/language.store";
+import { useProfileStore } from "@/app/store/profileStore";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -50,6 +53,7 @@ const COLORS = {
 };
 
 const ExpensePage = () => {
+    const profile = useProfileStore(s => s.profile);
     const { lang } = useLanguage();
     const t = translations[lang];
     const [list, setList] = useState([]);
@@ -59,6 +63,7 @@ const ExpensePage = () => {
     const [form] = Form.useForm();
     const [editId, setEditId] = useState(null);
     const [searchText, setSearchText] = useState("");
+    const [showGuide, setShowGuide] = useState(false);
     const [dateRange, setDateRange] = useState([moment().startOf('month'), moment().endOf('month')]);
 
     useEffect(() => {
@@ -246,14 +251,14 @@ const ExpensePage = () => {
     );
 
     return (
-        <div style={{ 
+        <div className="print-layout-container" style={{ 
           padding: '24px', 
           background: COLORS.background, 
           minHeight: '100vh',
           animation: 'fadeIn 0.6s ease-out'
         }}>
             {/* --- HEADER SECTION --- */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
                 <div>
                   <Space align="center" style={{ marginBottom: 8 }}>
                     <div style={{ 
@@ -264,7 +269,26 @@ const ExpensePage = () => {
                     }}>
                       <Calculator size={22} color="#fff" />
                     </div>
-                    <Title level={2} style={{ margin: 0, fontWeight: 900, letterSpacing: '-0.8px' }}>Professional Expense Ledger</Title>
+                    <Title level={2} style={{ margin: 0, fontWeight: 900, letterSpacing: '-0.8px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span>Professional Expense Ledger</span>
+                      <Button
+                        type="text"
+                        icon={<HelpCircle size={15} style={{ color: "#0f172a", marginRight: 4 }} />}
+                        onClick={() => setShowGuide(!showGuide)}
+                        style={{
+                          background: showGuide ? "rgba(15, 23, 42, 0.15)" : "rgba(15, 23, 42, 0.08)",
+                          color: "#0f172a",
+                          borderRadius: 8,
+                          fontWeight: 700,
+                          fontSize: 12,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          height: 32,
+                        }}
+                      >
+                        {showGuide ? "លាក់ការណែនាំ" : "របៀបប្រើប្រាស់"}
+                      </Button>
+                    </Title>
                   </Space>
                   <Text type="secondary" style={{ fontSize: 16 }}>Enterprise-grade operational cost & COGS management</Text>
                 </div>
@@ -282,6 +306,13 @@ const ExpensePage = () => {
                         style={{ height: 44, borderRadius: 12, fontWeight: 600 }}
                     >
                       Sync Data
+                    </Button>
+                    <Button 
+                        icon={<PrinterOutlined />} 
+                        onClick={() => window.print()}
+                        style={{ height: 44, borderRadius: 12, fontWeight: 600 }}
+                    >
+                      Print Report
                     </Button>
                     <Button
                         type="primary"
@@ -303,8 +334,26 @@ const ExpensePage = () => {
                 </Space>
             </div>
 
+            {showGuide && (
+                <Alert
+                    className="no-print"
+                    message={<strong>💡 របៀបគ្រប់គ្រងការចំណាយ (Expense & COGS Guide)</strong>}
+                    description={
+                        <div style={{ fontSize: 13, marginTop: 4, color: '#333' }}>
+                            <p style={{ margin: '3px 0' }}>1. <strong>ប្រភេទការចំណាយ៖</strong> ប្រព័ន្ធបែងចែកការចំណាយជាពីរប្រភេទ៖ <em>COGS (ថ្លៃដើមទំនិញលក់)</em> និង <em>OPEX (ចំណាយប្រតិបត្តិការទូទៅ ដូចជាទឹក ភ្លើង ជួលទីតាំង)</em>។</p>
+                            <p style={{ margin: '3px 0' }}>2. <strong>ការបញ្ចូលចំណាយ៖</strong> ចុចប៊ូតុង <strong>[NEW ENTRY]</strong> ដើម្បីកត់ត្រាការចំណាយថ្មី ដោយជ្រើសរើសថ្ងៃខែ ប្រភេទ និងចំនួនទឹកប្រាក់។</p>
+                            <p style={{ margin: '3px 0' }}>3. <strong>ចំណាយបង្កើតដោយប្រព័ន្ធ៖</strong> រាល់ពេលដែលបងធ្វើការបញ្ជាទិញស្តុកទំនិញចូល (Procurement) ប្រព័ន្ធនឹងបង្កើតប្រតិបត្តិការចំណាយជាប្រភេទ <strong>COGS</strong> ឱ្យដោយស្វ័យប្រវត្តិ។</p>
+                        </div>
+                    }
+                    type="info"
+                    closable
+                    onClose={() => setShowGuide(false)}
+                    style={{ borderRadius: 16, marginBottom: 24, border: '1px solid #bae7ff', background: '#e6f7ff' }}
+                />
+            )}
+
             {/* --- SUMMARY METRICS --- */}
-            <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
+            <Row className="no-print" gutter={[24, 24]} style={{ marginBottom: 32 }}>
                 <Col xs={24} sm={12} lg={6}>
                     <div className="op-mini-card" style={{ padding: '20px' }}>
                         <Statistic 
@@ -352,7 +401,7 @@ const ExpensePage = () => {
             </Row>
 
             {/* --- LEDGER TABLE SECTION --- */}
-            <Card style={{ 
+            <Card className="no-print" style={{ 
               borderRadius: 28, border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', overflow: 'hidden'
             }} styles={{ body: { padding: 0 } }}>
                 <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -453,6 +502,110 @@ const ExpensePage = () => {
                 </Form>
             </Modal>
 
+            {/* 🖨️ Printable Wrapper (Visible ONLY during print) */}
+            <div className="print-only-layout" style={{ display: 'none', fontFamily: 'Inter, sans-serif' }}>
+              {/* Header */}
+              <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+                <h2 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: 'bold', textTransform: 'uppercase', color: '#000' }}>
+                  {profile?.business_name || 'IT SRUK SRAE'}
+                </h2>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: 'bold', color: '#333' }}>
+                  របាយការណ៍កត់ត្រាការចំណាយ (EXPENSE LEDGER REPORT)
+                </h3>
+              </div>
+
+              {/* Metadata Table */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '12px' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', width: '20%' }}>BUSINESS NAME</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', width: '30%' }}>{profile?.business_name || 'IT SRUK SRAE'}</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', width: '20%' }}>REPORT TYPE</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', width: '30%', fontWeight: 'bold' }}>EXPENSE LEDGER REPORT</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>BRANCH / ADDRESS</td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>{profile?.branch_name || 'MAIN BRANCH'} {profile?.branch_address && `(${profile.branch_address})`}</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>DATE RANGE</td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>
+                      {dateRange[0] ? dateRange[0].format("DD/MM/YYYY") : ""} - {dateRange[1] ? dateRange[1].format("DD/MM/YYYY") : ""}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>TOTAL EXPENDITURE</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', color: '#1e4a2d', fontSize: '13px' }}>
+                      ${totals.total?.toLocaleString(undefined, { minimumFractionDigits: 2 })} ({(totals.total * 4100).toLocaleString()}៛)
+                    </td>
+                    <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>COGS / OPEX / ADMIN</td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>
+                      ${totals.cogs?.toLocaleString()} / ${totals.opex?.toLocaleString()} / ${totals.admin?.toLocaleString()}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Data Table */}
+              <h3 style={{ margin: '20px 0 10px 0', fontSize: '15px', fontWeight: 'bold', color: '#000' }}>Detailed Transaction Logs</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr style={{ background: '#f1f5f9' }}>
+                    <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>LEDGER DATE</th>
+                    <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>CLASSIFICATION</th>
+                    <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>NATURE OF EXPENSE</th>
+                    <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>METHOD</th>
+                    <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>AMOUNT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredList.map((item, idx) => {
+                    return (
+                      <tr key={idx}>
+                        <td style={{ border: '1px solid #000', padding: '8px' }}>{moment(item.expense_date).format("DD MMM, YYYY")}</td>
+                        <td style={{ border: '1px solid #000', padding: '8px' }}>{item.category_class?.toUpperCase()}</td>
+                        <td style={{ border: '1px solid #000', padding: '8px' }}>
+                          <div style={{ fontWeight: 'bold' }}>{item.type_name}</div>
+                          <div style={{ fontSize: '9px', color: '#555' }}>{item.description || "No specific details provided"}</div>
+                        </td>
+                        <td style={{ border: '1px solid #000', padding: '8px' }}>{item.payment_method || "Cash"}</td>
+                        <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right' }}>
+                          <div style={{ fontWeight: 'bold' }}>${parseFloat(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                          <div style={{ fontSize: '10px', color: '#555' }}>{(item.amount * 4100).toLocaleString()} ៛</div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
+                    <td style={{ border: '1px solid #000', padding: '8px' }} colSpan={4}>TOTAL EXPENDITURE</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right' }}>
+                      <div style={{ fontWeight: 'bold' }}>${totals.total?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div style={{ fontSize: '10px', color: '#555' }}>{(totals.total * 4100).toLocaleString()} ៛</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* 🖨️ Printable Footer */}
+              <div style={{ marginTop: '20px', pageBreakInside: 'avoid' }}>
+                {/* Signature Footer */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 50px 0 50px', marginTop: '10px' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: '13px', display: 'block', fontWeight: 700, color: '#000' }}>រៀបចំដោយ (Prepared By)</span>
+                    <div style={{ height: '35px' }}></div>
+                    <span style={{ fontSize: '12px', display: 'block', color: '#000' }}>..........................................</span>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: '13px', display: 'block', fontWeight: 700, color: '#000' }}>ពិនិត្យ និងអនុម័តដោយ (Approved By)</span>
+                    <div style={{ height: '35px' }}></div>
+                    <span style={{ fontSize: '12px', display: 'block', color: '#000' }}>..........................................</span>
+                  </div>
+                </div>
+                <div style={{ borderTop: '1px solid #000', padding: '8px 0', display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginTop: '15px' }}>
+                  <div>📍 {profile?.branch_address || 'Phnom Penh, Cambodia'}</div>
+                  <div>បោះពុម្ពដោយប្រព័ន្ធ POS៖ {moment().format("DD/MM/YYYY HH:mm")}</div>
+                </div>
+              </div>
+            </div>
+
             <style>{`
               @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(10px); }
@@ -461,6 +614,42 @@ const ExpensePage = () => {
 
               .ant-modal-mask {
                 backdrop-filter: blur(4px);
+              }
+
+              @media print {
+                .no-print {
+                  display: none !important;
+                }
+                .print-only-layout {
+                  display: block !important;
+                }
+                .print-layout-container {
+                  min-height: auto !important;
+                  height: auto !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  background: #ffffff !important;
+                }
+                /* Reset page margins and body */
+                body, html, .ant-layout, .admin-body, .ant-layout-content, .admin-layout-content {
+                  background: #ffffff !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  width: 100% !important;
+                  box-shadow: none !important;
+                }
+                .ant-layout-sider,
+                .ant-layout-header,
+                .admin-header,
+                .admin-sider,
+                header,
+                aside {
+                  display: none !important;
+                }
+                .ant-layout-footer,
+                footer {
+                  display: none !important;
+                }
               }
             `}</style>
         </div>

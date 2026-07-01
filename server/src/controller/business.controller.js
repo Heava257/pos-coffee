@@ -135,7 +135,7 @@ exports.create = async (req, res) => {
 
 
             // 4. Create Owner Account
-            const hashedPassword = bcrypt.hashSync(password, 10);
+            const hashedPassword = await bcrypt.hash(password, 12);
             const verifyToken = require('crypto').randomBytes(32).toString('hex');
             await conn.query(
                 "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",

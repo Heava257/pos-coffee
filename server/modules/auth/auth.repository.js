@@ -1,4 +1,11 @@
-const db = require("../../config/database");
+const db = require('../../config/database');
+const { createHash } = require('crypto'); // Node.js built-in
+
+/**
+ * M-2 FIX: OTPs are stored as SHA-256 hashes, never as plaintext.
+ * If the DB is read by an attacker, active reset tokens are useless without inversion.
+ */
+const hashOtp = (otp) => createHash('sha256').update(String(otp)).digest('hex');
 
 class AuthRepository {
   async findUserByEmail(email) {
@@ -40,17 +47,21 @@ class AuthRepository {
   }
 
   async verifyEmailOtp(email, otp) {
+    // M-2 FIX: compare against stored hash — plaintext OTP is never queried directly
+    const otpHash = hashOtp(otp);
     const [users] = await db.query(
-      "SELECT id FROM users WHERE email = ? AND reset_token = ? AND reset_token_expiry > NOW()",
-      [email, otp]
+      'SELECT id FROM users WHERE email = ? AND reset_token = ? AND reset_token_expiry > NOW()',
+      [email, otpHash]
     );
     return users[0] || null;
   }
 
   async updateResetToken(userId, otpCode, expiry) {
+    // M-2 FIX: store hash, not raw OTP
+    const otpHash = hashOtp(otpCode);
     await db.query(
-      "UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?",
-      [otpCode, expiry, userId]
+      'UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?',
+      [otpHash, expiry, userId]
     );
   }
 

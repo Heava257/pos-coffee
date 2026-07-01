@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import * as Lucide from "lucide-react";
 import {
   Card, Switch, Row, Col, Typography, Button, message, Spin, Tag, Empty, Badge, Input, Space, Radio
 } from "antd";
@@ -10,29 +11,29 @@ import { request } from "@/shared/utils/helper";
 const { Title, Text } = Typography;
 
 const CATEGORY_ICONS = {
-  coffee: "☕",
-  juice: "🧃",
-  milk: "🥛",
-  tea: "🍵",
-  snack: "🍿",
-  food: "🍽️",
-  rice: "🍚",
-  dessert: "🍰",
-  drink: "🥤",
-  beverage: "🍶",
-  pizza: "🍕",
-  noodle: "🍜",
-  soup: "🍲",
-  bread: "🥖",
-  cake: "🎂",
-  pharmacy: "💊",
-  medicine: "💊",
-  vitamin: "🧪",
-  skincare: "🧴",
-  equipment: "🩺",
-  baby: "👶",
-  first: "🩹",
-  fever: "🌡️",
+  coffee: "Coffee",
+  juice: "Citrus",
+  milk: "Milk",
+  tea: "CupSoda",
+  snack: "Cookie",
+  food: "ChefHat",
+  rice: "ChefHat",
+  dessert: "Cake",
+  drink: "GlassWater",
+  beverage: "GlassWater",
+  pizza: "Pizza",
+  noodle: "ChefHat",
+  soup: "Soup",
+  bread: "Croissant",
+  cake: "Cake",
+  pharmacy: "Pills",
+  medicine: "Pills",
+  vitamin: "Activity",
+  skincare: "Sparkles",
+  equipment: "Stethoscope",
+  baby: "Baby",
+  first: "HeartHandshake",
+  fever: "Thermometer",
 };
 
 const getCategoryIcon = (name) => {
@@ -40,7 +41,7 @@ const getCategoryIcon = (name) => {
   for (const [key, icon] of Object.entries(CATEGORY_ICONS)) {
     if (lower.includes(key)) return icon;
   }
-  return "🏷️";
+  return "Tag";
 };
 
 const CategoryManageTab = ({ targetBusinessId }) => {
@@ -201,7 +202,7 @@ const CategoryManageTab = ({ targetBusinessId }) => {
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, overflow: "hidden" }}>
-                      <div style={{
+                       <div style={{
                         width: "44px",
                         height: "44px",
                         background: isActive ? industryColor : "#f5f5f5",
@@ -210,11 +211,13 @@ const CategoryManageTab = ({ targetBusinessId }) => {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: "22px",
                         flexShrink: 0,
                         transition: "all 0.2s"
                       }}>
-                        {icon}
+                        {(() => {
+                          const IconComponent = Lucide[icon] || Lucide.Tag;
+                          return <IconComponent size={20} />;
+                        })()}
                       </div>
                       <div style={{ overflow: "hidden", flex: 1 }}>
                         <Text strong style={{ 

@@ -85,17 +85,24 @@ const setCache = async (key, value, expiresInSec = 3600) => {
   }
 };
 
+/**
+ * M-3 FIX: Use SCAN instead of KEYS for non-blocking cache invalidation.
+ * KEYS is O(N) and blocks Redis during iteration — SCAN is incremental and safe in production.
+ */
 const clearCache = async (pattern) => {
   try {
     if (!redis || redis.status !== 'ready') return;
-    const keys = await redis.keys(pattern);
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
+    let cursor = '0';
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      if (keys.length > 0) await redis.del(...keys);
+    } while (cursor !== '0');
   } catch (error) {
-    // Silently ignore
+    // Silently ignore — cache miss is always safe
   }
 };
+
 
 module.exports = {
   redis,

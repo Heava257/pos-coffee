@@ -1,9 +1,12 @@
-const jwt = require("jsonwebtoken");
-const config = require("../config");
-const db = require("../config/database");
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+const db = require('../config/database');
+const { getCache, setCache } = require('../src/util/redisClient');
 
-const permCache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// H-7 FIX: Permission cache lives in Redis, not in-process memory.
+// This ensures all Node workers / PM2 cluster instances share the same
+// permission state, and a single clearCache(key) invalidates everywhere.
+const PERM_TTL_SECONDS = 300; // 5 minutes
 
 const authMiddleware = (permission_name) => {
     return async (req, res, next) => {
@@ -30,20 +33,31 @@ const authMiddleware = (permission_name) => {
             req.branch_id = Number(decoded.branch_id);
             req.role_id = Number(decoded.role_id);
             req.auth = decoded;
+
+            // strict business suspension check
+            if (req.business_id && req.business_id !== 1) {
+                const [bizRow] = await db.query("SELECT status FROM businesses WHERE id = ?", [req.business_id]);
+                if (bizRow.length > 0 && bizRow[0].status === 'suspended') {
+                    return res.status(403).json({
+                        message: "Your business account is suspended!",
+                        error: "BUSINESS_SUSPENDED"
+                    });
+                }
+            }
+
             let rows = [];
 
-            // 🚀 GUEST ACCESS BYPASS: If no role_id but has guest permissions in token
+            // H-7 FIX: Redis-backed permission cache — shared across all processes
             if (!req.role_id && decoded.role_code === 'guest') {
                 rows = (decoded.permissions || []).map(p => ({ route_key: p, can_view: 1, can_create: 1, can_edit: 0, can_delete: 0 }));
             } else {
-                // 🚀 PERFORMANCE OPTIMIZATION: Use Cache for Permissions
-                const cacheKey = `${req.business_id}:${req.role_id}`;
-                const cached = permCache.get(cacheKey);
+                const cacheKey = `perm:${req.business_id}:${req.role_id}`;
+                const cached = await getCache(cacheKey);
 
-                if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
-                    rows = cached.data;
+                if (cached) {
+                    rows = cached;
                 } else {
-                    // 🚀 SAAS-AWARE PERMISSION QUERY
+                    // Live DB query — result cached in Redis for PERM_TTL_SECONDS
                     [rows] = await db.query(
                         `SELECT DISTINCT 
                             p.route_key, 
@@ -62,14 +76,13 @@ const authMiddleware = (permission_name) => {
                             pp.plan_id IS NOT NULL
                             OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', ''))
                             OR (
-                                -- Truly Core: Only for Platform Admins (Business ID 1)
                                 b.id = 1
                                 AND mp.permission_id IS NULL
                             )
                          )`,
                         [req.business_id, req.role_id]
                     );
-                    permCache.set(cacheKey, { data: rows, ts: Date.now() });
+                    await setCache(cacheKey, rows, PERM_TTL_SECONDS);
                 }
             }
             const livePerms = rows.map(r => r.route_key.toLowerCase().replace(/^\/+|\/+$/g, ''));
@@ -83,6 +96,11 @@ const authMiddleware = (permission_name) => {
 
             // 🚀 STRICT RBAC GUARD
             if (permission_name) {
+                // Platform Owner (business_id = 1) has full access bypass
+                if (req.business_id === 1) {
+                    return next();
+                }
+
                 const target = permission_name.toLowerCase().replace(/^\/+|\/+$/g, '');
                 const userPerm = rows.find(r => r.route_key.toLowerCase().replace(/^\/+|\/+$/g, '') === target);
 
@@ -120,9 +138,16 @@ const authMiddleware = (permission_name) => {
     };
 };
 
-authMiddleware.clearCache = () => {
-    console.log("🚀 Clearing Permission Cache...");
-    permCache.clear();
+// H-7 FIX: clearCache now invalidates the Redis key pattern for permissions.
+// Call this after any role/permission change: authMiddleware.clearCache(bizId, roleId)
+authMiddleware.clearCache = async (business_id, role_id) => {
+  const { clearCache } = require('../src/util/redisClient');
+  if (business_id && role_id) {
+    await clearCache(`perm:${business_id}:${role_id}`);
+  } else {
+    await clearCache('perm:*');
+  }
+  console.log('🚀 Redis permission cache cleared.');
 };
 
 module.exports = authMiddleware;

@@ -22,6 +22,8 @@ import {
   Typography,
   Divider,
   Tooltip,
+  Alert,
+  Progress, // Added Progress component
 } from "antd";
 const { Title, Text } = Typography;
 import { configStore } from "@/app/store/configStore";
@@ -33,6 +35,8 @@ import imageExtensions from 'image-extensions';
 import dayjs from "dayjs";
 
 import { useLanguage, translations } from "@/app/store/language.store";
+import { HelpCircle } from "lucide-react";
+import Swal from "sweetalert2";
 
 const { TabPane } = Tabs;
 
@@ -52,6 +56,7 @@ function UserPage() {
   const [form] = Form.useForm();
   const { config } = configStore();
   const [activeTab, setActiveTab] = useState("all"); // Add active tab state
+  const [showGuide, setShowGuide] = useState(false);
   const [filter, setFilter] = useState({
     txt_search: "",
     branch_id: "", // Add branch filter state
@@ -81,6 +86,37 @@ function UserPage() {
     selected_business_id: profile?.business_id === 1 ? null : profile?.business_id // Track which business is being managed
   });
 
+  const [passwordVal, setPasswordVal] = useState("");
+
+  const hasMinLen = passwordVal.length >= 8;
+  const hasUppercase = /[A-Z]/.test(passwordVal);
+  const hasNumber = /[0-9]/.test(passwordVal);
+  const hasSpecial = /[^A-Za-z0-9]/.test(passwordVal);
+
+  const metCount = [hasMinLen, hasUppercase, hasNumber, hasSpecial].filter(Boolean).length;
+  const strengthPercent = metCount * 25;
+
+  let progressColor = "#ff4d4f";
+  if (strengthPercent === 50 || strengthPercent === 75) {
+    progressColor = "#faad14";
+  } else if (strengthPercent === 100) {
+    progressColor = "#52c41a";
+  }
+
+  const renderPasswordStrength = () => {
+    if (!passwordVal) return null;
+
+    return (
+      <Progress
+        percent={strengthPercent}
+        strokeColor={progressColor}
+        showInfo={false}
+        strokeWidth={3}
+        style={{ marginTop: -10, marginBottom: 0, position: 'relative', zIndex: 1 }}
+      />
+    );
+  };
+
   useEffect(() => {
     if (userId) getList();
   }, [userId, filter.branch_id]); // Re-fetch when branch filter changes
@@ -88,9 +124,9 @@ function UserPage() {
   // Fetch user list with summary and sub info
   const getList = async () => {
     setState(pre => ({ ...pre, loading: true }));
-    const params = { 
+    const params = {
       branch_id: filter.branch_id,
-      target_business_id: state.selected_business_id 
+      target_business_id: state.selected_business_id
     };
     const res = await request("user", "get", params);
     if (res && !res.error) {
@@ -123,6 +159,38 @@ function UserPage() {
     return filteredUsers;
   };
 
+  const generateStrongPassword = (e) => {
+    e.preventDefault();
+    const length = 12;
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const symbols = "@$!%*?&";
+    
+    let password = "";
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+    
+    const allChars = uppercase + lowercase + numbers + symbols;
+    for (let i = 4; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    password = password.split('').sort(() => 0.5 - Math.random()).join('');
+    
+    form.setFieldsValue({
+      password: password,
+      confirm_password: password
+    });
+    
+    setPasswordVal(password);
+    
+    navigator.clipboard.writeText(password);
+    message.success(lang === 'kh' ? `លេខសម្ងាត់ខ្លាំងត្រូវបានបង្កើត និងចម្លងរួចរាល់៖ ${password}` : `Strong password generated and copied: ${password}`);
+  };
+
   // Function to convert file to base64
   const getBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -135,8 +203,10 @@ function UserPage() {
 
   // Handle edit user
   const onClickEdit = (item) => {
+    setPasswordVal("");
     form.setFieldsValue({
       ...item,
+      is_active: item.status === "active" ? 1 : 0,
     });
 
     setState((pre) => ({
@@ -184,12 +254,14 @@ function UserPage() {
     setState((pre) => ({ ...pre, visible: false }));
     form.resetFields();
     setImageDefault([]);
+    setPasswordVal("");
   };
 
   const handleOpenModal = () => {
     setState((pre) => ({ ...pre, visible: true }));
     form.resetFields();
     setImageDefault([]);
+    setPasswordVal("");
   };
 
   // Image Utilities
@@ -340,7 +412,7 @@ function UserPage() {
               <>
                 <Button type="text" onClick={() => onClickEdit(row)} style={{ color: '#1e4a2d' }}>{t.edit}</Button>
                 {row.id !== userId && (
-                   <Button type="text" danger onClick={() => clickBtnDelete(row)}>{t.delete}</Button>
+                  <Button type="text" danger onClick={() => clickBtnDelete(row)}>{t.delete}</Button>
                 )}
               </>
             ) : (
@@ -356,8 +428,25 @@ function UserPage() {
     <div style={{ padding: "0 10px" }}>
       {/* Executive Header */}
       <div style={{ marginBottom: 24 }}>
-        <Title level={2} style={{ color: '#1e4a2d', margin: 0 }}>
-          {isSuperAdmin ? (activeTab === 'superAdmins' ? "Platform Super Admins" : "Platform Staff & Access") : (t.staff + " & " + t.management)}
+        <Title level={2} style={{ color: '#1e4a2d', margin: 0, display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <span>{isSuperAdmin ? (activeTab === 'superAdmins' ? "Platform Super Admins" : "Platform Staff & Access") : (t.staff + " & " + t.management)}</span>
+          <Button
+            type="text"
+            icon={<HelpCircle size={15} style={{ color: "#1e4a2d", marginRight: 4 }} />}
+            onClick={() => setShowGuide(!showGuide)}
+            style={{
+              background: showGuide ? "rgba(30, 74, 45, 0.15)" : "rgba(30, 74, 45, 0.08)",
+              color: "#1e4a2d",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 12,
+              display: "inline-flex",
+              alignItems: "center",
+              height: 32,
+            }}
+          >
+            {showGuide ? "លាក់ការណែនាំ" : "របៀបប្រើប្រាស់"}
+          </Button>
         </Title>
         <Text type="secondary">
           {isSuperAdmin
@@ -365,6 +454,23 @@ function UserPage() {
             : t.staff_management_desc}
         </Text>
       </div>
+
+      {showGuide && (
+        <Alert
+          message={<strong>💡 របៀបគ្រប់គ្រងបុគ្គលិក និងតួនាទី (Staff & Permissions Guide)</strong>}
+          description={
+            <div style={{ fontSize: 13, marginTop: 4, color: '#333' }}>
+              <p style={{ margin: '3px 0' }}>1. <strong>ចុះឈ្មោះបុគ្គលិក៖</strong> ចុចលើប៊ូតុង <strong>[+ Create New]</strong> ឬ <strong>[បង្កើតថ្មី]</strong> ដើម្បីចុះឈ្មោះគណនីបុគ្គលិកថ្មី និងកំណត់លេខកូដសម្ងាត់ (PIN) សម្រាប់ពួកគេចូលលក់។</p>
+              <p style={{ margin: '3px 0' }}>2. <strong>កំណត់សាខា និងតួនាទី៖</strong> បងត្រូវជ្រើសរើសសាខា និងកំណត់តួនាទី (ដូចជា Cashier, Manager) ដើម្បីឱ្យពួកគេមានសិទ្ធិចូលប្រើប្រាស់ប្រព័ន្ធទៅតាមភារកិច្ចជាក់ស្តែង។</p>
+              <p style={{ margin: '3px 0' }}>3. <strong>កម្រិតដែនកំណត់៖</strong> ចំនួនបុគ្គលិកដែលអាចបង្កើតបានគឺអាស្រ័យលើកញ្ចប់គម្រោង (Subscription Plan) ដែលបងកំពុងប្រើប្រាស់។</p>
+            </div>
+          }
+          type="info"
+          closable
+          onClose={() => setShowGuide(false)}
+          style={{ borderRadius: 16, marginBottom: 24, border: '1px solid #bae7ff', background: '#e6f7ff' }}
+        />
+      )}
 
       <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>
         {/* Main Stats */}
@@ -409,13 +515,11 @@ function UserPage() {
         <Col xs={24} lg={6}>
           {profile?.business_id === 1 ? (
             <Card
+              className="platform-control-card"
               style={{
                 borderRadius: '16px',
-                background: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
-                color: 'white',
                 border: 'none',
-                height: '100%',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
+                height: '100%'
               }}
             >
               <Space direction="vertical" style={{ width: '100%' }} size="middle">
@@ -432,17 +536,17 @@ function UserPage() {
                 </div>
                 <Divider style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <Button 
-                    size="small" 
-                    ghost 
+                  <Button
+                    size="small"
+                    ghost
                     style={{ borderRadius: '6px', fontSize: '10px', borderColor: 'rgba(255,255,255,0.3)' }}
                     onClick={() => window.location.href = '/business'}
                   >
                     Onboard
                   </Button>
-                  <Button 
-                    size="small" 
-                    ghost 
+                  <Button
+                    size="small"
+                    ghost
                     style={{ borderRadius: '6px', fontSize: '10px', borderColor: 'rgba(255,255,255,0.3)' }}
                     onClick={() => window.location.href = '/system-modules'}
                   >
@@ -453,10 +557,9 @@ function UserPage() {
             </Card>
           ) : (
             <Card
+              className="subscription-info-card"
               style={{
                 borderRadius: '16px',
-                background: 'linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)',
-                color: 'white',
                 border: 'none',
                 height: '100%'
               }}
@@ -464,16 +567,16 @@ function UserPage() {
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ color: '#c0a060', fontWeight: 700 }}>{t.subscription}</Text>
-                  <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' }}>
+                  <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', color: '#ffffff' }}>
                     {state.subscription.sub_status?.toUpperCase() || t.active}
                   </div>
                 </div>
-                <Title level={3} style={{ color: 'white', margin: 0 }}>{state.subscription.plan_name}</Title>
-                <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                <Title level={3} style={{ color: '#ffffff', margin: 0 }}>{state.subscription.plan_name}</Title>
+                <div style={{ fontSize: '12px', opacity: 0.8, color: 'rgba(255,255,255,0.85)' }}>
                   {t.expires}: {state.subscription.deadline && dayjs(state.subscription.deadline).isValid() ? dayjs(state.subscription.deadline).format("DD MMM YYYY") : t.main_headquarter}
                 </div>
-                <Divider style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '8px 0' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                <Divider style={{ borderColor: 'rgba(255,255,255,0.15)', margin: '8px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(255,255,255,0.9)' }}>
                   <span>{t.staff_nodes}:</span>
                   <span>{state.summary.total_staff} / {state.subscription.max_staff || "∞"}</span>
                 </div>
@@ -486,33 +589,61 @@ function UserPage() {
       {/* Action Bar */}
       <Card bodyStyle={{ padding: '12px 20px' }} style={{ borderRadius: '16px', marginBottom: 20, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
         <Row justify="space-between" align="middle">
-          <Col xs={24} md={12}>
+          <Col xs={24} lg={8} xl={6}>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <Button
-                type={activeTab === 'all' ? 'primary' : 'text'}
-                onClick={() => setActiveTab('all')}
-                style={activeTab === 'all' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
-              >
-                Platform Team
-              </Button>
-              <Button
-                type={activeTab === 'superAdmins' ? 'primary' : 'text'}
-                onClick={() => setActiveTab('superAdmins')}
-                style={activeTab === 'superAdmins' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
-              >
-                Super Admin
-              </Button>
-              <Button
-                type={activeTab === 'admins' ? 'primary' : 'text'}
-                onClick={() => setActiveTab('admins')}
-                style={activeTab === 'admins' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
-              >
-                {t.admins}
-              </Button>
+              {isSuperAdmin ? (
+                <>
+                  <Button
+                    type={activeTab === 'all' ? 'primary' : 'text'}
+                    onClick={() => setActiveTab('all')}
+                    style={activeTab === 'all' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
+                  >
+                    Platform Team
+                  </Button>
+                  <Button
+                    type={activeTab === 'superAdmins' ? 'primary' : 'text'}
+                    onClick={() => setActiveTab('superAdmins')}
+                    style={activeTab === 'superAdmins' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
+                  >
+                    Super Admin
+                  </Button>
+                  <Button
+                    type={activeTab === 'admins' ? 'primary' : 'text'}
+                    onClick={() => setActiveTab('admins')}
+                    style={activeTab === 'admins' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
+                  >
+                    {t.admins}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type={activeTab === 'all' ? 'primary' : 'text'}
+                    onClick={() => setActiveTab('all')}
+                    style={activeTab === 'all' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
+                  >
+                    {lang === 'kh' ? 'ទាំងអស់' : 'All'}
+                  </Button>
+                  <Button
+                    type={activeTab === 'admins' ? 'primary' : 'text'}
+                    onClick={() => setActiveTab('admins')}
+                    style={activeTab === 'admins' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
+                  >
+                    {t.admins}
+                  </Button>
+                  <Button
+                    type={activeTab === 'users' ? 'primary' : 'text'}
+                    onClick={() => setActiveTab('users')}
+                    style={activeTab === 'users' ? { background: '#1e4a2d', borderRadius: '12px' } : {}}
+                  >
+                    {lang === 'kh' ? 'បុគ្គលិកទូទៅ' : 'General Staff'}
+                  </Button>
+                </>
+              )}
             </div>
           </Col>
-          <Col xs={24} md={12} style={{ textAlign: 'right', marginTop: '10px' }}>
-            <Space>
+          <Col xs={24} lg={16} xl={18} style={{ textAlign: 'right', marginTop: '10px' }}>
+            <Space wrap style={{ width: '100%', justifyContent: 'flex-end' }}>
               {profile?.business_id === 1 && (
                 <Select
                   placeholder="Select Business"
@@ -541,19 +672,104 @@ function UserPage() {
                 style={{ width: 250 }}
                 className="premium-search"
               />
-              {(isOwner || profile?.business_id === 1) && (
-                <Tooltip title={state.subscription.max_staff && state.summary.total_staff >= state.subscription.max_staff ? t.staff_limit_reached : ""}>
+              {(() => {
+                const isLimitReached = profile?.business_id !== 1 && state.subscription.max_staff && state.summary.total_staff >= state.subscription.max_staff;
+                return (isOwner || profile?.business_id === 1) && (
                   <Button
                     type="primary"
-                    disabled={state.subscription.max_staff && state.summary.total_staff >= state.subscription.max_staff}
                     icon={<MdOutlineCreateNewFolder />}
-                    onClick={handleOpenModal}
+                    onClick={() => {
+                      if (isLimitReached) {
+                        const redirectPath = profile?.business_id === 1 ? '/plans' : '/my-plan';
+                        Swal.fire({
+                          html: `
+                            <div style="display: flex; align-items: flex-start; gap: 16px; text-align: left; font-family: inherit;">
+                                <!-- Left Warning Icon -->
+                                <div style="background: #f59e0b; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+                                    <span style="color: #ffffff; font-size: 18px; font-weight: bold; font-family: inherit; line-height: 1;">!</span>
+                                </div>
+                                <!-- Right Content -->
+                                <div style="flex: 1;">
+                                    <h3 style="margin: 0 0 6px 0; font-family: inherit; font-size: 18px; font-weight: bold; color: #111827; display: flex; align-items: center; gap: 8px;">
+                                        💎 ${lang === 'kh' ? 'តម្រូវឱ្យមានគម្រោង Pro' : 'Pro Feature Required'}
+                                    </h3>
+                                    <p style="margin: 0; font-family: inherit; font-size: 14px; color: #4b5563; line-height: 1.5;">
+                                        ${lang === 'kh' 
+                                            ? `គណនីរបស់អ្នកបានឈានដល់ដែនកំណត់ចំនួនបុគ្គលិក (${state.summary.total_staff}/${state.subscription.max_staff}) ហើយ។ សូមធ្វើការដំឡើងគម្រោងសេវាកម្មដើម្បីបន្ថែមបុគ្គលិកបានកាន់តែច្រើន!` 
+                                            : `You have reached your staff limit (${state.summary.total_staff}/${state.subscription.max_staff}). Please upgrade your plan to add more staff.`}
+                                    </p>
+                                </div>
+                            </div>
+                          `,
+                          showCancelButton: true,
+                          confirmButtonText: lang === 'kh' ? 'Upgrade ឥឡូវនេះ' : 'Upgrade Now',
+                          cancelButtonText: lang === 'kh' ? 'បន្តិចទៀត' : 'Later',
+                          reverseButtons: true,
+                          buttonsStyling: false,
+                          customClass: {
+                              popup: 'rounded-2xl',
+                          },
+                          didOpen: () => {
+                              const popup = Swal.getPopup();
+                              if (popup) {
+                                  popup.style.width = '480px';
+                                  popup.style.padding = '24px';
+                                  popup.style.borderRadius = '20px';
+                              }
+
+                              const actions = Swal.getActions();
+                              if (actions) {
+                                  actions.style.display = 'flex';
+                                  actions.style.justifyContent = 'flex-end';
+                                  actions.style.gap = '16px';
+                                  actions.style.marginTop = '16px';
+                                  actions.style.width = '100%';
+                              }
+
+                              const confirmBtn = Swal.getConfirmButton();
+                              const cancelBtn = Swal.getCancelButton();
+                              if (confirmBtn) {
+                                  confirmBtn.style.padding = '8px 20px';
+                                  confirmBtn.style.borderRadius = '30px';
+                                  confirmBtn.style.backgroundColor = '#1e4a2d';
+                                  confirmBtn.style.color = '#ffffff';
+                                  confirmBtn.style.border = '2px solid #1e4a2d';
+                                  confirmBtn.style.fontWeight = 'bold';
+                                  confirmBtn.style.fontSize = '14px';
+                                  confirmBtn.style.cursor = 'pointer';
+                                  confirmBtn.style.display = 'inline-flex';
+                                  confirmBtn.style.alignItems = 'center';
+                                  confirmBtn.style.height = '40px';
+                              }
+                              if (cancelBtn) {
+                                  cancelBtn.style.padding = '8px 20px';
+                                  cancelBtn.style.borderRadius = '30px';
+                                  cancelBtn.style.backgroundColor = '#ffffff';
+                                  cancelBtn.style.color = '#111827';
+                                  cancelBtn.style.border = '1.5px solid #d1d5db';
+                                  cancelBtn.style.fontWeight = 'bold';
+                                  cancelBtn.style.fontSize = '14px';
+                                  cancelBtn.style.cursor = 'pointer';
+                                  cancelBtn.style.display = 'inline-flex';
+                                  cancelBtn.style.alignItems = 'center';
+                                  cancelBtn.style.height = '40px';
+                              }
+                          }
+                        }).then((result) => {
+                          if (result.isConfirmed) {
+                              window.location.href = redirectPath;
+                          }
+                        });
+                        return;
+                      }
+                      handleOpenModal();
+                    }}
                     style={{ background: '#1e4a2d', borderColor: '#1e4a2d', borderRadius: '12px', height: '40px' }}
                   >
                     + {profile?.business_id === 1 ? "Add Platform User" : t.add_new}
                   </Button>
-                </Tooltip>
-              )}
+                );
+              })()}
             </Space>
           </Col>
         </Row>
@@ -647,9 +863,9 @@ function UserPage() {
                 label={<Text strong>{t.email}</Text>}
                 rules={[{ required: true, message: t.email + " " + t.required }]}
               >
-                <Input 
-                  placeholder={t.email} 
-                  size="large" 
+                <Input
+                  placeholder={t.email}
+                  size="large"
                   disabled={form.getFieldValue("id") && !isSuperAdmin}
                   style={{ background: (form.getFieldValue("id") && !isSuperAdmin) ? "#f5f5f5" : "#fff" }}
                 />
@@ -702,21 +918,21 @@ function UserPage() {
               </Form.Item>
 
               {profile?.business_id === 1 && (
-                 <Form.Item
+                <Form.Item
                   name="business_id"
                   label={<Text strong>{t.business_label || "Business"}</Text>}
                   rules={[{ required: true }]}
                 >
-                  <Select 
-                    placeholder="Select Business" 
-                    size="large" 
-                    options={state.businesses.map(b => ({ label: b.name, value: b.id }))} 
+                  <Select
+                    placeholder="Select Business"
+                    size="large"
+                    options={state.businesses.map(b => ({ label: b.name, value: b.id }))}
                     onChange={async (biz_id) => {
-                       // Refresh roles and branches for the selected business
-                       const res = await request("user", "get", { target_business_id: biz_id });
-                       if (res && !res.error) {
-                          setState(p => ({ ...p, role: res.role, branches: res.branches }));
-                       }
+                      // Refresh roles and branches for the selected business
+                      const res = await request("user", "get", { target_business_id: biz_id });
+                      if (res && !res.error) {
+                        setState(p => ({ ...p, role: res.role, branches: res.branches }));
+                      }
                     }}
                   />
                 </Form.Item>
@@ -727,16 +943,16 @@ function UserPage() {
                 name="branch_id"
                 label={<Text strong>{t.branch}</Text>}
                 rules={[
-                  { 
-                    required: form.getFieldValue("is_super_admin") !== 1, 
-                    message: t.branch + " " + t.required 
+                  {
+                    required: form.getFieldValue("is_super_admin") !== 1,
+                    message: t.branch + " " + t.required
                   }
                 ]}
               >
-                <Select 
-                  placeholder={t.branch} 
-                  size="large" 
-                  options={state?.branches} 
+                <Select
+                  placeholder={t.branch}
+                  size="large"
+                  options={state?.branches}
                   allowClear={form.getFieldValue("is_super_admin") === 1}
                 />
               </Form.Item>
@@ -760,10 +976,24 @@ function UserPage() {
               {/* Password */}
               <Form.Item
                 name="password"
-                label={<Text strong>{t.password}</Text>}
+                label={
+                  <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                    <Text strong style={{ margin: 0 }}>{t.password}</Text>
+                    <a onClick={generateStrongPassword} style={{ fontSize: '11px', color: '#1e4a2d', fontWeight: '500', marginLeft: '12px', textDecoration: 'underline' }}>
+                      {lang === 'kh' ? 'បង្កើតស្វ័យប្រវត្ត' : 'Auto Generate'}
+                    </a>
+                  </span>
+                }
                 rules={form.getFieldValue("id") ? [] : [{ required: true, message: t.password + " " + t.required }]}
+                style={{ marginBottom: passwordVal ? 12 : 24 }}
               >
-                <Input.Password placeholder={t.password} size="large" />
+                <Input.Password
+                  placeholder={t.password}
+                  size="large"
+                  value={passwordVal}
+                  onChange={(e) => setPasswordVal(e.target.value)}
+                />
+                {renderPasswordStrength()}
               </Form.Item>
 
               {/* Confirm Password */}

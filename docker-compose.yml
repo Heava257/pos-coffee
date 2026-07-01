@@ -1,0 +1,84 @@
+version: "3.9"
+
+services:
+  # ─── MySQL Database ───────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: pos_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: coffee_saas
+      MYSQL_USER: dev_user
+      MYSQL_PASSWORD: 88889999
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - pos_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "dev_user", "-p88889999"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─── Redis Cache ──────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: pos_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pos_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── Node.js API Server ───────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: pos_server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      APP_ENV: development
+      DB_HOST: mysql
+      DB_USER: dev_user
+      DB_PASSWORD: 88889999
+      DB_DATABASE: coffee_saas
+      DB_PORT: 3306
+      REDISHOST: redis
+      REDISPORT: 6379
+      PORT: 8080
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pos_network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  pos_network:
+    driver: bridge

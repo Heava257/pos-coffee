@@ -14,7 +14,8 @@ import {
     Tag,
     DatePicker,
     Divider,
-    Segmented
+    Segmented,
+    Alert
 } from "antd";
 import { request } from "@/shared/utils/helper";
 import { MdAdd, MdDelete, MdEdit, MdInventory, MdOutlineCameraAlt, MdQrCodeScanner, MdRemoveRedEye, MdSearch } from "react-icons/md";
@@ -22,6 +23,7 @@ import { Html5Qrcode } from "html5-qrcode";
 import MainPage from "@/app/layouts/MainPage";
 import dayjs from "dayjs";
 import { useLanguage, translations } from "@/app/store/language.store";
+import { HelpCircle } from "lucide-react";
 import { useProfileStore } from "@/app/store/profileStore";
 
 function PurchasePage() {
@@ -56,6 +58,7 @@ function PurchasePage() {
         scanFilterId: null, // 🚀 Changed: Use Item ID for more reliable filtering
         showCamera: false, // 🚀 To toggle camera scanner
     });
+    const [showGuide, setShowGuide] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     
     useEffect(() => {
@@ -565,8 +568,27 @@ function PurchasePage() {
 
             {/* 🚀 Header & Search */}
             <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 15, alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <Space>
-                    <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: "bold", color: '#1e293b' }}>{t.purchase}</div>
+                <Space style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: "bold", color: '#1e293b', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>{t.purchase}</span>
+                        <Button
+                            type="text"
+                            icon={<HelpCircle size={15} style={{ color: "#2d6a42", marginRight: 4 }} />}
+                            onClick={() => setShowGuide(!showGuide)}
+                            style={{
+                                background: showGuide ? "rgba(45, 106, 66, 0.15)" : "rgba(45, 106, 66, 0.08)",
+                                color: "#2d6a42",
+                                borderRadius: 8,
+                                fontWeight: 700,
+                                fontSize: 12,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                height: 32,
+                            }}
+                        >
+                            {showGuide ? "លាក់ការណែនាំ" : "របៀបប្រើប្រាស់"}
+                        </Button>
+                    </div>
                     <Input.Search
                         placeholder={t.search}
                         onSearch={(txt) => setFilter(pre => ({ ...pre, txt, page: 1 }))}
@@ -574,10 +596,27 @@ function PurchasePage() {
                         style={{ width: isMobile ? '160px' : '300px' }}
                     />
                 </Space>
-                <Button type="primary" icon={<MdAdd />} onClick={onOpenModal} size={isMobile ? "middle" : "large"} style={{ borderRadius: '8px', fontWeight: 'bold' }}>
+                <Button type="primary" className="tour-purchase-add-btn" icon={<MdAdd />} onClick={onOpenModal} size={isMobile ? "middle" : "large"} style={{ borderRadius: '8px', fontWeight: 'bold' }}>
                     {isMobile ? t.add : t.new_purchase}
                 </Button>
             </div>
+
+            {showGuide && (
+                <Alert
+                    message={<strong>💡 របៀបគ្រប់គ្រងការទិញចូលស្តុក (Purchase Orders Guide)</strong>}
+                    description={
+                        <div style={{ fontSize: 13, marginTop: 4, color: '#333' }}>
+                            <p style={{ margin: '3px 0' }}>1. <strong>បង្កើតប័ណ្ណទិញចូល (New Purchase)៖</strong> ចុចប៊ូតុង <strong>[+ New Purchase]</strong> ដើម្បីជ្រើសរើសអ្នកផ្គត់ផ្គង់ និងផលិតផលដែលចង់ទិញ រួចបញ្ចូលតម្លៃដើម និងចំនួនដែលបានកម្ម៉ង់។</p>
+                            <p style={{ margin: '3px 0' }}>2. <strong>ការទទួលទំនិញចូលស្តុក (Receive Now)៖</strong> បន្ទាប់ពីបង្កើតប័ណ្ណទិញចូលរួចរាល់ ស្ថានភាពដំបូងគឺ "Pending"។ នៅពេលទំនិញមកដល់ហាងជាក់ស្តែង បងត្រូវចុចប៊ូតុង <strong>[Receive Now]</strong> ឬ <strong>[ទទួលទំនិញ]</strong> ដើម្បីបញ្ចូលចំនួនទំនិញដែលបានទទួលជាក់ស្តែងទៅក្នុងស្តុក។</p>
+                            <p style={{ margin: '3px 0' }}>3. <strong>កាត់កើនស្តុក៖</strong> នៅពេលបងរក្សាទុកការទទួលទំនិញរួចរាល់ នោះចំនួនស្តុកទំនិញ ឬគ្រឿងផ្សំនឹងកើនឡើងស្វ័យប្រវត្តិតាមការបញ្ចូលជាក់ស្តែង។</p>
+                        </div>
+                    }
+                    type="info"
+                    closable
+                    onClose={() => setShowGuide(false)}
+                    style={{ borderRadius: 16, marginBottom: 24, border: '1px solid #bae7ff', background: '#e6f7ff' }}
+                />
+            )}
 
             {/* 🚀 Main Purchase List (Mobile Cards / Desktop Table) */}
             {isMobile ? (

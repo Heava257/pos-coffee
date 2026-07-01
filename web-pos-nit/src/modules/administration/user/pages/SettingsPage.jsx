@@ -508,14 +508,14 @@ const SettingsPage = () => {
                             },
                             !isAdmin && {
                                 key: "printer",
-                                label: <span><PrinterOutlined /> {t.printer_settings || 'Printer'}</span>,
+                                label: <span className="tour-settings-printer-tab"><PrinterOutlined /> {t.printer_settings || 'Printer'}</span>,
                                 children: (
                                     <PrinterSettingsTab />
                                 )
                             },
                             (!isAdmin && profile?.plan_id >= 2) && {
                                 key: "promo",
-                                label: <span><MobileOutlined /> {t.mobile_app_promo_tab}</span>,
+                                label: <span className="tour-settings-promo-tab"><MobileOutlined /> {t.mobile_app_promo_tab}</span>,
                                 forceRender: true, // Ensure fields are registered
                                 children: (
                                     <div style={{ paddingTop: 24, paddingBottom: 24 }}>

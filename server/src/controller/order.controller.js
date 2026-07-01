@@ -324,6 +324,15 @@ exports.create = async (req, res) => {
         }
 
         await conn.commit();
+        
+        // Clear Redis product list cache so frontend sees updated stock immediately
+        try {
+            const { clearCache } = require("../util/redisClient");
+            await clearCache(`products_biz_${business_id}_branch_*`);
+        } catch (cacheErr) {
+            console.error("Cache Clear Error:", cacheErr);
+        }
+
         res.json({ success: true, message: "Order Placed Successfully!", order_id });
 
         // --- ASYNC TELEGRAM NOTIFICATION ---
@@ -1081,6 +1090,14 @@ exports.update = async (req, res, is_additive_param = null, order_id_param = nul
         }
 
         await conn.commit();
+
+        // Clear Redis product list cache so frontend sees updated stock immediately
+        try {
+            const { clearCache } = require("../util/redisClient");
+            await clearCache(`products_biz_${business_id}_branch_*`);
+        } catch (cacheErr) {
+            console.error("Cache Clear Error:", cacheErr);
+        }
 
         // 3. FETCH UPDATED DETAILS to send back to POS (So it gets new server_item_ids)
         const [updatedDetails] = await conn.query(

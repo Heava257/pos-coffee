@@ -1,8 +1,17 @@
+const getStorage = () => {
+  const remember = localStorage.getItem("remember_me") === "true";
+  return remember ? localStorage : sessionStorage;
+};
+
+export const setRememberMe = (value) => {
+  localStorage.setItem("remember_me", value ? "true" : "false");
+};
+
 export const setAcccessToken = (value) => {
-  localStorage.setItem("access_token", value);
+  getStorage().setItem("access_token", value);
 };
 export const getAcccessToken = () => {
-  return localStorage.getItem("access_token");
+  return getStorage().getItem("access_token");
 };
 
 // --- GUEST SESSION (To avoid conflict with Staff) ---
@@ -35,11 +44,11 @@ export const getGuestPermission = () => {
 };
 
 export const setProfile = (value) => {
-  localStorage.setItem("profile", JSON.stringify(value));
+  getStorage().setItem("profile", JSON.stringify(value));
 };
 export const getProfile = () => {
   try {
-    var profile = localStorage.getItem("profile");
+    var profile = getStorage().getItem("profile");
     if (profile !== "" && profile !== null && profile !== undefined) {
       return JSON.parse(profile);
     }
@@ -49,11 +58,11 @@ export const getProfile = () => {
   }
 };
 export const setPermission = (array) => {
-  localStorage.setItem("permission", JSON.stringify(array));
+  getStorage().setItem("permission", JSON.stringify(array));
 };
 export const getPermission = () => {
   try {
-    var permission = localStorage.getItem("permission");
+    var permission = getStorage().getItem("permission");
     if (permission !== "" && permission !== null && permission !== undefined) {
       return JSON.parse(permission);
     }
@@ -63,10 +72,10 @@ export const getPermission = () => {
   }
 };
 export const setUserId = (id) => {
-  localStorage.setItem("user_id", id);
+  getStorage().setItem("user_id", id);
 };
 export const getUserId = () => {
-  const userId = localStorage.getItem("user_id");
+  const userId = getStorage().getItem("user_id");
   return userId ? Number(userId) : null;
 };
 
@@ -75,4 +84,10 @@ export const setLogout = () => {
   localStorage.removeItem("profile");
   localStorage.removeItem("permission");
   localStorage.removeItem("user_id");
+  localStorage.removeItem("remember_me");
+
+  sessionStorage.removeItem("access_token");
+  sessionStorage.removeItem("profile");
+  sessionStorage.removeItem("permission");
+  sessionStorage.removeItem("user_id");
 };

@@ -60,6 +60,13 @@ import StockTransferPage from "@/modules/inventory/transfer/pages/StockTransferP
 import { getProfile } from "@/app/store/profile.store";
 import SaasLandingPage from "@/modules/platform/pages/SaasLandingPage";
 import LegalPage from "@/modules/platform/pages/LegalPage";
+import SolutionsPage from "@/modules/platform/pages/SolutionsPage";
+import FeaturesPage from "@/modules/platform/pages/FeaturesPage";
+import PricingPage from "@/modules/platform/pages/PricingPage";
+import ResourcesPage from "@/modules/platform/pages/ResourcesPage";
+import CompanyPage from "@/modules/platform/pages/CompanyPage";
+import ModulesPage from "@/modules/platform/pages/ModulesPage";
+import IntegrationsPage from "@/modules/platform/pages/IntegrationsPage";
 
 const RootRedirect = () => {
   const profile = getProfile();
@@ -144,7 +151,14 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/workspace-setup" element={<WorkspaceSetupPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
+           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/solutions" element={<SolutionsPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/company" element={<CompanyPage />} />
+          <Route path="/modules" element={<ModulesPage />} />
+          <Route path="/integrations" element={<IntegrationsPage />} />
           <Route path="/terms" element={<LegalPage />} />
           <Route path="/privacy" element={<LegalPage />} />
           <Route path="/cookies" element={<LegalPage />} />

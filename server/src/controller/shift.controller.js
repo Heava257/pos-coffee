@@ -176,6 +176,41 @@ exports.getList = async (req, res) => {
         sql += " ORDER BY s.id DESC ";
 
         const [list] = await db.query(sql, params);
+
+        // Dynamically calculate live statistics for currently Open shifts
+        for (const s of list) {
+            if (s.status === 'Open') {
+                const [orders] = await db.query(
+                    `SELECT 
+                        SUM(CASE WHEN payment_method = 'Cash' THEN total_amount ELSE 0 END) as cash_sales,
+                        SUM(CASE WHEN payment_method IN ('ABA', 'KHQR') THEN total_amount ELSE 0 END) as aba_sales,
+                        SUM(CASE WHEN payment_method NOT IN ('Cash', 'ABA', 'KHQR') THEN total_amount ELSE 0 END) as other_sales,
+                        SUM(total_amount) as total_sales
+                     FROM orders 
+                     WHERE shift_id = ? AND status != 'cancelled'`,
+                    [s.id]
+                );
+                 const [expenses] = await db.query(
+                     `SELECT SUM(amount) as total_expense 
+                      FROM expense 
+                      WHERE business_id = ? AND branch_id = ? AND created_at >= ?`,
+                     [s.business_id, s.branch_id, s.created_at]
+                 );
+                
+                const cashSales = Number(orders[0]?.cash_sales || 0);
+                const totalExpense = Number(expenses[0]?.total_expense || 0);
+                
+                s.total_sales_usd = Number(orders[0]?.total_sales || 0);
+                s.total_cash_usd = cashSales;
+                s.total_aba_usd = Number(orders[0]?.aba_sales || 0);
+                s.total_wing_usd = Number(orders[0]?.other_sales || 0);
+                s.total_expense_usd = totalExpense;
+                s.expected_cash_usd = Number(s.opening_cash_usd || 0) + cashSales - totalExpense;
+                // Live difference is actual (0) - expected
+                s.diff_usd = 0;
+            }
+        }
+
         res.json({ list });
     } catch (error) {
         logError("shift.getList", error, res);

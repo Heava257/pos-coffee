@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
+import * as Lucide from "lucide-react";
 import {
   Button,
   Empty,
@@ -24,6 +25,7 @@ import {
   ConfigProvider,
   Row,
   Col,
+  Alert,
 } from "antd";
 import { request, isPermission } from "@/shared/utils/helper";
 import { configStore } from "@/app/store/configStore";
@@ -132,31 +134,31 @@ const COLORS = {
 const getLocalizedDefaultCategories = (layout) => {
   if (layout === "pharmacy") {
     return [
-      { id: 51, name: "Medicine", icon: "💊", color: "#2196f3" },
-      { id: 52, name: "Supplements", icon: "🧴", color: "#64b5f6" },
-      { id: 53, name: "HealthCare", icon: "🏥", color: "#90caf9" },
-      { id: 54, name: "Equipment", icon: "🩹", color: "#1976d2" },
-      { id: 55, name: "Personal Care", icon: "🪥", color: "#42a5f5" },
-      { id: 56, name: "Others", icon: "📦", color: "#bbdefb" },
+      { id: 51, name: "Medicine", icon: "Pills", color: "#2196f3" },
+      { id: 52, name: "Supplements", icon: "Pills", color: "#64b5f6" },
+      { id: 53, name: "HealthCare", icon: "Activity", color: "#90caf9" },
+      { id: 54, name: "Equipment", icon: "Stethoscope", color: "#1976d2" },
+      { id: 55, name: "Personal Care", icon: "Sparkles", color: "#42a5f5" },
+      { id: 56, name: "Others", icon: "Coffee", color: "#bbdefb" },
     ];
   }
   if (layout === "retail") {
     return [
-      { id: 51, name: "Grocery", icon: "🛒", color: "#1e4a2d" },
-      { id: 52, name: "Beverage", icon: "🥤", color: "#2d6a42" },
-      { id: 53, name: "Ice Cream", icon: "🍦", color: "#3a7d52" },
-      { id: 54, name: "Home Care", icon: "🧼", color: "#4a8a3a" },
-      { id: 55, name: "Snack", icon: "🍿", color: "#5a9a4a" },
-      { id: 56, name: "Others", icon: "📦", color: "#6aa05a" },
+      { id: 51, name: "Grocery", icon: "ShoppingBag", color: "#1e4a2d" },
+      { id: 52, name: "Beverage", icon: "CupSoda", color: "#2d6a42" },
+      { id: 53, name: "Ice Cream", icon: "IceCream", color: "#3a7d52" },
+      { id: 54, name: "Home Care", icon: "Sparkles", color: "#4a8a3a" },
+      { id: 55, name: "Snack", icon: "Cookie", color: "#5a9a4a" },
+      { id: 56, name: "Others", icon: "Coffee", color: "#6aa05a" },
     ];
   }
   return [
-    { id: 51, name: "Coffee", icon: "☕", color: COLORS.darkGreen },
-    { id: 52, name: "Juice", icon: "🧃", color: "#4a8a3a" },
-    { id: 53, name: "Milk", icon: "🥛", color: "#3a6a9a" },
-    { id: 54, name: "Snack", icon: "🍪", color: "#9a5a2a" },
-    { id: 55, name: "Rice", icon: "🍚", color: "#7a4a8a" },
-    { id: 56, name: "Dessert", icon: "🍰", color: "#c0543a" },
+    { id: 51, name: "Coffee", icon: "Coffee", color: COLORS.darkGreen },
+    { id: 52, name: "Juice", icon: "Citrus", color: "#4a8a3a" },
+    { id: 53, name: "Milk", icon: "Milk", color: "#3a6a9a" },
+    { id: 54, name: "Snack", icon: "Cookie", color: "#9a5a2a" },
+    { id: 55, name: "Rice", icon: "ChefHat", color: "#7a4a8a" },
+    { id: 56, name: "Dessert", icon: "Cake", color: "#c0543a" },
   ];
 };
 
@@ -359,12 +361,16 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
                     objectFit: "cover",
                     opacity: isImgLoaded ? 1 : 0,
                     transform: hovered ? "scale(1.1)" : "scale(1)",
-                    
+
                   }}
                 />
               ) : (
-                <span style={{ fontSize: 44 }}>
-                  {getIconForCategory(product.category_name)}
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.textSecondary }}>
+                  {(() => {
+                    const iconName = getIconForCategory(product.category_name);
+                    const IconComponent = Lucide[iconName] || Lucide.Coffee;
+                    return <IconComponent size={40} strokeWidth={1.5} />;
+                  })()}
                 </span>
               )}
             </div>
@@ -467,14 +473,14 @@ const ProductCard = React.memo(({ product, onAdd, cartQty, selectedShop }) => {
           boxShadow: hovered && !isOOS
             ? `0 4px 12px ${COLORS.darkGreen}33`
             : "0 2px 6px rgba(0,0,0,0.05)",
-          
+
           transform: hovered && !isOOS ? "scale(1.1)" : "scale(1)",
           zIndex: 3
         }}
       >
         <PlusOutlined style={{
           fontSize: 15,
-          
+
           transform: hovered ? "rotate(90deg)" : "rotate(0deg)"
         }} />
       </div>
@@ -554,7 +560,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
             return (
               <tr
                 onClick={() => !isOOS && onAdd(p)}
-                style={{ borderBottom: `1px solid ${COLORS.softBorder}`, cursor: isOOS ? 'default' : 'pointer',  opacity: isOOS ? 0.6 : 1 }}
+                style={{ borderBottom: `1px solid ${COLORS.softBorder}`, cursor: isOOS ? 'default' : 'pointer', opacity: isOOS ? 0.6 : 1 }}
                 onMouseEnter={e => !isOOS && (e.currentTarget.style.background = '#fcfbf7')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
@@ -564,7 +570,13 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
                       {p.image ? (
                         <img src={Config.getFullImagePath(p.image)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
                       ) : (
-                        <span style={{ fontSize: 18 }}>{getIconForCategory(p.category_name)}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.textSecondary }}>
+                          {(() => {
+                            const iconName = getIconForCategory(p.category_name);
+                            const IconComponent = Lucide[iconName] || Lucide.Coffee;
+                            return <IconComponent size={16} strokeWidth={1.5} />;
+                          })()}
+                        </span>
                       )}
                     </div>
                     <div style={{ minWidth: 0 }}>
@@ -624,7 +636,7 @@ const ProductListView = React.memo(({ products, onAdd, getCartQty, COLORS, selec
                         alignItems: "center",
                         justifyContent: "center",
                         cursor: isOOS ? "not-allowed" : "pointer",
-                        
+
                         opacity: isOOS ? 0.5 : 1,
                         transform: "scale(1)",
                         boxShadow: "0 2px 5px rgba(30,74,45,0.2)"
@@ -740,7 +752,7 @@ const TableSelectorModal = ({ open, onCancel, onSelect, branchId, COLORS, t, hel
                     padding: '16px 12px',
                     textAlign: 'center',
                     cursor: 'pointer',
-                    
+
                     position: 'relative',
                     boxShadow: isOccupied ? '0 4px 15px rgba(232,93,93,0.1)' : '0 2px 8px rgba(0,0,0,0.04)'
                   }}
@@ -815,7 +827,7 @@ const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove, onEdi
         alignItems: "center",
         gap: 10,
         background: "#fafaf9",
-        
+
       }}
     >
       {/* 1. Compact Thumbnail */}
@@ -827,7 +839,13 @@ const BillCartItem = React.memo(({ item, onIncrease, onDecrease, onRemove, onEdi
         {imgUrl ? (
           <img src={imgUrl} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
-          <span style={{ fontSize: 20 }}>{getIconForCategory(item.category_name)}</span>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.textSecondary }}>
+            {(() => {
+              const iconName = getIconForCategory(item.category_name);
+              const IconComponent = Lucide[iconName] || Lucide.Coffee;
+              return <IconComponent size={18} strokeWidth={1.5} />;
+            })()}
+          </span>
         )}
       </div>
 
@@ -980,7 +998,7 @@ function PosPage() {
   const primaryColor = layoutConfig.primaryColor || COLORS.darkGreen;
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isEditingUniqueId, setIsEditingUniqueId] = useState(null);
-  const [parentCategories, setParentCategories] = useState([{ id: 'all', name: "All Products", icon: "🌐", color: primaryColor }]);
+  const [parentCategories, setParentCategories] = useState([{ id: 'all', name: "All Products", icon: "LayoutGrid", color: primaryColor }]);
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -1071,6 +1089,7 @@ function PosPage() {
   const [cashReceivedKHR, setCashReceivedKHR] = useState(0);
   const [cashPaymentModalVisible, setCashPaymentModalVisible] = useState(false);
   const { currentShift, fetchCurrentShift, openShift: storeOpenShift, closeShift: storeCloseShift } = useShiftStore();
+  const [showGuide, setShowGuide] = useState(false);
   const [openShiftModalVisible, setOpenShiftModalVisible] = useState(false);
   const [closeShiftModalVisible, setCloseShiftModalVisible] = useState(false);
   const [shiftSummary, setShiftSummary] = useState(null);
@@ -1369,16 +1388,18 @@ function PosPage() {
     try {
       const res = await request("category", "get");
       if (res && res.list && res.list.length > 0) {
-        const cats = res.list.map((c) => ({
-          id: c.id,
-          name: c.name,
-          icon: getIconForCategory(c.name),
-          color: getColorForCategory(c.name) || (layoutType === "pharmacy" ? "#2196f3" : COLORS.darkGreen),
-        }));
+        const cats = res.list
+          .filter((c) => Number(c.is_active) === 1)
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            icon: getIconForCategory(c.name),
+            color: getColorForCategory(c.name) || (layoutType === "pharmacy" ? "#2196f3" : COLORS.darkGreen),
+          }));
 
         // ADDED: Prepend 'All Products' category
         setParentCategories([
-          { id: 'all', name: t.all_products || "All Products", icon: "🌐", color: COLORS.darkGreen },
+          { id: 'all', name: t.all_products || "All Products", icon: "LayoutGrid", color: COLORS.darkGreen },
           ...cats
         ]);
 
@@ -1389,7 +1410,7 @@ function PosPage() {
         // Use localized defaults if no categories in DB
         const defaults = getLocalizedDefaultCategories(layoutType);
         setParentCategories([
-          { id: 'all', name: t.all_products || "All Products", icon: "🌐", color: COLORS.darkGreen },
+          { id: 'all', name: t.all_products || "All Products", icon: "LayoutGrid", color: COLORS.darkGreen },
           ...defaults
         ]);
       }
@@ -2842,6 +2863,7 @@ function PosPage() {
       }
 
       if (res && !res.error) {
+        window.dispatchEvent(new Event("order-completed"));
         const pSettings = getPrinterSettings();
         const key = `open${Date.now()}`;
         const btn = (
@@ -3061,7 +3083,12 @@ function PosPage() {
             }}>
               Browse Categories
             </div>
-            {parentCategories.map((cat) => {
+            {parentCategories.filter((cat) => {
+              if (cat.id === 'all') return true;
+              const sourceList = state.fullList || state.list || [];
+              const total = sourceList.filter((p) => Number(p.category_id) === Number(cat.id)).length;
+              return total > 0;
+            }).map((cat) => {
               const isSelected = selectedCategory === cat.id;
               const catColor = cat.color || primaryColor;
               return (
@@ -3077,7 +3104,7 @@ function PosPage() {
                     cursor: "pointer",
                     background: isSelected ? `${catColor}15` : "transparent",
                     color: isSelected ? catColor : COLORS.textPrimary,
-                    
+
                     border: `1px solid ${isSelected ? `${catColor}30` : "transparent"}`,
                     position: "relative",
                   }}
@@ -3107,16 +3134,19 @@ function PosPage() {
                     }} />
                   )}
 
-                  <div style={{
-                    fontSize: 24,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    filter: isSelected ? 'grayscale(0)' : 'grayscale(0.4)',
-                    
-                  }}>
-                    {cat.icon}
-                  </div>
+                  {(() => {
+                    const IconComponent = Lucide[cat.icon] || Lucide.Coffee;
+                    return (
+                      <div style={{
+                        width: 28, height: 28, borderRadius: 6,
+                        background: isSelected ? `${catColor}20` : '#f3f4f6',
+                        color: isSelected ? catColor : COLORS.textSecondary,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                      }}>
+                        <IconComponent size={15} />
+                      </div>
+                    );
+                  })()}
 
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{
@@ -3162,6 +3192,7 @@ function PosPage() {
             {!currentShift ? (
               <button
                 onClick={() => setOpenShiftModalVisible(true)}
+                className="tour-pos-open-shift"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -3174,7 +3205,7 @@ function PosPage() {
                   fontSize: 13,
                   fontWeight: 800,
                   color: COLORS.redBadge,
-                  
+
                   whiteSpace: "nowrap",
                   boxShadow: "0 4px 10px rgba(232,93,93,0.15)"
                 }}
@@ -3283,6 +3314,25 @@ function PosPage() {
               ⌘K
             </div>
 
+            <Button
+              type="text"
+              icon={<Lucide.HelpCircle size={15} style={{ color: COLORS.darkGreen, marginRight: 4 }} />}
+              onClick={() => setShowGuide(!showGuide)}
+              style={{
+                background: showGuide ? "rgba(30, 74, 45, 0.15)" : "rgba(30, 74, 45, 0.08)",
+                color: COLORS.darkGreen,
+                borderRadius: 8,
+                fontWeight: 700,
+                fontSize: 12,
+                display: "inline-flex",
+                alignItems: "center",
+                height: 32,
+                marginLeft: 8
+              }}
+            >
+              {showGuide ? "លាក់ការណែនាំ" : "របៀបប្រើប្រាស់"}
+            </Button>
+
             <Divider type="vertical" />
 
             <div style={{ fontSize: 13, color: COLORS.textSecondary, fontWeight: 500, whiteSpace: "nowrap" }}>
@@ -3308,7 +3358,7 @@ function PosPage() {
                     fontSize: 13,
                     fontWeight: 700,
                     color: COLORS.textPrimary,
-                    
+
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -3338,7 +3388,7 @@ function PosPage() {
                   cursor: 'pointer',
                   fontSize: 12,
                   fontWeight: 700,
-                  
+
                 }}
               >
                 Grid
@@ -3354,7 +3404,7 @@ function PosPage() {
                   cursor: 'pointer',
                   fontSize: 12,
                   fontWeight: 700,
-                  
+
                 }}
               >
                 List
@@ -3378,7 +3428,7 @@ function PosPage() {
                     fontSize: 13,
                     fontWeight: 700,
                     color: pendingCount > 0 ? "#fff" : COLORS.textPrimary,
-                    
+
                     whiteSpace: "nowrap",
                     boxShadow: pendingCount > 0 ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
                   }}
@@ -3409,7 +3459,7 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: isSoundEnabled ? "#fff" : COLORS.textPrimary,
-                
+
                 whiteSpace: "nowrap",
                 boxShadow: isSoundEnabled ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
               }}
@@ -3437,7 +3487,7 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: COLORS.textPrimary,
-                
+
                 whiteSpace: "nowrap"
               }}
             >
@@ -3459,7 +3509,7 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: isFullScreen ? "#fff" : COLORS.textPrimary,
-                
+
                 whiteSpace: "nowrap",
                 boxShadow: isFullScreen ? "0 4px 12px rgba(30,74,45,0.2)" : "none"
               }}
@@ -3484,7 +3534,7 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: COLORS.textPrimary,
-                
+
                 whiteSpace: "nowrap"
               }}
               onMouseEnter={(e) => {
@@ -3520,7 +3570,7 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: COLORS.textPrimary,
-                
+
                 whiteSpace: "nowrap"
               }}
               onMouseEnter={(e) => {
@@ -3545,6 +3595,23 @@ function PosPage() {
 
           </div>
 
+          {showGuide && (
+            <Alert
+              message={<strong>💡 របៀបប្រើប្រាស់ទំព័រលក់ (POS Quick Guide)</strong>}
+              description={
+                <div style={{ fontSize: 13, marginTop: 4, color: '#333' }}>
+                  <p style={{ margin: '3px 0' }}>1. <strong>បើកវេនលក់ (Open Shift)៖</strong> ត្រូវចុចប៊ូតុង [Open New Shift] និងបញ្ចូលលុយដំបូងក្នុងថតថវិការជាមុនសិន ទើបអាចលក់បាន។</p>
+                  <p style={{ margin: '3px 0' }}>2. <strong>បញ្ជាទិញ៖</strong> ចុចលើផលិតផលដើម្បីបន្ថែមទៅកាត។ បងអាចជ្រើសរើសទំហំ និងប្រភេទក្តៅ/ត្រជាក់បាន។</p>
+                  <p style={{ margin: '3px 0' }}>3. <strong>បង់ប្រាក់៖</strong> ជ្រើសរើសប្រភេទការទូទាត់ (លុយសុទ្ធ ABA, Wing) រួចចុចប៊ូតុង [PLACE ORDER] ដើម្បីទូទាត់ និងបោះពុម្ពវិក្កយបត្រ។</p>
+                </div>
+              }
+              type="info"
+              closable
+              onClose={() => setShowGuide(false)}
+              style={{ borderRadius: 12, marginBottom: 12, border: '1px solid #bae7ff', background: '#e6f7ff' }}
+            />
+          )}
+
           {/* Horizontal Category selection (Coffee/Restaurant) */}
           {layoutConfig.hasHorizontalCats && (
             <div
@@ -3557,11 +3624,16 @@ function PosPage() {
                 marginBottom: 2
               }}
             >
-              {parentCategories.map((cat) => {
+              {parentCategories.filter((cat) => {
+                if (cat.id === 'all') return true;
+                const sourceList = state.fullList || state.list || [];
+                const total = sourceList.filter((p) => Number(p.category_id) === Number(cat.id)).length;
+                return total > 0;
+              }).map((cat) => {
                 const isSelected = selectedCategory === cat.id;
                 // Use fullList for accurate global counts across categories
                 const sourceList = state.fullList || state.list || [];
-                const total = sourceList.filter((p) => p.category_id === cat.id).length;
+                const total = sourceList.filter((p) => Number(p.category_id) === Number(cat.id)).length;
 
                 return (
                   <button
@@ -3573,7 +3645,7 @@ function PosPage() {
                       borderRadius: 20,
                       background: isSelected ? COLORS.darkGreen : COLORS.white,
                       cursor: "pointer",
-                      
+
                       boxShadow: isSelected ? "0 4px 10px rgba(30,74,45,0.2)" : "0 2px 4px rgba(0,0,0,0.02)",
                       flexShrink: 0,
                       fontSize: 13,
@@ -3800,7 +3872,7 @@ function PosPage() {
                         style={{
                           width: "100%", border: `1px solid ${COLORS.softBorder}`, borderRadius: 10,
                           padding: "8px 12px", fontSize: 13, background: "#fafafa", textAlign: 'center', cursor: 'pointer', fontWeight: 800, color: COLORS.textPrimary,
-                          
+
                         }}
                       >
                         {tableNo ? (
@@ -3958,13 +4030,14 @@ function PosPage() {
               {/* Card buttons row — compact single row of 5 */}
               <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
                 {[
-                  { label: "Cash", icon: "💵", value: "Cash" },
-                  { label: "Wing", icon: "📱", value: "Wing" },
-                  { label: "ABA", icon: "🏦", value: "ABA" },
-                  { label: "Card", icon: "💳", value: "Card" },
-                  { label: "Other", icon: "❤️", value: "Other" },
+                  { label: "Cash", icon: Lucide.Banknote, value: "Cash", color: "#10b981" },
+                  { label: "Wing", icon: Lucide.Smartphone, value: "Wing", color: "#3b82f6" },
+                  { label: "ABA", icon: Lucide.Landmark, value: "ABA", color: "#06b6d4" },
+                  { label: "Card", icon: Lucide.CreditCard, value: "Card", color: "#8b5cf6" },
+                  { label: "Other", icon: Lucide.HelpCircle, value: "Other", color: "#6b7280" },
                 ].map((method) => {
                   const isActive = objSummary.payment_method === method.value;
+                  const IconComponent = method.icon;
                   return (
                     <div
                       key={method.value}
@@ -3980,11 +4053,18 @@ function PosPage() {
                         cursor: 'pointer',
                         border: isActive ? `2px solid ${primaryColor}` : '1.5px solid #e8e3d8',
                         background: isActive ? `${primaryColor}12` : '#fafaf9',
-                        
                         gap: 1,
                       }}
                     >
-                      <span style={{ fontSize: 14, lineHeight: 1 }}>{method.icon}</span>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: isActive ? method.color : '#94a3b8',
+                        marginBottom: 2
+                      }}>
+                        <IconComponent size={14} />
+                      </div>
                       <span style={{
                         fontSize: 9,
                         fontWeight: isActive ? 800 : 600,
@@ -4027,7 +4107,7 @@ function PosPage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                
+
                 boxShadow: '0 4px 15px rgba(0,0,0,0.04)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -4111,7 +4191,7 @@ function PosPage() {
                   flex: 1, height: 44, borderRadius: 12,
                   background: isDisabled || state.cart_list.length === 0 || !objSummary.payment_method ? "#eff1f3" : primaryColor,
                   color: isDisabled || state.cart_list.length === 0 || !objSummary.payment_method ? "#bcc1c7" : "#fff",
-                  fontWeight: 800, fontSize: 15, 
+                  fontWeight: 800, fontSize: 15,
                   boxShadow: state.cart_list.length > 0 && objSummary.payment_method ? `0 6px 15px ${primaryColor}30` : "none",
                   cursor: isDisabled || state.cart_list.length === 0 || !objSummary.payment_method ? "not-allowed" : "pointer",
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
@@ -4383,7 +4463,7 @@ function PosPage() {
                       padding: '8px 12px',
                       borderRadius: 10,
                       border: `1px solid ${tempOptions.addons.includes(a.label) ? COLORS.darkGreen : '#e2e8f0'}`,
-                      
+
                     }}>
                       <ConfigProvider theme={{ token: { colorPrimary: COLORS.darkGreen } }}>
                         <Checkbox value={a.label}>
@@ -4445,7 +4525,7 @@ function PosPage() {
                   cursor: 'pointer',
                   padding: '16px 24px',
                   borderBottom: `1px solid ${COLORS.softBorder}`,
-                  
+
                   background: isTableOccupied ? '#fff1f0' : 'inherit'
                 }}
                 className="pending-order-item"
@@ -4742,7 +4822,7 @@ function PosPage() {
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             cursor: 'pointer',
-                            
+
                           }}
                           className="spotlight-item"
                         >
@@ -4839,7 +4919,7 @@ function PosPage() {
                 borderRadius: 16,
                 border: `2px solid #f0f0f0`,
                 cursor: 'pointer',
-                
+
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -4874,7 +4954,13 @@ function PosPage() {
                 {p.image ? (
                   <img src={Config.image_path + p.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <div style={{ fontSize: 36 }}>{getIconForCategory(p.category_name)}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.textSecondary }}>
+                    {(() => {
+                      const iconName = getIconForCategory(p.category_name);
+                      const IconComponent = Lucide[iconName] || Lucide.Coffee;
+                      return <IconComponent size={32} strokeWidth={1.5} />;
+                    })()}
+                  </div>
                 )}
               </div>
               <div style={{ width: '100%' }}>

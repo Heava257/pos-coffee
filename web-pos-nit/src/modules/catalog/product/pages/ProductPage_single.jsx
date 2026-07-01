@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import * as Lucide from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Checkbox,
@@ -11,6 +13,7 @@ import {
   Modal,
   Row,
   Select,
+  AutoComplete,
   Space,
   Table,
   Tag,
@@ -21,6 +24,7 @@ import {
   Card,
   Switch,
   Radio,
+  Alert,
 } from "antd";
 import { SearchOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -78,7 +82,7 @@ const CategoryOptions = ({ selectedCategory, t, form }) => {
     let currentMoods = form.getFieldValue('moods');
     currentMoods = Array.isArray(currentMoods) ? currentMoods : [];
     currentMoods = currentMoods.map(m => typeof m === 'object' ? m : { value: m, label: m, price: 0 });
-    
+
     if (checked) {
       if (!currentMoods.some(m => m.value === value)) {
         const basePrice = form.getFieldValue('price') || 0;
@@ -87,19 +91,19 @@ const CategoryOptions = ({ selectedCategory, t, form }) => {
     } else {
       currentMoods = currentMoods.filter(m => m.value !== value);
     }
-    form.setFieldValue('moods', currentMoods);
+    form.setFieldValue('moods', [...currentMoods]);
   };
 
   const handleMoodPriceChange = (value, price) => {
     let currentMoods = form.getFieldValue('moods');
     currentMoods = Array.isArray(currentMoods) ? currentMoods : [];
     currentMoods = currentMoods.map(m => typeof m === 'object' ? m : { value: m, label: m, price: 0 });
-    
+
     const target = currentMoods.find(m => m.value === value);
     if (target) {
       target.price = price === null ? 0 : price;
     }
-    form.setFieldValue('moods', currentMoods);
+    form.setFieldValue('moods', [...currentMoods]);
   };
 
   const hasConfig = defaultMoods?.length > 0 || defaultSizes?.length > 0 || defaultAddons?.length > 0;
@@ -108,102 +112,120 @@ const CategoryOptions = ({ selectedCategory, t, form }) => {
   return (
     <div style={{
       background: isPharmacy ? "#f0f7ff" : "#ffffff",
-      padding: "24px",
-      borderRadius: "20px",
-      marginBottom: "20px",
+      padding: "12px 16px",
+      borderRadius: "16px",
+      marginBottom: "12px",
       border: `1px solid ${isPharmacy ? "#d6e4ff" : "#f0f0f0"}`,
-      boxShadow: "0 4px 20px rgba(0,0,0,0.03)"
+      boxShadow: "0 2px 12px rgba(0,0,0,0.02)"
     }}>
       <div style={{
         fontWeight: 800,
-        marginBottom: 24,
+        marginBottom: 12,
         color: isPharmacy ? "#0958d9" : COLORS.darkGreen,
-        fontSize: 18,
+        fontSize: 14,
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
+        gap: 8,
         borderBottom: `2px solid ${isPharmacy ? "#e6f4ff" : "#f6fbf8"}`,
-        paddingBottom: 12
+        paddingBottom: 8
       }}>
         <div style={{
-          width: 40,
-          height: 40,
-          borderRadius: 12,
+          width: 30,
+          height: 30,
+          borderRadius: 8,
           background: isPharmacy ? "#e6f4ff" : "#e6f0e9",
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 20
+          color: isPharmacy ? "#096dd9" : COLORS.darkGreen,
+          flexShrink: 0
         }}>
-          {isPharmacy ? "💊" : "☕"}
+          {isPharmacy ? <Lucide.PlusCircle size={16} /> : <Lucide.Coffee size={16} />}
         </div>
         <div>
-          <div style={{ fontSize: 16, lineHeight: 1 }}>{selectedCategory?.name || selectedCategory?.label}</div>
-          <div style={{ fontSize: 11, fontWeight: 500, color: COLORS.textSecondary, marginTop: 4 }}>
+          <div style={{ fontSize: 13, lineHeight: 1.1 }}>{selectedCategory?.name || selectedCategory?.label}</div>
+          <div style={{ fontSize: 9, fontWeight: 500, color: COLORS.textSecondary, marginTop: 2 }}>
             {isPharmacy ? "MEDICAL BLUEPRINT" : t.cooking_options_title}
           </div>
         </div>
       </div>
 
-      {/* Moods Section - Custom Surcharges! */}
+      {/* Moods Section */}
       {defaultMoods && defaultMoods.length > 0 && (
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontWeight: 800, marginBottom: 16, color: COLORS.textPrimary, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontWeight: 800, marginBottom: 8, color: COLORS.textPrimary, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             {isPharmacy ? t.dosage_instructions_label : (isRestaurant ? t.taste_instructions_label : t.mood || "Temperature Options")}
           </div>
           <Form.Item name="moods" noStyle>
-            <Row gutter={[12, 12]}>
+            <Row gutter={[8, 8]}>
               {defaultMoods.map((m, idx) => {
                 const label = typeof m === 'object' ? (m.label || m.value) : m;
                 const value = typeof m === 'object' ? (m.value || m.label) : m;
-                
+
                 const matchedMood = moods.find(x => typeof x === 'object' ? x.value === value : x === value);
                 const isChecked = !!matchedMood;
                 const priceValue = typeof matchedMood === 'object' ? matchedMood.price : 0;
 
-                let icon = "🔘";
-                if (label.toLowerCase().includes("hot")) icon = "🔥";
-                if (label.toLowerCase().includes("ice")) icon = "❄️";
-                if (label.toLowerCase().includes("frap")) icon = "🥤";
-                if (label.toLowerCase().includes("sweet")) icon = "🍯";
-                if (label.toLowerCase().includes("spicy")) icon = "🌶️";
+                let IconComponent = Lucide.Check;
+                let iconColor = COLORS.textSecondary;
+
+                if (label.toLowerCase().includes("hot")) {
+                  IconComponent = Lucide.Flame;
+                  iconColor = "#ef4444";
+                } else if (label.toLowerCase().includes("ice")) {
+                  IconComponent = Lucide.Snowflake;
+                  iconColor = "#3b82f6";
+                } else if (label.toLowerCase().includes("frap")) {
+                  IconComponent = Lucide.GlassWater;
+                  iconColor = "#ec4899";
+                } else if (label.toLowerCase().includes("sweet")) {
+                  IconComponent = Lucide.Candy;
+                  iconColor = "#eab308";
+                } else if (label.toLowerCase().includes("spicy")) {
+                  IconComponent = Lucide.Flame;
+                  iconColor = "#f97316";
+                }
 
                 return (
                   <Col span={24} key={idx}>
                     <div style={{
-                      padding: '10px 16px',
-                      border: isChecked ? `1.5px solid ${COLORS.midGreen}` : '1.5px solid #eee',
-                      borderRadius: '16px',
+                      padding: '6px 12px',
+                      border: isChecked ? `1px solid ${COLORS.midGreen}` : '1px solid #e2e8f0',
+                      borderRadius: '8px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       background: isChecked ? '#f0fdf4' : '#fafafa',
                       width: '100%',
-                      transition: 'all 0.3s ease',
-                      boxShadow: isChecked ? '0 4px 12px rgba(45, 106, 66, 0.08)' : 'none'
+                      transition: 'all 0.2s ease',
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <Checkbox 
-                          checked={isChecked} 
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Checkbox
+                          checked={isChecked}
                           onChange={(e) => handleMoodCheckboxChange(value, label, e.target.checked)}
-                          style={{ transform: 'scale(1.1)' }}
                         />
-                        <span style={{ fontSize: 18 }}>{icon}</span>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: isChecked ? COLORS.darkGreen : COLORS.textPrimary }}>{label}</span>
+                        <div style={{
+                          width: 22, height: 22, borderRadius: 4,
+                          background: isChecked ? `${iconColor}15` : '#f3f4f6',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                        }}>
+                          <IconComponent size={12} color={isChecked ? iconColor : '#94a3b8'} />
+                        </div>
+                        <span style={{ fontWeight: 700, fontSize: 12, color: isChecked ? COLORS.darkGreen : COLORS.textPrimary }}>{label}</span>
                       </div>
-                      
+
                       {isChecked && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.textSecondary }}>{t.price || "Price ($)"}:</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.textSecondary }}>{t.price || "Price ($)"}:</span>
                           <InputNumber
-                            size="middle"
+                            size="small"
                             placeholder="0.00"
                             value={priceValue}
                             onChange={(val) => handleMoodPriceChange(value, val)}
                             min={0}
                             step={0.1}
                             precision={2}
-                            style={{ width: 110, fontWeight: 800 }}
+                            style={{ width: 90, fontWeight: 800 }}
                           />
                         </div>
                       )}
@@ -216,48 +238,64 @@ const CategoryOptions = ({ selectedCategory, t, form }) => {
         </div>
       )}
 
-      {/* Sizes Section - Much Wider Price Inputs */}
+      {/* Sizes Section */}
       {defaultSizes && defaultSizes.length > 0 && (
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ margin: '24px 0', borderTop: `1px dashed ${isPharmacy ? "#d6e4ff" : "#eee"}` }} />
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ margin: '12px 0', borderTop: `1px dashed ${isPharmacy ? "#d6e4ff" : "#eee"}` }} />
           <Form.List name="sizes">
             {(fields, { add, remove }) => (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <div style={{ fontWeight: 800, color: COLORS.textPrimary, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div style={{ fontWeight: 800, color: COLORS.textPrimary, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     {isPharmacy ? t.packaging_units_label : (isRestaurant ? t.portions_sizes_label : t.sizes || "Pricing by Size")}
                   </div>
                   <Button
-                    type="primary"
-                    size="small"
+                    type="text"
+                    size="middle"
                     onClick={() => add()}
-                    icon={<MdAdd />}
-                    style={{ borderRadius: 8, background: COLORS.midGreen }}
+                    icon={<Lucide.Plus size={14} />}
+                    style={{ 
+                      borderRadius: '8px', 
+                      background: '#f0fdf4', 
+                      border: '1px solid #bbf7d0', 
+                      color: '#166534',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      display: 'flex', 
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 12px',
+                      height: '32px'
+                    }}
                   >
-                    {t.add}
+                    {t.add_size || 'Add Size'}
                   </Button>
                 </div>
-                
+
                 {fields.length === 0 && (
-                  <div style={{ padding: '20px', textAlign: 'center', background: '#f9f9f9', borderRadius: 12, border: '1px dashed #ddd', marginBottom: 16 }}>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{t.price_per_size_msg || "No size-specific prices defined yet."}</Text>
+                  <div style={{ padding: '12px', textAlign: 'center', background: '#f9f9f9', borderRadius: 8, border: '1px dashed #ddd', marginBottom: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 11 }}>{t.price_per_size_msg || "No size-specific prices defined yet."}</Text>
                   </div>
                 )}
 
-                {fields.map(({ key, name, ...restField }) => (
-                  <div key={key} style={{ 
-                    background: '#fcfcfc', 
-                    padding: '16px', 
-                    borderRadius: '16px', 
-                    border: '1px solid #f0f0f0', 
-                    marginBottom: 12,
-                    position: 'relative',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.01)'
-                  }}>
-                    <Row gutter={12} align="middle">
-                      <Col span={12}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textSecondary, marginBottom: 4, textTransform: 'uppercase' }}>
-                          {isPharmacy ? "Unit Type" : "Size"}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {fields.map(({ key, name, ...restField }) => (
+                    <div 
+                      key={key} 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px', 
+                        background: '#f8fafc', 
+                        padding: '8px 12px', 
+                        borderRadius: '12px', 
+                        border: '1px solid #e2e8f0',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{ flex: 2 }}>
+                        <div style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          {t.size || 'Size'}
                         </div>
                         <Form.Item
                           {...restField}
@@ -265,20 +303,24 @@ const CategoryOptions = ({ selectedCategory, t, form }) => {
                           rules={[{ required: true, message: '' }]}
                           style={{ marginBottom: 0 }}
                         >
-                          <Select
-                            size="large"
-                            placeholder="Select"
-                            options={defaultSizes.map(s => ({
-                              label: typeof s === 'object' ? (s.label || s.value) : s,
-                              value: typeof s === 'object' ? (s.value || s.label) : s
-                            }))}
+                          <AutoComplete
+                            size="middle"
+                            placeholder="Select or type..."
+                            options={defaultSizes.map(s => {
+                              const val = typeof s === 'object' ? (s.label || s.value) : s;
+                              return { label: val, value: val };
+                            })}
+                            filterOption={(inputValue, option) =>
+                              option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+                            }
                             style={{ width: '100%' }}
                           />
                         </Form.Item>
-                      </Col>
-                      <Col span={9}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textSecondary, marginBottom: 4, textTransform: 'uppercase' }}>
-                          {t.price} ($)
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          {t.price || 'Price ($)'}
                         </div>
                         <Form.Item
                           {...restField}
@@ -287,109 +329,167 @@ const CategoryOptions = ({ selectedCategory, t, form }) => {
                           style={{ marginBottom: 0 }}
                         >
                           <InputNumber
-                            size="large"
+                            size="middle"
                             placeholder="0.00"
-                            style={{ width: '100%', fontWeight: 800, color: COLORS.darkGreen }}
+                            style={{ width: '100%', fontWeight: 800, color: COLORS.darkGreen, borderRadius: '8px' }}
                             min={0}
                             step={0.1}
                             precision={2}
                           />
                         </Form.Item>
-                      </Col>
-                      <Col span={3}>
-                        <div style={{ height: 20 }} /> {/* Spacer */}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%', paddingTop: '16px' }}>
                         <Button
                           danger
                           type="text"
                           onClick={() => remove(name)}
-                          icon={<MdDelete style={{ fontSize: 20 }} />}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}
+                          icon={<Lucide.Trash2 size={16} />}
+                          style={{ 
+                            width: '36px', 
+                            height: '36px', 
+                            borderRadius: '8px', 
+                            background: '#fef2f2', 
+                            border: '1px solid #fee2e2',
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            padding: 0
+                          }}
                         />
-                      </Col>
-                    </Row>
-                  </div>
-                ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </>
             )}
           </Form.List>
         </div>
       )}
 
-      {/* Add-ons Section - Enhanced List */}
+      {/* Add-ons Section */}
       {defaultAddons && defaultAddons.length > 0 && (
         <div>
-          <div style={{ margin: '24px 0', borderTop: `1px dashed ${isPharmacy ? "#d6e4ff" : "#eee"}` }} />
+          <div style={{ margin: '12px 0', borderTop: `1px dashed ${isPharmacy ? "#d6e4ff" : "#eee"}` }} />
           <Form.List name="addons">
             {(fields, { add, remove }) => (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <div style={{ fontWeight: 800, color: COLORS.textPrimary, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     {isPharmacy ? "Notes/Warnings" : t.addons || "Extra Options"}
                   </div>
                   <Button
-                    type="primary"
-                    size="small"
+                    type="text"
+                    size="middle"
                     onClick={() => add()}
-                    icon={<MdAdd />}
-                    style={{ borderRadius: 8, background: COLORS.midGreen }}
+                    icon={<Lucide.Plus size={14} />}
+                    style={{ 
+                      borderRadius: '8px', 
+                      background: '#f0fdf4', 
+                      border: '1px solid #bbf7d0', 
+                      color: '#166534',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      display: 'flex', 
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 12px',
+                      height: '32px'
+                    }}
                   >
-                    {t.add}
+                    {t.add_addon || 'Add Option'}
                   </Button>
                 </div>
 
-                {fields.map(({ key, name, ...restField }) => (
-                  <div key={key} style={{ 
-                    background: '#fff', 
-                    padding: '12px', 
-                    borderRadius: '12px', 
-                    border: '1px solid #f0f0f0', 
-                    marginBottom: 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10
-                  }}>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'label']}
-                      rules={[{ required: true, message: '' }]}
-                      style={{ marginBottom: 0, flex: 2 }}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                  {fields.map(({ key, name, ...restField }) => (
+                    <div 
+                      key={key} 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px', 
+                        background: '#f8fafc', 
+                        padding: '8px 12px', 
+                        borderRadius: '12px', 
+                        border: '1px solid #e2e8f0',
+                        transition: 'all 0.2s'
+                      }}
                     >
-                      <Select
-                        size="large"
-                        placeholder="Select Option"
-                        options={defaultAddons.map(a => ({
-                          label: typeof a === 'object' ? (a.label || a.value) : a,
-                          value: typeof a === 'object' ? (a.value || a.label) : a
-                        }))}
-                        style={{ width: '100%' }}
-                      />
-                    </Form.Item>
-                    {!isPharmacy && (
-                      <Form.Item
-                        {...restField}
-                        name={[name, 'price']}
-                        rules={[{ required: true, message: '' }]}
-                        style={{ marginBottom: 0, width: 100 }}
-                      >
-                        <InputNumber
-                          size="large"
-                          placeholder="Price"
-                          style={{ width: '100%', fontWeight: 700 }}
-                          min={0}
-                          step={0.1}
-                          precision={2}
+                      <div style={{ flex: 2 }}>
+                        <div style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          {t.option || 'Option'}
+                        </div>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'label']}
+                          rules={[{ required: true, message: '' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <AutoComplete
+                            size="middle"
+                            placeholder="Select or type..."
+                            options={defaultAddons.map(a => {
+                              const val = typeof a === 'object' ? (a.label || a.value) : a;
+                              return { label: val, value: val };
+                            })}
+                            filterOption={(inputValue, option) =>
+                              option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+                            }
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', marginBottom: '4px', textTransform: 'uppercase' }}>
+                          {t.price || 'Price ($)'}
+                        </div>
+                        {!isPharmacy ? (
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'price']}
+                            rules={[{ required: true, message: '' }]}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <InputNumber
+                              size="middle"
+                              placeholder="0.00"
+                              style={{ width: '100%', fontWeight: 800, color: COLORS.darkGreen, borderRadius: '8px' }}
+                              min={0}
+                              step={0.1}
+                              precision={2}
+                            />
+                          </Form.Item>
+                        ) : (
+                          <div style={{ height: '32px', display: 'flex', alignItems: 'center', color: '#94a3b8', fontSize: '12px', fontWeight: 600 }}>
+                            N/A
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%', paddingTop: '16px' }}>
+                        <Button
+                          danger
+                          type="text"
+                          onClick={() => remove(name)}
+                          icon={<Lucide.Trash2 size={16} />}
+                          style={{ 
+                            width: '36px', 
+                            height: '36px', 
+                            borderRadius: '8px', 
+                            background: '#fef2f2', 
+                            border: '1px solid #fee2e2',
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            padding: 0
+                          }}
                         />
-                      </Form.Item>
-                    )}
-                    <Button
-                      danger
-                      type="text"
-                      onClick={() => remove(name)}
-                      icon={<MdDelete style={{ fontSize: 18 }} />}
-                      style={{ padding: 0 }}
-                    />
-                  </div>
-                ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </>
             )}
           </Form.List>
@@ -408,16 +508,17 @@ const getBase64 = (file) =>
   });
 
 function ProductPage() {
+  const navigate = useNavigate();
   const { lang } = useLanguage();
   const t = translations[lang];
-  const { profile, permissions } = useProfileStore(); 
+  const { profile, permissions } = useProfileStore();
   const hasRecipePerm = permissions?.some(p => p.route_key?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'recipe');
   const { config } = configStore();
   const [form] = Form.useForm();
   const [state, setState] = useState({
     list: [],
     visibleModal: false,
-    categoryList: [], 
+    categoryList: [],
     loading: false,
     total: 0,
     totals: {}
@@ -435,10 +536,13 @@ function ProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [activeTab, setActiveTab] = useState('basic');
+  const [showGuide, setShowGuide] = useState(false);
   const [viewState, setViewState] = useState('list');
   const [viewingProduct, setViewingProduct] = useState(null);
+  const [, forceUpdate] = useState({});
   const sizes = Form.useWatch('sizes', form);
   const hasSizes = sizes && sizes.length > 0;
+  const watchProductType = Form.useWatch('product_type', form);
 
   const watchName = Form.useWatch('name', form);
   const watchSubCategory = Form.useWatch('sub_category', form);
@@ -449,6 +553,42 @@ function ProductPage() {
   const watchQty = Form.useWatch('qty', form);
   const watchCostPrice = Form.useWatch('cost_price', form);
   const watchMoods = Form.useWatch('moods', form);
+  const watchReorderLevel = Form.useWatch('reorder_level', form);
+
+  const initializeCategoryDefaults = (cat) => {
+    if (!cat) return;
+    try {
+      const defaultSizes = cat.default_sizes ? (typeof cat.default_sizes === 'string' ? JSON.parse(cat.default_sizes) : cat.default_sizes) : [];
+      const defaultMoods = cat.default_moods ? (typeof cat.default_moods === 'string' ? JSON.parse(cat.default_moods) : cat.default_moods) : [];
+      const defaultAddons = cat.default_addons ? (typeof cat.default_addons === 'string' ? JSON.parse(cat.default_addons) : cat.default_addons) : [];
+
+      const formSizes = defaultSizes.map(s => ({
+        label: s.label || s.value || "",
+        price: s.price !== undefined ? Number(s.price) : 0
+      }));
+
+      const formMoods = defaultMoods.map(m => ({
+        value: m.value || m.label || "",
+        label: m.label || m.value || "",
+        price: m.price !== undefined ? Number(m.price) : 0
+      }));
+
+      const formAddons = defaultAddons.map(a => ({
+        label: a.label || a.value || "",
+        price: a.price !== undefined ? Number(a.price) : 0
+      }));
+
+      form.setFieldsValue({
+        sizes: formSizes,
+        moods: formMoods,
+        addons: formAddons
+      });
+
+      forceUpdate({});
+    } catch (e) {
+      console.error("Failed to initialize category defaults:", e);
+    }
+  };
 
   const userId = useProfileStore(s => s.profile?.id || s.profile?.user_id);
   useEffect(() => {
@@ -457,7 +597,11 @@ function ProductPage() {
       getFullCategories();
     }
   }, [userId]);
-
+  useEffect(() => {
+    if (watchProductType === 'Simple Product' && activeTab === 'variants') {
+      setActiveTab('basic');
+    }
+  }, [watchProductType, activeTab]);
   const getFullCategories = async () => {
     const res = await request("category", "get");
     if (res && !res.error) {
@@ -469,8 +613,8 @@ function ProductPage() {
   const getList = async () => {
     var param = {
       ...filter,
-      page: 1, 
-      is_list_all: 1, 
+      page: 1,
+      is_list_all: 1,
     };
 
     setState((pre) => ({ ...pre, loading: true }));
@@ -510,12 +654,13 @@ function ProductPage() {
   };
 
   const onFinish = async (items) => {
+    console.log("Submitting product form items:", items);
     var params = new FormData();
     params.append("name", items.name);
     params.append("category_id", items.category_id);
     params.append("barcode", items.barcode || "");
     params.append("brand", items.brand || "");
-    
+
     // Serialize advanced metadata inside description column as JSON for full persistence
     const descObj = {
       text: items.description || "",
@@ -526,7 +671,11 @@ function ProductPage() {
       tags: items.tags || [],
       cost_price: items.cost_price !== undefined ? items.cost_price : 0.45,
       tax_rate: items.tax_rate || "10%",
-      product_type: items.product_type || "Variant Product"
+      product_type: items.product_type || "Variant Product",
+      sub_category: items.sub_category || "",
+      preparation: items.preparation || "",
+      ingredients: items.ingredients || "",
+      notes: items.notes || ""
     };
     params.append("description", JSON.stringify(descObj));
 
@@ -535,7 +684,7 @@ function ProductPage() {
     params.append("discount", items.discount || 0);
     params.append("status", items.status || "1");
     params.append("id", form.getFieldValue("id") || "");
-    
+
     const cleanToArr = (val) => {
       if (!val) return [];
       if (Array.isArray(val)) return val;
@@ -567,13 +716,7 @@ function ProductPage() {
       if (res && !res.error) {
         message.success(t.product_saved || "Product Saved Successfully");
         getList();
-        if (viewingProduct) {
-          // If we were editing, return to the gorgeous view screen for that product
-          setViewingProduct(prev => ({ ...prev, ...items }));
-          setViewState('view');
-        } else {
-          onCloseModal();
-        }
+        onCloseModal();
       } else {
         res.error?.barcode && message.error(res.error?.barcode);
       }
@@ -586,11 +729,28 @@ function ProductPage() {
   };
 
   const onBtnNew = async () => {
+    if (!state.categoryList || state.categoryList.length === 0) {
+      Modal.warning({
+        title: "No Active Categories Found",
+        content: (
+          <div>
+            <p>You must activate at least one category before you can register products.</p>
+            <p>Please go to the Categories page to select and enable your business categories.</p>
+          </div>
+        ),
+        okText: "Go to Categories",
+        centered: true,
+        onOk: () => {
+          navigate("/category");
+        }
+      });
+      return;
+    }
     try {
       form.resetFields();
       form.setFieldsValue({ moods: [], sizes: [], addons: [] });
       setImageDefault([]);
-      
+
       const res = await request("new_barcode", "post");
       if (res && res.barcode) {
         form.setFieldValue("barcode", res.barcode);
@@ -600,8 +760,9 @@ function ProductPage() {
       if (firstCat) {
         form.setFieldValue("category_id", String(firstCat.id));
         setSelectedCategory(firstCat);
+        initializeCategoryDefaults(firstCat);
       }
-      
+
       setViewingProduct(null);
       setViewState('edit');
       setActiveTab('basic');
@@ -626,6 +787,7 @@ function ProductPage() {
   };
 
   const onClickEdit = (item, index) => {
+    console.log("Editing product item details:", item);
     const safeParse = (val) => {
       if (!val) return [];
       if (Array.isArray(val)) return val;
@@ -667,10 +829,15 @@ function ProductPage() {
     let costPrice = 0.45;
     let taxRate = "10%";
     let productType = "Variant Product";
+    let subCategory = "";
+    let preparation = "";
+    let ingredients = "";
+    let notes = "";
 
     try {
-      if (item.description && item.description.startsWith("{")) {
-        const descObj = JSON.parse(item.description);
+      const descStr = (item.description || "").trim();
+      if (descStr.startsWith("{")) {
+        const descObj = JSON.parse(descStr);
         descriptionText = descObj.text || "";
         prepTime = descObj.prep_time !== undefined ? descObj.prep_time : 5;
         shelfLife = descObj.shelf_life !== undefined ? descObj.shelf_life : 2;
@@ -680,6 +847,10 @@ function ProductPage() {
         costPrice = descObj.cost_price !== undefined ? descObj.cost_price : 0.45;
         taxRate = descObj.tax_rate || "10%";
         productType = descObj.product_type || "Variant Product";
+        subCategory = descObj.sub_category || "";
+        preparation = descObj.preparation || "";
+        ingredients = descObj.ingredients || "";
+        notes = descObj.notes || "";
       }
     } catch (e) {
       // fallback
@@ -697,6 +868,10 @@ function ProductPage() {
       cost_price: costPrice,
       tax_rate: taxRate,
       product_type: productType,
+      sub_category: subCategory,
+      preparation: preparation,
+      ingredients: ingredients,
+      notes: notes,
       sizes: Array.isArray(sizes) ? sizes : [],
       addons: Array.isArray(addons) ? addons : [],
       moods: finalMoods.filter(x => x.value),
@@ -773,7 +948,7 @@ function ProductPage() {
           // Use average or first size price as a fallback for valuation
           itemPrice = Number(sizesArr[0]?.price || 0);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return acc + (itemPrice * Number(i.qty || 0));
   }, 0);
@@ -808,8 +983,28 @@ function ProductPage() {
             gap: '24px'
           }}>
             <div>
-              <Title level={2} style={{ margin: 0, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: '16px', fontWeight: 800 }}>
-                <MdRestaurantMenu style={{ fontSize: '32px' }} /> {(typeof t?.products === 'string' ? t.products : "Inventory Master")}
+              <Title level={2} style={{ margin: 0, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: '16px', fontWeight: 800, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <MdRestaurantMenu style={{ fontSize: '32px' }} /> {(typeof t?.products === 'string' ? t.products : "Inventory Master")}
+                </div>
+                <Button
+                  type="text"
+                  icon={<Lucide.HelpCircle size={15} style={{ color: COLORS.darkGreen, marginRight: 4 }} />}
+                  onClick={() => setShowGuide(!showGuide)}
+                  style={{
+                    background: showGuide ? "rgba(30, 74, 45, 0.15)" : "rgba(30, 74, 45, 0.08)",
+                    color: COLORS.darkGreen,
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    height: 32,
+                    marginLeft: 12
+                  }}
+                >
+                  {showGuide ? "លាក់ការណែនាំ" : "របៀបប្រើប្រាស់"}
+                </Button>
               </Title>
               <Text type="secondary" style={{ fontSize: '14px', letterSpacing: '0.5px' }}>
                 {t.manage_all_products || "Administrative Product Control Center"}
@@ -833,6 +1028,7 @@ function ProductPage() {
               />
               <Button
                 type="primary"
+                className="tour-product-add-btn"
                 onClick={onBtnNew}
                 icon={<PlusOutlined />}
                 style={{
@@ -848,6 +1044,25 @@ function ProductPage() {
               </Button>
             </div>
           </div>
+
+          {showGuide && (
+            <Alert
+              message={<strong>💡 របៀបគ្រប់គ្រងទំនិញ/ផលិតផល (Product Quick Guide)</strong>}
+              description={
+                <div style={{ fontSize: 13, marginTop: 4, color: '#333' }}>
+                  <p style={{ margin: '3px 0' }}>1. <strong>បង្កើតថ្មី៖</strong> ចុចលើប៊ូតុង <strong>New Asset</strong> ឬ <strong>បង្កើតថ្មី</strong> ដើម្បីបន្ថែមទំនិញថ្មី លោកអ្នកអាចកំណត់តម្លៃ ឯកតា ទម្ងន់ ឬរូបភាពផលិតផលបាន។</p>
+                  <p style={{ margin: '3px 0' }}>2. <strong>ការកំណត់លម្អិត (Variants/Options)៖</strong> ក្នុងពេលបង្កើតផលិតផល បងអាចជ្រើសរើស <em>ម៉ាស៊ីនឆុង ជម្រើសសីតុណ្ហភាព (ក្តៅ/ត្រជាក់)</em> ឬ <em>ទំហំកែវ</em> តាមតម្រូវការអាជីវកម្ម។</p>
+                  <p style={{ margin: '3px 0' }}>3. <strong>ពិនិត្យស្តុក៖</strong> ទិន្នន័យស្តុកនឹងធ្វើបច្ចុប្បន្នភាពស្វ័យប្រវត្តិតាមការលក់ជាក់ស្តែងនៅទំព័រលក់ (POS)។</p>
+                </div>
+              }
+              type="info"
+              closable
+              onClose={() => {
+                setShowGuide(false);
+              }}
+              style={{ borderRadius: 16, marginBottom: 24, border: '1px solid #bae7ff', background: '#e6f7ff' }}
+            />
+          )}
 
           {/* Quick Insights Bar */}
           <Row gutter={24} style={{ marginBottom: '32px' }}>
@@ -898,11 +1113,10 @@ function ProductPage() {
                   title: "PRODUCT IDENTITY",
                   width: 400,
                   render: (_, r) => (
-                    <div 
+                    <div
                       style={{ display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer' }}
                       onClick={() => {
                         onClickEdit(r);
-                        setViewState('view');
                       }}
                     >
                       <div style={{ position: 'relative' }}>
@@ -979,10 +1193,12 @@ function ProductPage() {
                       const sizes = r.sizes ? (typeof r.sizes === 'string' ? JSON.parse(r.sizes) : r.sizes) : [];
                       if (Array.isArray(sizes) && sizes.length > 0) {
                         const prices = sizes.map(s => Number(s.price || 0));
+                        const min = Math.min(...prices);
+                        const max = Math.max(...prices);
                         priceDisplay = (
                           <div>
                             <div style={{ fontSize: '18px', fontWeight: 900, color: COLORS.darkGreen }}>
-                              ${Math.min(...prices).toFixed(2)} - ${Math.max(...prices).toFixed(2)}
+                              {min === max ? `$${min.toFixed(2)}` : `$${min.toFixed(2)} - $${max.toFixed(2)}`}
                             </div>
                             <div style={{ fontSize: '11px', color: COLORS.textSecondary, fontWeight: 700 }}>({sizes.length} SIZES CONFIGURED)</div>
                           </div>
@@ -1088,32 +1304,56 @@ function ProductPage() {
 
     // Parse the advanced JSON metadata from description
     let descText = viewingProduct.description || "";
-    let prepTime = 5;
-    let shelfLife = 2;
-    let storageCondition = "Refrigerated (2-5°C)";
-    let allergens = ["Milk"];
-    let tags = ["coffee", "latte", "hot", "bestseller"];
-    let costPrice = 0.45;
-    let taxRate = "10%";
-    let productType = "Variant Product";
+    let prepTime = null;
+    let shelfLife = null;
+    let storageCondition = "";
+    let allergens = [];
+    let tags = [];
+    let costPrice = viewingProduct.cost_price !== undefined ? Number(viewingProduct.cost_price) : 0;
+    let taxRate = viewingProduct.tax_rate || "";
+    let productType = viewingProduct.product_type || "Simple Product";
+    let preparation = "";
+    let ingredients = "";
+    let notes = "";
 
     try {
       if (viewingProduct.description && viewingProduct.description.startsWith("{")) {
         const parsed = JSON.parse(viewingProduct.description);
         descText = parsed.text || "";
-        prepTime = parsed.prep_time !== undefined ? parsed.prep_time : 5;
-        shelfLife = parsed.shelf_life !== undefined ? parsed.shelf_life : 2;
-        storageCondition = parsed.storage_condition || "Refrigerated (2-5°C)";
+        prepTime = parsed.prep_time !== undefined ? parsed.prep_time : null;
+        shelfLife = parsed.shelf_life !== undefined ? parsed.shelf_life : null;
+        storageCondition = parsed.storage_condition || "";
         allergens = parsed.allergens || [];
         tags = parsed.tags || [];
-        costPrice = parsed.cost_price !== undefined ? parsed.cost_price : 0.45;
-        taxRate = parsed.tax_rate || "10%";
-        productType = parsed.product_type || "Variant Product";
+        if (parsed.cost_price !== undefined) {
+          costPrice = Number(parsed.cost_price);
+        }
+        if (parsed.tax_rate !== undefined) {
+          taxRate = parsed.tax_rate;
+        }
+        if (parsed.product_type !== undefined) {
+          productType = parsed.product_type;
+        }
+        preparation = parsed.preparation || "";
+        ingredients = parsed.ingredients || "";
+        notes = parsed.notes || "";
       }
-    } catch (e) {}
+    } catch (e) { }
 
-    const profit = Number(viewingProduct.price || 0) - costPrice;
-    const profitPercent = viewingProduct.price > 0 ? ((profit / Number(viewingProduct.price)) * 100).toFixed(0) : 0;
+    // Calculate actual selling price (handling variant products)
+    let sellingPrice = Number(viewingProduct.price || 0);
+    try {
+      const sizesList = viewingProduct.sizes ? (typeof viewingProduct.sizes === 'string' ? JSON.parse(viewingProduct.sizes) : viewingProduct.sizes) : [];
+      if (viewingProduct.product_type === 'Variant Product' || productType === 'Variant Product') {
+        if (Array.isArray(sizesList) && sizesList.length > 0) {
+          const prices = sizesList.map(s => Number(s.price || 0));
+          sellingPrice = Math.min(...prices);
+        }
+      }
+    } catch (e) { }
+
+    const profit = sellingPrice - costPrice;
+    const profitPercent = sellingPrice > 0 ? ((profit / sellingPrice) * 100).toFixed(0) : 0;
 
     return (
       <MainPage>
@@ -1133,14 +1373,14 @@ function ProductPage() {
               <Button onClick={onCloseModal} style={{ borderRadius: '12px', height: '42px', fontWeight: 700, border: '1.5px solid #e2e8f0' }}>
                 Back to List
               </Button>
-              <Button 
+              <Button
                 onClick={() => handleCopy(viewingProduct.barcode, "Barcode")}
                 style={{ borderRadius: '12px', height: '42px', fontWeight: 700, border: '1.5px solid #e2e8f0' }}
               >
                 Duplicate
               </Button>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 onClick={() => onClickEdit(viewingProduct)}
                 style={{ borderRadius: '12px', height: '42px', fontWeight: 800, background: COLORS.darkGreen, borderColor: COLORS.darkGreen }}
               >
@@ -1154,13 +1394,59 @@ function ProductPage() {
             <Row gutter={32} align="middle">
               {/* Product Visual */}
               <Col span={7}>
-                <div style={{ width: '100%', height: '260px', borderRadius: '20px', overflow: 'hidden', border: '1px solid #e2e8f0', position: 'relative' }}>
-                  <Image
-                    src={Config.getFullImagePath(viewingProduct.image)}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    fallback="https://placehold.co/400x400?text=Brew+Coffee"
-                  />
-                  <div style={{ position: 'absolute', bottom: 16, right: 16, background: 'rgba(255,255,255,0.9)', padding: '6px 14px', borderRadius: '12px', fontWeight: 800, fontSize: '12px', cursor: 'pointer', border: '1px solid #e2e8f0' }} onClick={() => onClickEdit(viewingProduct)}>
+                <div style={{
+                  width: '100%',
+                  height: '260px',
+                  borderRadius: '20px',
+                  overflow: 'hidden',
+                  border: '1px solid #e2e8f0',
+                  position: 'relative',
+                  background: '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {/* Blurred background layer */}
+                  {viewingProduct.image && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundImage: `url(${Config.getFullImagePath(viewingProduct.image)})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      filter: 'blur(20px) saturate(150%)',
+                      opacity: 0.15,
+                      zIndex: 1
+                    }} />
+                  )}
+
+                  {/* Centered Image Container */}
+                  <div style={{ width: '100%', height: '100%', position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Image
+                      src={Config.getFullImagePath(viewingProduct.image)}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      wrapperStyle={{ width: '100%', height: '100%' }}
+                      fallback="https://placehold.co/400x400?text=Brew+Coffee"
+                    />
+                  </div>
+
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 16,
+                    right: 16,
+                    background: 'rgba(255,255,255,0.95)',
+                    padding: '6px 14px',
+                    borderRadius: '12px',
+                    fontWeight: 800,
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    border: '1px solid #e2e8f0',
+                    zIndex: 3,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                  }} onClick={() => onClickEdit(viewingProduct)}>
                     Change Image
                   </div>
                 </div>
@@ -1169,31 +1455,19 @@ function ProductPage() {
               {/* Central Information */}
               <Col span={9}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ background: '#f0fdf4', color: '#166534', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, border: '1px solid #bbf7d0' }}>
-                      ✓ Bestseller
-                    </span>
-                    <span style={{ background: '#eff6ff', color: '#1e40af', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 800 }}>
-                      ☕ Coffee
-                    </span>
-                  </div>
-
                   <div style={{ fontSize: '32px', fontWeight: 900, color: '#1e293b', letterSpacing: '-0.5px' }}>{viewingProduct.name}</div>
 
                   <Row gutter={[12, 12]} style={{ marginTop: '12px' }}>
                     {[
-                      { label: 'SKU', val: `COF-LAT-001` },
-                      { label: 'Barcode', val: viewingProduct.barcode },
-                      { label: 'Category', val: selectedCategory?.name || 'Coffee' },
-                      { label: 'Unit', val: 'Cup' },
-                      { label: 'Created At', val: '24 May 2024 10:30 AM' },
-                      { label: 'Created By', val: 'Chiva Pong' }
+                      { label: lang === 'kh' ? 'កូដទំនិញ / Barcode' : 'Barcode / SKU', val: viewingProduct.barcode || '-' },
+                      { label: lang === 'kh' ? 'ប្រភេទក្រុម' : 'Category', val: selectedCategory?.name || '-' },
+                      { label: lang === 'kh' ? 'ឯកតា' : 'Unit', val: viewingProduct.unit || (lang === 'kh' ? 'កែវ' : 'Cup') }
                     ].map((item, idx) => (
                       <Col span={12} key={idx}>
                         <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{item.label}</div>
                         <div style={{ fontSize: '14px', color: '#334155', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                           {item.val}
-                          {(item.label === 'SKU' || item.label === 'Barcode') && (
+                          {item.label.includes('Barcode') && item.val !== '-' && (
                             <span style={{ cursor: 'pointer', fontSize: '11px', color: COLORS.darkGreen }} onClick={() => handleCopy(item.val, item.label)}>📋</span>
                           )}
                         </div>
@@ -1207,28 +1481,39 @@ function ProductPage() {
               <Col span={8} style={{ borderLeft: '1.5px dashed #e2e8f0', paddingLeft: '32px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <Row gutter={12}>
-                    <Col span={12}>
+                    <Col span={24}>
                       <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 800 }}>STATUS</div>
-                        <div style={{ fontSize: '15px', color: '#16a34a', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 6, marginTop: '4px' }}>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a' }} /> Active
-                        </div>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 800 }}>OPERATIONAL STATUS</div>
-                        <div style={{ fontSize: '15px', color: '#16a34a', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 6, marginTop: '4px' }}>
-                          Available
+                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 800 }}>{lang === 'kh' ? 'ស្ថានភាព' : 'STATUS'}</div>
+                        <div style={{ fontSize: '15px', color: String(viewingProduct.status) === '1' ? '#16a34a' : '#ef4444', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 6, marginTop: '4px' }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: String(viewingProduct.status) === '1' ? '#16a34a' : '#ef4444' }} />
+                          {String(viewingProduct.status) === '1' ? (lang === 'kh' ? 'កំពុងដំណើរការ' : 'Active') : (lang === 'kh' ? 'ផ្អាកដំណើរការ' : 'Inactive')}
                         </div>
                       </div>
                     </Col>
                   </Row>
-
                   <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
                     <div style={{ display: 'flex', justify: 'space-between', marginBottom: '8px' }}>
                       <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>Selling Price</span>
-                      <span style={{ fontSize: '16px', color: '#1e293b', fontWeight: 900 }}>${Number(viewingProduct.price || 0).toFixed(2)} <span style={{ fontSize: '11px', color: '#94a3b8' }}>/ Cup</span></span>
+                      <span style={{ fontSize: '16px', color: '#1e293b', fontWeight: 900 }}>
+                        {(() => {
+                          try {
+                            const sizesList = viewingProduct.sizes ? (typeof viewingProduct.sizes === 'string' ? JSON.parse(viewingProduct.sizes) : viewingProduct.sizes) : [];
+                            if (viewingProduct.product_type === 'Variant Product' || productType === 'Variant Product') {
+                              if (Array.isArray(sizesList) && sizesList.length > 0) {
+                                const prices = sizesList.map(s => Number(s.price || 0));
+                                const min = Math.min(...prices);
+                                const max = Math.max(...prices);
+                                if (min === max) {
+                                  return `$${min.toFixed(2)}`;
+                                }
+                                return `$${min.toFixed(2)} - $${max.toFixed(2)}`;
+                              }
+                            }
+                          } catch (e) { }
+                          return `$${Number(viewingProduct.price || 0).toFixed(2)}`;
+                        })()}
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}> / Cup</span>
+                      </span>
                     </div>
                     <div style={{ display: 'flex', justify: 'space-between', marginBottom: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
                       <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>Cost Price</span>
@@ -1237,8 +1522,19 @@ function ProductPage() {
                     <div style={{ display: 'flex', justify: 'space-between', borderTop: '1.5px solid #e2e8f0', paddingTop: '8px', alignItems: 'center' }}>
                       <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 800 }}>Net Profit</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '20px', color: '#16a34a', fontWeight: 900 }}>${profit.toFixed(2)}</span>
-                        <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 800 }}>{profitPercent}%</span>
+                        <span style={{ fontSize: '20px', color: profit >= 0 ? '#16a34a' : '#ef4444', fontWeight: 900 }}>
+                          {profit >= 0 ? `$${profit.toFixed(2)}` : `-$${Math.abs(profit).toFixed(2)}`}
+                        </span>
+                        <span style={{
+                          background: profit >= 0 ? '#dcfce7' : '#fef2f2',
+                          color: profit >= 0 ? '#166534' : '#991b1b',
+                          padding: '2px 8px',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          fontWeight: 800
+                        }}>
+                          {profitPercent}%
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1247,25 +1543,114 @@ function ProductPage() {
             </Row>
           </Card>
 
-          {/* Lower Panel: Tabs & Inventory Grid */}
-          <Row gutter={24}>
-            {/* Left Card: Dynamic Spec details */}
-            <Col span={15}>
-              <Card style={{ borderRadius: '24px', border: '1px solid #e2e8f0', minHeight: '400px' }} bodyStyle={{ padding: '32px' }}>
-                {/* Custom Sub Tabs */}
-                <div style={{ display: 'flex', gap: '24px', borderBottom: '1px solid #e2e8f0', marginBottom: '24px', paddingBottom: '0' }}>
-                  {[
-                    { key: 'info', label: 'Information' },
-                    { key: 'inventory', label: 'Inventory details' },
-                    { key: 'pricing', label: 'Pricing blueprints' },
-                    { key: 'suppliers', label: 'Suppliers' }
-                  ].map(tab => {
-                    const isActive = viewSubTab === tab.key;
+
+        </div>
+      </MainPage>
+    );
+  };
+
+  const renderEdit = () => {
+    const planId = Number(profile?.plan_id || 1);
+
+    const tabsList = [
+      { key: 'basic', label: t.basic_info || 'Basic Information' },
+      { key: 'inventory', label: t.inventory_pricing || 'Inventory & Pricing' }
+    ];
+
+    return (
+      <MainPage>
+        <Form layout="vertical" onFinish={onFinish} form={form} onValuesChange={() => forceUpdate({})}>
+          <Form.Item name="id" hidden><Input /></Form.Item>
+
+          <div style={{ padding: '0 8px 24px 8px' }}>
+            {/* Breadcrumbs */}
+            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginBottom: '12px' }}>
+              Products <span style={{ margin: '0 4px' }}>/</span> <span style={{ color: '#1e293b' }}>Edit Product</span>
+            </div>
+
+            {/* Warning if no categories are active */}
+            {(!state.categoryList || state.categoryList.length === 0) && (
+              <div style={{ marginBottom: '16px' }}>
+                <Alert
+                  message={<span style={{ fontWeight: 800 }}>No Active Categories Found</span>}
+                  description={
+                    <span>
+                      You must activate at least one category before you can register products.{" "}
+                      <a onClick={() => navigate("/category")} style={{ fontWeight: 800, color: COLORS.darkGreen, textDecoration: 'underline', cursor: 'pointer' }}>
+                        Go to Categories page to select and enable them.
+                      </a>
+                    </span>
+                  }
+                  type="warning"
+                  showIcon
+                  style={{ borderRadius: '12px' }}
+                />
+              </div>
+            )}
+
+            {/* Header Actions Block */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <Title level={3} style={{ margin: 0, fontWeight: 900, color: '#1e293b', letterSpacing: '-0.5px' }}>
+                  {form.getFieldValue("id") ? "Product Details" : "Register New Product"}
+                </Title>
+                <Text type="secondary" style={{ fontSize: '12px', fontWeight: 500 }}>Update product information and manage inventory</Text>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Button onClick={onCloseModal} style={{ borderRadius: '10px', height: '36px', fontWeight: 700, padding: '0 16px' }}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    form.setFieldValue('status', '0');
+                    form.submit();
+                  }}
+                  style={{ borderRadius: '10px', height: '36px', fontWeight: 700, padding: '0 16px' }}
+                >
+                  Save Draft
+                </Button>
+                <Button
+                  type="primary"
+                  onClick={() => {
+                    form.setFieldValue('status', '1');
+                    form.submit();
+                  }}
+                  loading={isSubmitting}
+                  style={{ borderRadius: '10px', height: '36px', fontWeight: 800, background: COLORS.darkGreen, borderColor: COLORS.darkGreen, padding: '0 16px' }}
+                >
+                  Save Product
+                </Button>
+              </div>
+            </div>
+
+            <Row gutter={16}>
+              {/* Left Column: Form Fields and Tabs */}
+              <Col span={16}>
+                {/* Form Segment Tabs */}
+                <div style={{
+                  display: 'flex',
+                  gap: '24px',
+                  borderBottom: '1px solid #e2e8f0',
+                  marginBottom: '20px',
+                  paddingBottom: '0',
+                  marginTop: '4px'
+                }}>
+                  {tabsList.map(tab => {
+                    const isActive = activeTab === tab.key;
                     return (
-                      <div 
-                        key={tab.key} 
-                        onClick={() => setViewSubTab(tab.key)}
-                        style={{ fontSize: '14px', fontWeight: isActive ? 800 : 600, color: isActive ? COLORS.darkGreen : '#64748b', paddingBottom: '12px', borderBottom: isActive ? `3px solid ${COLORS.darkGreen}` : '3px solid transparent', cursor: 'pointer' }}
+                      <div
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: isActive ? 800 : 600,
+                          color: isActive ? COLORS.darkGreen : '#64748b',
+                          paddingBottom: '10px',
+                          borderBottom: isActive ? `3px solid ${COLORS.darkGreen}` : '3px solid transparent',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          transform: isActive ? 'translateY(1.5px)' : 'none'
+                        }}
                       >
                         {tab.label}
                       </div>
@@ -1273,527 +1658,355 @@ function ProductPage() {
                   })}
                 </div>
 
-                {/* Sub Tab Contents */}
-                {viewSubTab === 'info' && (
+                {/* Tab 1: Basic Information */}
+                <div style={{ display: activeTab === 'basic' ? 'block' : 'none' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {[
-                      { label: 'Description', val: descText || viewingProduct.description || 'Smooth and creamy latte made with 100% Arabica beans.' },
-                      { label: 'Preparation', val: '1 shot of espresso + Steamed milk' },
-                      { label: 'Ingredients', val: 'Espresso, Fresh Milk' },
-                      { label: 'Allergens', val: allergens.join(', ') || 'Milk' },
-                      { label: 'Shelf Life', val: `${shelfLife} Day` },
-                      { label: 'Tax Profile', val: `VAT ${taxRate}` },
-                      { label: 'Notes', val: 'Best served in the morning.' }
-                    ].map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
-                        <div style={{ width: '150px', fontSize: '13px', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase' }}>{item.label}</div>
-                        <div style={{ fontSize: '14px', color: '#334155', fontWeight: 700 }}>{item.val}</div>
+                    {/* Product Identity Card */}
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '20px', borderRadius: '24px' }}>
+                      <div style={{ fontWeight: 800, marginBottom: '16px', color: '#1e293b', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Lucide.FileText size={16} color={COLORS.darkGreen} /> Product Identity
                       </div>
-                    ))}
-                  </div>
-                )}
 
-                {viewSubTab === 'inventory' && (
-                  <div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#334155', marginBottom: '16px' }}>Asset Tracking Details</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
-                        <span style={{ color: '#64748b', fontWeight: 600 }}>Warehouse Code</span>
-                        <span style={{ fontWeight: 800, color: '#1e293b' }}>WH-MAIN-01</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
-                        <span style={{ color: '#64748b', fontWeight: 600 }}>Reorder Status</span>
-                        <span style={{ fontWeight: 800, color: '#16a34a' }}>Sufficient Stock</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                      <Row gutter={16}>
+                        {/* Image Upload Area */}
+                        <Col span={4} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <Form.Item name="image_default" noStyle>
+                            <Upload
+                              customRequest={(options) => options.onSuccess()}
+                              maxCount={1}
+                              listType="picture-card"
+                              fileList={imageDefault}
+                              onPreview={handlePreview}
+                              onChange={handleChangeImageDefault}
+                              className="premium-upload-control-small"
+                              style={{ width: 84, height: 84, margin: 0 }}
+                            >
+                              {imageDefault.length === 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                  <MdAdd size={20} color={COLORS.darkGreen} />
+                                  <div style={{ marginTop: '2px', fontSize: '9px', fontWeight: 800, color: COLORS.darkGreen }}>PHOTO</div>
+                                </div>
+                              )}
+                            </Upload>
+                          </Form.Item>
+                        </Col>
 
-                {viewSubTab === 'pricing' && (
-                  <div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#334155', marginBottom: '16px' }}>Active Variations & Mood Prices</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {(() => {
-                        const moods = viewingProduct.moods ? (typeof viewingProduct.moods === 'string' ? JSON.parse(viewingProduct.moods) : viewingProduct.moods) : [];
-                        if (moods.length === 0) return <div style={{ color: '#94a3b8' }}>No variations configured.</div>;
-                        return moods.map((m, idx) => {
-                          const label = typeof m === 'object' ? (m.label || m.value) : m;
-                          const price = typeof m === 'object' ? m.price : 0;
-                          return (
-                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
-                              <span style={{ color: '#64748b', fontWeight: 700 }}>{label} Mode</span>
-                              <span style={{ fontWeight: 900, color: COLORS.darkGreen }}>${Number(price).toFixed(2)}</span>
+                        {/* Name & Category */}
+                        <Col span={10}>
+                          <Form.Item
+                            name="name"
+                            label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>{(t.product_name || 'PRODUCT NAME').toUpperCase()} *</Text>}
+                            rules={[{ required: true, message: t.product_name }]}
+                            style={{ marginBottom: 12 }}
+                          >
+                            <Input size="middle" placeholder="Latte Coffee" style={{ fontWeight: 700, borderRadius: '10px' }} />
+                          </Form.Item>
+
+                          <Form.Item
+                            name="category_id"
+                            label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>{(t.category || 'CATEGORY').toUpperCase()} *</Text>}
+                            rules={[{ required: true, message: t.category_required }]}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <Select
+                              size="middle"
+                              options={state.categoryList.map(c => ({ label: c.name, value: String(c.id) }))}
+                              placeholder="Select Category"
+                              style={{ borderRadius: '10px' }}
+                              onChange={(value) => {
+                                const cat = state.categoryList.find(c => String(c.id) === String(value));
+                                setSelectedCategory(cat || null);
+                                initializeCategoryDefaults(cat);
+                              }}
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        {/* Sub Category & Brand */}
+                        <Col span={10}>
+                          <Form.Item
+                            name="sub_category"
+                            label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>{(t.sub_category || 'SUB CATEGORY').toUpperCase()}</Text>}
+                            style={{ marginBottom: 12 }}
+                          >
+                            <Select
+                              size="middle"
+                              options={[
+                                { label: 'Hot Coffee', value: 'Hot Coffee' },
+                                { label: 'Iced Coffee', value: 'Iced Coffee' },
+                                { label: 'Blended Coffee', value: 'Blended Coffee' },
+                                { label: 'Specialty Tea', value: 'Specialty Tea' }
+                              ]}
+                              placeholder="Select"
+                              style={{ borderRadius: '10px' }}
+                            />
+                          </Form.Item>
+
+                          <Form.Item name="brand" label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>{(t.brand_label || 'BRAND').toUpperCase()}</Text>} style={{ marginBottom: 0 }}>
+                            <Select
+                              size="middle"
+                              options={[
+                                { label: 'Cafe Manager', value: 'Cafe Manager' },
+                                { label: 'Starbucks Roast', value: 'Starbucks Roast' },
+                                { label: 'Local Premium', value: 'Local Premium' }
+                              ]}
+                              placeholder="Select"
+                              style={{ borderRadius: '10px' }}
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+
+                      <div style={{ borderTop: '1px dashed #e2e8f0', margin: '14px 0' }} />
+
+                      <Row gutter={16}>
+                        {/* Barcode & SKU */}
+                        <Col span={10}>
+                          <Row gutter={8}>
+                            <Col span={17}>
+                              <Form.Item name="barcode" label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>{(t.barcode || 'BARCODE / SKU').toUpperCase()}</Text>} style={{ marginBottom: 0 }}>
+                                <Input size="middle" placeholder="SKU Code" style={{ borderRadius: '10px' }} />
+                              </Form.Item>
+                            </Col>
+                            <Col span={7} style={{ display: 'flex', alignItems: 'flex-end' }}>
+                              <Button size="middle" onClick={onBtnNew} style={{ width: '100%', borderRadius: '10px', fontWeight: 800, background: '#f1f5f9', border: '1px solid #cbd5e1' }}>
+                                Gen
+                              </Button>
+                            </Col>
+                          </Row>
+                        </Col>
+
+                        {/* Status Toggle */}
+                        <Col span={6}>
+                          <Form.Item name="status" valuePropName="checked" getValueProps={(v) => ({ checked: String(v) === '1' })} getValueFromEvent={(c) => c ? '1' : '0'} label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>{(t.status || 'STATUS').toUpperCase()}</Text>} style={{ marginBottom: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', padding: '6px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', height: '32px' }}>
+                              <span style={{ fontWeight: 700, fontSize: '12px' }}>{(t.active || 'Active')}</span>
+                              <Switch size="small" defaultChecked />
                             </div>
-                          );
-                        });
-                      })()}
+                          </Form.Item>
+                        </Col>
+
+                        {/* Description */}
+                        <Col span={8}>
+                          <Form.Item name="description" label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>{(t.description_label || 'DESCRIPTION').toUpperCase()}</Text>} style={{ marginBottom: 0 }}>
+                            <Input size="middle" placeholder="Short description..." style={{ borderRadius: '10px' }} />
+                          </Form.Item>
+                        </Col>
+                      </Row>
                     </div>
-                  </div>
-                )}
 
-                {viewSubTab === 'suppliers' && (
-                  <div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#334155', marginBottom: '16px' }}>Associated Supplier Registry</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
-                      <span style={{ color: '#64748b', fontWeight: 600 }}>Primary Supplier</span>
-                      <span style={{ fontWeight: 800, color: '#1e293b' }}>Cafe Manager Wholesale</span>
+                    {/* Pricing, Classification & Taxation Card */}
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '20px', borderRadius: '24px' }}>
+                      <Row gutter={16} align="middle">
+                        <Col span={8}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>
+                            {(t.product_classification || 'PRODUCT CLASSIFICATION').toUpperCase()}
+                          </div>
+                          <Form.Item name="product_type" noStyle>
+                            <Radio.Group buttonStyle="solid" style={{ width: '100%' }}>
+                              <Radio.Button value="Simple Product" style={{ width: '50%', textAlign: 'center', fontSize: '12px', fontWeight: 700, borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px' }}>
+                                {t.simple_product || 'Simple'}
+                              </Radio.Button>
+                              <Radio.Button value="Variant Product" style={{ width: '50%', textAlign: 'center', fontSize: '12px', fontWeight: 700, borderTopRightRadius: '10px', borderBottomRightRadius: '10px' }}>
+                                {t.variant_product || 'Variant'}
+                              </Radio.Button>
+                            </Radio.Group>
+                          </Form.Item>
+                        </Col>
+
+                        <Col span={16}>
+                          {watchProductType !== 'Variant Product' ? (
+                            <Row gutter={12}>
+                              <Col span={8}>
+                                <Form.Item name="price" label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>{(t.base_price_label || 'BASE UNIT PRICE').toUpperCase()} *</Text>} style={{ marginBottom: 0 }} rules={[{ required: watchProductType !== 'Variant Product', message: '' }]}>
+                                  <InputNumber
+                                    size="middle"
+                                    min={0}
+                                    step={0.01}
+                                    prefix="$"
+                                    style={{ width: '100%', fontWeight: 900, borderRadius: '10px' }}
+                                  />
+                                </Form.Item>
+                              </Col>
+                              <Col span={8}>
+                                <Form.Item name="cost_price" label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>{(t.cost_price || 'COST PRICE').toUpperCase()}</Text>} style={{ marginBottom: 0 }}>
+                                  <InputNumber
+                                    size="middle"
+                                    min={0}
+                                    step={0.01}
+                                    prefix="$"
+                                    style={{ width: '100%', fontWeight: 900, borderRadius: '10px' }}
+                                  />
+                                </Form.Item>
+                              </Col>
+                              <Col span={8}>
+                                <Form.Item name="tax_rate" label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>{(t.tax || 'TAX RATE').toUpperCase()}</Text>} style={{ marginBottom: 0 }}>
+                                  <Select
+                                    size="middle"
+                                    options={[
+                                      { label: '10%', value: '10%' },
+                                      { label: '5%', value: '5%' },
+                                      { label: '0%', value: '0%' }
+                                    ]}
+                                    style={{ borderRadius: '10px' }}
+                                  />
+                                </Form.Item>
+                              </Col>
+                            </Row>
+                          ) : (
+                            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '8px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', height: '38px' }}>
+                              <Lucide.Sparkles size={14} color="#16a34a" />
+                              <span style={{ color: '#166534', fontSize: '11px', fontWeight: 700 }}>
+                                {t.configure_variants_below || 'Configure variant options and sizes below.'}
+                              </span>
+                            </div>
+                          )}
+                        </Col>
+                      </Row>
+
+                      {/* Inline Variant Options Checklist */}
+                      {watchProductType === 'Variant Product' && (
+                        <div style={{ marginTop: '20px', borderTop: '1px dashed #e2e8f0', paddingTop: '20px' }}>
+                          {selectedCategory ? (
+                            (() => {
+                              const defaultMoods = selectedCategory.default_moods ? (typeof selectedCategory.default_moods === 'string' ? JSON.parse(selectedCategory.default_moods) : selectedCategory.default_moods) : [];
+                              const defaultSizes = selectedCategory.default_sizes ? (typeof selectedCategory.default_sizes === 'string' ? JSON.parse(selectedCategory.default_sizes) : selectedCategory.default_sizes) : [];
+                              const defaultAddons = selectedCategory.default_addons ? (typeof selectedCategory.default_addons === 'string' ? JSON.parse(selectedCategory.default_addons) : selectedCategory.default_addons) : [];
+                              const hasConfig = defaultMoods?.length > 0 || defaultSizes?.length > 0 || defaultAddons?.length > 0;
+
+                              if (!hasConfig) {
+                                return (
+                                  <div style={{ padding: '24px 16px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1.5px dashed #cbd5e1' }}>
+                                    <Lucide.AlertCircle size={24} color="#94a3b8" style={{ marginBottom: 8 }} />
+                                    <div style={{ fontWeight: 800, color: '#475569', fontSize: '13px' }}>No customization options required</div>
+                                    <div style={{ color: '#64748b', fontSize: '11px', marginTop: 4 }}>
+                                      The selected category "{selectedCategory.name}" has no sizes, moods, or add-ons configured by the platform.
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return <CategoryOptions selectedCategory={selectedCategory} t={t} form={form} />;
+                            })()
+                          ) : (
+                            <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8' }}>Please select a Category first</div>
+                          )}
+                        </div>
+                      )}
                     </div>
+
+
                   </div>
-                )}
-              </Card>
-            </Col>
+                </div>
 
-            {/* Right Card: Inventory & Stock Location */}
-            <Col span={9}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                {/* Inventory Overview */}
-                <Card style={{ borderRadius: '24px', border: '1px solid #e2e8f0' }} bodyStyle={{ padding: '28px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '15px' }}>Inventory Overview</span>
-                    <span style={{ fontSize: '12px', color: COLORS.darkGreen, fontWeight: 800, cursor: 'pointer' }}>View Stock History</span>
-                  </div>
-
-                  <Row gutter={12} style={{ marginBottom: '24px' }}>
-                    {[
-                      { label: 'On Hand', val: viewingProduct.qty || 0, color: '#16a34a' },
-                      { label: 'Reserved', val: 2, color: '#ea580c' },
-                      { label: 'Available', val: Math.max(0, (viewingProduct.qty || 0) - 2), color: '#2563eb' },
-                      { label: 'Reorder Level', val: 5, color: '#dc2626' }
-                    ].map((item, idx) => (
-                      <Col span={6} key={idx} style={{ textAlign: 'center' }}>
-                        <div style={{ background: '#f8fafc', padding: '12px 8px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>{item.label}</div>
-                          <div style={{ fontSize: '16px', fontWeight: 900, color: item.color, marginTop: '6px' }}>{item.val}</div>
-                          <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600, marginTop: '2px' }}>Cup</div>
-                        </div>
-                      </Col>
-                    ))}
-                  </Row>
-
-                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', marginBottom: '14px' }}>Stock by Location</div>
-                    {[
-                      { branch: 'Main Branch', qty: Math.max(0, (viewingProduct.qty || 0) - 4), total: viewingProduct.qty, pct: 60 },
-                      { branch: 'BKK Branch', qty: 3, total: viewingProduct.qty, pct: 30 },
-                      { branch: 'Airport Branch', qty: 1, total: viewingProduct.qty, pct: 10 }
-                    ].map((loc, idx) => (
-                      <div key={idx} style={{ marginBottom: '14px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                          <span>{loc.branch}</span>
-                          <span style={{ fontWeight: 800, color: '#1e293b' }}>{loc.qty} Cup</span>
-                        </div>
-                        <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
-                          <div style={{ width: `${loc.pct}%`, height: '100%', background: COLORS.darkGreen, borderRadius: '10px' }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                    <Button type="primary" style={{ flex: 1, height: '42px', borderRadius: '12px', background: COLORS.darkGreen, borderColor: COLORS.darkGreen, fontWeight: 800 }} onClick={() => onClickEdit(viewingProduct)}>
-                      + Adjust Stock
-                    </Button>
-                    <Button style={{ flex: 1, height: '42px', borderRadius: '12px', fontWeight: 700, border: '1.5px solid #e2e8f0' }} onClick={() => onClickEdit(viewingProduct)}>
-                      ⇄ Stock Transfer
-                    </Button>
-                  </div>
-                </Card>
-              </div>
-            </Col>
-          </Row>
-
-          {/* Footer Metadata */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px', borderTop: '1.5px solid #e2e8f0', paddingTop: '24px', flexWrap: 'wrap', gap: '16px' }}>
-            <div style={{ display: 'flex', gap: '28px' }}>
-              <div>
-                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700 }}>LAST UPDATED</span>
-                <div style={{ fontSize: '13px', color: '#475569', fontWeight: 800, marginTop: '2px' }}>24 May 2024 02:15 PM</div>
-              </div>
-              <div>
-                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700 }}>UPDATED BY</span>
-                <div style={{ fontSize: '13px', color: '#475569', fontWeight: 800, marginTop: '2px' }}>Chiva Pong</div>
-              </div>
-              <div>
-                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700 }}>PRODUCT ID</span>
-                <div style={{ fontSize: '13px', color: '#475569', fontWeight: 800, marginTop: '2px' }}>#PRD-000145</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '28px' }}>
-              <div>
-                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700 }}>TOTAL SOLD</span>
-                <div style={{ fontSize: '13px', color: COLORS.darkGreen, fontWeight: 900, marginTop: '2px' }}>1,248 Cup</div>
-              </div>
-              <div>
-                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700 }}>RATING</span>
-                <div style={{ fontSize: '13px', color: '#eab308', fontWeight: 900, marginTop: '2px' }}>⭐⭐⭐⭐⭐ <span style={{ color: '#475569', fontWeight: 700 }}>4.8 (126)</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </MainPage>
-    );
-  };
-
-  const renderEdit = () => {
-    return (
-      <MainPage>
-        <Form layout="vertical" onFinish={onFinish} form={form}>
-          <Form.Item name="id" hidden><Input /></Form.Item>
-          
-          <div style={{ padding: '0 12px 40px 12px' }}>
-            {/* Breadcrumbs */}
-            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600, marginBottom: '16px' }}>
-              Products <span style={{ margin: '0 6px' }}>/</span> <span style={{ color: '#1e293b' }}>Edit Product</span>
-            </div>
-
-            {/* Header Actions Block (Screenshot 1 style) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
-              <div>
-                <Title level={2} style={{ margin: 0, fontWeight: 900, color: '#1e293b', letterSpacing: '-0.5px' }}>
-                  {form.getFieldValue("id") ? "Product Details" : "Register New Product"}
-                </Title>
-                <Text type="secondary" style={{ fontSize: '14px', fontWeight: 500 }}>Update product information and manage inventory</Text>
-              </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <Button onClick={onCloseModal} style={{ borderRadius: '12px', height: '42px', fontWeight: 700, border: '1.5px solid #e2e8f0' }}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={() => {
-                    form.setFieldValue('status', '0');
-                    form.submit();
-                  }}
-                  style={{ borderRadius: '12px', height: '42px', fontWeight: 700, border: '1.5px solid #e2e8f0' }}
-                >
-                  Save Draft
-                </Button>
-                <Button 
-                  type="primary" 
-                  onClick={() => {
-                    form.setFieldValue('status', '1');
-                    form.submit();
-                  }}
-                  loading={isSubmitting}
-                  style={{ borderRadius: '12px', height: '42px', fontWeight: 800, background: COLORS.darkGreen, borderColor: COLORS.darkGreen }}
-                >
-                  Save Product
-                </Button>
-              </div>
-            </div>
-
-            {/* Form Segment Tabs */}
-            <div style={{ 
-              display: 'flex', 
-              gap: '28px', 
-              borderBottom: '1px solid #e2e8f0', 
-              marginBottom: '32px', 
-              paddingBottom: '0', 
-              marginTop: '12px' 
-            }}>
-              {[
-                { key: 'basic', label: 'Basic Information' },
-                { key: 'variants', label: 'Variants & Customizations' },
-                { key: 'inventory', label: 'Inventory & Pricing' },
-                { key: 'media', label: 'Product Visuals' }
-              ].map(tab => {
-                const isActive = activeTab === tab.key;
-                return (
-                  <div 
-                    key={tab.key} 
-                    onClick={() => setActiveTab(tab.key)}
-                    style={{ 
-                      fontSize: '15px', 
-                      fontWeight: isActive ? 800 : 600, 
-                      color: isActive ? COLORS.darkGreen : '#64748b', 
-                      paddingBottom: '14px', 
-                      borderBottom: isActive ? `3px solid ${COLORS.darkGreen}` : '3px solid transparent', 
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      transform: isActive ? 'translateY(1.5px)' : 'none'
-                    }}
-                  >
-                    {tab.label}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Tab 1: Basic Information (Screenshot 1 4-column layout) */}
-            {activeTab === 'basic' && (
-              <Row gutter={24}>
-                {/* Column 1: Basic Details */}
-                <Col span={7}>
-                  <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '24px', minHeight: '520px' }}>
-                    <div style={{ fontWeight: 800, marginBottom: '20px', color: '#1e293b', fontSize: '15px' }}>
-                      📝 Basic Details
+                {/* Tab 3: Inventory & Pricing Tab */}
+                <div style={{ display: activeTab === 'inventory' ? 'block' : 'none' }}>
+                  <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '24px', minHeight: '380px' }}>
+                    <div style={{ fontWeight: 800, marginBottom: '20px', color: COLORS.darkGreen, fontSize: '16px', borderBottom: '2px solid #f6fbf8', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Lucide.Package size={18} /> {t.inventory_asset_control || 'Inventory & Asset Control'}
                     </div>
-                    
-                    <Form.Item
-                      name="name"
-                      label={<Text strong style={{ color: '#64748b', fontSize: '12px' }}>PRODUCT NAME *</Text>}
-                      rules={[{ required: true, message: t.product_name }]}
-                    >
-                      <Input size="large" placeholder="Latte Coffee" style={{ fontWeight: 700, borderRadius: '12px' }} />
-                    </Form.Item>
-
-                    <Form.Item
-                      name="category_id"
-                      label={<Text strong style={{ color: '#64748b', fontSize: '12px' }}>CATEGORY *</Text>}
-                      rules={[{ required: true, message: t.category_required }]}
-                    >
-                      <Select
-                        size="large"
-                        options={state.categoryList.map(c => ({ label: c.name, value: String(c.id) }))}
-                        placeholder="Select Category"
-                        style={{ borderRadius: '12px' }}
-                        onChange={(value) => {
-                          const cat = state.categoryList.find(c => String(c.id) === String(value));
-                          setSelectedCategory(cat || null);
-                        }}
-                      />
-                    </Form.Item>
-
-                    <Form.Item
-                      name="sub_category"
-                      label={<Text strong style={{ color: '#64748b', fontSize: '12px' }}>SUB CATEGORY</Text>}
-                    >
-                      <Select
-                        size="large"
-                        options={[
-                          { label: 'Hot Coffee', value: 'Hot Coffee' },
-                          { label: 'Iced Coffee', value: 'Iced Coffee' },
-                          { label: 'Blended Coffee', value: 'Blended Coffee' },
-                          { label: 'Specialty Tea', value: 'Specialty Tea' }
-                        ]}
-                        placeholder="Select Sub Category"
-                        style={{ borderRadius: '12px' }}
-                      />
-                    </Form.Item>
-
-                    <Row gutter={12}>
-                      <Col span={18}>
-                        <Form.Item name="barcode" label={<Text strong style={{ color: '#64748b', fontSize: '12px' }}>BARCODE / SKU</Text>}>
-                          <Input size="large" placeholder="73620303" style={{ borderRadius: '12px' }} />
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item name="qty" label={<Text strong style={{ color: COLORS.textSecondary, fontSize: '11px' }}>{(t.on_hand_qty || 'ON-HAND QUANTITY').toUpperCase()}</Text>} style={{ marginBottom: 12 }}>
+                          <InputNumber size="middle" style={{ width: '100%', fontWeight: 900, borderRadius: '10px' }} />
+                        </Form.Item>
+                        <Form.Item name="reorder_level" label={<Text strong style={{ color: COLORS.textSecondary, fontSize: '11px' }}>{(t.reorder_level || 'REORDER LEVEL').toUpperCase()}</Text>} style={{ marginBottom: 0 }}>
+                          <InputNumber size="middle" style={{ width: '100%', fontWeight: 900, borderRadius: '10px' }} defaultValue={5} />
                         </Form.Item>
                       </Col>
-                      <Col span={6} style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '24px' }}>
-                        <Button size="large" onClick={onBtnNew} style={{ width: '100%', borderRadius: '12px', fontWeight: 800, background: '#f1f5f9', border: '1.5px dashed #cbd5e1' }}>
-                          Gen
-                        </Button>
+                      <Col span={12}>
+                        {selectedCategory?.industry_code === 'pharmacy' && (
+                          <>
+                            <Form.Item name="generic_name" label={<Text strong style={{ color: COLORS.textSecondary, fontSize: '11px' }}>{(t.generic_name || 'GENERIC NAME').toUpperCase()}</Text>} style={{ marginBottom: 12 }}>
+                              <Input size="middle" style={{ borderRadius: '10px' }} />
+                            </Form.Item>
+                            <Form.Item name="strength" label={<Text strong style={{ color: COLORS.textSecondary, fontSize: '11px' }}>{(t.strength || 'STRENGTH').toUpperCase()}</Text>} style={{ marginBottom: 12 }}>
+                              <Input size="middle" style={{ borderRadius: '10px' }} />
+                            </Form.Item>
+                            <Form.Item name="expiry_date" label={<Text strong style={{ color: COLORS.textSecondary, fontSize: '11px' }}>{(t.expiry_date || 'EXPIRY DATE').toUpperCase()}</Text>} style={{ marginBottom: 0 }}>
+                              <DatePicker size="middle" style={{ width: '100%', borderRadius: '10px' }} format="DD/MM/YYYY" />
+                            </Form.Item>
+                          </>
+                        )}
                       </Col>
                     </Row>
-
-                    <Form.Item name="brand" label={<Text strong style={{ color: '#64748b', fontSize: '12px' }}>BRAND</Text>}>
-                      <Select
-                        size="large"
-                        options={[
-                          { label: 'Cafe Manager', value: 'Cafe Manager' },
-                          { label: 'Starbucks Roast', value: 'Starbucks Roast' },
-                          { label: 'Local Premium', value: 'Local Premium' }
-                        ]}
-                        placeholder="Select Brand"
-                        style={{ borderRadius: '12px' }}
-                      />
-                    </Form.Item>
-
-                    <Form.Item name="description" label={<Text strong style={{ color: '#64748b', fontSize: '12px' }}>DESCRIPTION</Text>}>
-                      <Input.TextArea size="large" rows={4} placeholder="Smooth and creamy latte..." style={{ borderRadius: '16px' }} />
-                    </Form.Item>
                   </div>
-                </Col>
+                </div>
+              </Col>
 
-                {/* Column 2: Product Type & Preparation */}
-                <Col span={5}>
-                  <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '24px', minHeight: '520px' }}>
-                    <Form.Item name="product_type" label={<Text strong style={{ color: '#64748b', fontSize: '12px' }}>PRODUCT TYPE</Text>} style={{ marginBottom: '24px' }}>
-                      <Radio.Group style={{ width: '100%' }}>
-                        <Space direction="vertical" style={{ width: '100%' }}>
-                          <Radio value="Simple Product" style={{ display: 'flex', alignItems: 'flex-start', margin: '8px 0' }}>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>Simple Product</div>
-                              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Single SKU product</div>
-                            </div>
-                          </Radio>
-                          <Radio value="Variant Product" style={{ display: 'flex', alignItems: 'flex-start', margin: '8px 0' }}>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>Variant Product</div>
-                              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Multiple variations (size, flavor)</div>
-                            </div>
-                          </Radio>
-                        </Space>
-                      </Radio.Group>
-                    </Form.Item>
+              {/* Right Column: Sticky Live Preview */}
+              <Col span={8}>
+                <div style={{ position: 'sticky', top: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Product Preview Card */}
+                  <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                    <div style={{ fontWeight: 800, marginBottom: '12px', color: '#64748b', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.product_preview || 'Product Preview'}</div>
 
-                    <div style={{ borderTop: '1px dashed #e2e8f0', margin: '20px 0' }} />
-
-                    <div style={{ fontWeight: 800, marginBottom: '16px', color: '#1e293b', fontSize: '14px' }}>⚙️ Preparation Info</div>
-                    
-                    <Form.Item name="prep_time" label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>PREPARATION TIME</Text>}>
-                      <InputNumber size="large" min={1} addonAfter="mins" style={{ width: '100%', borderRadius: '12px' }} />
-                    </Form.Item>
-
-                    <Form.Item name="shelf_life" label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>SHELF LIFE</Text>}>
-                      <InputNumber size="large" min={1} addonAfter="days" style={{ width: '100%', borderRadius: '12px' }} />
-                    </Form.Item>
-
-                    <Form.Item name="storage_condition" label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>STORAGE CONDITION</Text>}>
-                      <Select
-                        size="large"
-                        options={[
-                          { label: 'Refrigerated (2-5°C)', value: 'Refrigerated (2-5°C)' },
-                          { label: 'Frozen (-18°C)', value: 'Frozen (-18°C)' },
-                          { label: 'Dry & Ambient', value: 'Dry & Ambient' }
-                        ]}
-                        style={{ borderRadius: '12px' }}
-                      />
-                    </Form.Item>
-
-                    <div style={{ borderTop: '1px dashed #e2e8f0', margin: '20px 0' }} />
-
-                    <Form.Item name="allergens" label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>ALLERGENS</Text>}>
-                      <Checkbox.Group style={{ width: '100%' }}>
-                        <Row gutter={[8, 8]}>
-                          {['Milk', 'Nuts', 'Soy', 'Gluten', 'Other'].map(allergen => (
-                            <Col span={12} key={allergen}>
-                              <Checkbox value={allergen} style={{ fontWeight: 600, fontSize: '13px' }}>{allergen}</Checkbox>
-                            </Col>
-                          ))}
-                        </Row>
-                      </Checkbox.Group>
-                    </Form.Item>
-
-                    <div style={{ borderTop: '1px dashed #e2e8f0', margin: '20px 0' }} />
-
-                    <Form.Item name="status" valuePropName="checked" getValueProps={(v) => ({ checked: String(v) === '1' })} getValueFromEvent={(c) => c ? '1' : '0'} label={<Text strong style={{ color: '#64748b', fontSize: '11px' }}>OPERATIONAL STATUS</Text>}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                        <span style={{ fontWeight: 700, fontSize: '13px', color: '#1e293b' }}>Active / Trading</span>
-                        <Switch defaultChecked />
-                      </div>
-                    </Form.Item>
-                  </div>
-                </Col>
-
-                {/* Column 3: Product Preview & Inventory Summary */}
-                <Col span={6}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Product Preview Card */}
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '24px' }}>
-                      <div style={{ fontWeight: 800, marginBottom: '16px', color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Preview</div>
-                      
-                      <div style={{ width: '100%', height: '160px', borderRadius: '20px', overflow: 'hidden', marginBottom: '16px', position: 'relative', border: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                      <div style={{ width: '72px', height: '72px', borderRadius: '14px', overflow: 'hidden', border: '1px solid #f1f5f9', position: 'relative', flexShrink: 0, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {imageDefault.length > 0 && imageDefault[0].url ? (
-                          <img src={imageDefault[0].url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={imageDefault[0].url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                         ) : (
-                          <div style={{ width: '100%', height: '100%', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '32px' }}>☕</span>
-                            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>No Image Uploaded</span>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Lucide.Image size={24} color="#94a3b8" strokeWidth={1.5} />
                           </div>
                         )}
-                        <div style={{ position: 'absolute', top: 12, right: 12, background: '#f0fdf4', color: '#166534', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, border: '1px solid #bbf7d0' }}>
-                          Active
+                        <div style={{ position: 'absolute', top: 4, right: 4, background: '#f0fdf4', color: '#166534', padding: '1px 6px', borderRadius: '10px', fontSize: '9px', fontWeight: 900, border: '1px solid #bbf7d0' }}>
+                          {t.active_status || 'Active'}
                         </div>
                       </div>
 
-                      <div style={{ fontWeight: 800, fontSize: '18px', color: '#1e293b', lineHeight: 1.2 }}>{watchName || 'Latte Coffee'}</div>
-                      <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 600, marginTop: '4px' }}>
-                        {selectedCategory?.name || 'Coffee'} • {watchSubCategory || 'Hot Coffee'}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginTop: '4px' }}>
-                        SKU: {watchBarcode || '73620303'} | Brand: {watchBrand || 'Cafe Manager'}
-                      </div>
-
-                      <div style={{ fontWeight: 900, fontSize: '22px', color: COLORS.darkGreen, marginTop: '14px' }}>
-                        ${(watchPrice || 0).toFixed(2)}
-                      </div>
-                      
-                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '8px', fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {watchDescription || 'Smooth and creamy latte made with espresso and steamed milk. Perfect balance of coffee flavor.'}
-                      </div>
-                    </div>
-
-                    {/* Inventory Summary Card */}
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '24px' }}>
-                      <div style={{ fontWeight: 800, marginBottom: '16px', color: '#1e293b', fontSize: '14px' }}>📈 Inventory Summary</div>
-                      
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {[
-                          { label: 'Current Stock', val: watchQty || 0, color: '#16a34a', bg: '#f0fdf4' },
-                          { label: 'Reserved', val: 2, color: '#ea580c', bg: '#fff7ed' },
-                          { label: 'Available', val: Math.max(0, (watchQty || 0) - 2), color: '#2563eb', bg: '#eff6ff' },
-                          { label: 'Reorder Level', val: 5, color: '#dc2626', bg: '#fef2f2' }
-                        ].map((item, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '12px', background: item.bg }}>
-                            <span style={{ fontWeight: 700, fontSize: '13px', color: '#475569' }}>{item.label}</span>
-                            <span style={{ fontWeight: 900, fontSize: '14px', color: item.color }}>{item.val} unit</span>
-                          </div>
-                        ))}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: '15px', color: '#1e293b', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{watchName || t.product_name || 'Product Name'}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>
+                          {selectedCategory?.name || t.category || 'Category'} {watchSubCategory ? `• ${watchSubCategory}` : ''}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600, marginTop: '1px' }}>
+                          {watchBarcode ? `SKU: ${watchBarcode}` : t.no_sku || 'No SKU'}
+                        </div>
+                        <div style={{ fontWeight: 900, fontSize: '16px', color: COLORS.darkGreen, marginTop: '3px' }}>
+                          {(() => {
+                            if (watchProductType === 'Variant Product' && Array.isArray(sizes) && sizes.length > 0) {
+                              const prices = sizes.map(s => Number(s.price || 0));
+                              const min = Math.min(...prices);
+                              const max = Math.max(...prices);
+                              if (min === max) {
+                                return `$${min.toFixed(2)}`;
+                              }
+                              return `$${min.toFixed(2)} - $${max.toFixed(2)}`;
+                            }
+                            return `$${(watchPrice || 0).toFixed(2)}`;
+                          })()}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </Col>
 
-                {/* Column 4: Pricing & Stock + Variants */}
-                <Col span={6}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Pricing & Stock Card */}
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '24px' }}>
-                      <div style={{ fontWeight: 800, marginBottom: '16px', color: '#1e293b', fontSize: '14px' }}>💰 Pricing & Stock</div>
-
-                      <Form.Item name="price" label={<Text strong style={{ color: '#64748b', fontSize: '12px' }}>BASE UNIT PRICE *</Text>}>
-                        <InputNumber
-                          size="large"
-                          min={0}
-                          step={0.01}
-                          prefix="$"
-                          style={{ width: '100%', fontWeight: 900, borderRadius: '12px' }}
-                        />
-                      </Form.Item>
-
-                      <Form.Item name="cost_price" label={<Text strong style={{ color: '#64748b', fontSize: '12px' }}>COST PRICE</Text>}>
-                        <InputNumber
-                          size="large"
-                          min={0}
-                          step={0.01}
-                          prefix="$"
-                          style={{ width: '100%', fontWeight: 900, borderRadius: '12px' }}
-                        />
-                      </Form.Item>
-
-                      <Form.Item name="tax_rate" label={<Text strong style={{ color: '#64748b', fontSize: '12px' }}>TAX RATE</Text>}>
-                        <Select
-                          size="large"
-                          options={[
-                            { label: '10%', value: '10%' },
-                            { label: '5%', value: '5%' },
-                            { label: '0%', value: '0%' }
-                          ]}
-                          style={{ borderRadius: '12px' }}
-                        />
-                      </Form.Item>
-
-                      <div style={{ marginTop: '16px', background: '#f8fafc', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>PROFIT MARGIN</div>
-                        {(() => {
-                          const base = watchPrice || 0;
-                          const cost = watchCostPrice || 0;
-                          let margin = 0;
-                          if (base > 0) {
-                            margin = ((base - cost) / base) * 100;
-                          }
-                          return (
-                            <div style={{ fontSize: '18px', fontWeight: 900, color: margin >= 30 ? '#16a34a' : '#ea580c', marginTop: '4px' }}>
-                              {margin.toFixed(2)}%
-                            </div>
-                          );
-                        })()}
-                      </div>
+                  {/* Inventory Summary Card */}
+                  <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                    <div style={{ fontWeight: 800, marginBottom: '12px', color: '#1e293b', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Lucide.Package size={14} color={COLORS.darkGreen} /> {t.inventory_summary || 'Inventory Summary'}
                     </div>
 
-                    {/* Variants Summary Card */}
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '24px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '14px' }}>
-                          Variants ({(() => {
+                    <Row gutter={[8, 8]}>
+                      {[
+                        { label: t.current_stock || 'Current Stock', val: watchQty || 0, color: '#16a34a', bg: '#f0fdf4' },
+                        { label: t.reorder_level || 'Reorder Level', val: watchReorderLevel || 5, color: '#dc2626', bg: '#fef2f2' }
+                      ].map((item, idx) => (
+                        <Col span={12} key={idx}>
+                          <div style={{ padding: '6px 10px', borderRadius: '10px', background: item.bg, border: '1px solid rgba(0,0,0,0.01)', height: '44px' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', lineHeight: 1 }}>{item.label}</div>
+                            <div style={{ fontWeight: 900, fontSize: '12px', color: item.color, marginTop: '4px' }}>{item.val} {lang === 'kh' ? 'កែវ' : 'unit'}</div>
+                          </div>
+                        </Col>
+                      ))}
+                    </Row>
+                  </div>
+
+                  {/* Variants Summary Card */}
+                  {watchProductType === 'Variant Product' && (
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '13px' }}>
+                          {t.variants_title || 'Variants'} ({(() => {
                             let list = watchMoods;
                             if (typeof list === 'string') {
                               try {
@@ -1809,12 +2022,12 @@ function ProductPage() {
                             return Array.isArray(list) ? list.length : 0;
                           })()})
                         </span>
-                        <Button size="small" type="link" onClick={() => setActiveTab('variants')} style={{ fontWeight: 800, padding: 0 }}>
-                          + Configure
+                        <Button size="small" type="link" onClick={() => setActiveTab('basic')} style={{ fontWeight: 800, padding: 0, fontSize: '11px' }}>
+                          {t.configure || 'Configure'}
                         </Button>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', maxHeight: '100px', overflowY: 'auto' }}>
                         {(() => {
                           let moodsList = watchMoods;
                           if (typeof moodsList === 'string') {
@@ -1832,7 +2045,7 @@ function ProductPage() {
 
                           if (finalMoods.length === 0) {
                             return (
-                              <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', background: '#f8fafc', borderRadius: '12px', border: '1.5px dashed #cbd5e1' }}>
+                              <div style={{ padding: '8px', textAlign: 'center', color: '#94a3b8', background: '#f8fafc', borderRadius: '10px', width: '100%', fontSize: '11px' }}>
                                 No variants configured
                               </div>
                             );
@@ -1840,100 +2053,39 @@ function ProductPage() {
                           return finalMoods.map((m, idx) => {
                             const label = typeof m === 'object' ? (m.label || m.value) : m;
                             const price = typeof m === 'object' ? m.price : 0;
-                            
                             const labelStr = String(label || "");
+
                             let icon = "🔘";
                             if (labelStr.toLowerCase().includes("hot")) icon = "🔥";
                             if (labelStr.toLowerCase().includes("ice")) icon = "❄️";
                             if (labelStr.toLowerCase().includes("frap")) icon = "🥤";
 
                             return (
-                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid #f1f5f9', borderRadius: '12px', background: '#fafafa' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <span style={{ fontSize: '14px' }}>{icon}</span>
-                                  <span style={{ fontWeight: 700, fontSize: '13px', color: '#334155' }}>{labelStr}</span>
-                                </div>
-                                <span style={{ fontWeight: 800, fontSize: '13px', color: COLORS.darkGreen }}>${Number(price).toFixed(2)}</span>
-                              </div>
+                              <Tag key={idx} style={{
+                                margin: 0,
+                                borderRadius: '6px',
+                                padding: '2px 6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                fontWeight: 700,
+                                fontSize: '10px',
+                                color: '#334155'
+                              }}>
+                                <span>{icon} {labelStr}</span>
+                                <span style={{ color: COLORS.darkGreen, marginLeft: '2px' }}>${Number(price).toFixed(2)}</span>
+                              </Tag>
                             );
                           });
                         })()}
                       </div>
                     </div>
-                  </div>
-                </Col>
-              </Row>
-            )}
-
-            {/* Tab 2: Variants Configuration */}
-            {activeTab === 'variants' && (
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '32px', borderRadius: '24px', minHeight: '520px' }}>
-                <div style={{ fontWeight: 800, marginBottom: '24px', color: COLORS.darkGreen, fontSize: '18px', borderBottom: '2px solid #f6fbf8', paddingBottom: '12px' }}>
-                  🛡️ Variants & Customization Blueprint
+                  )}
                 </div>
-                <CategoryOptions selectedCategory={selectedCategory} t={t} form={form} />
-              </div>
-            )}
-
-            {/* Tab 3: Inventory & Pricing Tab */}
-            {activeTab === 'inventory' && (
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '32px', borderRadius: '24px', minHeight: '520px' }}>
-                <div style={{ fontWeight: 800, marginBottom: '24px', color: COLORS.darkGreen, fontSize: '18px', borderBottom: '2px solid #f6fbf8', paddingBottom: '12px' }}>
-                  📈 Inventory & Asset Control
-                </div>
-                <Row gutter={32}>
-                  <Col span={12}>
-                    <Form.Item name="qty" label={<Text strong style={{ color: COLORS.textSecondary }}>ON-HAND QUANTITY</Text>}>
-                      <InputNumber size="large" style={{ width: '100%', fontWeight: 900, borderRadius: '12px' }} />
-                    </Form.Item>
-                    <Form.Item name="reorder_level" label={<Text strong style={{ color: COLORS.textSecondary }}>REORDER LEVEL</Text>}>
-                      <InputNumber size="large" style={{ width: '100%', fontWeight: 900, borderRadius: '12px' }} defaultValue={5} />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    {selectedCategory?.industry_code === 'pharmacy' && (
-                      <>
-                        <Form.Item name="generic_name" label={<Text strong style={{ color: COLORS.textSecondary }}>GENERIC NAME</Text>}>
-                          <Input size="large" style={{ borderRadius: '12px' }} />
-                        </Form.Item>
-                        <Form.Item name="strength" label={<Text strong style={{ color: COLORS.textSecondary }}>STRENGTH</Text>}>
-                          <Input size="large" style={{ borderRadius: '12px' }} />
-                        </Form.Item>
-                        <Form.Item name="expiry_date" label={<Text strong style={{ color: COLORS.textSecondary }}>EXPIRY DATE</Text>}>
-                          <DatePicker size="large" style={{ width: '100%', borderRadius: '12px' }} format="DD/MM/YYYY" />
-                        </Form.Item>
-                      </>
-                    )}
-                  </Col>
-                </Row>
-              </div>
-            )}
-
-            {/* Tab 4: Media Upload Tab */}
-            {activeTab === 'media' && (
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '32px', borderRadius: '24px', minHeight: '520px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ fontWeight: 800, marginBottom: '24px', color: COLORS.darkGreen, fontSize: '18px', textAlign: 'center' }}>
-                  📸 Product Image & Branding Visuals
-                </div>
-                <Form.Item name="image_default" noStyle>
-                  <Upload
-                    customRequest={(options) => options.onSuccess()}
-                    maxCount={1}
-                    listType="picture-card"
-                    fileList={imageDefault}
-                    onPreview={handlePreview}
-                    onChange={handleChangeImageDefault}
-                    className="premium-upload-control"
-                    style={{ transform: 'scale(1.2)' }}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px' }}>
-                      <MdAdd size={36} color={COLORS.darkGreen} />
-                      <div style={{ marginTop: '12px', fontSize: '14px', fontWeight: 800, color: COLORS.darkGreen }}>UPLOAD PHOTO</div>
-                    </div>
-                  </Upload>
-                </Form.Item>
-              </div>
-            )}
+              </Col>
+            </Row>
 
           </div>
         </Form>
@@ -1943,7 +2095,7 @@ function ProductPage() {
 
   // ─── Conditional View Router ──────────────────────────────────────────────
 
-  if (viewState === 'view') return renderView();
+  if (viewState === 'view') return renderEdit();
   if (viewState === 'edit') return renderEdit();
   return renderList();
 }

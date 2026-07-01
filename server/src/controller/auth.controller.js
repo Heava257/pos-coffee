@@ -5,8 +5,8 @@ const axios = require("axios");
 const config = require("../util/config");
 
 // Helper for JWT
-const generateAccessToken = (data) => {
-  return jwt.sign(data, config.token.access_token_key, { expiresIn: "7d" });
+const generateAccessToken = (data, remember = false) => {
+  return jwt.sign(data, config.token.access_token_key, { expiresIn: remember ? "30d" : "7d" });
 };
 
 // 1. Register for Business Owner (SaaS Entry Point)
@@ -51,10 +51,10 @@ exports.register = async (req, res) => {
         [business_id, planId, finalPlanType, startDate, formattedEndDate]
       );
 
-      // B. Create Main Branch (Safe insert)
+      // B. Create Main Branch (Safe insert with location and phone)
       const [branch] = await conn.query(
-        "INSERT IGNORE INTO branches (business_id, name, is_main) VALUES (?, ?, ?)",
-        [business_id, "Main Branch", '1']
+        "INSERT IGNORE INTO branches (business_id, name, is_main, phone, province, district, location) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [business_id, "Main Branch", '1', phone || null, req.body.province || null, req.body.district || null, req.body.address || null]
       );
       let branch_id = branch.insertId;
       if (branch_id === 0) {
@@ -112,16 +112,20 @@ exports.register = async (req, res) => {
       const hashedPassword = bcrypt.hashSync(password, 10);
       const verifyToken = require('crypto').randomBytes(32).toString('hex');
       await conn.query(
-        "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token, pin_code, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
+        "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token, pin_code, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
         [business_id, branch_id, owner_role_id, owner_name, email, hashedPassword, 'active', 0, verifyToken, '1234']
       );
 
-      // E. Enable all global categories by default for new businesses
       await conn.query(`
         INSERT INTO business_categories (business_id, category_id, is_active)
-        SELECT ?, id, 1 FROM categories WHERE business_id = 1
+        SELECT ?, id, 0 FROM categories WHERE business_id = 1
       `, [business_id]);
 
+      // Create Welcome Notification with current timestamp for the new business
+      await conn.query(
+        "INSERT INTO system_notifications (business_id, title, message, type, is_read) VALUES (?, 'Welcome to Coffee POS!', 'Explore your new dashboard analytics and manage your branches from a single workspace.', 'system', 0)",
+        [business_id]
+      );
       await conn.commit();
 
       // 🚀 Send Welcome Email
@@ -208,7 +212,10 @@ exports.googleLogin = async (req, res) => {
 };
 
 // 2. Login (SaaS Context Injection)
-const generateLoginResponse = async (user) => {
+const generateLoginResponse = async (user, remember = false) => {
+  // Update last_active timestamp for the business
+  await db.query("UPDATE businesses SET last_active = NOW() WHERE id = ?", [user.business_id]);
+
   const payload = {
     user_id: user.id,
     business_id: user.business_id,
@@ -265,7 +272,7 @@ const generateLoginResponse = async (user) => {
 `, [user.business_id, user.role_id]);
 
   payload.permissions = rolePerms.map(p => p.route_key);
-  const accessToken = generateAccessToken(payload);
+  const accessToken = generateAccessToken(payload, remember);
 
   if (user.branch_id) {
     const [branch] = await db.query("SELECT name FROM branches WHERE id = ?", [user.branch_id]);
@@ -284,7 +291,7 @@ const generateLoginResponse = async (user) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, remember } = req.body;
     const sql = `
             SELECT u.*, 
                    r.name as role_name, r.code as role_code,
@@ -309,13 +316,13 @@ exports.login = async (req, res) => {
     const user = users[0];
 
     const isStaff = user.role_code !== 'owner' && user.role_code !== 'super_admin';
-    if (user.is_verified === 0 && !isStaff) {
-      return res.status(403).json({
-        message: "Your email is not verified yet!",
-        unverified: true,
-        email: user.email
-      });
-    }
+    // if (user.is_verified === 0 && !isStaff) {
+    //   return res.status(403).json({
+    //     message: "Your email is not verified yet!",
+    //     unverified: true,
+    //     email: user.email
+    //   });
+    // }
 
     if (user.business_status !== 'active') {
       return res.status(403).json({ message: "Your business account is suspended!" });
@@ -329,7 +336,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Password incorrect!" });
     }
 
-    const loginData = await generateLoginResponse(user);
+    const loginData = await generateLoginResponse(user, remember);
     res.json({
       message: "Login successful",
       ...loginData
@@ -412,10 +419,10 @@ exports.verifyManager = async (req, res) => {
       SELECT u.id, u.password, u.status, u.business_id, r.code as role_code
       FROM users u
       INNER JOIN roles r ON u.role_id = r.id
-      WHERE u.username = ? OR u.email = ?
+      WHERE u.email = ?
     `;
 
-    const [users] = await db.query(sql, [username, username]);
+    const [users] = await db.query(sql, [username]);
 
     if (users.length === 0) {
       return res.status(404).json({ message: "User not found!" });

@@ -24,6 +24,7 @@ import {
     UsergroupAddOutlined
 } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
+import Swal from "sweetalert2";
 import { getProfile, setPermission } from "@/app/store/profile.store";
 import { useLanguage, translations } from "@/app/store/language.store";
 
@@ -60,10 +61,10 @@ const PermissionPage = () => {
                 }
             }
 
-            const permRes = await request("permission", "get");
+            const targetBiz = selectedBusinessId || profile?.business_id;
+            const permRes = await request(`permission?target_business_id=${targetBiz}`, "get");
             if (permRes && permRes.list) setAllPermissions(permRes.list);
 
-            const targetBiz = selectedBusinessId || profile?.business_id;
             const roleRes = await request(`role?target_business_id=${targetBiz}`, "get");
 
             if (roleRes && roleRes.list) {
@@ -205,6 +206,93 @@ const PermissionPage = () => {
     const isOwnerRole = selectedRole?.code?.toLowerCase() === 'owner';
     const isOwnRole = Number(profile?.role_id) === Number(selectedRoleId);
 
+    const activeBiz = businesses.find(b => b.id === selectedBusinessId);
+    // If it's System Default (ID 1), allow editing all permissions. Otherwise, respect the business's active plan.
+    const selectedPlanId = selectedBusinessId === 1 ? 3 : (activeBiz ? activeBiz.plan_id : (profile?.plan_id || 1));
+
+    const showUpgradeAlert = () => {
+        const redirectPath = profile?.business_id === 1 ? '/plans' : '/my-plan';
+        Swal.fire({
+            html: `
+              <div style="display: flex; align-items: flex-start; gap: 16px; text-align: left; font-family: inherit;">
+                  <!-- Left Warning Icon -->
+                  <div style="background: #f59e0b; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+                      <span style="color: #ffffff; font-size: 18px; font-weight: bold; font-family: inherit; line-height: 1;">!</span>
+                  </div>
+                  <!-- Right Content -->
+                  <div style="flex: 1;">
+                      <h3 style="margin: 0 0 6px 0; font-family: inherit; font-size: 18px; font-weight: bold; color: #111827; display: flex; align-items: center; gap: 8px;">
+                          💎 ${lang === 'kh' ? 'តម្រូវឱ្យមានគម្រោង Pro' : 'Pro Feature Required'}
+                      </h3>
+                      <p style="margin: 0; font-family: inherit; font-size: 14px; color: #4b5563; line-height: 1.5;">
+                          ${lang === 'kh' 
+                              ? 'មុខងារនេះតម្រូវឱ្យធ្វើការដំឡើងគម្រោងសេវាកម្មជាមុនសិន។ សូមដំឡើងគម្រោងរបស់អ្នកដើម្បីទទួលបានមុខងារលំដាប់ខ្ពស់!' 
+                              : 'This feature is a premium feature. Please upgrade your plan to access this functionality.'}
+                      </p>
+                  </div>
+              </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: lang === 'kh' ? 'Upgrade ឥឡូវនេះ' : 'Upgrade Now',
+            cancelButtonText: lang === 'kh' ? 'បន្តិចទៀត' : 'Later',
+            reverseButtons: true,
+            buttonsStyling: false,
+            customClass: {
+                popup: 'rounded-2xl',
+            },
+            didOpen: () => {
+                const popup = Swal.getPopup();
+                if (popup) {
+                    popup.style.width = '480px';
+                    popup.style.padding = '24px';
+                    popup.style.borderRadius = '20px';
+                }
+
+                const actions = Swal.getActions();
+                if (actions) {
+                    actions.style.display = 'flex';
+                    actions.style.justifyContent = 'flex-end';
+                    actions.style.gap = '16px';
+                    actions.style.marginTop = '16px';
+                    actions.style.width = '100%';
+                }
+
+                const confirmBtn = Swal.getConfirmButton();
+                const cancelBtn = Swal.getCancelButton();
+                if (confirmBtn) {
+                    confirmBtn.style.padding = '8px 20px';
+                    confirmBtn.style.borderRadius = '30px';
+                    confirmBtn.style.backgroundColor = '#1e4a2d';
+                    confirmBtn.style.color = '#ffffff';
+                    confirmBtn.style.border = '2px solid #1e4a2d';
+                    confirmBtn.style.fontWeight = 'bold';
+                    confirmBtn.style.fontSize = '14px';
+                    confirmBtn.style.cursor = 'pointer';
+                    confirmBtn.style.display = 'inline-flex';
+                    confirmBtn.style.alignItems = 'center';
+                    confirmBtn.style.height = '40px';
+                }
+                if (cancelBtn) {
+                    cancelBtn.style.padding = '8px 20px';
+                    cancelBtn.style.borderRadius = '30px';
+                    cancelBtn.style.backgroundColor = '#ffffff';
+                    cancelBtn.style.color = '#111827';
+                    cancelBtn.style.border = '1.5px solid #d1d5db';
+                    cancelBtn.style.fontWeight = 'bold';
+                    cancelBtn.style.fontSize = '14px';
+                    cancelBtn.style.cursor = 'pointer';
+                    cancelBtn.style.display = 'inline-flex';
+                    cancelBtn.style.alignItems = 'center';
+                    cancelBtn.style.height = '40px';
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = redirectPath;
+            }
+        });
+    };
+
     const columns = [
         {
             title: t.permission_name || "Permission Name",
@@ -225,12 +313,19 @@ const PermissionPage = () => {
             render: (_, record) => {
                 const isChecked = !!selectedPermissions[record.id]?.can_view;
                 const isCritical = ['/dashboard', '/permission', '/role'].includes(record.route_key);
+                const isPlanRestricted = record.is_allowed === 0;
                 const isDisabled = (isCritical && (isOwnRole || isOwnerRole));
 
                 return (
                     <Checkbox
                         checked={isChecked}
-                        onChange={(e) => handleCheckboxChange(record.id, 'can_view', e.target.checked)}
+                        onChange={(e) => {
+                            if (isPlanRestricted) {
+                                showUpgradeAlert();
+                                return;
+                            }
+                            handleCheckboxChange(record.id, 'can_view', e.target.checked);
+                        }}
                         disabled={isDisabled}
                     />
                 );
@@ -243,12 +338,19 @@ const PermissionPage = () => {
             render: (_, record) => {
                 const isChecked = !!selectedPermissions[record.id]?.can_create;
                 const isCritical = ['/permission', '/role'].includes(record.route_key);
+                const isPlanRestricted = record.is_allowed === 0;
                 const isDisabled = (isCritical && (isOwnRole || isOwnerRole));
 
                 return (
                     <Checkbox
                         checked={isChecked}
-                        onChange={(e) => handleCheckboxChange(record.id, 'can_create', e.target.checked)}
+                        onChange={(e) => {
+                            if (isPlanRestricted) {
+                                showUpgradeAlert();
+                                return;
+                            }
+                            handleCheckboxChange(record.id, 'can_create', e.target.checked);
+                        }}
                         disabled={isDisabled}
                     />
                 );
@@ -261,12 +363,19 @@ const PermissionPage = () => {
             render: (_, record) => {
                 const isChecked = !!selectedPermissions[record.id]?.can_edit;
                 const isCritical = ['/permission', '/role'].includes(record.route_key);
+                const isPlanRestricted = record.is_allowed === 0;
                 const isDisabled = (isCritical && (isOwnRole || isOwnerRole));
 
                 return (
                     <Checkbox
                         checked={isChecked}
-                        onChange={(e) => handleCheckboxChange(record.id, 'can_edit', e.target.checked)}
+                        onChange={(e) => {
+                            if (isPlanRestricted) {
+                                showUpgradeAlert();
+                                return;
+                            }
+                            handleCheckboxChange(record.id, 'can_edit', e.target.checked);
+                        }}
                         disabled={isDisabled}
                     />
                 );
@@ -279,12 +388,19 @@ const PermissionPage = () => {
             render: (_, record) => {
                 const isChecked = !!selectedPermissions[record.id]?.can_delete;
                 const isCritical = ['/permission', '/role', '/business'].includes(record.route_key);
+                const isPlanRestricted = record.is_allowed === 0;
                 const isDisabled = (isCritical && (isOwnRole || isOwnerRole));
 
                 return (
                     <Checkbox
                         checked={isChecked}
-                        onChange={(e) => handleCheckboxChange(record.id, 'can_delete', e.target.checked)}
+                        onChange={(e) => {
+                            if (isPlanRestricted) {
+                                showUpgradeAlert();
+                                return;
+                            }
+                            handleCheckboxChange(record.id, 'can_delete', e.target.checked);
+                        }}
                         disabled={isDisabled}
                     />
                 );
@@ -354,7 +470,7 @@ const PermissionPage = () => {
                                     {t.select_business || "Step 1: Select Business"}
                                 </Text>
                                 <Select
-                                    style={{ width: '100%', marginBottom: '20px' }}
+                                    style={{ width: '100%', marginBottom: selectedBusinessId > 1 && activeBiz ? '10px' : '20px' }}
                                     size="large"
                                     placeholder="Select Business"
                                     value={selectedBusinessId}
@@ -366,11 +482,30 @@ const PermissionPage = () => {
                                         <Option key={biz.id} value={biz.id}>
                                             <Space>
                                                 <Badge status={biz.status === 'active' ? 'success' : 'error'} />
-                                                {biz.name} (ID: {biz.id})
+                                                {biz.name} (ID: {biz.id}){biz.id > 1 && biz.plan_name ? ` - [ ${biz.plan_name} ]` : ''}
                                             </Space>
                                         </Option>
                                     ))}
                                 </Select>
+                                {selectedBusinessId > 1 && activeBiz && (
+                                    <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Text type="secondary" style={{ fontSize: '13px' }}>
+                                            {lang === 'kh' ? 'គម្រោងបច្ចុប្បន្ន៖ ' : 'Current Plan: '}
+                                        </Text>
+                                        <span style={{ 
+                                            background: activeBiz.plan_id === 3 ? '#f6ffed' : activeBiz.plan_id === 2 ? '#e6f7ff' : '#fffbe6',
+                                            color: activeBiz.plan_id === 3 ? '#52c41a' : activeBiz.plan_id === 2 ? '#1890ff' : '#faad14',
+                                            border: `1px solid ${activeBiz.plan_id === 3 ? '#b7eb8f' : activeBiz.plan_id === 2 ? '#91d5ff' : '#ffe58f'}`,
+                                            padding: '2px 10px',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: 'bold',
+                                            display: 'inline-block'
+                                        }}>
+                                            {activeBiz.plan_name || 'Free Plan'}
+                                        </span>
+                                    </div>
+                                )}
                                 <Divider style={{ margin: '12px 0' }} />
                             </>
                         )}

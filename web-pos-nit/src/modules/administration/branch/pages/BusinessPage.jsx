@@ -3,11 +3,13 @@ import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space,
     Typography, Divider, Badge, Tooltip, Statistic,
-    Select, Checkbox, Tabs, Spin
+    Select, Checkbox, Tabs, Spin, Progress
 } from "antd";
+import dayjs from "dayjs";
 import {
     PlusOutlined,
     ShopOutlined,
+    ShoppingOutlined,
     SearchOutlined,
     MailOutlined,
     PhoneOutlined,
@@ -29,12 +31,15 @@ import {
     AppstoreOutlined
 } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
+import { Config } from "@/shared/utils/config";
 import CategoryManageTab from "@/modules/administration/user/components/CategoryManageTab";
 import { CAMBODIA_GEO } from "@/shared/utils/cambodia_geo";
+import { useLanguage } from "@/app/store/language.store";
 
 const { Title, Text } = Typography;
 
 const BusinessPage = () => {
+    const { lang } = useLanguage();
     const [list, setList] = useState([]);
     const [packageList, setPackageList] = useState([]);
     const [plans, setPlans] = useState([]);
@@ -44,6 +49,67 @@ const BusinessPage = () => {
     const [selectedBiz, setSelectedBiz] = useState(null);
     const [form] = Form.useForm();
     const [searchText, setSearchText] = useState("");
+    const [passwordVal, setPasswordVal] = useState("");
+
+    const hasMinLen = passwordVal.length >= 8;
+    const hasUppercase = /[A-Z]/.test(passwordVal);
+    const hasNumber = /[0-9]/.test(passwordVal);
+    const hasSpecial = /[^A-Za-z0-9]/.test(passwordVal);
+
+    const metCount = [hasMinLen, hasUppercase, hasNumber, hasSpecial].filter(Boolean).length;
+    const strengthPercent = metCount * 25;
+
+    let progressColor = "#ff4d4f";
+    if (strengthPercent === 50 || strengthPercent === 75) {
+        progressColor = "#faad14";
+    } else if (strengthPercent === 100) {
+        progressColor = "#52c41a";
+    }
+
+    const renderPasswordStrength = () => {
+        if (!passwordVal) return null;
+
+        return (
+            <Progress 
+                percent={strengthPercent} 
+                strokeColor={progressColor} 
+                showInfo={false} 
+                strokeWidth={3} 
+                style={{ marginTop: -10, marginBottom: 0, position: 'relative', zIndex: 1 }}
+            />
+        );
+    };
+
+    const generateStrongPassword = (e) => {
+        e.preventDefault();
+        const length = 12;
+        const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const lowercase = "abcdefghijklmnopqrstuvwxyz";
+        const numbers = "0123456789";
+        const symbols = "@$!%*?&";
+        
+        let password = "";
+        password += uppercase[Math.floor(Math.random() * uppercase.length)];
+        password += lowercase[Math.floor(Math.random() * lowercase.length)];
+        password += numbers[Math.floor(Math.random() * numbers.length)];
+        password += symbols[Math.floor(Math.random() * symbols.length)];
+        
+        const allChars = uppercase + lowercase + numbers + symbols;
+        for (let i = 4; i < length; i++) {
+            password += allChars[Math.floor(Math.random() * allChars.length)];
+        }
+        
+        password = password.split('').sort(() => 0.5 - Math.random()).join('');
+        
+        form.setFieldsValue({
+            password: password
+        });
+        
+        setPasswordVal(password);
+        
+        navigator.clipboard.writeText(password);
+        message.success(lang === 'kh' ? `លេខសម្ងាត់ខ្លាំងត្រូវបានបង្កើត និងចម្លងរួចរាល់៖ ${password}` : `Strong password generated and copied: ${password}`);
+    };
 
     // Detail View State
     const [detailVisible, setDetailVisible] = useState(false);
@@ -79,7 +145,11 @@ const BusinessPage = () => {
         setLoading(true);
         try {
             const res = await request("business", "get");
-            if (res && res.list) setList(res.list);
+            if (res && res.list) {
+                // Exclude Platform Owner (business_id = 1)
+                const clientList = res.list.filter(item => item.id !== 1);
+                setList(clientList);
+            }
         } catch (error) {
             message.error("Failed to fetch businesses");
         } finally {
@@ -130,6 +200,7 @@ const BusinessPage = () => {
                 message.success("Operation successful!");
                 setVisible(false);
                 form.resetFields();
+                setPasswordVal("");
                 getList();
             }
         } catch (error) {
@@ -175,24 +246,45 @@ const BusinessPage = () => {
         {
             title: "Business / Enterprise",
             dataIndex: "name",
-            render: (text, record) => (
-                <Space size="middle">
-                    <div style={{
-                        width: 45, height: 45, borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
-                    }}>
-                        <ShopOutlined style={{ fontSize: '20px' }} />
-                    </div>
-                    <div>
-                        <Text strong style={{ fontSize: '14px', color: '#1e4a2d', display: 'block' }}>{text}</Text>
-                        <Space size={4}>
-                            <Tag color="blue" style={{ fontSize: '10px', borderRadius: 4, margin: 0 }}>{record.province}</Tag>
-                            <Tag color="cyan" style={{ fontSize: '10px', borderRadius: 4, margin: 0 }}>{record.district}</Tag>
-                        </Space>
-                    </div>
-                </Space>
-            )
+            render: (text, record) => {
+                const hasLogo = record.logo && typeof record.logo === 'string' && record.logo.trim() !== '' && record.logo !== 'null' && record.logo !== 'undefined';
+                return (
+                    <Space size="middle">
+                        <div style={{
+                            width: 45,
+                            height: 45,
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            backgroundColor: '#1e4a2d',
+                            background: '#1e4a2d',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            {hasLogo ? (
+                                <img
+                                    src={Config.getFullImagePath(record.logo)}
+                                    alt="Logo"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        const iconEl = e.target.parentElement.querySelector('.default-shop-icon');
+                                        if (iconEl) iconEl.style.display = 'inline-block';
+                                    }}
+                                />
+                            ) : null}
+                            <ShoppingOutlined className="default-shop-icon" style={{ fontSize: '20px', color: '#fffffe', display: hasLogo ? 'none' : 'inline-block' }} />
+                        </div>
+                        <div>
+                            <Text strong style={{ fontSize: '14px', color: '#1e4a2d', display: 'block' }}>{text}</Text>
+                            <Space size={4}>
+                                <Tag color="blue" style={{ fontSize: '10px', borderRadius: 4, margin: 0 }}>{record.province}</Tag>
+                                <Tag color="cyan" style={{ fontSize: '10px', borderRadius: 4, margin: 0 }}>{record.district}</Tag>
+                            </Space>
+                        </div>
+                    </Space>
+                );
+            }
         },
         {
             title: "Owner",
@@ -221,6 +313,34 @@ const BusinessPage = () => {
             title: "Status",
             dataIndex: "status",
             render: (status) => <Badge status={status === 'active' ? 'success' : 'error'} text={status?.toUpperCase()} />
+        },
+        {
+            title: "Registered Date",
+            dataIndex: "created_at",
+            render: (created_at) => (
+                <div style={{ lineHeight: '1.4' }}>
+                    <Text style={{ fontSize: '13px', fontWeight: 600, display: 'block' }}>
+                        {created_at ? dayjs(created_at).format("DD-MMM-YYYY") : "—"}
+                    </Text>
+                    <Text style={{ fontSize: '12px', color: '#475569', display: 'block', fontWeight: 500 }}>
+                        {created_at ? dayjs(created_at).format("h:mm A") : ""}
+                    </Text>
+                </div>
+            )
+        },
+        {
+            title: "Last Active",
+            dataIndex: "last_active",
+            render: (last_active) => (
+                <div style={{ lineHeight: '1.4' }}>
+                    <Text style={{ fontSize: '13px', fontWeight: 600, display: 'block', color: last_active ? '#2d6a3e' : '#64748b' }}>
+                        {last_active ? dayjs(last_active).format("DD-MMM-YYYY") : "—"}
+                    </Text>
+                    <Text style={{ fontSize: '12px', color: last_active ? '#335e3b' : '#64748b', display: 'block', fontWeight: 500 }}>
+                        {last_active ? dayjs(last_active).format("h:mm A") : (lang === 'kh' ? "មិនទាន់ចូលប្រើ" : "Never logged in")}
+                    </Text>
+                </div>
+            )
         },
         {
             title: "Management",
@@ -317,7 +437,7 @@ const BusinessPage = () => {
                     <Text strong>Business Registry</Text>
                     <Space>
                         <Input placeholder="Search..." prefix={<SearchOutlined />} onChange={e => setSearchText(e.target.value)} style={{ width: 250 }} />
-                        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setVisible('create'); form.resetFields(); }} style={{ background: '#1e4a2d' }}>Onboard Business</Button>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setVisible('create'); form.resetFields(); setPasswordVal(""); }} style={{ background: '#1e4a2d' }}>Onboard Business</Button>
                     </Space>
                 </div>}
             >
@@ -342,7 +462,7 @@ const BusinessPage = () => {
                     </div>
                 }
                 open={!!visible}
-                onCancel={() => setVisible(false)}
+                onCancel={() => { setVisible(false); setPasswordVal(""); }}
                 onOk={() => form.submit()}
                 width={visible === 'renew' ? 500 : 1000}
                 centered
@@ -455,7 +575,32 @@ const BusinessPage = () => {
                         <Row gutter={24}>
                             <Col span={8}><Form.Item name="owner_name" label="Owner Full Name" rules={[{required:true}]}><Input prefix={<UserOutlined />} size="large" autoComplete="off"/></Form.Item></Col>
                             <Col span={8}><Form.Item name="email" label="Admin Email" rules={[{required:true, type:'email'}]}><Input prefix={<MailOutlined />} size="large" autoComplete="new-password"/></Form.Item></Col>
-                            {visible === 'create' && <Col span={8}><Form.Item name="password" label="Temp Password" rules={[{required:true}]}><Input.Password prefix={<LockOutlined />} size="large" autoComplete="new-password"/></Form.Item></Col>}
+                            {visible === 'create' && (
+                                <Col span={8}>
+                                    <Form.Item 
+                                        name="password" 
+                                        label={
+                                            <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                                                <Text strong style={{ margin: 0 }}>Temp Password</Text>
+                                                <a onClick={generateStrongPassword} style={{ fontSize: '11px', color: '#1e4a2d', fontWeight: '500', marginLeft: '12px', textDecoration: 'underline' }}>
+                                                    {lang === 'kh' ? 'បង្កើតស្វ័យប្រវត្ត' : 'Auto Generate'}
+                                                </a>
+                                            </span>
+                                        } 
+                                        rules={[{required:true}]}
+                                        style={{ marginBottom: passwordVal ? 12 : 24 }}
+                                    >
+                                        <Input.Password 
+                                            prefix={<LockOutlined />} 
+                                            size="large" 
+                                            autoComplete="new-password"
+                                            value={passwordVal}
+                                            onChange={(e) => setPasswordVal(e.target.value)}
+                                        />
+                                        {renderPasswordStrength()}
+                                    </Form.Item>
+                                </Col>
+                            )}
                         </Row>
                         </>
                     )}

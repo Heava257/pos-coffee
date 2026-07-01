@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { request } from "@/shared/utils/helper";
 import { useNavigate } from "react-router-dom";
-import { Card, Row, Col, Typography, Select, Table, Badge, Spin, Button, Space, DatePicker, Divider, Tooltip as AntTooltip, Tag, Modal } from "antd";
+import { Card, Row, Col, Typography, Select, Table, Badge, Spin, Button, Space, DatePicker, Divider, Tooltip as AntTooltip, Tag, Modal, Alert } from "antd";
 import {
   MoreOutlined,
   SearchOutlined,
@@ -30,7 +30,7 @@ import {
 import dayjs from "dayjs";
 import { useLanguage, translations } from "@/app/store/language.store";
 import { useProfileStore } from "@/app/store/profileStore";
-import { DollarSign, ShoppingBag, TrendingUp, Wallet, Package, AlertCircle, FileText } from "lucide-react";
+import { DollarSign, ShoppingBag, TrendingUp, Wallet, Package, AlertCircle, FileText, HelpCircle } from "lucide-react";
 import { useReactToPrint } from "react-to-print";
 import PrintZReport from "@/modules/pos/components/PrintZReport";
 
@@ -67,6 +67,7 @@ function HomePage() {
   const [briefingData, setBriefingData] = useState(null);
 
   const [viewStyle, setViewStyle] = useState(1); // 1: Analytical, 2: Operational, 3: Inventory
+  const [showGuide, setShowGuide] = useState(false);
 
   const refZReport = React.useRef(null);
   const handlePrintZReport = useReactToPrint({
@@ -382,10 +383,27 @@ function HomePage() {
   return (
     <div style={{ padding: '0 0 24px 0' }}>
       {/* Header & Date Filter */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <Title level={4} style={{ margin: 0, color: '#1e4a2d', fontWeight: 900 }}>
-            {lang === 'en' ? 'Welcome back' : 'ស្វាគមន៍ការត្រឡប់មកវិញ'}, {profile?.name || 'Partner'}!
+          <Title level={4} style={{ margin: 0, color: '#1e4a2d', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span>{lang === 'en' ? 'Welcome back' : 'ស្វាគមន៍ការត្រឡប់មកវិញ'}, {profile?.name || 'Partner'}!</span>
+            <Button
+              type="text"
+              icon={<HelpCircle size={15} style={{ color: "#1e4a2d", marginRight: 4 }} />}
+              onClick={() => setShowGuide(!showGuide)}
+              style={{
+                background: showGuide ? "rgba(30, 74, 45, 0.15)" : "rgba(30, 74, 45, 0.08)",
+                color: "#1e4a2d",
+                borderRadius: 8,
+                fontWeight: 700,
+                fontSize: 12,
+                display: "inline-flex",
+                alignItems: "center",
+                height: 32,
+              }}
+            >
+              {showGuide ? "លាក់ការណែនាំ" : "របៀបប្រើប្រាស់"}
+            </Button>
           </Title>
           <Text type="secondary">
             {viewStyle === 1 && (lang === 'en' ? "Analytical overview of your business performance." : "ទិដ្ឋភាពទូទៅនៃការវិភាគលើអាជីវកម្មរបស់អ្នក។")}
@@ -393,6 +411,7 @@ function HomePage() {
             {viewStyle === 3 && (lang === 'en' ? "Inventory audit and profitability insights." : "ការធ្វើសវនកម្មស្តុក និងការយល់ដឹងពីប្រាក់ចំណេញ។")}
           </Text>
         </div>
+
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <RangePicker
             value={dates}
@@ -410,6 +429,23 @@ function HomePage() {
           </Button>
         </div>
       </div>
+
+      {showGuide && (
+        <Alert
+          message={<strong>💡 របៀបអានរបាយការណ៍ Dashboard (Dashboard Quick Guide)</strong>}
+          description={
+            <div style={{ fontSize: 13, marginTop: 4, color: '#333' }}>
+              <p style={{ margin: '3px 0' }}>1. <strong>របាយការណ៍សង្ខេប៖</strong> បង្ហាញពីផលចំណេញសុទ្ធ ចំណូល និងចំណាយសរុបក្នុងកំឡុងពេលដែលបងបានជ្រើសរើស។</p>
+              <p style={{ margin: '3px 0' }}>2. <strong>ការប្តូរទិដ្ឋភាព (Change View)៖</strong> ចុចប៊ូតុង Change View ដើម្បីប្តូររវាង៖ <em>ទិដ្ឋភាពហិរញ្ញវត្ថុ (Analytical)</em>, <em>ទិដ្ឋភាពប្រតិបត្តិការលក់ (Operational)</em> ឬ <em>ទិដ្ឋភាពស្តុកទំនិញ (Inventory)</em>។</p>
+              <p style={{ margin: '3px 0' }}>3. <strong>តម្រងកាលបរិច្ឆេទ (Date Filter)៖</strong> បងអាចជ្រើសរើសចន្លោះថ្ងៃខែឆ្នាំដែលចង់មើល ដើម្បីឱ្យតារាង និងទិន្នន័យទាំងអស់ផ្លាស់ប្តូរទៅតាមនោះ។</p>
+            </div>
+          }
+          type="info"
+          closable
+          onClose={() => setShowGuide(false)}
+          style={{ borderRadius: 16, marginBottom: 24, border: '1px solid #bae7ff', background: '#e6f7ff' }}
+        />
+      )}
 
       <Spin spinning={isLoading}>
         {viewStyle === 1 && renderAnalyticalView()}

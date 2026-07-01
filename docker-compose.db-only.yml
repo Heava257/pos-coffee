@@ -1,0 +1,53 @@
+# ============================================================
+# 🐳 Docker - Database Only Setup
+# ─────────────────────────────────────────────────────────────
+# ដំណើរការ MySQL + Redis លើ Docker ប៉ុណ្ណោះ
+# Node.js server នៅដំណើរការលើ Local ដូចធម្មតា
+# ============================================================
+
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: pos_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: coffee_saas
+      MYSQL_USER: dev_user
+      MYSQL_PASSWORD: 88889999
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - pos_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "dev_user", "-p88889999"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: pos_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pos_network
+    command: redis-server --appendonly yes
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  pos_network:
+    driver: bridge

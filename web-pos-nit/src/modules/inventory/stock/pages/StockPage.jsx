@@ -20,6 +20,7 @@ import {
     Divider,
     Empty,
     Tabs,
+    Alert
 } from "antd";
 import { 
     MdInventory, 
@@ -52,6 +53,7 @@ import {
     Cell, PieChart, Pie
 } from 'recharts';
 import { useLanguage, translations } from "@/app/store/language.store";
+import { HelpCircle } from "lucide-react";
 import { useProfileStore } from "@/app/store/profileStore";
 import MainPage from "@/app/layouts/MainPage";
 import { formatDateClient, request } from "@/shared/utils/helper";
@@ -85,6 +87,7 @@ const StockPage = () => {
     const { profile } = useProfileStore();
     const t = translations[lang];
     const [form] = Form.useForm();
+    const [showGuide, setShowGuide] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [state, setState] = useState({
         logs: [],
@@ -713,7 +716,26 @@ const StockPage = () => {
                                                 <MdHistory size={26} style={{ color: COLORS.primary }} />
                                             </div>
                                             <div>
-                                                <Title level={3} style={{ margin: 0, color: COLORS.secondary, letterSpacing: '-0.5px' }}>{t.stock_ledger_audit}</Title>
+                                                <Title level={3} style={{ margin: 0, color: COLORS.secondary, letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                                    <span>{t.stock_ledger_audit}</span>
+                                                    <Button
+                                                        type="text"
+                                                        icon={<HelpCircle size={15} style={{ color: COLORS.primary, marginRight: 4 }} />}
+                                                        onClick={() => setShowGuide(!showGuide)}
+                                                        style={{
+                                                            background: showGuide ? "rgba(0, 98, 65, 0.15)" : "rgba(0, 98, 65, 0.08)",
+                                                            color: COLORS.primary,
+                                                            borderRadius: 8,
+                                                            fontWeight: 700,
+                                                            fontSize: 12,
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            height: 32,
+                                                        }}
+                                                    >
+                                                        {showGuide ? "លាក់ការណែនាំ" : "របៀបប្រើប្រាស់"}
+                                                    </Button>
+                                                </Title>
                                                 <Text type="secondary" style={{ fontSize: 13 }}>{t.stock_ledger_audit_desc}</Text>
                                             </div>
                                         </div>
@@ -738,6 +760,23 @@ const StockPage = () => {
                                         </Button>
                                     </div>
                                 </div>
+
+                                {showGuide && (
+                                    <Alert
+                                        message={<strong>💡 របៀបគ្រប់គ្រងស្តុក និងការកែសម្រួលស្តុក (Inventory & Audit Guide)</strong>}
+                                        description={
+                                            <div style={{ fontSize: 13, marginTop: 4, color: '#333' }}>
+                                                <p style={{ margin: '3px 0' }}>1. <strong>ពិនិត្យចំនួនស្តុក៖</strong> បងអាចពិនិត្យចំនួនស្តុកផលិតផលសម្រេច ឬស្តុកគ្រឿងផ្សំ (Raw Materials) នៅក្នុងតារាងខាងក្រោមបានភ្លាមៗ។</p>
+                                                <p style={{ margin: '3px 0' }}>2. <strong>ការកែសម្រួលស្តុកដោយផ្ទាល់ដៃ (Manual Adjustment)៖</strong> ចុចប៊ូតុង <strong>[Manual Adjustment]</strong> ឬ <strong>[កែសម្រួលស្តុក]</strong> ក្នុងករណីចង់បូកបន្ថែមស្តុក ឬដកស្តុកចេញ (ដូចជាទំនិញខូច ហួសដីឡេ ឬកំពប់ជាដើម) ដោយជ្រើសរើសហេតុផលឱ្យបានច្បាស់លាស់។</p>
+                                                <p style={{ margin: '3px 0' }}>3. <strong>ការធ្វើសវនកម្ម (Physical Audit)៖</strong> ប្រើប្រាស់ផ្ទាំង Physical Audit ដើម្បីផ្ទៀងផ្ទាត់ស្តុកជាក់ស្តែងដែលរាប់បាននៅលើធ្នើរ ធៀបនឹងស្តុកនៅលើប្រព័ន្ធ ដើម្បីស្វែងរកភាពលំអៀង។</p>
+                                            </div>
+                                        }
+                                        type="info"
+                                        closable
+                                        onClose={() => setShowGuide(false)}
+                                        style={{ borderRadius: 16, marginBottom: 24, border: '1px solid #bae7ff', background: '#e6f7ff', width: '100%' }}
+                                    />
+                                )}
 
                                 {/* Filters */}
                                 <div style={{ 

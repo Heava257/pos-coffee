@@ -1,46 +1,44 @@
-const fs = require("fs/promises");
-const path = require("path");
-const util = require("util");
+const fs = require('fs/promises');
+const path = require('path');
+const util = require('util');
+const { randomUUID } = require('crypto'); // built-in, no npm package needed
 
+/**
+ * C-5 FIX: Structured error logger.
+ * - Full error details go ONLY to server-side logs (file + console).
+ * - Client receives only a safe error_id (correlation ID) — no SQL, no stack, no file paths.
+ */
 exports.logError = async (controller, error, res) => {
-  // 1. Detailed console logging (visible in Railway/Production logs)
-  console.error(`🚨 [${controller}] Error Detail:`, util.inspect(error, { depth: null, colors: true }));
+  const errorId = randomUUID();
+  const timestamp = new Date().toISOString();
+
+  // 1. Detailed server-side logging (safe to read in Railway / PM2 logs)
+  const logEntry = `[${timestamp}] [${errorId}] [${controller}]\n${util.inspect(error, { depth: null })}\n\n`;
+  console.error(`🚨 [${errorId}] [${controller}]`, error.message);
 
   try {
-    const logDir = "./logs";
-    try {
-      await fs.access(logDir);
-    } catch {
-      await fs.mkdir(logDir, { recursive: true });
-    } 
-
-    const logPath = path.join(logDir, controller + ".txt");
-    const logMessage = `[${new Date().toISOString()}] ${util.inspect(error, { depth: null })}\n`;
-    await fs.appendFile(logPath, logMessage);
+    const logDir = './logs';
+    try { await fs.access(logDir); } catch { await fs.mkdir(logDir, { recursive: true }); }
+    const logPath = path.join(logDir, 'app.log'); // single rotating log file
+    await fs.appendFile(logPath, logEntry);
   } catch (logErr) {
-    console.error("Critical: Failed to write to log file:", logErr);
+    console.error('[CRITICAL] Failed to write log file:', logErr.message);
   }
 
-  // 2. Return friendly response to client
-  if (res && !res.headersSent) {
-    let friendlyMessage = error?.message || "Something went wrong! Please try again later.";
-    
-    // 🛡️ TRANSLATE TECHNICAL ERRORS
-    if (error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062) {
-      const match = error.sqlMessage?.match(/'([^']*)'/);
-      const value = match ? match[1] : "";
-      friendlyMessage = `Duplicate Entry: '${value}' already exists in our system. Please use a different value.`;
-    } else if (error?.code === 'ER_ROW_IS_REFERENCED_2' || error?.errno === 1451) {
-      friendlyMessage = "Cannot delete this item because it is being used by other records.";
-    }
+  // 2. Friendly user-facing error codes for common DB errors
+  let userMessage = 'Something went wrong. Please try again.';
+  if (error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062) {
+    userMessage = 'This record already exists. Please use a different value.';
+  } else if (error?.code === 'ER_ROW_IS_REFERENCED_2' || error?.errno === 1451) {
+    userMessage = 'Cannot delete — this item is referenced by other records.';
+  }
 
+  // 3. Safe API response — NEVER expose SQL, stack traces, or internal paths
+  if (res && !res.headersSent) {
     res.status(500).json({
-      error: "Internal Error",
-      message: friendlyMessage,
-      technical: error?.message || null,
-      sqlMessage: error?.sqlMessage || null,
-      controller: controller
+      error: 'Internal Server Error',
+      message: userMessage,
+      error_id: errorId, // client can send this ID to support for tracing
     });
   }
-};
-  
+};

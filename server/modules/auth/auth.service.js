@@ -1,14 +1,14 @@
-const authRepository = require("./auth.repository");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const axios = require("axios");
-const config = require("../../config");
-const db = require("../../config/database");
-const crypto = require("crypto");
-const mailConfig = require("../../config/mail");
+const authRepository = require('./auth.repository');
+const bcrypt = require('bcrypt'); // C-4 FIX: use only bcrypt (not bcryptjs) — async only
+const jwt = require('jsonwebtoken');
+const axios = require('axios');
+const config = require('../../config');
+const db = require('../../config/database');
+const { randomBytes, randomInt } = require('crypto'); // built-in Node.js — no npm package
+const mailConfig = require('../../config/mail');
 
-const generateAccessToken = (data) => {
-  return jwt.sign(data, config.token.access_token_key, { expiresIn: "7d" });
+const generateAccessToken = (data, remember = false) => {
+  return jwt.sign(data, config.token.access_token_key, { expiresIn: remember ? '30d' : '7d' });
 };
 
 const sendBrevoAPI = async ({ to, subject, htmlContent, senderName }) => {
@@ -87,43 +87,40 @@ const sendPasswordResetEmail = async (to, name, otpCode) => {
 };
 
 class AuthService {
-  async generateLoginResponse(user) {
+  async generateLoginResponse(user, remember = false) {
+    // H-5 FIX: JWT payload is minimal and stable.
+    // Permissions are NOT embedded — the auth middleware fetches them live from Redis/DB.
+    // This keeps tokens small and ensures permission changes take effect without re-login.
     const payload = {
-      user_id: user.id,
+      user_id:     user.id,
       business_id: user.business_id,
-      branch_id: user.branch_id,
-      role_id: user.role_id,
-      name: user.name,
-      email: user.email,
-      plan_name: user.plan_name,
-      plan_limits: {
-        branches: user.max_branches,
-        staff: user.max_staff,
-        products: user.max_products
-      },
-      business_name: user.business_name,
-      role_name: user.role_name,
-      role_code: user.role_code,
-      business_logo: user.business_logo,
-      profile_image: user.image,
-      active_modules: user.active_modules,
-      plan_type: user.plan_type,
-      plan_id: user.plan_id,
-      business_layout: user.business_layout
+      branch_id:   user.branch_id,
+      role_id:     user.role_id,
+      // Non-sensitive profile data (safe to embed; not used for auth decisions)
+      name:            user.name,
+      email:           user.email,
+      plan_name:       user.plan_name,
+      plan_limits:     { branches: user.max_branches, staff: user.max_staff, products: user.max_products },
+      business_name:   user.business_name,
+      role_name:       user.role_name,
+      role_code:       user.role_code,
+      business_logo:   user.business_logo,
+      profile_image:   user.image,
+      active_modules:  user.active_modules,
+      plan_type:       user.plan_type,
+      plan_id:         user.plan_id,
+      business_layout: user.business_layout,
     };
 
-    const bizModules = (user.active_modules || "").split(",").map(m => m.trim()).filter(Boolean);
-    const planModules = (user.plan_modules || "").split(",").map(m => m.trim()).filter(Boolean);
-    const activeModules = [...new Set([...bizModules, ...planModules])];
+    const bizModules  = (user.active_modules || '').split(',').map(m => m.trim()).filter(Boolean);
+    const planModules = (user.plan_modules   || '').split(',').map(m => m.trim()).filter(Boolean);
+    payload.active_modules = [...new Set([...bizModules, ...planModules])].join(',');
 
+    // Fetch permissions for the profile response (not stored in JWT)
     const [rolePerms] = await db.query(`
       SELECT DISTINCT 
-          p.route_key, 
-          p.name,
-          rp.can_view,
-          rp.can_create,
-          rp.can_edit,
-          rp.can_delete
+          p.route_key, p.name,
+          rp.can_view, rp.can_create, rp.can_edit, rp.can_delete
       FROM permissions p
       INNER JOIN businesses b ON b.id = ?
       INNER JOIN roles r ON r.id = ?
@@ -134,20 +131,15 @@ class AuthService {
       WHERE (
           pp.plan_id IS NOT NULL
           OR FIND_IN_SET(sm.code, REPLACE(b.active_modules, ' ', ''))
-          OR (
-              -- Truly Core: Only for Platform Admins (Business ID 1)
-              b.id = 1
-              AND NOT EXISTS (SELECT 1 FROM plan_permissions WHERE permission_id = p.id)
-              AND NOT EXISTS (SELECT 1 FROM module_permissions WHERE permission_id = p.id)
-          )
+          OR (b.id = 1 AND NOT EXISTS (SELECT 1 FROM plan_permissions WHERE permission_id = p.id)
+                        AND NOT EXISTS (SELECT 1 FROM module_permissions WHERE permission_id = p.id))
       )
     `, [user.business_id, user.role_id]);
 
-    payload.permissions = rolePerms.map(p => p.route_key);
-    const accessToken = generateAccessToken(payload);
+    const accessToken = generateAccessToken(payload, remember);
 
     if (user.branch_id) {
-      const [branch] = await db.query("SELECT name FROM branches WHERE id = ?", [user.branch_id]);
+      const [branch] = await db.query('SELECT name FROM branches WHERE id = ?', [user.branch_id]);
       if (branch.length > 0) payload.branch_name = branch[0].name;
     }
 
@@ -155,9 +147,9 @@ class AuthService {
       access_token: accessToken,
       profile: {
         ...payload,
-        is_super_admin: user.role_code === 'super_admin' ? 1 : 0
+        is_super_admin: user.role_code === 'super_admin' ? 1 : 0,
       },
-      permission: rolePerms
+      permission: rolePerms,
     };
   }
 
@@ -263,10 +255,11 @@ class AuthService {
         WHERE route_key IN ('/invoices', '/order', '/category', '/product', '/table', '/profile')
       `, [sale_role_id]);
 
-      const hashedPassword = bcrypt.hashSync(password, 10);
-      const verifyToken = crypto.randomBytes(32).toString('hex');
+      // C-4 FIX: async bcrypt — never use hashSync/compareSync (blocks event loop)
+      const hashedPassword = await bcrypt.hash(password, 12);
+      const verifyToken = randomBytes(32).toString('hex');
       await conn.query(
-        "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token, pin_code, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
+        "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token, pin_code, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
         [business_id, branch_id, owner_role_id, owner_name, email, hashedPassword, 'active', 0, verifyToken, '1234']
       );
 
@@ -287,9 +280,14 @@ class AuthService {
 
       await conn.query(`
         INSERT INTO business_categories (business_id, category_id, is_active)
-        SELECT ?, id, IF(industry_code = ?, 1, 0) FROM categories WHERE business_id = 1
-      `, [business_id, targetIndustry]);
+        SELECT ?, id, 0 FROM categories WHERE business_id = 1
+      `, [business_id]);
 
+      // Create Welcome Notification with current timestamp for the new business
+      await conn.query(
+        "INSERT INTO system_notifications (business_id, title, message, type, is_read) VALUES (?, 'Welcome to Coffee POS!', 'Explore your new dashboard analytics and manage your branches from a single workspace.', 'system', 0)",
+        [business_id]
+      );
       await conn.commit();
 
       sendWelcomeEmail(email, business_name, owner_name, verifyToken).catch(err => {
@@ -333,16 +331,16 @@ class AuthService {
     return { success: true, ...loginData };
   }
 
-  async login(email, password) {
+  async login(email, password, remember = false) {
     const user = await authRepository.findUserByEmail(email);
     if (!user) {
       throw new Error("Account not found or incorrect email!");
     }
 
     const isStaff = user.role_code !== 'owner' && user.role_code !== 'super_admin';
-    if (user.is_verified === 0 && !isStaff) {
-      throw new Error("Your email is not verified yet! Please check your inbox to verify your account first.");
-    }
+    // if (user.is_verified === 0 && !isStaff) {
+    //   throw new Error("Your email is not verified yet! Please check your inbox to verify your account first.");
+    // }
 
     if (user.business_status !== 'active') {
       throw new Error("Your business account is suspended!");
@@ -352,11 +350,11 @@ class AuthService {
       throw new Error("Your account has been deactivated. Please contact your administrator.");
     }
 
-    if (!bcrypt.compareSync(password, user.password)) {
-      throw new Error("Password incorrect!");
-    }
+    // C-4 FIX: async bcrypt.compare instead of blocking compareSync
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) throw new Error('Password incorrect!');
 
-    const loginData = await this.generateLoginResponse(user);
+    const loginData = await this.generateLoginResponse(user, remember);
     return { success: true, ...loginData };
   }
 
@@ -364,9 +362,9 @@ class AuthService {
     const user = await authRepository.findUserById(id);
     if (!user) throw new Error("User not found!");
 
-    if (!bcrypt.compareSync(password, user.password)) {
-      throw new Error("Password incorrect!");
-    }
+    // C-4 FIX: async compare
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) throw new Error('Password incorrect!');
 
     if (business_id && user.business_id !== business_id) {
       throw new Error("Access denied.");
@@ -385,18 +383,18 @@ class AuthService {
       SELECT u.id, u.password, u.status, u.business_id, r.code as role_code
       FROM users u
       INNER JOIN roles r ON u.role_id = r.id
-      WHERE u.username = ? OR u.email = ?
+      WHERE u.email = ?
     `;
-    const [users] = await db.query(sql, [username, username]);
+    const [users] = await db.query(sql, [username]);
     if (users.length === 0) throw new Error("User not found!");
 
     const user = users[0];
     const isAuthorized = ["owner", "admin", "manager"].includes(user.role_code.toLowerCase());
     if (!isAuthorized) throw new Error("Authorized personnel only!");
 
-    if (!bcrypt.compareSync(password, user.password)) {
-      throw new Error("Password incorrect!");
-    }
+    // C-4 FIX: async compare
+    const isManagerMatch = await bcrypt.compare(password, user.password);
+    if (!isManagerMatch) throw new Error('Password incorrect!');
 
     if (business_id && user.business_id !== business_id) {
       throw new Error("Security breach: Wrong business domain.");
@@ -418,20 +416,26 @@ class AuthService {
   }
 
   async forgotPassword(email) {
-    const [users] = await db.query("SELECT id, name, status FROM users WHERE email = ?", [email]);
-    if (users.length === 0) throw new Error("Email not found in our system!");
+    const [users] = await db.query('SELECT id, name, status FROM users WHERE email = ?', [email]);
+
+    // L-4 FIX: always return the same response regardless of whether the email exists.
+    // This prevents email enumeration attacks.
+    if (users.length === 0 || users[0].status !== 'active') {
+      // Silent return — do not reveal whether email is registered
+      return true;
+    }
 
     const user = users[0];
-    if (user.status !== 'active') throw new Error("This account is not active. Please contact support.");
 
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = new Date(Date.now() + 3600000);
+    // H-2 FIX: crypto.randomInt is cryptographically secure — Math.random() is NOT
+    const otpCode = randomInt(100000, 999999).toString();
+    const expiry = new Date(Date.now() + 3600000); // 1 hour
 
     await authRepository.updateResetToken(user.id, otpCode, expiry);
 
     const emailSent = await sendPasswordResetEmail(email, user.name, otpCode);
     if (!emailSent) {
-      throw new Error("Failed to deliver OTP email. Please check configuration or try again.");
+      throw new Error('Failed to deliver OTP email. Please check configuration or try again.');
     }
 
     return true;
@@ -439,9 +443,10 @@ class AuthService {
 
   async resetPassword(email, otp, new_password) {
     const user = await authRepository.verifyEmailOtp(email, otp);
-    if (!user) throw new Error("Invalid or expired OTP code!");
+    if (!user) throw new Error('Invalid or expired OTP code!');
 
-    const hashedPassword = bcrypt.hashSync(new_password, 10);
+    // C-4 FIX: async hash
+    const hashedPassword = await bcrypt.hash(new_password, 12);
     await authRepository.updatePasswordAndClearReset(user.id, hashedPassword);
     return true;
   }

@@ -1,9 +1,206 @@
 import axios from "axios";
 import { Config } from "@/shared/utils/config";
 import { setServerSatus } from "@/app/store/server.store";
-import { getAcccessToken, getPermission, getGuestToken } from "@/app/store/profile.store";
+import { getAcccessToken, getPermission, getGuestToken, setLogout } from "@/app/store/profile.store";
+import { useLanguage, translations } from "@/app/store/language.store";
+import Swal from "sweetalert2"; // Import SweetAlert2 for premium modals
 import dayjs from "dayjs";
 import { message } from "antd";
+
+/**
+ * Global API Error Alert Handler using SweetAlert2 Modals (EN/KH)
+ * Displays actual error reasons translated into the selected language in a premium pop-up.
+ */
+export const alertAPIError = (err) => {
+  const activeLang = useLanguage.getState().lang || "en";
+  const t = translations[activeLang] || translations["en"];
+  const okText = activeLang === "kh" ? "យល់ព្រម" : "Ok";
+
+  const response = err.response;
+  if (response) {
+    const status = response.status;
+
+    // 1. Parse structured validation errors array (CRUD validation)
+    if (response.data && Array.isArray(response.data.errors)) {
+      let errorListHTML = '<ul style="text-align: left; margin: 15px 0 0 0; padding-left: 20px; font-family: inherit;">';
+      
+      response.data.errors.forEach((e) => {
+        const fieldName = t[e.field] || e.field;
+        let msg = e.message;
+
+        if (activeLang === "kh") {
+          if (msg.includes("is required") || msg.includes("required")) {
+            msg = `សូមបញ្ចូល ${fieldName}`;
+          } else if (msg.includes("must be a valid email")) {
+            msg = `${fieldName} ត្រូវតែជាអុីមែលត្រឹមត្រូវ`;
+          } else if (msg.includes("must be 8") || msg.includes("8-128")) {
+            msg = `${fieldName} ត្រូវតែមានប្រវែងពី ៨ ទៅ ១២៨ តួអក្សរ`;
+          } else if (msg.includes("uppercase letter")) {
+            msg = `${fieldName} ត្រូវតែមានអក្សរធំយ៉ាងតិច ១ តួ`;
+          } else if (msg.includes("at least one number") || msg.includes("one number")) {
+            msg = `${fieldName} ត្រូវតែមានលេខយ៉ាងតិច ១ តួ`;
+          } else if (msg.includes("special character")) {
+            msg = `${fieldName} ត្រូវតែមាននិមិត្តសញ្ញាពិសេសយ៉ាងតិច ១ តួ`;
+          } else if (msg.includes("PIN must be")) {
+            msg = `PIN ត្រូវតែមានពី ៤ ទៅ ៦ ខ្ទង់`;
+          } else if (msg.includes("already in use") || msg.includes("already exists")) {
+            msg = `${fieldName} នេះត្រូវបានប្រើប្រាស់រួចហើយ`;
+          } else if (msg.includes("must be a number") || msg.includes("must be an integer") || msg.includes("must be decimal")) {
+            msg = `${fieldName} ត្រូវតែជាលេខ`;
+          } else if (msg.includes("must be a string")) {
+            msg = `${fieldName} ត្រូវតែជាអក្សរ`;
+          }
+        }
+        errorListHTML += `<li style="margin-bottom: 8px; color: #4b5563; font-size: 14px; line-height: 1.5;">${msg}</li>`;
+      });
+      
+      errorListHTML += '</ul>';
+
+      // Show high-fidelity validation modal
+      Swal.fire({
+        icon: 'error',
+        title: activeLang === "kh" ? "បញ្ហាក្នុងការបញ្ជាក់ទិន្នន័យ" : "Validation Error",
+        html: errorListHTML,
+        confirmButtonText: okText,
+        confirmButtonColor: '#1e4a2d', // Coffee theme color
+        customClass: {
+          popup: 'rounded-2xl',
+        }
+      });
+      return;
+    }
+
+    // 2. Parse general error responses (database constraints, business logic)
+    const rawError = response.data?.message || response.data?.error || "Operation failed";
+    let finalMessage = rawError;
+
+    if (activeLang === "kh") {
+      if (rawError === "Password incorrect!") {
+        finalMessage = "លេខសម្ងាត់មិនត្រឹមត្រូវទេ!";
+      } else if (rawError === "Account not found or incorrect email!") {
+        finalMessage = "រកមិនឃើញគណនី ឬអុីមែលមិនត្រឹមត្រូវទេ!";
+      } else if (rawError === "Your business account is suspended!") {
+        finalMessage = "គណនីអាជីវកម្មរបស់អ្នកត្រូវបានផ្អាក!";
+      } else if (rawError === "Your account has been deactivated. Please contact your administrator.") {
+        finalMessage = "គណនីរបស់អ្នកត្រូវបានបិទ។ សូមទាក់ទងអ្នកគ្រប់គ្រង។";
+      } else if (rawError === "User not found!") {
+        finalMessage = "រកមិនឃើញអ្នកប្រើប្រាស់ទេ!";
+      } else if (rawError === "Access denied.") {
+        finalMessage = "គ្មានសិទ្ធិចូលប្រើប្រាស់ទេ!";
+      } else if (rawError === "Authorized personnel only!") {
+        finalMessage = "សម្រាប់តែបុគ្គលិកដែលមានសិទ្ធិប៉ុណ្ណោះ!";
+      } else if (rawError === "Invalid or expired OTP code!") {
+        finalMessage = "កូដ OTP មិនត្រឹមត្រូវ ឬអស់សុពលភាព!";
+      } else if (rawError.includes("already exists") || rawError.includes("Duplicate entry")) {
+        finalMessage = "ទិន្នន័យនេះមានរួចហើយនៅក្នុងប្រព័ន្ធ។";
+      } else if (rawError.includes("not found")) {
+        finalMessage = "រកមិនឃើញទិន្នន័យនេះទេ។";
+      } else if (rawError.includes("Cannot delete") || rawError.includes("foreign key constraint")) {
+        finalMessage = "មិនអាចលុបបានទេ ព្រោះទិន្នន័យនេះកំពុងប្រើប្រាស់ដោយផ្នែកផ្សេងទៀត។";
+      }
+    }
+
+    const titleText = activeLang === "kh" ? "មានបញ្ហា!" : "Error!";
+    
+    if (status === 429) {
+      let secondsLeft = response.data?.retryAfter || 300;
+      
+      const formatTime = (secs) => {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        if (activeLang === "kh") {
+          return `${m} នាទី ${s} វិនាទី`;
+        }
+        return `${m}m ${s}s`;
+      };
+
+      Swal.fire({
+        icon: 'error',
+        title: titleText,
+        html: `<div style="font-size: 15px; line-height: 1.6;">
+                 ${finalMessage}<br/><br/>
+                 <strong style="color: #ef4444; font-size: 18px;" id="swal-rate-limit-timer">${formatTime(secondsLeft)}</strong>
+               </div>`,
+        showConfirmButton: true,
+        confirmButtonText: okText,
+        confirmButtonColor: '#1e4a2d',
+        customClass: {
+          popup: 'rounded-2xl',
+        },
+        didOpen: () => {
+          const timerEl = document.getElementById('swal-rate-limit-timer');
+          const interval = setInterval(() => {
+            secondsLeft--;
+            if (secondsLeft <= 0) {
+              clearInterval(interval);
+              Swal.close();
+            } else if (timerEl) {
+              timerEl.textContent = formatTime(secondsLeft);
+            }
+          }, 1000);
+
+          const popup = Swal.getPopup();
+          if (popup) popup._timerInterval = interval;
+        },
+        willClose: () => {
+          const popup = Swal.getPopup();
+          const interval = popup ? popup._timerInterval : null;
+          if (interval) clearInterval(interval);
+        }
+      });
+      return;
+    }
+    
+    if (status === 403) {
+      if (response.data?.error === "BUSINESS_SUSPENDED") return;
+      Swal.fire({
+        icon: 'error',
+        title: titleText,
+        text: finalMessage || (activeLang === "kh" ? "ការចូលប្រើត្រូវបានបដិសេធ" : "Access Denied"),
+        confirmButtonText: okText,
+        confirmButtonColor: '#1e4a2d',
+      });
+    } else if (status >= 500) {
+      Swal.fire({
+        icon: 'error',
+        title: titleText,
+        text: (activeLang === "kh" ? "កំហុសម៉ាស៊ីនមេ៖ " : "Server Error: ") + finalMessage,
+        confirmButtonText: okText,
+        confirmButtonColor: '#1e4a2d',
+      });
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: titleText,
+        text: finalMessage,
+        confirmButtonText: okText,
+        confirmButtonColor: '#1e4a2d',
+      });
+    }
+
+  } else if (err.code === "ERR_NETWORK") {
+    const networkMsg = activeLang === "kh"
+      ? "មិនអាចភ្ជាប់ទៅកាន់ម៉ាស៊ីនមេបានទេ។ សូមពិនិត្យមើលថាតើប្រព័ន្ធដំណើរការដែរឬទេ។"
+      : "Cannot connect to server. Please check if the backend is running.";
+    Swal.fire({
+      icon: 'error',
+      title: activeLang === "kh" ? "បញ្ហាការភ្ជាប់បណ្តាញ" : "Connection Error",
+      text: networkMsg,
+      confirmButtonText: okText,
+      confirmButtonColor: '#1e4a2d',
+    });
+  } else {
+    const fallbackMsg = err.message || "Something went wrong";
+    Swal.fire({
+      icon: 'error',
+      title: activeLang === "kh" ? "មានបញ្ហា!" : "Error!",
+      text: fallbackMsg,
+      confirmButtonText: okText,
+      confirmButtonColor: '#1e4a2d',
+    });
+  }
+};
+
 
 export const request = (url = "", method = "get", data = {}) => {
   // 🧠 SMART TOKEN SELECTION: 
@@ -107,34 +304,33 @@ export const request = (url = "", method = "get", data = {}) => {
         var errorMessage = response.data?.message || response.data?.error || "Operation failed";
 
         if (status == 401) {
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("profile");
-          // Only redirect if not already on login/register/etc.
+          setLogout();
           if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/register")) {
              window.location.href = "/login";
           }
         }
         
-        if (status == 403) {
-          message.error(errorMessage || "Access Denied: You don't have permission for this action.");
-        } else if (status >= 500) {
-          message.error("Server Error: " + (errorMessage || "Please try again later."));
-        } else {
-          message.error(errorMessage);
+        if (status == 403 && response.data?.error === "BUSINESS_SUSPENDED") {
+          setLogout();
+          window.location.href = "/login?suspended=true";
+          return Promise.reject({ ...response.data, message: errorMessage, error: true, status: status });
         }
+
+        // Call our new unified multi-language error alert handler
+        alertAPIError(err);
         
         setServerSatus(status);
         return Promise.reject({ ...response.data, message: errorMessage, error: true, status: status });
-      } else if (err.code == "ERR_NETWORK") {
-        setServerSatus("error");
-        const networkMsg = "Cannot connect to server. Please check if the backend is running.";
-        message.error(networkMsg);
-        return Promise.reject({ error: true, message: networkMsg });
       }
+
+      // Handle network or fallback client errors through the alert helper too
+      alertAPIError(err);
       
-      const fallbackMsg = err.message || "Something went wrong";
-      message.error(fallbackMsg);
-      return Promise.reject({ error: true, message: fallbackMsg });
+      if (err.code == "ERR_NETWORK") {
+        setServerSatus("error");
+        return Promise.reject({ error: true, message: err.message });
+      }
+      return Promise.reject({ error: true, message: err.message });
     });
 };
 
@@ -182,40 +378,58 @@ export const updateAddons = (itemId, addonValue, checked, availableAddons) => {
 
 
 export const getIconForCategory = (name) => {
-  if (!name) return '🍽️';
+  if (!name) return 'Coffee';
   const lowerName = name.toLowerCase();
 
-  // Restaurant & Food (New)
-  if (lowerName.includes('seafood') || lowerName.includes('គ្រឿងសមុទ្រ')) return '🦞';
-  if (lowerName.includes('soup') || lowerName.includes('សម្ល')) return '🥣';
-  if (lowerName.includes('stir-fry') || lowerName.includes('ម្ហូបឆា')) return '🍳';
-  if (lowerName.includes('roasted') || lowerName.includes('deep-fried') || lowerName.includes('បំពង')) return '🍗';
-  if (lowerName.includes('salad') || lowerName.includes('spicy') || lowerName.includes('ញាំ')) return '🥗';
-  if (lowerName.includes('dessert') || lowerName.includes('បង្អែម')) return '🍰';
-  if (lowerName.includes('drink') || lowerName.includes('ភេសជ្ជៈ')) return '🥤';
+  // Coffee & Cafe (Specific)
+  if (lowerName.includes('coffee') || lowerName.includes('កាហ្វេ')) return 'Coffee';
+  if (lowerName.includes('tea') || lowerName.includes('តែ')) return 'Leaf';
+  if (lowerName.includes('frappe') || lowerName.includes('blend')) return 'IceCream';
+  if (lowerName.includes('soda') || lowerName.includes('refresher')) return 'GlassWater';
+  if (lowerName.includes('juice') || lowerName.includes('ទឹកផ្លែឈើ')) return 'Citrus';
+  if (lowerName.includes('milk') || lowerName.includes('ដោះគោ')) return 'Milk';
+  if (lowerName.includes('cake') || lowerName.includes('នំខេក')) return 'Cake';
+  if (lowerName.includes('pastry') || lowerName.includes('pastries') || lowerName.includes('bread') || lowerName.includes('នំប៉័ង')) return 'Croissant';
+  if (lowerName.includes('signature') || lowerName.includes('special')) return 'Sparkles';
+  if (lowerName.includes('dessert') || lowerName.includes('បង្អែម')) return 'Cake';
+  if (lowerName.includes('snack') || lowerName.includes('ចម្រុះ')) return 'Cookie';
+
+  // Restaurant & Food
+  if (lowerName.includes('seafood') || lowerName.includes('គ្រឿងសមុទ្រ')) return 'Fish';
+  if (lowerName.includes('soup') || lowerName.includes('សម្ល')) return 'Soup';
+  if (lowerName.includes('stir-fry') || lowerName.includes('ម្ហូបឆា')) return 'Flame';
+  if (lowerName.includes('roasted') || lowerName.includes('deep-fried') || lowerName.includes('បំពង')) return 'ChefHat';
+  if (lowerName.includes('salad') || lowerName.includes('spicy') || lowerName.includes('ញាំ')) return 'Salad';
+  if (lowerName.includes('rice') || lowerName.includes('បាយ')) return 'ChefHat';
+  if (lowerName.includes('drink') || lowerName.includes('ភេសជ្ជៈ')) return 'CupSoda';
 
   // Pharmacy 
-  if (lowerName.includes('medicine') || lowerName.includes('ថ្នាំ')) return '💊';
-  if (lowerName.includes('antibiotics') || lowerName.includes('ថ្នាំផ្សះ')) return '🦠';
-  if (lowerName.includes('supplement') || lowerName.includes('vitamin') || lowerName.includes('វីតាមីន')) return '🧪';
-  if (lowerName.includes('skincare') || lowerName.includes('care') || lowerName.includes('ថែរក្សា')) return '🧴';
-  if (lowerName.includes('medical') || lowerName.includes('equipment') || lowerName.includes('ឧបករណ៍')) return '🩺';
-  if (lowerName.includes('baby') || lowerName.includes('mom') || lowerName.includes('ម្តាយ')) return '👶';
-  if (lowerName.includes('first aid') || lowerName.includes('សង្គ្រោះ')) return '🩹';
+  if (lowerName.includes('medicine') || lowerName.includes('ថ្នាំ')) return 'Pills';
+  if (lowerName.includes('antibiotics') || lowerName.includes('ថ្នាំផ្សះ')) return 'Pills';
+  if (lowerName.includes('supplement') || lowerName.includes('vitamin') || lowerName.includes('វីតាមីន')) return 'Pills';
+  if (lowerName.includes('skincare') || lowerName.includes('care') || lowerName.includes('ថែរក្សា')) return 'Sparkles';
+  if (lowerName.includes('medical') || lowerName.includes('equipment') || lowerName.includes('ឧបករណ៍')) return 'Stethoscope';
+  if (lowerName.includes('baby') || lowerName.includes('mom') || lowerName.includes('ម្តាយ')) return 'Baby';
+  if (lowerName.includes('first aid') || lowerName.includes('សង្គ្រោះ')) return 'Activity';
 
-  // Cafe/Food
-  if (lowerName.includes('coffee')) return '☕';
-  if (lowerName.includes('juice')) return '🧃';
-  if (lowerName.includes('milk')) return '🥛';
-  if (lowerName.includes('snack')) return '🍪';
-  if (lowerName.includes('rice')) return '🍚';
-
-  return '🍽️';
+  return 'Coffee';
 };
 
 export const getColorForCategory = (name) => {
-  if (!name) return '#ff6b35';
+  if (!name) return '#8B4513';
   const lowerName = name.toLowerCase();
+
+  // Cafe/Food Colors
+  if (lowerName.includes('coffee') || lowerName.includes('កាហ្វេ')) return '#8B4513';
+  if (lowerName.includes('tea') || lowerName.includes('តែ')) return '#4CAF50';
+  if (lowerName.includes('frappe') || lowerName.includes('blend')) return '#FF69B4';
+  if (lowerName.includes('soda') || lowerName.includes('refresher')) return '#00BCD4';
+  if (lowerName.includes('juice') || lowerName.includes('ទឹកផ្លែឈើ')) return '#FF9800';
+  if (lowerName.includes('milk') || lowerName.includes('ដោះគោ')) return '#2196F3';
+  if (lowerName.includes('cake') || lowerName.includes('pastry') || lowerName.includes('bread') || lowerName.includes('នំ')) return '#E91E63';
+  if (lowerName.includes('signature') || lowerName.includes('special')) return '#FFD700';
+  if (lowerName.includes('dessert') || lowerName.includes('បង្អែម')) return '#9C27B0';
+  if (lowerName.includes('snack')) return '#795548';
 
   // Restaurant & Food Colors
   if (lowerName.includes('seafood') || lowerName.includes('គ្រឿងសមុទ្រ')) return '#13c2c2';
@@ -223,8 +437,7 @@ export const getColorForCategory = (name) => {
   if (lowerName.includes('stir-fry') || lowerName.includes('ម្ហូបឆា')) return '#fa541c';
   if (lowerName.includes('roasted') || lowerName.includes('deep-fried') || lowerName.includes('បំពង')) return '#faad14';
   if (lowerName.includes('salad') || lowerName.includes('spicy') || lowerName.includes('ញាំ')) return '#52c41a';
-  if (lowerName.includes('dessert') || lowerName.includes('បង្អែម')) return '#eb2f96';
-  if (lowerName.includes('drink') || lowerName.includes('ភេសជ្ជៈ')) return '#597ef7';
+  if (lowerName.includes('rice')) return '#f5222d';
 
   // Pharmacy Colors
   if (lowerName.includes('medicine') || lowerName.includes('ថ្នាំ')) return '#13c2c2';
@@ -234,14 +447,7 @@ export const getColorForCategory = (name) => {
   if (lowerName.includes('medical') || lowerName.includes('equipment')) return '#0958d9';
   if (lowerName.includes('baby') || lowerName.includes('mom')) return '#2f54eb';
 
-  // Cafe/Food Colors
-  if (lowerName.includes('coffee')) return '#8B4513';
-  if (lowerName.includes('juice')) return '#4CAF50';
-  if (lowerName.includes('milk')) return '#2196F3';
-  if (lowerName.includes('snack')) return '#FF9800';
-  if (lowerName.includes('rice')) return '#E91E63';
-
-  return '#ff6b35';
+  return '#8B4513';
 };
 
 //   export const getIconForCategory = (categoryName) => {

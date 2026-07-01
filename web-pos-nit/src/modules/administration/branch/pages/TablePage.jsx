@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space,
-    Typography, Select, Tooltip, Empty, Badge
+    Typography, Select, Tooltip, Empty, Badge,
+    Alert
 } from "antd";
 import {
     PlusOutlined,
@@ -17,6 +18,7 @@ import { request } from "@/shared/utils/helper";
 import { getProfile } from "@/app/store/profile.store";
 
 import { useLanguage, translations } from "@/app/store/language.store";
+import { HelpCircle } from "lucide-react";
 
 const { Title, Text } = Typography;
 
@@ -40,6 +42,7 @@ const TablePage = () => {
     const [selectedTable, setSelectedTable] = useState(null);
     const [form] = Form.useForm();
     const [searchText, setSearchText] = useState("");
+    const [showGuide, setShowGuide] = useState(false);
     const profile = getProfile();
 
     useEffect(() => {
@@ -304,8 +307,28 @@ const TablePage = () => {
                 gap: '20px'
             }}>
                 <div>
-                    <Title level={2} style={{ margin: 0, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: '16px', fontWeight: 800 }}>
-                        <QrcodeOutlined style={{ fontSize: '32px' }} /> {t.table_qr_setup}
+                    <Title level={2} style={{ margin: 0, color: COLORS.darkGreen, display: 'flex', alignItems: 'center', gap: '16px', fontWeight: 800, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <QrcodeOutlined style={{ fontSize: '32px' }} /> {t.table_qr_setup}
+                        </div>
+                        <Button
+                            type="text"
+                            icon={<HelpCircle size={15} style={{ color: COLORS.darkGreen, marginRight: 4 }} />}
+                            onClick={() => setShowGuide(!showGuide)}
+                            style={{
+                                background: showGuide ? "rgba(30, 74, 45, 0.15)" : "rgba(30, 74, 45, 0.08)",
+                                color: COLORS.darkGreen,
+                                borderRadius: 8,
+                                fontWeight: 700,
+                                fontSize: 12,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                height: 32,
+                                marginLeft: 12
+                            }}
+                        >
+                            {showGuide ? "លាក់ការណែនាំ" : "របៀបប្រើប្រាស់"}
+                        </Button>
                     </Title>
                     <Text type="secondary" style={{ fontSize: '14px', letterSpacing: '0.5px' }}>
                         {t.manage_table_qr} • {branches.find(b => b.id === selectedBranch)?.name}
@@ -347,6 +370,23 @@ const TablePage = () => {
                     </Button>
                 </div>
             </div>
+
+            {showGuide && (
+                <Alert
+                    message={<strong>💡 របៀបគ្រប់គ្រងតុអាហារ និង QR Code (Table & QR Setup Guide)</strong>}
+                    description={
+                        <div style={{ fontSize: 13, marginTop: 4, color: '#333' }}>
+                            <p style={{ margin: '3px 0' }}>1. <strong>បង្កើតតុថ្មី៖</strong> ចុចប៊ូតុង <strong>[Add Table]</strong> ឬ <strong>[បន្ថែមតុ]</strong> ដើម្បីបង្កើតឈ្មោះតុ ឬលេខតុសម្រាប់ហាងបង។</p>
+                            <p style={{ margin: '3px 0' }}>2. <strong>QR Code សម្រាប់ភ្ញៀវកម្ម៉ង់៖</strong> ប្រព័ន្ធនឹងបង្កើត QR Code ស្វ័យប្រវត្តិតាមតុនីមួយៗ។ បងអាចចុចប៊ូតុង <strong>[View QR]</strong> ដើម្បីមើល ទាញយក ឬបោះពុម្ពបិទលើតុ ដើម្បីឱ្យភ្ញៀវស្កេនកម្ម៉ង់ដោយខ្លួនឯងបាន។</p>
+                            <p style={{ margin: '3px 0' }}>3. <strong>ស្ថានភាពតុ៖</strong> បងអាចតាមដានស្ថានភាពតុ (Operational / Maintenance) និងចំនួនភ្ញៀវអង្គុយជាក់ស្តែងបានភ្លាមៗ។</p>
+                        </div>
+                    }
+                    type="info"
+                    closable
+                    onClose={() => setShowGuide(false)}
+                    style={{ borderRadius: 16, marginBottom: 32, border: '1px solid #bae7ff', background: '#e6f7ff' }}
+                />
+            )}
 
             {/* Insights Row */}
             <Row gutter={24} style={{ marginBottom: '32px' }}>

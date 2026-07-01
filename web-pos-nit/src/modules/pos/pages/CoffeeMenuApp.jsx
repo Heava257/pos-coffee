@@ -1193,7 +1193,6 @@ const CoffeeMenuApp = () => {
             request("category", "get", { business_id: selectedShop.business_id }),
             request("product", "get", { business_id: selectedShop.business_id, branch_id: selectedShop.id })
           ]);
-          if (cRes?.list) setCategories([{ id: "all", name: "All" }, ...cRes.list]);
           if (pRes?.list) {
             // Sort by rating (calculated or actual) descending
             const withRating = pRes.list.map(p => ({
@@ -1202,6 +1201,20 @@ const CoffeeMenuApp = () => {
             }));
             const sorted = withRating.sort((a, b) => b._rating - a._rating);
             setMenuItems(sorted);
+
+            if (cRes?.list) {
+              const activeCats = cRes.list.filter((c) => {
+                const isActive = Number(c.is_active) === 1;
+                const hasProducts = pRes.list.some((p) => Number(p.category_id) === Number(c.id));
+                return isActive && hasProducts;
+              });
+              setCategories([{ id: "all", name: "All" }, ...activeCats]);
+            }
+          } else {
+            if (cRes?.list) {
+              const activeCats = cRes.list.filter((c) => Number(c.is_active) === 1);
+              setCategories([{ id: "all", name: "All" }, ...activeCats]);
+            }
           }
         } catch { } finally { setLoading(false); }
       };

@@ -22,7 +22,7 @@ class AuthController {
 
   async login(req, res) {
     try {
-      const result = await authService.login(req.body.email, req.body.password);
+      const result = await authService.login(req.body.email, req.body.password, req.body.remember);
       res.json(result);
     } catch (error) {
       logError("auth.login", error, res);
@@ -125,9 +125,10 @@ class AuthController {
         params.push(image);
       }
 
-      if (password && password.trim() !== "") {
-        const hashedPassword = require("bcrypt").hashSync(password, 10);
-        sql += ", password = ?";
+      if (password && password.trim() !== '') {
+        // C-4 FIX: async bcrypt.hash — hashSync blocks the event loop
+        const hashedPassword = await require('bcrypt').hash(password, 12);
+        sql += ', password = ?';
         params.push(hashedPassword);
       }
 

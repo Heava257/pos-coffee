@@ -44,7 +44,7 @@ exports.getList = async (req, res) => {
     const [Top_Sale] = await db.query(topSaleQuery, [business_id, ...(target_branch_id ? [target_branch_id] : []), from_date, to_date]);
 
     const [todaySale] = await db.query(`
-      SELECT COALESCE(SUM(total_amount), 0) as total FROM orders 
+      SELECT COALESCE(SUM(total_amount), 0) as total, COUNT(id) as order_count FROM orders 
       WHERE business_id = ? ${target_branch_id ? 'AND branch_id = ?' : ''} AND DATE(created_at) = ?
     `, [business_id, ...(target_branch_id ? [target_branch_id] : []), today]);
 
@@ -172,6 +172,7 @@ exports.getList = async (req, res) => {
     res.json({
       today_summary: {
         income: Number(todaySale[0].total),
+        order_count: Number(todaySale[0].order_count || 0),
         expense: Number(todayExpense[0].total)
       },
       stock_summary: {

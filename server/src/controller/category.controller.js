@@ -7,7 +7,8 @@ exports.getList = async (req, res) => {
     const business_id = req.business_id || req.query.business_id;
     if (!business_id) return res.json({ list: [] });
     
-    const cacheKey = `categories_biz_${business_id}`;
+    const include_inactive = req.query.all === "1" || req.query.include_inactive === "1";
+    const cacheKey = `categories_biz_${business_id}_all_${include_inactive ? 1 : 0}`;
 
     /*
     // 1. Check Redis Cache
@@ -22,11 +23,39 @@ exports.getList = async (req, res) => {
 
     if (business_id === 1) {
       // Platform Admin sees EVERYTHING for management
-      sql = `SELECT * FROM categories WHERE business_id = 1 ORDER BY id ASC`;
+      sql = `SELECT *, 1 as is_active FROM categories WHERE business_id = 1 ORDER BY id ASC`;
+    } else if (include_inactive) {
+      const [biz] = await db.query(`
+        SELECT mp.code, mp.industry_code 
+        FROM businesses b
+        LEFT JOIN modular_packages mp ON b.package_id = mp.id
+        WHERE b.id = ?
+      `, [business_id]);
+      
+      let industry_code = "coffee_cafe";
+      if (biz.length > 0) {
+        const pkg = biz[0];
+        const code = pkg.code;
+        if (code === "mart" || pkg.industry_code === "retail") {
+          industry_code = "mart";
+        } else {
+          industry_code = pkg.industry_code || code || "coffee_cafe";
+        }
+      }
+
+      sql = `
+        SELECT c.*, 
+               IF(c.business_id = 1, COALESCE(bc.is_active, 0), 1) AS is_active
+        FROM categories c
+        LEFT JOIN business_categories bc ON c.id = bc.category_id AND bc.business_id = ?
+        WHERE (c.business_id = 1 AND c.industry_code = ?) OR (c.business_id = ?)
+        ORDER BY c.id ASC
+      `;
+      params = [business_id, industry_code, business_id];
     } else {
       // Show BOTH and SORT by popularity (order volume)
       sql = `
-        SELECT c.*, 
+        SELECT c.*, 1 as is_active,
                (SELECT COUNT(od.id) 
                 FROM order_details od 
                 JOIN products p ON od.product_id = p.id 
@@ -34,12 +63,12 @@ exports.getList = async (req, res) => {
                 WHERE p.category_id = c.id AND o.business_id = ? AND o.status != 'cancelled'
                ) as total_orders
         FROM categories c
-        LEFT JOIN business_categories bc ON c.id = bc.category_id
+        LEFT JOIN business_categories bc ON c.id = bc.category_id AND bc.business_id = ?
         WHERE (bc.business_id = ? AND bc.is_active = 1) OR (c.business_id = ?)
         GROUP BY c.id
         ORDER BY total_orders DESC, c.name ASC
       `;
-      params = [business_id, business_id, business_id];
+      params = [business_id, business_id, business_id, business_id];
     }
 
     const [list] = await db.query(sql, params);

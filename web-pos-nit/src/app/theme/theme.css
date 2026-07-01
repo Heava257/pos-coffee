@@ -1180,3 +1180,33 @@ textarea:not(.pos-page-root *) {
 .ant-pagination-item-active a {
   color: #ffffff !important;
 }
+
+/* Force dark green gradient background on the subscription info card, overriding the global cream background */
+.subscription-info-card.ant-card {
+  background: linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%) !important;
+  background-color: #1e4a2d !important;
+  border: none !important;
+  box-shadow: 0 8px 24px rgba(30, 74, 45, 0.15) !important;
+  color: #ffffff !important;
+}
+
+/* Force dark grey gradient background on the platform control card for Super Admins */
+.platform-control-card.ant-card {
+  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%) !important;
+  background-color: #0f2027 !important;
+  border: none !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+  color: #ffffff !important;
+}
+
+/* Force dark green gradient background on the MyPlanPage current plan card */
+.current-plan-card {
+  background: linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%) !important;
+  background-color: #1e4a2d !important;
+  color: #ffffff !important;
+}
+
+/* Force semi-transparent overlay background for the remaining days badge */
+.days-remaining-badge {
+  background: rgba(255, 255, 255, 0.1) !important;
+}

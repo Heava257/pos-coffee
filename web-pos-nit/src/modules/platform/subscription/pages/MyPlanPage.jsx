@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { request } from "@/shared/utils/helper";
 import { Config } from "@/shared/utils/config";
 import { useLanguage, translations } from "@/app/store/language.store";
+import { getAcccessToken } from "@/app/store/profile.store";
 import QRCode from 'react-qr-code';
 import { Image as AntImage } from 'antd'; // Rename to avoid conflict with potential other Image components
 
@@ -171,7 +172,7 @@ function MyPlanPage() {
     };
 const handleDownloadInvoice = async (tranId) => {
     try {
-        const token = localStorage.getItem("access_token");
+        const token = getAcccessToken();
         const response = await fetch(
             `${Config.base_url}payment/invoice/${tranId}`,
             {
@@ -338,10 +339,9 @@ const handleDownloadInvoice = async (tranId) => {
                         {/* Plan Card */}
                         <Col xs={24} lg={10}>
                             <div
+                                className="current-plan-card"
                                 style={{
                                     borderRadius: "24px",
-                                    background: "linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)",
-                                    color: "white",
                                     boxShadow: "0 10px 30px rgba(30,74,45,0.2)",
                                     height: "100%",
                                     padding: "24px",
@@ -383,12 +383,14 @@ const handleDownloadInvoice = async (tranId) => {
                                     </Row>
 
                                     {daysLeft !== null && (
-                                        <div style={{
-                                            background: "rgba(255,255,255,0.1)",
-                                            borderRadius: "12px",
-                                            padding: "10px 16px",
-                                            textAlign: "center",
-                                        }}>
+                                        <div 
+                                            className="days-remaining-badge"
+                                            style={{
+                                                borderRadius: "12px",
+                                                padding: "10px 16px",
+                                                textAlign: "center",
+                                            }}
+                                        >
                                             <Text style={{ color: isExpired ? "#ff6b6b" : "#c0a060", fontWeight: 700 }}>
                                                 {isExpired ? `${t.expired_label} ${Math.abs(daysLeft)} ${t.days_ago}` : `${daysLeft} ${t.days_remaining}`}
                                             </Text>

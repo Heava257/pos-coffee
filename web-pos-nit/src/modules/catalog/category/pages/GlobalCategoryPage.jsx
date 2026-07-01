@@ -1,3 +1,4 @@
+import * as Lucide from "lucide-react";
 import {
     Table, Button, Card, Row, Col, Input, 
     Modal, Form, message, Tag, Space, 
@@ -17,7 +18,7 @@ import {
     CameraOutlined,
     UploadOutlined
 } from "@ant-design/icons";
-import { request } from "@/shared/utils/helper";
+import { request, getIconForCategory, getColorForCategory } from "@/shared/utils/helper";
 import { useEffect, useState } from "react";
 
 const { Title, Text } = Typography;
@@ -144,22 +145,27 @@ const GlobalCategoryPage = () => {
             title: "Category Preview",
             dataIndex: "name",
             key: "name",
-            render: (text, record) => (
-                <Space size="middle">
-                    <Avatar 
-                        src={record.image} 
-                        size={50} 
-                        shape="square" 
-                        icon={<CoffeeOutlined />} 
-                        style={{ background: '#f5f5f5', border: '1px solid #eee' }}
-                    />
-                    <div>
-                        <Text strong style={{ fontSize: '16px', color: '#1e4a2d' }}>{text}</Text>
-                        <br />
-                        <Text type="secondary" style={{ fontSize: '11px' }}>ID: CAT-{record.id.toString().padStart(3, '0')}</Text>
-                    </div>
-                </Space>
-            )
+            render: (text, record) => {
+                const iconName = getIconForCategory(text);
+                const IconComponent = Lucide[iconName] || Lucide.Coffee;
+                const iconColor = getColorForCategory(text) || (record.industry_code === 'pharmacy' ? '#08979c' : '#1e4a2d');
+                return (
+                    <Space size="middle">
+                        <div style={{
+                            width: 44, height: 44, borderRadius: 10,
+                            background: `${iconColor}15`, color: iconColor,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <IconComponent size={22} />
+                        </div>
+                        <div>
+                            <Text strong style={{ fontSize: '16px', color: '#1e4a2d' }}>{text}</Text>
+                            <br />
+                            <Text type="secondary" style={{ fontSize: '11px' }}>ID: CAT-{record.id.toString().padStart(3, '0')}</Text>
+                        </div>
+                    </Space>
+                );
+            }
         },
         {
             title: "Product Config Template (JSON)",
@@ -171,8 +177,8 @@ const GlobalCategoryPage = () => {
                             record.industry_code === 'pharmacy' ? 'blue' : 
                             record.industry_code === 'restaurant' ? 'orange' :
                             record.industry_code === 'retail' ? 'green' : 'gold'
-                        } style={{ borderRadius: 20, fontWeight: 700, textTransform: 'uppercase' }}>
-                            📦 {record.industry_code?.replace('_', ' ') || 'COFFEE CAFE'}
+                        } style={{ borderRadius: 20, fontWeight: 700, textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Lucide.Package size={12} /> {record.industry_code?.replace('_', ' ') || 'COFFEE CAFE'}
                         </Tag>
                     </div>
                     <ConfigPreview label="Moods" items={record.default_moods} color="blue" />
@@ -269,10 +275,10 @@ const GlobalCategoryPage = () => {
 
                                 <Form.Item name="industry_code" label="Industry Package / កញ្ចប់វិស័យ" rules={[{ required: true }]}>
                                     <Select size="large" placeholder="Select Industry Package">
-                                        <Select.Option value="coffee_cafe">☕ Coffee & Cafe</Select.Option>
-                                        <Select.Option value="restaurant">🍽️ Restaurant & Dining</Select.Option>
-                                        <Select.Option value="pharmacy">💊 Pharmacy & Medical</Select.Option>
-                                        <Select.Option value="retail">🛒 Retail & Mart</Select.Option>
+                                        <Select.Option value="coffee_cafe">Coffee & Cafe</Select.Option>
+                                        <Select.Option value="restaurant">Restaurant & Dining</Select.Option>
+                                        <Select.Option value="pharmacy">Pharmacy & Medical</Select.Option>
+                                        <Select.Option value="retail">Retail & Mart</Select.Option>
                                     </Select>
                                 </Form.Item>
                                 

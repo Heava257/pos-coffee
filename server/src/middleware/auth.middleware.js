@@ -32,6 +32,18 @@ const authMiddleware = (permission_name) => {
             req.branch_id = Number(decoded.branch_id);
             req.role_id = Number(decoded.role_id);
             req.auth = decoded;
+
+            // strict business suspension check
+            if (req.business_id && req.business_id !== 1) {
+                const [bizRow] = await db.query("SELECT status FROM businesses WHERE id = ?", [req.business_id]);
+                if (bizRow.length > 0 && bizRow[0].status === 'suspended') {
+                    return res.status(403).json({
+                        message: "Your business account is suspended!",
+                        error: "BUSINESS_SUSPENDED"
+                    });
+                }
+            }
+
             let rows = [];
 
             // 🚀 GUEST ACCESS BYPASS: If no role_id but has guest permissions in token

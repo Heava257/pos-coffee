@@ -24,8 +24,8 @@ import MainPage from "@/app/layouts/MainPage";
 import { configStore } from "@/app/store/configStore";
 import { Config } from "@/shared/utils/config";
 import jsPDF from "jspdf";
-import { useReactToPrint } from "react-to-print";
 import dayjs from "dayjs";
+import { useProfileStore } from "@/app/store/profileStore";
 
 const { Title, Text } = Typography;
 
@@ -44,6 +44,7 @@ const COLORS = {
 };
 
 function Top_Sales() {
+  const profile = useProfileStore(s => s.profile);
   const { config } = configStore();
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -81,16 +82,6 @@ function Top_Sales() {
       revenue: Number(item.total_sale_amount)
     }));
   }, [list]);
-
-  const handlePrint = useReactToPrint({
-    content: () => printComponentRef.current,
-    documentTitle: "Top Sales Intelligence Report",
-    onBeforeGetContent: () => {
-      setLoading(true);
-      return Promise.resolve();
-    },
-    onAfterPrint: () => setLoading(false),
-  });
 
   const columns = [
     {
@@ -187,14 +178,14 @@ function Top_Sales() {
 
   return (
     <MainPage loading={loading}>
-      <div style={{ 
+      <div className="print-layout-container" style={{ 
         padding: '12px 24px 24px', 
         background: COLORS.background, 
         minHeight: '100vh',
         animation: 'fadeIn 0.8s ease-out'
       }}>
         {/* --- TOP BAR --- */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
+        <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32 }}>
           <div>
             <Space align="center" style={{ marginBottom: 8 }}>
               <div style={{ 
@@ -223,7 +214,7 @@ function Top_Sales() {
             <Button 
               type="primary" 
               icon={<PrinterOutlined />} 
-              onClick={handlePrint}
+              onClick={() => window.print()}
               style={{ 
                 borderRadius: 12, height: 42, fontWeight: 700,
                 background: COLORS.textPrimary, border: 'none', padding: '0 20px'
@@ -243,7 +234,7 @@ function Top_Sales() {
         </div>
 
         {/* --- HERO KPI CARDS --- */}
-        <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
+        <Row className="no-print" gutter={[24, 24]} style={{ marginBottom: 32 }}>
           <Col xs={24} lg={16}>
             <Card style={{ borderRadius: 28, border: 'none', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', overflow: 'hidden' }}>
               <Row gutter={24} align="middle">
@@ -303,7 +294,8 @@ function Top_Sales() {
         </Row>
 
         {/* --- MAIN ANALYTICS VIEW --- */}
-        {viewType === "analytics" ? (
+        <div className="no-print">
+          {viewType === "analytics" ? (
           <Row gutter={[24, 24]}>
             <Col span={24}>
               <Card style={{ borderRadius: 32, border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.05)', padding: 12 }}>
@@ -345,54 +337,104 @@ function Top_Sales() {
             />
           </Card>
         )}
+      </div>
 
-        {/* --- PRINT TEMPLATE (HIDDEN) --- */}
-        <div style={{ display: "none" }}>
-          <div ref={printComponentRef} style={{ padding: 40, fontFamily: 'Arial, sans-serif' }}>
-            <div style={{ textAlign: 'center', marginBottom: 40 }}>
-              <h1 style={{ color: COLORS.secondary, margin: 0, fontSize: 28 }}>Best Sellers Intelligence Report</h1>
-              <p style={{ color: '#666' }}>Generated on {dayjs().format('MMMM DD, YYYY HH:mm')}</p>
-            </div>
-            <Row gutter={24} style={{ marginBottom: 30 }}>
-              <Col span={8}>
-                <div style={{ padding: 20, border: '1px solid #eee', borderRadius: 10, textAlign: 'center' }}>
-                  <h4 style={{ margin: 0, color: '#888' }}>TOTAL REVENUE</h4>
-                  <h2 style={{ margin: '10px 0 0', color: COLORS.secondary }}>${totals.revenue.toLocaleString()}</h2>
-                </div>
-              </Col>
-              <Col span={8}>
-                <div style={{ padding: 20, border: '1px solid #eee', borderRadius: 10, textAlign: 'center' }}>
-                  <h4 style={{ margin: 0, color: '#888' }}>TOTAL ITEMS</h4>
-                  <h2 style={{ margin: '10px 0 0', color: COLORS.secondary }}>{list.length}</h2>
-                </div>
-              </Col>
-              <Col span={8}>
-                <div style={{ padding: 20, border: '1px solid #eee', borderRadius: 10, textAlign: 'center' }}>
-                  <h4 style={{ margin: 0, color: '#888' }}>AVG REVENUE</h4>
-                  <h2 style={{ margin: '10px 0 0', color: COLORS.secondary }}>${totals.avg.toFixed(2)}</h2>
-                </div>
-              </Col>
-            </Row>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 20 }}>
-              <thead style={{ background: '#f8fafc' }}>
-                <tr>
-                  <th style={{ padding: 12, textAlign: 'left', borderBottom: '2px solid #eee' }}>Rank</th>
-                  <th style={{ padding: 12, textAlign: 'left', borderBottom: '2px solid #eee' }}>Product Name</th>
-                  <th style={{ padding: 12, textAlign: 'left', borderBottom: '2px solid #eee' }}>Category</th>
-                  <th style={{ padding: 12, textAlign: 'right', borderBottom: '2px solid #eee' }}>Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((item, index) => (
-                  <tr key={index}>
-                    <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>#{index + 1}</td>
-                    <td style={{ padding: 12, borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{item.product_name}</td>
-                    <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>{item.category_name}</td>
-                    <td style={{ padding: 12, borderBottom: '1px solid #eee', textAlign: 'right' }}>${Number(item.total_sale_amount).toLocaleString()}</td>
+        {/* 🖨️ Printable Header (Visible ONLY during print) */}
+        <div className="print-header" style={{ display: 'none', marginBottom: '20px', fontFamily: 'Inter, sans-serif' }}>
+          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+            <h2 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: 'bold', textTransform: 'uppercase', color: '#000' }}>
+              {profile?.business_name || 'IT SRUK SRAE'}
+            </h2>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: 'bold', color: '#333' }}>
+              របាយការណ៍ទំនិញលក់ដាច់បំផុត (BEST SELLERS REPORT)
+            </h3>
+          </div>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '12px' }}>
+            <tbody>
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', width: '20%' }}>BUSINESS NAME</td>
+                <td style={{ border: '1px solid #000', padding: '8px', width: '30%' }}>{profile?.business_name || 'IT SRUK SRAE'}</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', width: '20%' }}>REPORT TYPE</td>
+                <td style={{ border: '1px solid #000', padding: '8px', width: '30%', fontWeight: 'bold' }}>BEST SELLERS REPORT</td>
+              </tr>
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>BRANCH / ADDRESS</td>
+                <td style={{ border: '1px solid #000', padding: '8px' }}>{profile?.branch_name || 'MAIN BRANCH'} {profile?.branch_address && `(${profile.branch_address})`}</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>DATE GENERATED</td>
+                <td style={{ border: '1px solid #000', padding: '8px' }}>{dayjs().format("DD/MM/YYYY HH:mm")}</td>
+              </tr>
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>TOTAL REVENUE</td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', color: '#1e4a2d', fontSize: '13px' }}>
+                  ${totals.revenue?.toLocaleString(undefined, { minimumFractionDigits: 2 })} ({(totals.revenue * 4100).toLocaleString()}៛)
+                </td>
+                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>TOTAL ITEMS</td>
+                <td style={{ border: '1px solid #000', padding: '8px' }}>{list.length} Items (Avg: ${totals.avg?.toFixed(2)}/item)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* 🖨️ Printable Table (Visible ONLY during print) */}
+        <div className="print-table-container" style={{ display: 'none', marginBottom: '20px', fontFamily: 'Inter, sans-serif' }}>
+          <h3 style={{ margin: '20px 0 10px 0', fontSize: '15px', fontWeight: 'bold', color: '#000' }}>Detailed Product Performance</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+            <thead>
+              <tr style={{ background: '#f1f5f9' }}>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', fontWeight: 'bold', width: '80px' }}>RANK</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>PRODUCT NAME</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>CATEGORY</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', fontWeight: 'bold', width: '120px' }}>SHARE</th>
+                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'right', fontWeight: 'bold', width: '180px' }}>REVENUE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((item, idx) => {
+                const pct = ((Number(item.total_sale_amount) / (totals.revenue || 1)) * 100).toFixed(1);
+                return (
+                  <tr key={idx}>
+                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>#{idx + 1}</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>{item.product_name}</td>
+                    <td style={{ border: '1px solid #000', padding: '8px' }}>{item.category_name?.toUpperCase()}</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{pct}%</td>
+                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right' }}>
+                      <div style={{ fontWeight: 'bold' }}>${Number(item.total_sale_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div style={{ fontSize: '10px', color: '#555' }}>{(Number(item.total_sale_amount) * 4100).toLocaleString()} ៛</div>
+                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                );
+              })}
+              <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
+                <td style={{ border: '1px solid #000', padding: '8px' }} colSpan={3}>TOTAL BUSINESS REVENUE</td>
+                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>100%</td>
+                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right' }}>
+                  <div style={{ fontWeight: 'bold' }}>${totals.revenue?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  <div style={{ fontSize: '10px', color: '#555' }}>{(totals.revenue * 4100).toLocaleString()} ៛</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* 🖨️ Printable Footer (Visible ONLY during print) */}
+        <div className="print-footer" style={{ display: 'none', marginTop: '20px', fontFamily: 'Inter, sans-serif', pageBreakInside: 'avoid' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 50px 0 50px', marginTop: '10px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '13px', display: 'block', fontWeight: 700, color: '#000' }}>រៀបចំដោយ (Prepared By)</span>
+              <div style={{ height: '35px' }}></div>
+              <span style={{ fontSize: '12px', display: 'block', color: '#000' }}>..........................................</span>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '13px', display: 'block', fontWeight: 700, color: '#000' }}>ពិនិត្យ និងអនុម័តដោយ (Approved By)</span>
+              <div style={{ height: '35px' }}></div>
+              <span style={{ fontSize: '12px', display: 'block', color: '#000' }}>..........................................</span>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid #000', padding: '8px 0', display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginTop: '15px' }}>
+            <div>📍 {profile?.branch_address || 'Phnom Penh, Cambodia'}</div>
+            <div>បោះពុម្ពដោយប្រព័ន្ធ POS៖ {dayjs().format("DD/MM/YYYY HH:mm")}</div>
           </div>
         </div>
       </div>
@@ -403,7 +445,43 @@ function Top_Sales() {
           to { opacity: 1; transform: translateY(0); }
         }
         @media print {
-          .ant-main-page-header, .ant-btn, .ant-segmented {
+          .print-layout-container {
+            min-height: auto !important;
+            height: auto !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .print-header {
+            display: block !important;
+          }
+          .print-table-container {
+            display: block !important;
+          }
+          .print-footer {
+            display: block !important;
+          }
+          /* Reset page margins and body */
+          body, html, .ant-layout, .admin-body, .ant-layout-content, .admin-layout-content {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            box-shadow: none !important;
+          }
+          .ant-layout-sider,
+          .ant-layout-header,
+          .admin-header,
+          .admin-sider,
+          header,
+          aside {
+            display: none !important;
+          }
+          .ant-layout-footer,
+          footer {
             display: none !important;
           }
         }

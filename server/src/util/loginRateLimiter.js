@@ -13,7 +13,9 @@ const loginRateLimiter = rateLimit({
   }),
   keyGenerator: (req) => req.ip,
   handler: (req, res, next, options) => {
+    const retryAfter = req.rateLimit.resetTime ? Math.ceil((req.rateLimit.resetTime.getTime() - Date.now()) / 1000) : 300;
     return res.status(options.statusCode).json({
+       retryAfter: retryAfter,
        message: "គណនីរបស់អ្នកត្រូវបានផ្អាកជាបណ្ដោះអាសន្ន ដោយសារព្យាយាម Login ខុសច្រើនដង។ សូមរងចាំ ៥ នាទី!"
     });
   }

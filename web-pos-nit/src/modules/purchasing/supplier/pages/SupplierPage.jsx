@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { request } from "@/shared/utils/helper";
 import MainPage from "@/app/layouts/MainPage";
-import { Button, Form, Input, message, Modal, Space, Table } from "antd";
+import { Button, Form, Input, message, Modal, Space, Table, Alert } from "antd";
 import dayjs from "dayjs";
 import { MdOutlineCreateNewFolder } from "react-icons/md";
 import { useLanguage, translations } from "@/app/store/language.store";
+import { HelpCircle } from "lucide-react";
 
 function SupplierPage() {
   const { lang } = useLanguage();
   const t = translations[lang];
   const [form] = Form.useForm();
+  const [showGuide, setShowGuide] = useState(false);
   const [state, setState] = useState({
     list: [],
     loading: false,
@@ -110,8 +112,27 @@ function SupplierPage() {
   return (
     <MainPage loading={state.loading}>
       <div className="pageHeader">
-        <Space>
-          <div style={{ fontWeight: 600, fontSize: 18 }}>{t.supplier_list}</div>
+        <Space style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+          <div style={{ fontWeight: 600, fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>{t.supplier_list}</span>
+            <Button
+              type="text"
+              icon={<HelpCircle size={15} style={{ color: "#2d6a42", marginRight: 4 }} />}
+              onClick={() => setShowGuide(!showGuide)}
+              style={{
+                background: showGuide ? "rgba(45, 106, 66, 0.15)" : "rgba(45, 106, 66, 0.08)",
+                color: "#2d6a42",
+                borderRadius: 8,
+                fontWeight: 700,
+                fontSize: 12,
+                display: "inline-flex",
+                alignItems: "center",
+                height: 32,
+              }}
+            >
+              {showGuide ? "លាក់ការណែនាំ" : "របៀបប្រើប្រាស់"}
+            </Button>
+          </div>
           <Input.Search
             onChange={(value) =>
               setState((p) => ({ ...p, txtSearch: value.target.value }))
@@ -121,10 +142,27 @@ function SupplierPage() {
             placeholder={t.search}
           />
         </Space>
-        <Button type="primary" onClick={openModal} icon={<MdOutlineCreateNewFolder />}>
+        <Button type="primary" className="tour-supplier-add-btn" onClick={openModal} icon={<MdOutlineCreateNewFolder />}>
           {t.add_new}
         </Button>
       </div>
+
+      {showGuide && (
+        <Alert
+          message={<strong>💡 របៀបគ្រប់គ្រងអ្នកផ្គត់ផ្គង់ (Supplier Directory Guide)</strong>}
+          description={
+            <div style={{ fontSize: 13, marginTop: 4, color: '#333' }}>
+              <p style={{ margin: '3px 0' }}>1. <strong>ចុះឈ្មោះអ្នកលក់ដុំ (Create Supplier)៖</strong> ចុចប៊ូតុង <strong>[+ Create New]</strong> ឬ <strong>[បង្កើតថ្មី]</strong> ដើម្បីបញ្ចូលព័ត៌មានអ្នកលក់ ឬដៃគូផ្គត់ផ្គង់វត្ថុធាតុដើមឱ្យអាជីវកម្មរបស់បង (ដូចជាឈ្មោះ លេខទូរស័ព្ទ អ៊ីមែល និងអាសយដ្ឋាន)។</p>
+              <p style={{ margin: '3px 0' }}>2. <strong>ការស្វែងរក និងទំនាក់ទំនង៖</strong> បងអាចស្វែងរកអ្នកផ្គត់ផ្គង់តាមឈ្មោះ ឬលេខកូដ និងទូរស័ព្ទទៅពួកគេដោយផ្ទាល់នៅពេលដែលស្តុកទំនិញជិតអស់។</p>
+              <p style={{ margin: '3px 0' }}>3. <strong>តំណភ្ជាប់ទៅការទិញចូល (Purchase linkage)៖</strong> ព័ត៌មានអ្នកផ្គត់ផ្គង់ដែលបានបង្កើត នឹងបង្ហាញឱ្យជ្រើសរើសនៅពេលបងបង្កើតប័ណ្ណទិញចូលស្តុក (Purchase Orders)។</p>
+            </div>
+          }
+          type="info"
+          closable
+          onClose={() => setShowGuide(false)}
+          style={{ borderRadius: 16, marginBottom: 24, border: '1px solid #bae7ff', background: '#e6f7ff' }}
+        />
+      )}
       <Modal
         open={state.visible}
         title={<b>{form.getFieldValue("id") ? t.edit_supplier : t.add_new_supplier}</b>}

@@ -100,6 +100,16 @@ const PlanPage = () => {
                 const v = res.settings[key];
                 cleaned[key] = (v === "null" || v === "undefined") ? "" : v;
             });
+            if (cleaned.landing_page) {
+                try {
+                    const parsed = JSON.parse(cleaned.landing_page);
+                    Object.keys(parsed).forEach(k => {
+                        cleaned[`landing_${k}`] = parsed[k];
+                    });
+                } catch(e) {
+                    console.error(e);
+                }
+            }
             setSystemSettings(cleaned);
             systemForm.setFieldsValue(cleaned);
             if (cleaned.payway_khqr_image) {
@@ -117,8 +127,19 @@ const PlanPage = () => {
     const handleSaveSystemSettings = async (values) => {
         setSysLoading(true);
         const formData = new FormData();
+        
+        // Construct the landing_page JSON
+        const landingKeys = ['heroTitle', 'heroSubtext', 'primaryCTA', 'secondaryCTA', 'promoMart', 'promoRx', 'promoResto', 'telegram', 'phone', 'navLinks'];
+        const landingObj = {};
+        landingKeys.forEach(k => {
+            landingObj[k] = values[`landing_${k}`] || "";
+        });
+        formData.append("landing_page", JSON.stringify(landingObj));
+
         Object.keys(values).forEach(key => {
-            if (values[key] !== undefined) formData.append(key, values[key]);
+            if (values[key] !== undefined && !key.startsWith("landing_")) {
+                formData.append(key, values[key]);
+            }
         });
 
         if (fileList.length > 0 && fileList[0].originFileObj) {
@@ -129,7 +150,7 @@ const PlanPage = () => {
 
         const res = await request("system-settings", "put", formData);
         if (res && res.success) {
-            message.success("Master payment settings updated!");
+            message.success("System settings updated!");
             fetchSystemSettings();
         }
         setSysLoading(false);
@@ -511,6 +532,90 @@ const PlanPage = () => {
                                     </div>
                                 </Space>
                             </div>
+                        </div>
+                    </TabPane>
+
+                    <TabPane
+                        tab={<span><MonitorOutlined />Landing Page Setup</span>}
+                        key="landing_page_setup"
+                    >
+                        <div style={{ padding: '0 10px' }}>
+                            <div style={{ marginBottom: 20 }}>
+                                <Title level={4}>Landing Page Customization</Title>
+                                <Text type="secondary">Customize the public landing page title, subtext, promotions and support details.</Text>
+                            </div>
+
+                            <Card style={{ borderRadius: 16, border: '1px solid #f0f0f0', background: '#fdfdfd' }}>
+                                <Form form={systemForm} layout="vertical" onFinish={handleSaveSystemSettings}>
+                                    <Row gutter={24}>
+                                        <Col span={24}>
+                                            <Form.Item name="landing_navLinks" label="Navigation Menus (Comma Separated)" tooltip="The links shown in the top header (e.g. Home, Solutions, Features, Pricing, Resources, Company)">
+                                                <Input placeholder="Home, Solutions, Features, Pricing, Resources, Company" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={24}>
+                                            <Form.Item name="landing_heroTitle" label="Hero Title" tooltip="Main headline shown on the landing page">
+                                                <Input.TextArea rows={3} placeholder="Run Your Business Smarter, Faster, Better" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={24}>
+                                            <Form.Item name="landing_heroSubtext" label="Hero Subtext" tooltip="The paragraph description under the main headline">
+                                                <Input.TextArea rows={3} placeholder="One platform to manage POS, ERP, HRM, CRM..." />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={12}>
+                                            <Form.Item name="landing_primaryCTA" label="Primary CTA (Button)" tooltip="Main action button text (e.g. Get Started Free)">
+                                                <Input placeholder="Get Started Free" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={12}>
+                                            <Form.Item name="landing_secondaryCTA" label="Secondary CTA (Button)" tooltip="Secondary action button text (e.g. Watch Demo)">
+                                                <Input placeholder="Watch Demo" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={24}>
+                                            <Divider orientation="left" style={{ fontSize: 13, color: '#999' }}>Discount & Promotion Codes</Divider>
+                                        </Col>
+                                        <Col span={8}>
+                                            <Form.Item name="landing_promoMart" label="Promo Code (Mart)" tooltip="Promo code for Mart business package">
+                                                <Input placeholder="e.g. SROKSRE-MART-20" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={8}>
+                                            <Form.Item name="landing_promoRx" label="Promo Code (Pharmacy)" tooltip="Promo code for Pharmacy business package">
+                                                <Input placeholder="e.g. SROKSRE-RX-15" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={8}>
+                                            <Form.Item name="landing_promoResto" label="Promo Code (Restaurant)" tooltip="Promo code for Restaurant business package">
+                                                <Input placeholder="e.g. SROKSRE-RESTO-12" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={24}>
+                                            <Divider orientation="left" style={{ fontSize: 13, color: '#999' }}>Support & Contact Info</Divider>
+                                        </Col>
+                                        <Col span={12}>
+                                            <Form.Item name="landing_telegram" label="Telegram Username/Link" tooltip="Support telegram contact (e.g. @yourname)">
+                                                <Input placeholder="e.g. @growme_support" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col span={12}>
+                                            <Form.Item name="landing_phone" label="Support Phone Number" tooltip="Support phone number contact">
+                                                <Input placeholder="e.g. +855 081 257 XXX" />
+                                            </Form.Item>
+                                        </Col>
+                                    </Row>
+                                    <Button
+                                        type="primary"
+                                        htmlType="submit"
+                                        loading={sysLoading}
+                                        icon={<CheckCircleOutlined />}
+                                        style={{ height: 40, borderRadius: 8, background: '#1e4a2d' }}
+                                    >
+                                        Save Landing Page Configuration
+                                    </Button>
+                                </Form>
+                            </Card>
                         </div>
                     </TabPane>
                 </Tabs>

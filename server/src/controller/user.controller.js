@@ -132,7 +132,8 @@ exports.register = async (req, res) => {
 
             if (password && password !== "") {
                 sql += ", password=?";
-                params.push(bcrypt.hashSync(password, 10));
+                const hashedPassword = await bcrypt.hash(password, 12);
+                params.push(hashedPassword);
             }
 
             sql += " WHERE id=? AND business_id=?";
@@ -155,7 +156,7 @@ exports.register = async (req, res) => {
                 return res.status(400).json({ message: "Password is required for new users." });
             }
 
-            const hashedPassword = bcrypt.hashSync(password, 10);
+            const hashedPassword = await bcrypt.hash(password, 12);
             const defaultPin = pin_code || '1234';
             await db.query(`
                 INSERT INTO users (business_id, branch_id, name, email, password, pin_code, role_id, is_super_admin, address, tel, status, image, is_verified) 
