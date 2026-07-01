@@ -7,11 +7,11 @@ echo "============================================="
 
 # 1. Stop current production services
 echo "🛑 Stopping current containers..."
-docker compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml down
 
 # 2. Build and start services in detached mode
 echo "⚙️ Building and starting new production containers..."
-docker compose -f docker-compose.prod.yml up --build -d
+docker-compose -f docker-compose.prod.yml up --build -d
 
 # 3. Wait for database to start up and become healthy
 echo "⏳ Waiting for MySQL to become healthy..."
