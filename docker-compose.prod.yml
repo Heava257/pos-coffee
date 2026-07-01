@@ -66,16 +66,16 @@ services:
     networks:
       - pos_prod_network
 
-  # ─── React Frontend & Proxy ───────────────────────────────────
   web:
-    build:
-      context: ./web-pos-nit
-      dockerfile: Dockerfile
+    image: nginx:alpine
     container_name: pos_web_prod
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
+    volumes:
+      - ./web-pos-nit/dist:/usr/share/nginx/html
+      - ./web-pos-nit/nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - server
     networks:
