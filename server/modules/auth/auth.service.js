@@ -259,7 +259,7 @@ class AuthService {
       const hashedPassword = await bcrypt.hash(password, 12);
       const verifyToken = randomBytes(32).toString('hex');
       await conn.query(
-        "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token, pin_code, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
+        "INSERT INTO users (business_id, branch_id, role_id, name, email, password, status, is_super_admin, verify_token, pin_code, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
         [business_id, branch_id, owner_role_id, owner_name, email, hashedPassword, 'active', 0, verifyToken, '1234']
       );
 
@@ -338,9 +338,9 @@ class AuthService {
     }
 
     const isStaff = user.role_code !== 'owner' && user.role_code !== 'super_admin';
-    // if (user.is_verified === 0 && !isStaff) {
-    //   throw new Error("Your email is not verified yet! Please check your inbox to verify your account first.");
-    // }
+    if (user.is_verified === 0 && !isStaff) {
+      throw new Error("Your email is not verified yet! Please check your inbox to verify your account first.");
+    }
 
     if (user.business_status !== 'active') {
       throw new Error("Your business account is suspended!");
