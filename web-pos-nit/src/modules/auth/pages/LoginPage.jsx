@@ -4,6 +4,7 @@ import { message } from "antd";
 import { request } from "@/shared/utils/helper";
 import { useProfileStore } from "@/app/store/profileStore";
 import { setAcccessToken, setRememberMe } from "@/app/store/profile.store";
+import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import "./AuthPremium.css";
 
 const EyeIcon = ({ open }) => (
@@ -36,11 +37,36 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const SocialBtn = ({ icon, label, full }) => (
-  <button className={`ap-social-btn${full ? " ap-social-btn-full" : ""}`}>
+const SocialBtn = ({ icon, label, full, onClick, disabled }) => (
+  <button className={`ap-social-btn${full ? " ap-social-btn-full" : ""}`} onClick={onClick} disabled={disabled}>
     <span style={{ display: "inline-flex", alignItems: "center" }}>{icon}</span> {label}
   </button>
 );
+
+const GoogleLoginButton = ({ onLoginSuccess, loading }) => {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "222467462843-3mc4kb1636gcpugur0cgmb4mbdgfpbfl.apps.googleusercontent.com";
+  
+  const login = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      onLoginSuccess(tokenResponse.access_token);
+    },
+    onError: () => {
+      message.error("Google Login Failed");
+    }
+  });
+
+  return (
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <SocialBtn 
+        icon={<GoogleIcon />} 
+        label={loading ? "Connecting..." : "Google"} 
+        full 
+        onClick={() => !loading && login()} 
+        disabled={loading}
+      />
+    </GoogleOAuthProvider>
+  );
+};
 
 const POSIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -150,6 +176,47 @@ export default function LoginPage() {
     }
   }, []);
 
+  const handleGoogleLogin = async (accessToken) => {
+    setLoading(true);
+    try {
+      const res = await request("auth/google-login", "post", { access_token: accessToken });
+      if (res?.success) {
+        setRememberMe(remember);
+        setAcccessToken(res.access_token);
+        
+        // Save login metadata
+        try {
+          const meta = getBrowserAndOS();
+          localStorage.setItem("last_login_meta", JSON.stringify({
+            ...meta,
+            timestamp: new Date().getTime()
+          }));
+        } catch (e) {
+          console.error("Failed to save login metadata:", e);
+        }
+
+        // Update the profile store
+        const store = useProfileStore.getState();
+        store.setProfile(res.profile);
+        store.setPermissions(res.permission);
+
+        const r = res.profile;
+        const isAdmin = r.is_super_admin === 1 || ["Owner","Executive","Admin"].includes(r.role_name);
+        navigate(isAdmin ? "/dashboard" : "/invoices");
+        message.success("Logged in successfully with Google");
+      } else if (res?.not_registered) {
+        message.warning(res.message || "This Gmail is not registered in our system.");
+      } else {
+        message.error(res?.message || "Google Login failed");
+      }
+    } catch (error) {
+      console.error(error);
+      message.error("Google authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onLogin = async () => {
     if (!email || !pass) { message.warning("Please fill in all fields"); return; }
     setLoading(true);
@@ -251,7 +318,7 @@ export default function LoginPage() {
 
           {/* Social logins */}
           <div className="ap-social-grid">
-            <SocialBtn icon={<GoogleIcon />} label="Google" full />
+            <GoogleLoginButton onLoginSuccess={handleGoogleLogin} loading={loading} />
           </div>
 
           <div className="ap-divider"><span>or sign in with email</span></div>
