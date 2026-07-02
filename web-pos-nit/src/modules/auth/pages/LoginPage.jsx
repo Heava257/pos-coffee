@@ -157,6 +157,43 @@ const getRelativeTime = (timestamp) => {
   return `${days}d ago`;
 };
 
+const EmailInput = ({ value, onChange, onBlur, onKeyDown, className, placeholder }) => {
+  const showPreview = value && !value.includes("@");
+
+  return (
+    <div style={{ position: "relative", width: "100%" }}>
+      <input
+        type="email"
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        onKeyDown={onKeyDown}
+        className={className}
+        placeholder={placeholder}
+        style={{ paddingRight: showPreview ? "95px" : "16px" }}
+      />
+      {showPreview && (
+        <span
+          style={{
+            position: "absolute",
+            right: "14px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "rgba(255, 255, 255, 0.25)",
+            pointerEvents: "none",
+            fontSize: "13px",
+            userSelect: "none",
+            fontWeight: "500",
+            fontFamily: "inherit"
+          }}
+        >
+          @gmail.com
+        </span>
+      )}
+    </div>
+  );
+};
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail]   = useState("");
@@ -174,7 +211,7 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("landing_theme") || "light";
+    const savedTheme = localStorage.getItem("landing_theme") || "dark";
     if (savedTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
@@ -225,9 +262,14 @@ export default function LoginPage() {
 
   const onLogin = async () => {
     if (!email || !pass) { message.warning("Please fill in all fields"); return; }
+    let loginEmail = email.trim();
+    if (!loginEmail.includes("@")) {
+      loginEmail = `${loginEmail}@gmail.com`;
+      setEmail(loginEmail);
+    }
     setLoading(true);
     try {
-      const res = await request("auth/login", "post", { email, password: pass, remember });
+      const res = await request("auth/login", "post", { email: loginEmail, password: pass, remember });
       if (res?.success) {
         setRememberMe(remember);
         setAcccessToken(res.access_token);
@@ -332,8 +374,15 @@ export default function LoginPage() {
           {/* Email field */}
           <div className="ap-field">
             <label className="ap-label">Email address</label>
-            <input className="ap-input" type="email" placeholder="you@company.com"
-              value={email} onChange={e => setEmail(e.target.value)}
+            <EmailInput className="ap-input" placeholder="you@company.com"
+              value={email} 
+              onChange={e => setEmail(e.target.value)}
+              onBlur={e => {
+                const val = e.target.value.trim();
+                if (val && !val.includes("@")) {
+                  setEmail(`${val}@gmail.com`);
+                }
+              }}
               onKeyDown={e => e.key === "Enter" && onLogin()} />
           </div>
 

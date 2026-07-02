@@ -148,6 +148,42 @@ const F = ({ label, children, style }) => (
 const Inp = (props) => <input className="ap-input" {...props} />;
 const Sel = ({ children, ...props }) => <select className="ap-input" {...props}>{children}</select>;
 
+const EmailInput = ({ value, onChange, onBlur, placeholder }) => {
+  const showPreview = value && !value.includes("@");
+
+  return (
+    <div style={{ position: "relative", width: "100%" }}>
+      <input
+        type="email"
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        className="ap-input"
+        placeholder={placeholder}
+        style={{ paddingRight: showPreview ? "95px" : "16px" }}
+      />
+      {showPreview && (
+        <span
+          style={{
+            position: "absolute",
+            right: "14px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "rgba(255, 255, 255, 0.25)",
+            pointerEvents: "none",
+            fontSize: "13px",
+            userSelect: "none",
+            fontWeight: "500",
+            fontFamily: "inherit"
+          }}
+        >
+          @gmail.com
+        </span>
+      )}
+    </div>
+  );
+};
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   useEffect(() => {
@@ -212,8 +248,13 @@ export default function RegisterPage() {
 
   const validate = () => {
     if (step===1) {
-      if (!acc.firstName||!acc.lastName||!acc.email||!acc.password){message.warning("Fill all required fields");return false;}
-      if (!/\S+@\S+\.\S+/.test(acc.email)){message.warning("Enter a valid email");return false;}
+      let regEmail = acc.email.trim();
+      if (regEmail && !regEmail.includes("@")) {
+        regEmail = `${regEmail}@gmail.com`;
+        setAcc(prev => ({ ...prev, email: regEmail }));
+      }
+      if (!acc.firstName||!acc.lastName||!regEmail||!acc.password){message.warning("Fill all required fields");return false;}
+      if (!/\S+@\S+\.\S+/.test(regEmail)){message.warning("Enter a valid email");return false;}
       if (acc.password.length<8){message.warning("Password needs 8+ characters");return false;}
       if (acc.password!==acc.confirm){message.warning("Passwords don't match");return false;}
     }
@@ -262,7 +303,17 @@ export default function RegisterPage() {
         </F>
       </div>
       <F label="Email Address *">
-        <Inp type="email" placeholder="you@company.com" value={acc.email} onChange={e=>setAcc({...acc,email:e.target.value})}/>
+        <EmailInput 
+          placeholder="you@company.com" 
+          value={acc.email} 
+          onChange={e=>setAcc({...acc,email:e.target.value})}
+          onBlur={e => {
+            const val = e.target.value.trim();
+            if (val && !val.includes("@")) {
+              setAcc({ ...acc, email: `${val}@gmail.com` });
+            }
+          }}
+        />
       </F>
       <div className="ap-row">
         <F label={
@@ -323,7 +374,17 @@ export default function RegisterPage() {
             )}
           </div>
         }>
-          <Inp type="email" placeholder="info@company.com" value={biz.email} onChange={e=>setBiz({...biz,email:e.target.value})}/>
+          <EmailInput 
+            placeholder="info@company.com" 
+            value={biz.email} 
+            onChange={e=>setBiz({...biz,email:e.target.value})}
+            onBlur={e => {
+              const val = e.target.value.trim();
+              if (val && !val.includes("@")) {
+                setBiz({ ...biz, email: `${val}@gmail.com` });
+              }
+            }}
+          />
         </F>
         <F label={
           <div style={{display:"flex",justifyContent:"space-between",width:"100%",alignItems:"center"}}>
