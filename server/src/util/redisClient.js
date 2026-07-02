@@ -1,15 +1,15 @@
 const Redis = require('ioredis');
 
-// Connect matching Railway environment variables.
+// Connect matching production Redis environment variables.
 // If not deployed, it falls back to local Redis (127.0.0.1:6379)
 const redisConnectionURL = process.env.REDIS_URL || process.env.REDIS_PUBLIC_URL || null;
 
 let redis = null;
 
 if (redisConnectionURL) {
-  // Use connection URL provided by Railway
+  // Use connection URL provided by environment
   redis = new Redis(redisConnectionURL, {
-    family: 0, // Auto-detect IPv4/IPv6 (Railway uses IPv6 internally)
+    family: 0, // Auto-detect IPv4/IPv6
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     retryStrategy(times) {
@@ -19,7 +19,7 @@ if (redisConnectionURL) {
   });
 
   redis.on('connect', () => {
-    console.log('✅ Connected to Railway Redis');
+    console.log('✅ Connected to Redis');
   });
 
   redis.on('error', (err) => {
@@ -27,7 +27,7 @@ if (redisConnectionURL) {
   });
 
 } else if (process.env.REDISHOST) {
-  // Use individual Railway variables if REDIS_URL is somehow missing but others are present
+  // Use individual Redis environment variables if REDIS_URL is missing but host is present
   redis = new Redis({
     host: process.env.REDISHOST,
     port: parseInt(process.env.REDISPORT || "6379"),
@@ -43,7 +43,7 @@ if (redisConnectionURL) {
   });
 
   redis.on('connect', () => {
-    console.log(`✅ Connected to Railway Redis at ${process.env.REDISHOST}`);
+    console.log(`✅ Connected to Redis at ${process.env.REDISHOST}`);
   });
 
   redis.on('error', (err) => {

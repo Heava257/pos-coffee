@@ -2,26 +2,18 @@ require('dotenv').config();
 const mysql = require("mysql2/promise");
 
 async function syncPermissions() {
-    const isRailway = process.argv.includes('--railway');
-
     let connection;
     try {
-        if (isRailway) {
-            console.log("Connecting to Railway Database...");
-            const connectionString = "mysql://root:YqQSkpUuUStPjQjscjEAnxTfGbeXUjZJ@roundhouse.proxy.rlwy.net:47416/railway";
-            connection = await mysql.createConnection(connectionString);
-        } else {
-            console.log("Connecting to Local Database...");
-            connection = await mysql.createConnection({
-                host: process.env.DB_HOST || 'localhost',
-                user: process.env.DB_USER || 'root',
-                password: process.env.DB_PASSWORD || '',
-                database: process.env.DB_DATABASE || 'coffee_saas',
-                port: process.env.DB_PORT || 3306
-            });
-        }
+        console.log("Connecting to Database...");
+        connection = await mysql.createConnection({
+            host: process.env.DB_HOST || 'localhost',
+            user: process.env.DB_USER || 'root',
+            password: process.env.DB_PASSWORD || '',
+            database: process.env.DB_DATABASE || 'coffee_saas',
+            port: process.env.DB_PORT || 3306
+        });
 
-        console.log(`Starting Permission Sync on ${isRailway ? 'Railway' : 'Local'}...`);
+        console.log("Starting Permission Sync...");
 
         // 1. Ensure System Settings exists
         const [settingsCheck] = await connection.execute(

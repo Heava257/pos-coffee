@@ -12,7 +12,7 @@ exports.logError = async (controller, error, res) => {
   const errorId = randomUUID();
   const timestamp = new Date().toISOString();
 
-  // 1. Detailed server-side logging (safe to read in Railway / PM2 logs)
+  // 1. Detailed server-side logging (safe to read in PM2 / Container logs)
   const logEntry = `[${timestamp}] [${errorId}] [${controller}]\n${util.inspect(error, { depth: null })}\n\n`;
   console.error(`🚨 [${errorId}] [${controller}]`, error.message);
 

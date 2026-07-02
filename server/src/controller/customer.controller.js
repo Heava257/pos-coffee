@@ -274,10 +274,10 @@ exports.sendPromoEmail = async (req, res) => {
         return res.json({ success: false, message: "Email system is currently unavailable. Please check platform configuration." });
     }
 
-    const baseUrl = (platform_url || "https://pos-coffee-web-production.up.railway.app").replace(/\/$/, "");
+    const baseUrl = (platform_url || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
     const orderUrl = `${baseUrl}/customer/menu?biz=${business_id}${branch_id ? `&br=${branch_id}` : ''}`;
 
-    // 🚀 USE BREVO API (HTTP) - Bypass Railway SMTP blocks
+    // 🚀 USE BREVO API (HTTP) - Bypass SMTP port blocks
     try {
       const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
         sender: { name: branchName || bizName, email: senderEmail },

@@ -15,21 +15,17 @@
 
 // Helper to get consistent API URL
 const getDynamicBaseUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    // Smart Railway URL detection
-    if (host.includes("railway.app")) {
-      // If we are on pos-coffee-web-production.up.railway.app
-      // we want to hit pos-coffee-api-production.up.railway.app
-      const apiHost = host.replace("-web", "-api");
-      return `https://${apiHost}/api/`;
-    }
-    // Fallback for local testing and deployment
+    // Fallback for local testing and same-origin deployment
     if (host !== 'localhost' && host !== '127.0.0.1') {
       return window.location.origin + "/api/";
     }
   }
-  return import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8080/api/";
+  return "http://127.0.0.1:8080/api/";
 };
 
 const formattedBaseUrl = getDynamicBaseUrl();

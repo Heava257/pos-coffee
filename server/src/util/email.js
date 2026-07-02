@@ -4,7 +4,7 @@ dotenv.config();
 
 /**
  * យើងប្រើប្រាស់ Brevo HTTP API (Port 443 HTTPS) ជំនួសឲ្យ SMTP (Port 587/465) 
- * ដើម្បីជៀសវាងការបិទ Port ពីសំណាក់ Railway និងដើម្បីអាចផ្ញើទៅកាន់ Personal Email បានយ៉ាងងាយស្រួល។
+ * ដើម្បីជៀសវាងការបិទ Port ពីសំណាក់ cloud hosting providers និងដើម្បីអាចផ្ញើទៅកាន់ Personal Email បានយ៉ាងងាយស្រួល។
  */
 
 const PLATFORM_SENDER_EMAIL = process.env.SENDER_EMAIL || "pongchiva257@gmail.com";

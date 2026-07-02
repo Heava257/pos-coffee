@@ -1,4 +1,5 @@
 
+require('dotenv').config();
 const mysql = require("mysql2/promise");
 
 async function run() {
@@ -54,7 +55,13 @@ async function run() {
         console.log(`Processing category: ${group.cat}`);
         let connection;
         try {
-            connection = await mysql.createConnection("mysql://root:YqQSkpUuUStPjQjscjEAnxTfGbeXUjZJ@roundhouse.proxy.rlwy.net:47416/railway");
+            connection = await mysql.createConnection({
+                host: process.env.DB_HOST || 'localhost',
+                user: process.env.DB_USER || 'root',
+                password: process.env.DB_PASSWORD || '',
+                database: process.env.DB_DATABASE || 'coffee_saas',
+                port: process.env.DB_PORT || 3306
+            });
             const bizId = 5;
             const branchId = 6;
 

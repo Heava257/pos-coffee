@@ -6,8 +6,8 @@ module.exports = {
     DATABASE: process.env.APP_ENV === 'production' ? process.env.DB_PROD_DATABASE : (process.env.DB_DATABASE || "coffee_saas"),
     PORT: process.env.APP_ENV === 'production' ? process.env.DB_PROD_PORT : (process.env.DB_PORT || 3306),
   },
-  platform_api_url: process.env.VITE_PLATFORM_API_URL || "https://platformsapi-production.up.railway.app/api",
-  platform_hub_url: process.env.VITE_PLATFORM_HUB_URL || "https://platformhub-production.up.railway.app",
+  platform_api_url: process.env.VITE_PLATFORM_API_URL || "http://localhost:3000/api",
+  platform_hub_url: process.env.VITE_PLATFORM_HUB_URL || "http://localhost:3000",
   token: {
     access_token_key: process.env.ACCESS_TOKEN_KEY || "your_secret_key",
     refresh_token_key: process.env.REFRESH_TOKEN_KEY || "your_refresh_secret_key",
@@ -26,8 +26,8 @@ module.exports = {
     api_key: process.env.PAYWAY_API_KEY || "demo_api_key",
     base_url: process.env.PAYWAY_BASE_URL || "https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments",
     callback_url: process.env.PAYWAY_CALLBACK_URL || "http://localhost:8080/api/payment/callback",
-    return_url: process.env.PAYWAY_RETURN_URL || "https://pos-coffee-web-production.up.railway.app/payment/result",
+    return_url: process.env.PAYWAY_RETURN_URL || "http://localhost:3000/payment/result",
   },
 
-  app_url: process.env.APP_URL || "https://pos-coffee-web-production.up.railway.app",
+  app_url: process.env.APP_URL || "http://localhost:3000",
 };

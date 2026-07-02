@@ -1,0 +1,56 @@
+
+services:
+  # ─── Redis Cache ──────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: pos_redis_prod
+    restart: unless-stopped
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - pos_prod_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── Node.js API Server ───────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: pos_server_prod
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - pos_prod_network
+
+  # ─── Nginx SSL Reverse Proxy ──────────────────────────────────
+  web:
+    image: nginx:alpine
+    container_name: pos_web_prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.rds.conf:/etc/nginx/conf.d/default.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - server
+    networks:
+      - pos_prod_network
+
+volumes:
+  redis_prod_data:
+    driver: local
+
+networks:
+  pos_prod_network:
+    driver: bridge
