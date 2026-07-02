@@ -43,9 +43,7 @@ const SocialBtn = ({ icon, label, full, onClick, disabled }) => (
   </button>
 );
 
-const GoogleLoginButton = ({ onLoginSuccess, loading }) => {
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "222467462843-3mc4kb1636gcpugur0cgmb4mbdgfpbfl.apps.googleusercontent.com";
-  
+const GoogleLoginInner = ({ onLoginSuccess, loading }) => {
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       onLoginSuccess(tokenResponse.access_token);
@@ -56,14 +54,22 @@ const GoogleLoginButton = ({ onLoginSuccess, loading }) => {
   });
 
   return (
+    <SocialBtn 
+      icon={<GoogleIcon />} 
+      label={loading ? "Connecting..." : "Google"} 
+      full 
+      onClick={() => !loading && login()} 
+      disabled={loading}
+    />
+  );
+};
+
+const GoogleLoginButton = ({ onLoginSuccess, loading }) => {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "222467462843-3mc4kb1636gcpugur0cgmb4mbdgfpbfl.apps.googleusercontent.com";
+
+  return (
     <GoogleOAuthProvider clientId={googleClientId}>
-      <SocialBtn 
-        icon={<GoogleIcon />} 
-        label={loading ? "Connecting..." : "Google"} 
-        full 
-        onClick={() => !loading && login()} 
-        disabled={loading}
-      />
+      <GoogleLoginInner onLoginSuccess={onLoginSuccess} loading={loading} />
     </GoogleOAuthProvider>
   );
 };
