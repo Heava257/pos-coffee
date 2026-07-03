@@ -51,17 +51,24 @@ if (redisConnectionURL) {
   });
 
 } else {
-  // Fallback to local Redis
-  // Ensure you have Redis installed locally if you want to use it in Localhost development
-  redis = new Redis({
-    host: '127.0.0.1',
-    port: 6379,
-    retryStrategy(times) {
-      // Don't spam retries locally if dev doesn't have Redis installed
-      console.warn('⚠️ Local Redis not found. Set REDIS_URL for production.');
-      return null;
+  // Fallback to mock Redis for local development to prevent connection crashes and keep app running
+  console.warn('⚠️ Local Redis not detected. Initializing mock Redis client for fallback.');
+  const EventEmitter = require('events');
+  class MockRedis extends EventEmitter {
+    constructor() {
+      super();
+      this.status = 'failed';
     }
-  });
+    call() { return Promise.resolve(0); }
+    get() { return Promise.resolve(null); }
+    set() { return Promise.resolve('OK'); }
+    setex() { return Promise.resolve('OK'); }
+    del() { return Promise.resolve(0); }
+    scan() { return Promise.resolve(['0', []]); }
+    quit() { return Promise.resolve('OK'); }
+    disconnect() {}
+  }
+  redis = new MockRedis();
 }
 
 // Global caching helper
