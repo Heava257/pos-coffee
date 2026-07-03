@@ -10,11 +10,7 @@ echo "🧹 Cleaning up old containers and freeing RAM..."
 sudo docker stop pos_web_prod pos_mysql_prod 2>/dev/null || true
 sudo docker rm pos_web_prod pos_mysql_prod 2>/dev/null || true
 
-# 1. Stop current production services
-echo "🛑 Stopping current containers..."
-sudo docker-compose -f docker-compose.rds.yml down
-
-# 2. Build and start services in detached mode
+# 1. Build and start services in detached mode (Docker Compose builds first, then replaces containers with near-zero downtime)
 echo "⚙️ Building and starting production containers (API + Redis + Nginx)..."
 sudo docker-compose -f docker-compose.rds.yml up --build -d
 

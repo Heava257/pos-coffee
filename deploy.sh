@@ -5,11 +5,7 @@ echo "============================================="
 echo "   POS COFFEE DEPLOYMENT ON AWS EC2"
 echo "============================================="
 
-# 1. Stop current production services
-echo "🛑 Stopping current containers..."
-docker-compose -f docker-compose.prod.yml down
-
-# 2. Build and start services in detached mode
+# 1. Build and start services in detached mode (Docker Compose builds first, then replaces containers with near-zero downtime)
 echo "⚙️ Building and starting new production containers..."
 docker-compose -f docker-compose.prod.yml up --build -d
 
