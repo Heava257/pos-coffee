@@ -80,76 +80,105 @@ exports.generateInvoice = async (req, res) => {
         doc.registerFont("KhmerBold", boldFontPath);
         doc.font("Helvetica"); // Set Helvetica as default font for standard English text
 
+        const getFont = (text, isBold = false) => {
+            return hasKhmer(text) 
+                ? (isBold ? "KhmerBold" : "KhmerRegular") 
+                : (isBold ? "Helvetica-Bold" : "Helvetica");
+        };
+
         // Pipe to response
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `attachment; filename=Invoice-${data.tran_id}.pdf`);
         doc.pipe(res);
 
         // ─── Header Section ───────────────────────────────────────────
-        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(24).text("BORCELLE COFFEE", 50, 50, { align: "left" });
-        doc.font("Helvetica").fillColor("#666").fontSize(10).text("Premium POS Ecosystem", 50, 80);
+        // Redesigned to use platform branding "COFFEE POS PLATFORM"
+        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(22).text("COFFEE POS PLATFORM", 50, 50);
+        doc.font("Helvetica").fillColor("#666").fontSize(9).text("Premium POS & Ecosystem", 50, 75);
+        doc.fillColor("#999").text("Email: pongchiva257@gmail.com | Support: t.me/growme_support", 50, 90);
 
-        doc.font("Helvetica-Bold").fillColor("#333").fontSize(20).text("INVOICE", 400, 50, { align: "right" });
-        doc.font("Helvetica").fontSize(10).text(`Tran ID: ${data.tran_id}`, 400, 80, { align: "right" });
+        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(26).text("INVOICE", 400, 50, { align: "right" });
+        doc.font("Helvetica").fillColor("#555").fontSize(10).text(`Tran ID: ${data.tran_id}`, 400, 80, { align: "right" });
         doc.text(`Date: ${dayjs(data.created_at).format("DD MMM YYYY")}`, 400, 95, { align: "right" });
 
-        doc.moveDown(2);
-        doc.strokeColor("#eee").lineWidth(1).moveTo(50, 120).lineTo(550, 120).stroke();
+        doc.strokeColor("#a4c9a8").lineWidth(1.5).moveTo(50, 115).lineTo(550, 115).stroke();
 
-        // ─── Billing Details ──────────────────────────────────────────
-        doc.moveDown(1);
-        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(11).text("BILL TO:", 50, 140);
+        // ─── Billing Details & Invoice Details Cards ──────────────────
+        // Draw elegant light green rounded boxes for details
+        const cardY = 135;
+        const cardHeight = 90;
         
-        // Use KhmerBold if business name contains Khmer, otherwise Helvetica-Bold
-        const bizFont = hasKhmer(data.business_name) ? "KhmerBold" : "Helvetica-Bold";
-        doc.font(bizFont).fillColor("#333").fontSize(14).text(data.business_name, 50, 155);
+        // Left Card (Bill To)
+        doc.fillColor("#f9fbf9").rect(50, cardY, 240, cardHeight).fill();
+        doc.strokeColor("#e1eae2").lineWidth(1).rect(50, cardY, 240, cardHeight).stroke();
         
-        // Use KhmerRegular for owner name if it contains Khmer, using continued text for "Attn: "
-        if (hasKhmer(data.owner_name)) {
-            doc.font("Helvetica").fontSize(10).text("Attn: ", 50, 175, { continued: true })
-               .font("KhmerRegular").text(data.owner_name);
-        } else {
-            doc.font("Helvetica").fontSize(10).text(`Attn: ${data.owner_name || ""}`, 50, 175);
-        }
+        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(9).text("BILL TO:", 65, cardY + 12);
+        const bizFont = getFont(data.business_name, true);
+        doc.font(bizFont).fillColor("#1e4a2d").fontSize(12).text(data.business_name, 65, cardY + 27);
         
-        doc.font("Helvetica").text(data.business_email, 50, 190);
+        const ownerFont = getFont(data.owner_name, false);
+        doc.font("Helvetica").fillColor("#555").fontSize(9.5).text("Attn: ", 65, cardY + 47, { continued: true })
+           .font(ownerFont).text(data.owner_name || "");
+        doc.font("Helvetica").fillColor("#555").fontSize(9.5).text(data.business_email || "", 65, cardY + 62);
 
-        // Sub Info section (right)
-        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(11).text("STATUS:", 400, 140, { align: "right" });
-        doc.font("Helvetica-Bold").fillColor("#2d6a3e").fontSize(16).text(data.status.toUpperCase(), 400, 155, { align: "right" });
-        doc.font("Helvetica").fillColor("#333").fontSize(10).text(`Method: PayWay ABA`, 400, 180, { align: "right" });
+        // Right Card (Invoice Info)
+        doc.fillColor("#f9fbf9").rect(310, cardY, 240, cardHeight).fill();
+        doc.strokeColor("#e1eae2").lineWidth(1).rect(310, cardY, 240, cardHeight).stroke();
+        
+        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(9).text("PAYMENT DETAILS:", 325, cardY + 12);
+        
+        // Status indicator
+        const isPaid = data.status.toLowerCase() === 'active' || data.status.toLowerCase() === 'paid';
+        const statusColor = isPaid ? "#2d6a3e" : "#d32f2f";
+        doc.font("Helvetica").fillColor("#555").fontSize(9.5).text("Status: ", 325, cardY + 27, { continued: true })
+           .font("Helvetica-Bold").fillColor(statusColor).text(data.status.toUpperCase());
+        
+        // Payment method based on Free / Paid
+        const isFreePlan = parseFloat(data.amount || 0) === 0;
+        const methodText = isFreePlan ? "Free Activation" : "PayWay ABA";
+        doc.font("Helvetica").fillColor("#555").fontSize(9.5).text("Method: ", 325, cardY + 47, { continued: true })
+           .font("Helvetica-Bold").text(methodText);
+           
+        // Plan Info
+        const planNameFont = getFont(data.plan_name, false);
+        doc.font("Helvetica").fillColor("#555").fontSize(9.5).text("Plan: ", 325, cardY + 62, { continued: true })
+           .font(planNameFont).text(data.plan_name);
 
         // ─── Table Section ────────────────────────────────────────────
-        doc.moveDown(3);
         const tableTop = 250;
 
         // Table Header
-        doc.fillColor("#f4f1eb").rect(50, tableTop, 500, 30).fill();
-        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(10).text("DESCRIPTION", 70, tableTop + 10);
-        doc.text("DURATION", 300, tableTop + 10);
-        doc.text("AMOUNT", 480, tableTop + 10, { align: "right" });
+        doc.fillColor("#1e4a2d").rect(50, tableTop, 500, 26).fill();
+        doc.font("Helvetica-Bold").fillColor("#ffffff").fontSize(9.5).text("DESCRIPTION", 65, tableTop + 8);
+        doc.text("DURATION", 300, tableTop + 8);
+        doc.text("AMOUNT", 450, tableTop + 8, { align: "right", width: 85 });
 
-        // Table Rows
-        // Use KhmerRegular for plan name if it contains Khmer
-        const planFont = hasKhmer(data.plan_name) ? "KhmerRegular" : "Helvetica";
-        doc.font(planFont).fillColor("#333").fontSize(11).text(data.plan_name, 70, tableTop + 45, { continued: true })
+        // Table Row (Zebra styling or white background with border)
+        doc.fillColor("#ffffff").rect(50, tableTop + 26, 500, 45).fill();
+        doc.strokeColor("#e1eae2").lineWidth(1).rect(50, tableTop + 26, 500, 45).stroke();
+        
+        const rowY = tableTop + 42;
+        // Description
+        const descFont = getFont(data.plan_name, false);
+        doc.font(descFont).fillColor("#333").fontSize(10.5).text(data.plan_name, 65, rowY, { continued: true })
            .font("Helvetica").text(" Subscription Plan");
            
-        const durationText = data.duration_days ? `${data.duration_days} Days` : "Lifetime / No Expiry";
-        doc.font("Helvetica").fontSize(10).text(durationText, 300, tableTop + 45);
-        doc.fontSize(11).text(`$${parseFloat(data.amount || 0).toFixed(2)}`, 480, tableTop + 45, { align: "right" });
-
-        doc.strokeColor("#eee").lineWidth(1).moveTo(50, tableTop + 70).lineTo(550, tableTop + 70).stroke();
+        // Duration
+        const durationText = data.duration_days ? `${data.duration_days} Days` : "30 Days";
+        doc.font("Helvetica").fillColor("#333").fontSize(10).text(durationText, 300, rowY);
+        
+        // Amount
+        doc.font("Helvetica-Bold").fillColor("#333").fontSize(11).text(`$${parseFloat(data.amount || 0).toFixed(2)}`, 450, rowY, { align: "right", width: 85 });
 
         // ─── Total Section ────────────────────────────────────────────
-        const totalPos = tableTop + 100;
-        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(12).text("Total (USD):", 380, totalPos);
-        doc.fontSize(22).text(`$${parseFloat(data.amount || 0).toFixed(2)}`, 450, totalPos - 5, { align: "right" });
+        const totalPos = tableTop + 95;
+        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(11.5).text("Total (USD):", 380, totalPos + 5);
+        doc.font("Helvetica-Bold").fillColor("#1e4a2d").fontSize(22).text(`$${parseFloat(data.amount || 0).toFixed(2)}`, 450, totalPos - 5, { align: "right", width: 85 });
 
         // ─── Footer ───────────────────────────────────────────────────
         const footerPos = 750;
-        doc.strokeColor("#eee").lineWidth(1).moveTo(50, footerPos - 20).lineTo(550, footerPos - 20).stroke();
-        doc.font("Helvetica").fillColor("#999").fontSize(10).text("Thank you for your business! This is a system-generated invoice.", 50, footerPos, { align: "center", width: 500 });
+        doc.strokeColor("#e1eae2").lineWidth(1).moveTo(50, footerPos - 15).lineTo(550, footerPos - 15).stroke();
+        doc.font("Helvetica").fillColor("#999").fontSize(9.5).text("Thank you for choosing Coffee POS Platform! This is a system-generated invoice.", 50, footerPos, { align: "center", width: 500 });
 
         doc.end();
 
