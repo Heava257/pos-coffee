@@ -5,6 +5,14 @@ const db = require('../src/util/connection');
 async function seed() {
   try {
     console.log('🌱 Starting database seeding against AWS RDS...');
+    
+    // Check if the database already has tables to avoid overwriting production data
+    const [tables] = await db.query("SHOW TABLES");
+    if (tables.length > 0) {
+      console.log('⚠️ Database already contains tables. Skipping seeding to prevent data loss!');
+      return;
+    }
+
     const sqlFilePath = path.join(__dirname, '../database/POS_Coffee26.sql');
     const sql = fs.readFileSync(sqlFilePath, 'utf8');
 
