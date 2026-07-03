@@ -64,9 +64,10 @@ exports.sendExpiryReminder = async (to, businessName, daysLeft) => {
     return sendBrevoAPI({ to, subject, htmlContent });
 };
 
-exports.sendWelcomeEmail = async (to, businessName, ownerName, verifyToken) => {
+exports.sendWelcomeEmail = async (to, businessName, ownerName, verifyToken, clientUrl) => {
     const subject = `Welcome to Coffee POS Platform - Please Verify Your Email`;
-    const verifyLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${verifyToken}&email=${to}`;
+    const finalClientUrl = clientUrl || process.env.CLIENT_URL || 'http://localhost:5173';
+    const verifyLink = `${finalClientUrl}/verify-email?token=${verifyToken}&email=${to}`;
     
     const htmlContent = `
         <div style="font-family: sans-serif; padding: 20px; color: #333;">

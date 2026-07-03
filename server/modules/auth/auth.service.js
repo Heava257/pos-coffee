@@ -42,9 +42,10 @@ const sendBrevoAPI = async ({ to, subject, htmlContent, senderName }) => {
   }
 };
 
-const sendWelcomeEmail = async (to, businessName, ownerName, verifyToken) => {
+const sendWelcomeEmail = async (to, businessName, ownerName, verifyToken, clientUrl) => {
   const subject = `Welcome to Coffee POS Platform - Please Verify Your Email`;
-  const verifyLink = `${mailConfig.clientUrl}/verify-email?token=${verifyToken}&email=${to}`;
+  const finalClientUrl = clientUrl || mailConfig.clientUrl;
+  const verifyLink = `${finalClientUrl}/verify-email?token=${verifyToken}&email=${to}`;
   
   const htmlContent = `
     <div style="font-family: sans-serif; padding: 20px; color: #333;">
@@ -153,7 +154,7 @@ class AuthService {
     };
   }
 
-  async register(body) {
+  async register(body, clientUrl) {
     const {
       business_name,
       owner_name,
@@ -290,7 +291,7 @@ class AuthService {
       );
       await conn.commit();
 
-      sendWelcomeEmail(email, business_name, owner_name, verifyToken).catch(err => {
+      sendWelcomeEmail(email, business_name, owner_name, verifyToken, clientUrl).catch(err => {
         console.error("Welcome Email background fail:", err.message);
       });
 

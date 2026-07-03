@@ -13,7 +13,8 @@ const logError = (apiName, error, res) => {
 class AuthController {
   async register(req, res) {
     try {
-      const result = await authService.register(req.body);
+      const clientUrl = req.get('origin') || req.get('referer');
+      const result = await authService.register(req.body, clientUrl);
       res.json(result);
     } catch (error) {
       logError("auth.register", error, res);
