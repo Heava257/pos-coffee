@@ -75,11 +75,6 @@ const VerifyEmailPage = () => {
                         status="success"
                         title="Verification Successful!"
                         subTitle="Your email has been verified. You can now log into your account."
-                        extra={[
-                            <Button type="primary" key="login" size="large" onClick={() => navigate('/login')} style={{ background: '#1e4a2d' }}>
-                                Go to Login Page
-                            </Button>
-                        ]}
                     />
                 ) : (
                     <Result
