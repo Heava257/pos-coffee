@@ -1,6 +1,7 @@
-
+import React, { useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { request } from "@/shared/utils/helper";
 import HomePage from "@/modules/dashboard/pages/HomePage";
 import LoginPage from "@/modules/auth/pages/LoginPage";
 import RegisterPage from "@/modules/auth/pages/RegisterPage";
@@ -93,6 +94,53 @@ const RootRedirect = () => {
 
 
 function App() {
+  useEffect(() => {
+    let cleanUpMediaQuery = null;
+
+    const applyTheme = async () => {
+      try {
+        const res = await request("system-setting/public", "get");
+        if (res && res.success && res.settings) {
+          Object.keys(res.settings).forEach(key => {
+            if (key.startsWith("flag_")) {
+              localStorage.setItem(key, res.settings[key]);
+            }
+          });
+        }
+        if (res && res.success && res.settings && res.settings.flag_dark_mode_auto === "true") {
+          const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+          
+          const handleThemeChange = (e) => {
+            if (e.matches) {
+              document.documentElement.classList.add("dark");
+            } else {
+              document.documentElement.classList.remove("dark");
+            }
+          };
+
+          handleThemeChange(mediaQuery);
+          mediaQuery.addEventListener('change', handleThemeChange);
+          cleanUpMediaQuery = () => mediaQuery.removeEventListener('change', handleThemeChange);
+        } else {
+          const savedTheme = localStorage.getItem("landing_theme") || "dark";
+          if (savedTheme === "dark") {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
+        }
+      } catch (err) {
+        console.error("Theme auto-detection failed:", err);
+      }
+    };
+
+    applyTheme();
+
+    return () => {
+      if (cleanUpMediaQuery) cleanUpMediaQuery();
+    };
+  }, []);
+
   const MainLayoutWrapper = () => (
     <MainLayoutAuth>
       <Outlet />

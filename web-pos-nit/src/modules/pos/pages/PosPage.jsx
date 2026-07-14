@@ -1080,6 +1080,9 @@ function PosPage() {
   const [pendingOrdersVisible, setPendingOrdersVisible] = useState(false);
   const [pendingOrders, setPendingOrders] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [biometricVisible, setBiometricVisible] = useState(false);
+  const [biometricVerifying, setBiometricVerifying] = useState(false);
+  const [biometricSuccess, setBiometricSuccess] = useState(false);
   const [viewMode, setViewMode] = useState("grid"); // grid or list
 
   const [isKitchenPending, setIsKitchenPending] = useState(false);
@@ -2831,122 +2834,142 @@ function PosPage() {
         return;
       }
     }
-    const items = getCartPayload();
-    const param = {
-      ...objSummary,
-      cart_items: items,
-      customer_name: customerName,
-      table_no: tableNo,
-      order_type: orderType,
-      guest_count: guestCount,
-      sub_total: +objSummary.sub_total,
-      total_amount: +objSummary.total,
-      total_qty: +objSummary.total_qty,
-      tax: 0,
-      discount: 0,
-      payment_method: objSummary.payment_method,
-      shift_id: currentShift?.id,
-      total_paid: objSummary.payment_method === "Cash"
-        ? (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate))
-        : +objSummary.total
+    const executeOrderSubmission = async () => {
+      const items = getCartPayload();
+      const param = {
+        ...objSummary,
+        cart_items: items,
+        customer_name: customerName,
+        table_no: tableNo,
+        order_type: orderType,
+        guest_count: guestCount,
+        sub_total: +objSummary.sub_total,
+        total_amount: +objSummary.total,
+        total_qty: +objSummary.total_qty,
+        tax: 0,
+        discount: 0,
+        payment_method: objSummary.payment_method,
+        shift_id: currentShift?.id,
+        total_paid: objSummary.payment_method === "Cash"
+          ? (Number(cashReceivedUSD) + (Number(cashReceivedKHR) / exchangeRate))
+          : +objSummary.total
+      };
+
+      try {
+        let res;
+        if (currentOrderId) {
+          // Send FULL updated order to server (handles added items + completion)
+          const updateParam = { ...param, order_id: currentOrderId, status: "completed" };
+          res = await request("order", "put", updateParam);
+          if (res && !res.error) res.order_id = currentOrderId;
+        } else {
+          res = await request("order", "post", param);
+        }
+
+        if (res && !res.error) {
+          window.dispatchEvent(new Event("order-completed"));
+          const pSettings = getPrinterSettings();
+          const key = `open${Date.now()}`;
+          const btn = (
+            <Space>
+              <Button type="primary" size="small" icon={<PrinterOutlined />} onClick={() => {
+                handlePrintInvoice();
+              }}>
+                Print Invoice
+              </Button>
+              <Button size="small" icon={<TagOutlined />} onClick={() => {
+                handlePrintLabel();
+              }}>
+                Print Label
+              </Button>
+              <Button size="small" onClick={() => {
+                notification.destroy(key);
+                handleClearCart(true);
+              }}>
+                Done
+              </Button>
+            </Space>
+          );
+
+          notification.success({
+            message: currentOrderId ? t.order_completed : t.order_placed,
+            description: `Order ID: #${res.order_no || res.order_id}. Manual print available below if needed.`,
+            action: btn,
+            key,
+            duration: 10,
+            placement: 'top'
+          });
+
+          getPendingOrders();
+          getList();
+          getMaterials();
+
+          const currentPrintCart = [...state.cart_list];
+          const currentPrintSummary = {
+            ...objSummary,
+            order_no: res.order_no || res.order_id,
+            order_date: new Date().toISOString(),
+            order_type: orderType,
+            received_usd: cashReceivedUSD,
+            received_khr: cashReceivedKHR
+          };
+
+          setState(prev => ({
+            ...prev,
+            printCart: currentPrintCart,
+            printSummary: currentPrintSummary
+          }));
+
+          const isBankPayment = objSummary.payment_method !== "Cash";
+
+          if (isBankPayment) {
+            setPaymentData({
+              paymentLink: res.payment_link || "",
+              orderNo: res.order_no || res.order_id || "TEMP",
+              total: +objSummary.total
+            });
+            setQrModalVisible(true);
+          }
+
+          setObjSummary((p) => ({
+            ...p,
+            order_no: res.order_no || res.order_id,
+            order_date: new Date().toISOString(),
+          }));
+
+          // --- DYNAMIC PRINTING WORKFLOW ---
+          if (!isBankPayment) {
+            // Trigger print workflow for all order types at checkout 
+            triggerAutoPrintWorkflow(false);
+          } else {
+            // For bank payments, we wait for the QR modal to close before clearing the cart
+            // and triggering the print workflow.
+          }
+        } else {
+          message.error(`Order failed! ${res?.message || res?.error || ""}`);
+        }
+      } catch (err) {
+        console.error(err);
+        message.error(t.order_failed || "Order failed!");
+      }
     };
 
-    try {
-      let res;
-      if (currentOrderId) {
-        // Send FULL updated order to server (handles added items + completion)
-        const updateParam = { ...param, order_id: currentOrderId, status: "completed" };
-        res = await request("order", "put", updateParam);
-        if (res && !res.error) res.order_id = currentOrderId;
-      } else {
-        res = await request("order", "post", param);
-      }
+    const biometricActive = localStorage.getItem("flag_biometric_login") === "true";
+    if (biometricActive) {
+      setBiometricVisible(true);
+      setBiometricVerifying(true);
+      setBiometricSuccess(false);
 
-      if (res && !res.error) {
-        window.dispatchEvent(new Event("order-completed"));
-        const pSettings = getPrinterSettings();
-        const key = `open${Date.now()}`;
-        const btn = (
-          <Space>
-            <Button type="primary" size="small" icon={<PrinterOutlined />} onClick={() => {
-              handlePrintInvoice();
-            }}>
-              Print Invoice
-            </Button>
-            <Button size="small" icon={<TagOutlined />} onClick={() => {
-              handlePrintLabel();
-            }}>
-              Print Label
-            </Button>
-            <Button size="small" onClick={() => {
-              notification.destroy(key);
-              handleClearCart(true);
-            }}>
-              Done
-            </Button>
-          </Space>
-        );
-
-        notification.success({
-          message: currentOrderId ? t.order_completed : t.order_placed,
-          description: `Order ID: #${res.order_no || res.order_id}. Manual print available below if needed.`,
-          action: btn,
-          key,
-          duration: 10,
-          placement: 'top'
-        });
-
-        getPendingOrders();
-        getList();
-        getMaterials();
-
-        const currentPrintCart = [...state.cart_list];
-        const currentPrintSummary = {
-          ...objSummary,
-          order_no: res.order_no || res.order_id,
-          order_date: new Date().toISOString(),
-          order_type: orderType,
-          received_usd: cashReceivedUSD,
-          received_khr: cashReceivedKHR
-        };
-
-        setState(prev => ({
-          ...prev,
-          printCart: currentPrintCart,
-          printSummary: currentPrintSummary
-        }));
-
-        const isBankPayment = objSummary.payment_method !== "Cash";
-
-        if (isBankPayment) {
-          setPaymentData({
-            paymentLink: res.payment_link || "",
-            orderNo: res.order_no || res.order_id || "TEMP",
-            total: +objSummary.total
-          });
-          setQrModalVisible(true);
-        }
-
-        setObjSummary((p) => ({
-          ...p,
-          order_no: res.order_no || res.order_id,
-          order_date: new Date().toISOString(),
-        }));
-
-        // --- DYNAMIC PRINTING WORKFLOW ---
-        if (!isBankPayment) {
-          // Trigger print workflow for all order types at checkout 
-          triggerAutoPrintWorkflow(false);
-        } else {
-          // For bank payments, we wait for the QR modal to close before clearing the cart
-          // and triggering the print workflow.
-        }
-      } else {
-        message.error(`Order failed! ${res?.message || res?.error || ""}`);
-      }
-    } catch (err) {
-      console.error(err);
-      message.error(t.order_failed || "Order failed!");
+      setTimeout(() => {
+        setBiometricVerifying(false);
+        setBiometricSuccess(true);
+        setTimeout(() => {
+          setBiometricVisible(false);
+          executeOrderSubmission();
+        }, 600);
+      }, 1500);
+    } else {
+      executeOrderSubmission();
     }
   };
 
@@ -3470,6 +3493,33 @@ function PosPage() {
               <span>{isSoundEnabled ? t.sound_on : t.sound_off}</span>
             </button>
 
+            {/* 📶 Offline Mode Status Indicator */}
+            {(() => {
+              const offlineActive = localStorage.getItem("flag_offline_mode") === "true";
+              return (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: offlineActive ? "rgba(82, 196, 26, 0.1)" : "rgba(100, 116, 139, 0.1)",
+                    border: `1.5px solid ${offlineActive ? "#52c41a" : "#94a3b8"}`,
+                    borderRadius: 8,
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: offlineActive ? "#237804" : "#475569",
+                    whiteSpace: "nowrap",
+                    height: 32,
+                    boxSizing: "border-box"
+                  }}
+                >
+                  <DatabaseOutlined style={{ color: offlineActive ? "#52c41a" : "#64748b", fontSize: 16 }} />
+                  <span>{offlineActive ? "Offline Caching: Active" : "Online Only"}</span>
+                </div>
+              );
+            })()}
+
             <button
               onClick={() => {
                 fetchPublicConfig();
@@ -3487,8 +3537,9 @@ function PosPage() {
                 fontSize: 13,
                 fontWeight: 700,
                 color: COLORS.textPrimary,
-
-                whiteSpace: "nowrap"
+                whiteSpace: "nowrap",
+                height: 32,
+                boxSizing: "border-box"
               }}
             >
               <SyncOutlined spin={state.loading} style={{ fontSize: 16 }} />
@@ -5059,6 +5110,73 @@ function PosPage() {
             </Button>
           </Form>
         </div>
+      </Modal>
+
+      {/* 🔐 Futuristic Biometric Verification Modal */}
+      <Modal
+        title={null}
+        open={biometricVisible}
+        footer={null}
+        closable={false}
+        centered
+        width={380}
+        styles={{ content: { borderRadius: 28, padding: 0, overflow: 'hidden', border: 'none' } }}
+      >
+        <div style={{
+          padding: '40px 30px',
+          background: 'linear-gradient(135deg, #1e4a2d 0%, #112919 100%)',
+          color: '#fff',
+          textAlign: 'center'
+        }}>
+          {biometricVerifying ? (
+            <div style={{ animation: 'pulse 1.5s infinite' }}>
+              <div style={{
+                width: 90,
+                height: 90,
+                borderRadius: '50%',
+                background: 'rgba(24, 144, 255, 0.15)',
+                border: '2px dashed #1890ff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 20
+              }}>
+                <span style={{ fontSize: 42, color: '#1890ff', animation: 'scan 1.5s infinite alternate' }}>☝️</span>
+              </div>
+              <Title level={4} style={{ color: '#fff', margin: '10px 0 5px', fontWeight: 'bold' }}>Scanning Biometrics</Title>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, display: 'block' }}>
+                Verifying register authority via fingerprint scanner...
+              </Text>
+            </div>
+          ) : (
+            <div>
+              <div style={{
+                width: 90,
+                height: 90,
+                borderRadius: '50%',
+                background: 'rgba(82, 196, 26, 0.15)',
+                border: '2px solid #52c41a',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 20
+              }}>
+                <span style={{ fontSize: 42, color: '#52c41a' }}>✅</span>
+              </div>
+              <Title level={4} style={{ color: '#fff', margin: '10px 0 5px', fontWeight: 'bold' }}>Access Granted</Title>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, display: 'block' }}>
+                Biometric credentials matched! Processing payment...
+              </Text>
+            </div>
+          )}
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+          }
+        `}</style>
       </Modal>
     </div>
   );

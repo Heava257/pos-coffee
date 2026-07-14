@@ -18,7 +18,9 @@ exports.getSystemSettings = async (req, res) => {
 
 exports.getPublicSystemSettings = async (req, res) => {
     try {
-        const [rows] = await db.query("SELECT sett_key, sett_value FROM system_settings WHERE sett_key IN ('landing_page')");
+        const [rows] = await db.query(
+            "SELECT sett_key, sett_value FROM system_settings WHERE sett_key = 'landing_page' OR sett_key LIKE 'flag_%'"
+        );
         const settings = {};
         rows.forEach(row => {
             settings[row.sett_key] = row.sett_value;
