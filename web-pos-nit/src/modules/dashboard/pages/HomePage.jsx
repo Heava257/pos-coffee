@@ -37,7 +37,7 @@ import PrintZReport from "@/modules/pos/components/PrintZReport";
 
 import SuperAdminDashboard from "@/modules/dashboard/pages/SuperAdminDashboard";
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
 
 const COLORS = {
