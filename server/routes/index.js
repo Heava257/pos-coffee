@@ -47,6 +47,7 @@ registerRoute("/subscription", "/subscriptions", "../modules/subscription/subscr
 router.use("/billing", require("../modules/billing/billing.routes"));
 
 registerRoute("/notification", "/notifications", "../modules/notification/notification.routes");
+registerRoute("/security", "/securities", "../modules/security/security.routes");
 registerRoute("/employee", "/employees", "../modules/employee/employee.routes");
 registerRoute("/shift", "/shifts", "../modules/shift/shift.routes");
 registerRoute("/table", "/tables", "../modules/table/table.routes");

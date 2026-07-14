@@ -56,6 +56,7 @@ import LoyaltySearchPage from "@/modules/pos/pages/LoyaltySearchPage";
 import DigitalMenuBoard from "@/modules/pos/pages/DigitalMenuBoard";
 import ModuleConfigPage from "@/modules/platform/module/pages/ModuleConfigPage";
 import SystemModulePage from "@/modules/platform/module/pages/SystemModulePage";
+import SecurityDashboardPage from "@/modules/platform/pages/SecurityDashboardPage";
 import StockTransferPage from "@/modules/inventory/transfer/pages/StockTransferPage";
 import { getProfile } from "@/app/store/profile.store";
 import SaasLandingPage from "@/modules/platform/pages/SaasLandingPage";
@@ -121,6 +122,7 @@ function App() {
             <Route path="/service-blueprints" element={<ModuleConfigPage />} />
             <Route path="/system-subscriptions" element={<PlanPage />} />
             <Route path="/system-modules" element={<SystemModulePage />} />
+            <Route path="/security-logs" element={<SecurityDashboardPage />} />
             <Route path="/my-plan" element={<MyPlanPage />} />
             <Route path="/payment/result" element={<PaymentResultPage />} />
             <Route path="/order" element={<OrderPage />} />

@@ -227,6 +227,11 @@ const MENU_STRUCTURE = [
         labelKey: "system_modules",
         icon: <AppstoreOutlined />,
       },
+      {
+        key: "security-logs",
+        labelKey: "security_logs",
+        icon: <SafetyCertificateOutlined />,
+      },
     ]
   },
 ];
@@ -694,7 +699,7 @@ const MainLayout = () => {
         }
 
         // 2. Platform Admin Exceptions (Critical Security)
-        const platformAdminModules = ["plans", "business", "service-blueprints", "system-modules", "permission", "role", "system-subscriptions", "modular_package", "global-category"];
+        const platformAdminModules = ["plans", "business", "service-blueprints", "system-modules", "permission", "role", "system-subscriptions", "modular_package", "global-category", "security-logs"];
         if (platformAdminModules.includes(newItem.key)) {
           // These modules are strictly for the SaaS owner
           if (profile?.business_id !== 1) return null;
