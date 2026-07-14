@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Card, Table, Tag, Button, Space, Typography, Popconfirm, message, Spin, Alert } from "antd";
-import { CloudDownloadOutlined, PlusOutlined, DeleteOutlined, SyncOutlined, DatabaseOutlined } from "@ant-design/icons";
+import { Card, Table, Tag, Button, Space, Typography, Popconfirm, message, Spin, Alert, Switch, Input, Row, Col, Divider } from "antd";
+import { CloudDownloadOutlined, PlusOutlined, DeleteOutlined, SyncOutlined, DatabaseOutlined, SettingOutlined } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
 import dayjs from "dayjs";
 
@@ -11,23 +11,37 @@ const BackupRecoveryPage = () => {
   const [backups, setBackups] = useState([]);
   const [generating, setGenerating] = useState(false);
 
-  const fetchBackups = async () => {
+  // Auto-backup configuration state
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [cronPattern, setCronPattern] = useState("0 2 * * *");
+  const [retentionDays, setRetentionDays] = useState("30");
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const fetchBackupsAndSettings = async () => {
     setLoading(true);
     try {
       const res = await request("backup", "get");
       if (res && res.success) {
         setBackups(res.list);
       }
+      
+      const settingsRes = await request("system-setting", "get");
+      if (settingsRes && settingsRes.success && settingsRes.settings) {
+        const s = settingsRes.settings;
+        setScheduleEnabled(s.backup_schedule_enabled === "true");
+        setCronPattern(s.backup_schedule_cron || "0 2 * * *");
+        setRetentionDays(s.backup_schedule_retention_days || "30");
+      }
     } catch (err) {
       console.error(err);
-      message.error("Failed to load database backups list.");
+      message.error("Failed to load database backups and settings.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBackups();
+    fetchBackupsAndSettings();
   }, []);
 
   const handleCreateBackup = async () => {
@@ -59,6 +73,25 @@ const BackupRecoveryPage = () => {
     } catch (err) {
       console.error(err);
       message.error("Failed to delete backup file.");
+    }
+  };
+
+  const handleSaveScheduleSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const res = await request("system-setting", "put", {
+        backup_schedule_enabled: scheduleEnabled ? "true" : "false",
+        backup_schedule_cron: cronPattern,
+        backup_schedule_retention_days: retentionDays
+      });
+      if (res && res.success) {
+        message.success("Automated backup schedule settings saved successfully.");
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to save schedule settings.");
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -120,7 +153,7 @@ const BackupRecoveryPage = () => {
           </Paragraph>
         </div>
         <Space>
-          <Button icon={<SyncOutlined />} onClick={fetchBackups} disabled={generating}>
+          <Button icon={<SyncOutlined />} onClick={fetchBackupsAndSettings} disabled={generating}>
             Refresh List
           </Button>
           <Button 
@@ -135,18 +168,73 @@ const BackupRecoveryPage = () => {
         </Space>
       </div>
 
-      <Alert
-        message="Automated Snapshot Schedule Active"
-        description="The system performs automated database backups every night at 02:00 AM UTC. Automated backups are stored in AWS S3 and kept for 30 days."
-        type="success"
-        showIcon
-        style={{ marginBottom: 24, borderRadius: 8 }}
-      />
-
       <Spin spinning={loading}>
-        <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12 }} title={<b>Platform Database Backups</b>}>
-          <Table columns={columns} dataSource={backups} pagination={false} size="small" rowKey="filename" />
-        </Card>
+        <Row gutter={[24, 24]}>
+          {/* Scheduler Configuration Card */}
+          <Col xs={24} lg={8}>
+            <Card 
+              bordered={false} 
+              className="shadow-sm" 
+              style={{ borderRadius: 12 }}
+              title={
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span><SettingOutlined style={{ marginRight: 8 }} /><b>Scheduler Settings</b></span>
+                  <Switch checked={scheduleEnabled} onChange={(val) => setScheduleEnabled(val)} />
+                </div>
+              }
+            >
+              <Paragraph style={{ fontSize: 12, color: "#666" }}>
+                Automate your database backups on a recurring cron interval. System backup processes are run in the background.
+              </Paragraph>
+              
+              <div style={{ margin: "16px 0" }}>
+                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 12 }}>Cron Expression</label>
+                <Input 
+                  value={cronPattern} 
+                  placeholder="e.g. 0 2 * * *" 
+                  onChange={(e) => setCronPattern(e.target.value)} 
+                  disabled={!scheduleEnabled}
+                />
+                <Text type="secondary" style={{ fontSize: 10 }}>
+                  Format: Min Hour Day Month Weekday (e.g. <Text code>0 2 * * *</Text> runs daily at 2:00 AM)
+                </Text>
+              </div>
+
+              <div style={{ margin: "16px 0" }}>
+                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 12 }}>Retention Period (Days)</label>
+                <Input 
+                  type="number" 
+                  value={retentionDays} 
+                  placeholder="30" 
+                  onChange={(e) => setRetentionDays(e.target.value)} 
+                  disabled={!scheduleEnabled}
+                />
+                <Text type="secondary" style={{ fontSize: 10 }}>
+                  Backups older than this will be deleted automatically.
+                </Text>
+              </div>
+
+              <Divider style={{ margin: "16px 0" }} />
+              
+              <Button 
+                type="primary" 
+                block 
+                style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}
+                onClick={handleSaveScheduleSettings}
+                loading={savingSettings}
+              >
+                Save Schedule Config
+              </Button>
+            </Card>
+          </Col>
+
+          {/* Backup List Card */}
+          <Col xs={24} lg={16}>
+            <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12 }} title={<b>Platform Database Backups</b>}>
+              <Table columns={columns} dataSource={backups} pagination={false} size="small" rowKey="filename" />
+            </Card>
+          </Col>
+        </Row>
       </Spin>
     </div>
   );

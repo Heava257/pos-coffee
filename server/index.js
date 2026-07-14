@@ -7,6 +7,9 @@ const xssClean = require('xss-clean');     // L-2 FIX: sanitize XSS payloads
 const telegramPolling = require('./src/service/telegramPolling.service');
 telegramPolling.start();
 
+const backupScheduler = require('./src/service/backupScheduler.service');
+backupScheduler.start();
+
 const app = express();
 
 // â”€â”€â”€ Security Middleware (order matters) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

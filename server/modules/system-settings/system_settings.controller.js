@@ -1,6 +1,7 @@
 const { db, logError } = require("../../src/util/helper");
 const fs = require('fs');
 const path = require('path');
+const backupScheduler = require("../../src/service/backupScheduler.service");
 
 exports.getSystemSettings = async (req, res) => {
     try {
@@ -55,6 +56,10 @@ exports.updateSystemSettings = async (req, res) => {
                 "UPDATE system_settings SET sett_value = ? WHERE sett_key = ?",
                 [params[key], key]
             );
+        }
+
+        if (keys.some(k => k.startsWith("backup_schedule_"))) {
+            backupScheduler.reload();
         }
 
         res.json({ success: true, message: "System settings updated successfully" });
