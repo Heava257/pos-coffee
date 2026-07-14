@@ -62,6 +62,7 @@ import PaymentGatewayPage from "@/modules/platform/pages/PaymentGatewayPage";
 import IntegrationCenterPage from "@/modules/platform/pages/IntegrationCenterPage";
 import AuditLogsPage from "@/modules/platform/pages/AuditLogsPage";
 import BackupRecoveryPage from "@/modules/platform/pages/BackupRecoveryPage";
+import InfrastructureMonitoringPage from "@/modules/platform/pages/InfrastructureMonitoringPage";
 import StockTransferPage from "@/modules/inventory/transfer/pages/StockTransferPage";
 import { getProfile } from "@/app/store/profile.store";
 import SaasLandingPage from "@/modules/platform/pages/SaasLandingPage";
@@ -146,7 +147,7 @@ function App() {
             <Route path="/feature-flags" element={<SystemModulePage />} />
             <Route path="/notification-center" element={<SettingsPage />} />
             <Route path="/backup-recovery" element={<BackupRecoveryPage />} />
-            <Route path="/infrastructure-monitoring" element={<SecurityDashboardPage />} />
+            <Route path="/infrastructure-monitoring" element={<InfrastructureMonitoringPage />} />
 
             <Route path="/my-plan" element={<MyPlanPage />} />
             <Route path="/payment/result" element={<PaymentResultPage />} />
