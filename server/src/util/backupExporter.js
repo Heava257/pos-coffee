@@ -1,6 +1,7 @@
 const { db } = require("./helper");
 const fs = require("fs");
 const path = require("path");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
 const BACKUP_DIR = path.join(__dirname, "../../backups");
 
@@ -59,9 +60,58 @@ const runBackup = async () => {
 
   fs.appendFileSync(outputPath, `SET FOREIGN_KEY_CHECKS=1;\n`);
 
+  const fileStats = fs.statSync(outputPath);
+
+  // ── Trigger Cloud S3 Upload if Enabled ──────────────────────────────────────
+  try {
+    const [settings] = await db.query(
+      "SELECT sett_key, sett_value FROM system_settings WHERE sett_key IN ('backup_s3_enabled', 'backup_s3_provider', 'backup_s3_access_key', 'backup_s3_secret_key', 'backup_s3_region', 'backup_s3_bucket', 'backup_s3_endpoint')"
+    );
+
+    const s3Conf = {};
+    settings.forEach(s => {
+      s3Conf[s.sett_key] = s.sett_value;
+    });
+
+    if (s3Conf.backup_s3_enabled === "true") {
+      console.log(`[CloudBackup] Starting S3 upload to bucket: ${s3Conf.backup_s3_bucket}...`);
+      
+      const s3ClientConfig = {
+        region: s3Conf.backup_s3_region || "us-east-1",
+        credentials: {
+          accessKeyId: s3Conf.backup_s3_access_key,
+          secretAccessKey: s3Conf.backup_s3_secret_key
+        }
+      };
+
+      if (s3Conf.backup_s3_provider !== "aws" && s3Conf.backup_s3_endpoint) {
+        let endpointUrl = s3Conf.backup_s3_endpoint;
+        if (!endpointUrl.startsWith("http://") && !endpointUrl.startsWith("https://")) {
+          endpointUrl = `https://${endpointUrl}`;
+        }
+        s3ClientConfig.endpoint = endpointUrl;
+      }
+
+      const s3Client = new S3Client(s3ClientConfig);
+      const fileContent = fs.readFileSync(outputPath);
+
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: s3Conf.backup_s3_bucket,
+          Key: filename,
+          Body: fileContent
+        })
+      );
+      console.log(`[CloudBackup] Successfully uploaded backup ${filename} to S3 bucket ${s3Conf.backup_s3_bucket}.`);
+    }
+  } catch (s3Err) {
+    console.error("[CloudBackup] S3 Upload Failed:", s3Err.message);
+    // We do not throw the error so the local backup is still considered successful
+  }
+
   return {
     filename,
-    size_bytes: fs.statSync(outputPath).size,
+    size_bytes: fileStats.size,
     created_at: new Date()
   };
 };
