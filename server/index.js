@@ -1,4 +1,4 @@
-﻿
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -34,6 +34,10 @@ app.use(cors({
   credentials: true,
   optionsSuccessStatus: 200,
 }));
+
+// IP Blacklist check middleware (blocks malicious IPs at entry level)
+const ipBlacklistMiddleware = require('./middlewares/ipBlacklist.middleware');
+app.use(ipBlacklistMiddleware);
 
 // L-2 FIX: xss-clean strips HTML/script tags from req.body, req.query, req.params
 app.use(xssClean());

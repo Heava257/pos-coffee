@@ -209,6 +209,28 @@ async function runMigrations() {
     )
   `);
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS security_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      ip VARCHAR(45) NOT NULL,
+      event_type VARCHAR(50) NOT NULL,
+      endpoint VARCHAR(255) NULL,
+      user_agent VARCHAR(500) NULL,
+      details TEXT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS blocked_ips (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      ip VARCHAR(45) NOT NULL UNIQUE,
+      reason VARCHAR(255) NULL,
+      blocked_by INT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
   // ── System Settings seed ───────────────────────────────────────────────────
   const defaultSettings = [
     ['payway_merchant_id', ''],
