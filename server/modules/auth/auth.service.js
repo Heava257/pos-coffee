@@ -88,15 +88,20 @@ const sendPasswordResetEmail = async (to, name, otpCode) => {
 };
 
 class AuthService {
-  async generateLoginResponse(user, remember = false) {
+  async generateLoginResponse(user, remember = false, req = null) {
     // H-5 FIX: JWT payload is minimal and stable.
     // Permissions are NOT embedded — the auth middleware fetches them live from Redis/DB.
     // This keeps tokens small and ensures permission changes take effect without re-login.
+    const { randomUUID } = require('crypto');
+    const existingSessionUuid = req?.auth?.session_uuid;
+    const sessionUuid = existingSessionUuid || randomUUID();
+
     const payload = {
       user_id:     user.id,
       business_id: user.business_id,
       branch_id:   user.branch_id,
       role_id:     user.role_id,
+      session_uuid: sessionUuid,
       // Non-sensitive profile data (safe to embed; not used for auth decisions)
       name:            user.name,
       email:           user.email,
@@ -136,6 +141,17 @@ class AuthService {
                         AND NOT EXISTS (SELECT 1 FROM module_permissions WHERE permission_id = p.id))
       )
     `, [user.business_id, user.role_id]);
+
+    if (req && !existingSessionUuid) {
+      const ip = req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+      const ua = req.headers['user-agent'] || 'unknown';
+      const expiresAt = remember ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      await db.query(
+        "INSERT INTO user_sessions (user_id, token_uuid, ip_address, user_agent, expires_at) VALUES (?, ?, ?, ?, ?)",
+        [user.id, sessionUuid, ip, ua, expiresAt]
+      ).catch(err => console.error("Failed to save user session:", err.message));
+    }
 
     const accessToken = generateAccessToken(payload, remember);
 
@@ -304,7 +320,7 @@ class AuthService {
     }
   }
 
-  async googleLogin(accessToken) {
+  async googleLogin(accessToken, req = null) {
     const googleRes = await axios.get(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
     const { email, picture } = googleRes.data;
 
@@ -328,11 +344,11 @@ class AuthService {
       user.image = picture;
     }
 
-    const loginData = await this.generateLoginResponse(user);
+    const loginData = await this.generateLoginResponse(user, false, req);
     return { success: true, ...loginData };
   }
 
-  async login(email, password, remember = false) {
+  async login(email, password, remember = false, req = null) {
     const user = await authRepository.findUserByEmail(email);
     if (!user) {
       throw new Error("Account not found or incorrect email!");
@@ -355,11 +371,11 @@ class AuthService {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new Error('Password incorrect!');
 
-    const loginData = await this.generateLoginResponse(user, remember);
+    const loginData = await this.generateLoginResponse(user, remember, req);
     return { success: true, ...loginData };
   }
 
-  async loginByPassword(id, password, business_id) {
+  async loginByPassword(id, password, business_id, req = null) {
     const user = await authRepository.findUserById(id);
     if (!user) throw new Error("User not found!");
 
@@ -375,7 +391,7 @@ class AuthService {
       throw new Error("Account deactivated.");
     }
 
-    const loginData = await this.generateLoginResponse(user);
+    const loginData = await this.generateLoginResponse(user, false, req);
     return { success: true, ...loginData };
   }
 

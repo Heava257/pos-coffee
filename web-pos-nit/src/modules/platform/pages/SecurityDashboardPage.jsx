@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Table, Tag, Button, Modal, Input, Space, Card, Row, Col, Statistic, Tabs, Form, message, Popconfirm, Typography } from "antd";
+import { Table, Tag, Button, Modal, Input, Space, Card, Row, Col, Statistic, Tabs, Form, message, Popconfirm, Typography, Progress, Tooltip } from "antd";
 import {
   SafetyCertificateOutlined,
   WarningOutlined,
@@ -9,7 +9,13 @@ import {
   ReloadOutlined,
   PlusOutlined,
   CheckCircleOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  DesktopOutlined,
+  DatabaseOutlined,
+  DashboardOutlined,
+  GlobalOutlined,
+  UserDeleteOutlined,
+  LaptopOutlined
 } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
 import { useLanguage, translations } from "@/app/store/language.store";
@@ -32,6 +38,12 @@ const SecurityDashboardPage = () => {
 
   const [blockedIps, setBlockedIps] = useState([]);
   const [blockedLoading, setBlockedLoading] = useState(false);
+
+  // New States for Server Status and Sessions
+  const [serverStatus, setServerStatus] = useState(null);
+  const [serverLoading, setServerLoading] = useState(false);
+  const [sessions, setSessions] = useState([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
 
   // Modal State for blocking IP
   const [blockModalVisible, setBlockModalVisible] = useState(false);
@@ -67,14 +79,46 @@ const SecurityDashboardPage = () => {
     }
   };
 
+  const fetchServerStatus = async () => {
+    setServerLoading(true);
+    try {
+      const res = await request("securities/server-status", "get");
+      if (res) {
+        setServerStatus(res);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setServerLoading(false);
+    }
+  };
+
+  const fetchSessions = async () => {
+    setSessionsLoading(true);
+    try {
+      const res = await request("securities/active-sessions", "get");
+      if (res && res.list) {
+        setSessions(res.list);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
   const handleRefresh = () => {
     fetchLogs(logsPage, logsSearch);
     fetchBlockedIps();
+    fetchServerStatus();
+    fetchSessions();
   };
 
   useEffect(() => {
     fetchLogs(1, "");
     fetchBlockedIps();
+    fetchServerStatus();
+    fetchSessions();
   }, []);
 
   const handleLogsPageChange = (page) => {
@@ -116,11 +160,29 @@ const SecurityDashboardPage = () => {
     }
   };
 
-  // Statistics calculations
-  const totalIncidents = logsTotal;
-  const rateLimitEvents = logs.filter(l => l.event_type === 'rate_limit_blocked').length;
-  const activeBlockedCount = blockedIps.length;
+  // Revoke User Session (Force Logout)
+  const handleRevokeSession = async (tokenUuid) => {
+    try {
+      const res = await request("securities/revoke-session", "post", { token_uuid: tokenUuid });
+      if (res && res.success) {
+        message.success(res.message);
+        fetchSessions();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
+  // Format uptime to readable string
+  const formatUptime = (seconds) => {
+    if (!seconds) return "N/A";
+    const d = Math.floor(seconds / (3600 * 24));
+    const h = Math.floor((seconds % (3600 * 24)) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return `${d}d ${h}h ${m}m`;
+  };
+
+  // Log Columns
   const logColumns = [
     {
       title: "ID",
@@ -202,6 +264,7 @@ const SecurityDashboardPage = () => {
     },
   ];
 
+  // Blocked Columns
   const blockedColumns = [
     {
       title: "IP Address",
@@ -244,6 +307,87 @@ const SecurityDashboardPage = () => {
     },
   ];
 
+  // Active Sessions Columns
+  const sessionColumns = [
+    {
+      title: "User",
+      key: "user",
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: "bold", color: "#1e4a2d" }}>{record.user_name}</div>
+          <div style={{ fontSize: "12px", color: "#666" }}>{record.user_email}</div>
+        </div>
+      ),
+    },
+    {
+      title: "Business / Shop",
+      dataIndex: "business_name",
+      key: "business_name",
+      render: (name) => <Tag color="purple">{name || "System"}</Tag>,
+    },
+    {
+      title: "Role",
+      dataIndex: "role_name",
+      key: "role_name",
+      render: (role) => <Tag color="blue">{role}</Tag>,
+    },
+    {
+      title: "IP Address",
+      dataIndex: "ip_address",
+      key: "ip_address",
+      render: (ip) => <Text code copyable>{ip}</Text>,
+    },
+    {
+      title: "Device / Browser",
+      dataIndex: "user_agent",
+      key: "user_agent",
+      ellipsis: true,
+      render: (ua) => {
+        let os = "Desktop/Browser";
+        if (ua.toLowerCase().includes("android")) os = "Android App/Mobile";
+        else if (ua.toLowerCase().includes("iphone") || ua.toLowerCase().includes("ipad")) os = "iOS App/Mobile";
+        return (
+          <Tooltip title={ua}>
+            <span>
+              <LaptopOutlined style={{ marginRight: "6px" }} />
+              {os}
+            </span>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: "Login Time",
+      dataIndex: "created_at",
+      key: "created_at",
+      render: (time) => dayjs(time).format("YYYY-MM-DD HH:mm:ss"),
+    },
+    {
+      title: "Last Active",
+      dataIndex: "last_activity",
+      key: "last_activity",
+      render: (time) => dayjs(time).format("HH:mm:ss"),
+    },
+    {
+      title: "Force Action",
+      key: "action",
+      width: 150,
+      render: (_, record) => (
+        <Popconfirm
+          title="Force logout this user and terminate session?"
+          onConfirm={() => handleRevokeSession(record.token_uuid)}
+          okText="Yes, Log out"
+          okButtonProps={{ danger: true }}
+          cancelText="No"
+        >
+          <Button type="primary" danger size="small" icon={<UserDeleteOutlined />}>
+            Force Logout
+          </Button>
+        </Popconfirm>
+      ),
+    },
+  ];
+
   return (
     <div style={{ padding: "24px", minHeight: "100%" }}>
       {/* Page Header */}
@@ -251,15 +395,15 @@ const SecurityDashboardPage = () => {
         <div>
           <Title level={2} style={{ margin: 0, color: "#1e4a2d" }}>
             <SafetyCertificateOutlined style={{ marginRight: "10px" }} />
-            {t.security_logs || "Security Management"}
+            {t.security_logs || "Security & System Management"}
           </Title>
           <Paragraph style={{ color: "#666", margin: "4px 0 0 0" }}>
-            Monitor real-time system attacks, review rate-limit blocks, and manage IP blacklist.
+            Real-time server infrastructure status, security block tracking, and live active session management.
           </Paragraph>
         </div>
         <Space>
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-            Refresh
+            Refresh All
           </Button>
           <Button
             type="primary"
@@ -277,39 +421,133 @@ const SecurityDashboardPage = () => {
 
       {/* Summary Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-        <Col xs={24} sm={8}>
+        <Col xs={24} sm={6}>
           <Card bordered={false} className="shadow-sm">
-            <Card.Meta
-              avatar={<WarningOutlined style={{ color: "#d48806", fontSize: "28px" }} />}
-              title={<span style={{ color: "#666", fontSize: "14px", fontWeight: "normal" }}>Total Logged Incidents</span>}
-              description={<span style={{ color: "#d48806", fontSize: "24px", fontWeight: "bold" }}>{totalIncidents}</span>}
+            <Statistic
+              title="Total Logged Incidents"
+              value={logsTotal}
+              prefix={<WarningOutlined style={{ color: "#d48806" }} />}
+              valueStyle={{ color: "#d48806", fontWeight: "bold" }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
+        <Col xs={24} sm={6}>
           <Card bordered={false} className="shadow-sm">
-            <Card.Meta
-              avatar={<InfoCircleOutlined style={{ color: "#096dd9", fontSize: "28px" }} />}
-              title={<span style={{ color: "#666", fontSize: "14px", fontWeight: "normal" }}>Rate Limit Violations</span>}
-              description={<span style={{ color: "#096dd9", fontSize: "24px", fontWeight: "bold" }}>{rateLimitEvents}</span>}
+            <Statistic
+              title="Active IP Blocks"
+              value={blockedIps.length}
+              prefix={<CheckCircleOutlined style={{ color: "#cf1322" }} />}
+              valueStyle={{ color: "#cf1322", fontWeight: "bold" }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
+        <Col xs={24} sm={6}>
           <Card bordered={false} className="shadow-sm">
-            <Card.Meta
-              avatar={<CheckCircleOutlined style={{ color: "#3f8600", fontSize: "28px" }} />}
-              title={<span style={{ color: "#666", fontSize: "14px", fontWeight: "normal" }}>Active IP Blocks</span>}
-              description={<span style={{ color: "#3f8600", fontSize: "24px", fontWeight: "bold" }}>{activeBlockedCount}</span>}
+            <Statistic
+              title="Live Online Sessions"
+              value={sessions.length}
+              prefix={<GlobalOutlined style={{ color: "#3f8600" }} />}
+              valueStyle={{ color: "#3f8600", fontWeight: "bold" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={6}>
+          <Card bordered={false} className="shadow-sm">
+            <Statistic
+              title="Server Uptime"
+              value={formatUptime(serverStatus?.uptime_seconds)}
+              prefix={<DesktopOutlined style={{ color: "#096dd9" }} />}
+              valueStyle={{ color: "#096dd9", fontWeight: "bold", fontSize: "20px" }}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* Tabs for Logs and Blocks */}
+      {/* Main Tabbed Panel */}
       <Card bordered={false} className="shadow-sm" style={{ borderRadius: "8px" }}>
         <Tabs defaultActiveKey="1">
-          <TabPane tab="Attack & Incident Logs" key="1">
+          {/* Tab 1: Server Status Dashboard */}
+          <TabPane tab={<span><DashboardOutlined /> Server Infrastructure Health</span>} key="1">
+            <Row gutter={[24, 24]} style={{ padding: "16px 0" }}>
+              <Col xs={24} md={12}>
+                <Card title="System Performance Gauges" loading={serverLoading}>
+                  <Row gutter={16} justify="space-around" align="middle" style={{ textAlign: "center" }}>
+                    <Col span={12}>
+                      <Progress
+                        type="dashboard"
+                        percent={serverStatus?.cpu?.usage_pct || 0}
+                        strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                        width={130}
+                      />
+                      <div style={{ marginTop: "10px", fontWeight: "bold" }}>CPU Core Load</div>
+                      <div style={{ color: "#666" }}>{serverStatus?.cpu?.cores || 1} Cores Available</div>
+                    </Col>
+                    <Col span={12}>
+                      <Progress
+                        type="dashboard"
+                        percent={serverStatus?.ram?.usage_pct || 0}
+                        strokeColor={{ '0%': '#108ee9', '100%': '#ff4d4f' }}
+                        width={130}
+                      />
+                      <div style={{ marginTop: "10px", fontWeight: "bold" }}>RAM Usage</div>
+                      <div style={{ color: "#666" }}>
+                        {serverStatus?.ram?.used_mb || 0} MB / {serverStatus?.ram?.total_mb || 0} MB
+                      </div>
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+
+              <Col xs={24} md={12}>
+                <Card title="Infrastructure Services" loading={serverLoading}>
+                  <div style={{ marginBottom: "20px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <span style={{ fontWeight: "bold" }}><DatabaseOutlined style={{ marginRight: "8px" }} /> MySQL Database Health</span>
+                      <Tag color={serverStatus?.database?.status === 'healthy' ? "success" : "error"}>
+                        {serverStatus?.database?.status?.toUpperCase() || "UNKNOWN"}
+                      </Tag>
+                    </div>
+                    <div style={{ color: "#666", fontSize: "13px" }}>
+                      Latency: <Text code>{serverStatus?.database?.latency_ms || 0} ms</Text> (Live connection response latency)
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: "20px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <span style={{ fontWeight: "bold" }}><GlobalOutlined style={{ marginRight: "8px" }} /> Redis Memory Caching</span>
+                      <Tag color={serverStatus?.redis?.status === 'healthy' ? "success" : "error"}>
+                        {serverStatus?.redis?.status?.toUpperCase() || "UNKNOWN"}
+                      </Tag>
+                    </div>
+                    <div style={{ color: "#666", fontSize: "13px" }}>
+                      Cache Status: <Text code>{serverStatus?.redis?.status === 'healthy' ? 'Active' : 'Fallback Mode (Memory Mock)'}</Text>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontWeight: "bold", marginBottom: "8px" }}>Process Runtime (RSS)</div>
+                    <div style={{ fontSize: "14px" }}>
+                      NodeJS memory footprint: <Text code>{serverStatus?.ram?.process_rss_mb || 0} MB</Text>
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+          </TabPane>
+
+          {/* Tab 2: Live Active User Sessions */}
+          <TabPane tab={<span><DesktopOutlined /> Active User Sessions</span>} key="2">
+            <Table
+              columns={sessionColumns}
+              dataSource={sessions}
+              rowKey="token_uuid"
+              loading={sessionsLoading}
+              pagination={{ pageSize: 15 }}
+            />
+          </TabPane>
+
+          {/* Tab 3: Security & Incident Logs */}
+          <TabPane tab={<span><WarningOutlined /> Incident Logs</span>} key="3">
             <div style={{ marginBottom: "16px", display: "flex", justifyContent: "flex-end" }}>
               <Input
                 placeholder="Search IP Address..."
@@ -334,13 +572,15 @@ const SecurityDashboardPage = () => {
               }}
             />
           </TabPane>
-          <TabPane tab="IP Blacklist" key="2">
+
+          {/* Tab 4: IP Blacklist */}
+          <TabPane tab={<span><BlockOutlined /> IP Blacklist</span>} key="4">
             <Table
               columns={blockedColumns}
               dataSource={blockedIps}
               rowKey="id"
               loading={blockedLoading}
-              pagination={{ pageSize: 10 }}
+              pagination={{ pageSize: 15 }}
             />
           </TabPane>
         </Tabs>

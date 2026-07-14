@@ -27,6 +27,32 @@ const authMiddleware = (permission_name) => {
         try {
             const decoded = jwt.verify(token, config.token.access_token_key);
 
+            // Active session revocation check
+            if (decoded.session_uuid) {
+                const sessionCacheKey = `session_active:${decoded.session_uuid}`;
+                const isCachedActive = await getCache(sessionCacheKey);
+
+                if (isCachedActive === 'false') {
+                    return res.status(401).json({
+                        message: "Session expired or revoked",
+                        error: "SESSION_REVOKED"
+                    });
+                } else if (!isCachedActive) {
+                    const [sessionRows] = await db.query(
+                        "SELECT id FROM user_sessions WHERE token_uuid = ?",
+                        [decoded.session_uuid]
+                    );
+                    if (sessionRows.length === 0) {
+                        await setCache(sessionCacheKey, 'false', 'EX', 300);
+                        return res.status(401).json({
+                            message: "Session expired or revoked",
+                            error: "SESSION_REVOKED"
+                        });
+                    }
+                    await setCache(sessionCacheKey, 'true', 'EX', 60);
+                }
+            }
+
             // Inject SaaS context into request
             req.user_id = decoded.user_id;
             req.business_id = Number(decoded.business_id);

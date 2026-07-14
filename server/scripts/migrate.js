@@ -310,6 +310,57 @@ async function runMigrations() {
     console.warn("  ⚠ Seeding templates failed:", err.message);
   }
 
+  // ── Security Tables ────────────────────────────────────────────────────────
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS security_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ip VARCHAR(45) NOT NULL,
+        event_type VARCHAR(100) NOT NULL,
+        endpoint VARCHAR(255) NULL,
+        user_agent VARCHAR(500) NULL,
+        details TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('  ✓ security_logs table verified');
+  } catch (err) {
+    console.warn('  ⚠ security_logs table creation skipped:', err.message);
+  }
+
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS blocked_ips (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ip VARCHAR(45) NOT NULL UNIQUE,
+        reason VARCHAR(255) NULL,
+        blocked_by INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('  ✓ blocked_ips table verified');
+  } catch (err) {
+    console.warn('  ⚠ blocked_ips table creation skipped:', err.message);
+  }
+
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        token_uuid VARCHAR(100) NOT NULL UNIQUE,
+        ip_address VARCHAR(45) NOT NULL,
+        user_agent VARCHAR(500) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('  ✓ user_sessions table verified');
+  } catch (err) {
+    console.warn('  ⚠ user_sessions table creation skipped:', err.message);
+  }
+
   // ── Mark all users as verified (one-time unlock for existing accounts) ─────
   try {
     await db.query('UPDATE users SET is_verified = 1 WHERE is_verified = 0 OR is_verified IS NULL');

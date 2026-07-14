@@ -18,7 +18,7 @@ class AuthController {
 
   async login(req, res) {
     try {
-      const result = await authService.login(req.body.email, req.body.password, req.body.remember);
+      const result = await authService.login(req.body.email, req.body.password, req.body.remember, req);
       try { loginRateLimiter.resetKey(req.ip); } catch (e) {}
       res.json(result);
     } catch (error) {
@@ -28,7 +28,7 @@ class AuthController {
 
   async googleLogin(req, res) {
     try {
-      const result = await authService.googleLogin(req.body.access_token);
+      const result = await authService.googleLogin(req.body.access_token, req);
       try { loginRateLimiter.resetKey(req.ip); } catch (e) {}
       res.json(result);
     } catch (error) {
@@ -38,7 +38,7 @@ class AuthController {
 
   async loginByPassword(req, res) {
     try {
-      const result = await authService.loginByPassword(req.body.id, req.body.password, req.business_id);
+      const result = await authService.loginByPassword(req.body.id, req.body.password, req.business_id, req);
       try { loginRateLimiter.resetKey(req.ip); } catch (e) {}
       res.json(result);
     } catch (error) {
@@ -82,7 +82,7 @@ class AuthController {
         plan_type: req.auth.plan_type,
         plan_id: req.auth.plan_id,
         business_layout: req.auth.business_layout
-      });
+      }, false, req);
       res.json(result);
     } catch (error) {
       logError("auth.getProfile", error, res);
