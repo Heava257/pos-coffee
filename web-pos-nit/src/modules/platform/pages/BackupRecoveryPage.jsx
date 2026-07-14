@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Card, Table, Tag, Button, Space, Typography, Popconfirm, message, Spin, Alert, Switch, Input, Row, Col, Divider } from "antd";
-import { CloudDownloadOutlined, PlusOutlined, DeleteOutlined, SyncOutlined, DatabaseOutlined, SettingOutlined } from "@ant-design/icons";
+import { Card, Table, Tag, Button, Space, Typography, Popconfirm, message, Spin, Alert, Switch, Input, Row, Col, Divider, Select } from "antd";
+import { CloudDownloadOutlined, PlusOutlined, DeleteOutlined, SyncOutlined, DatabaseOutlined, SettingOutlined, CloudUploadOutlined } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
 import dayjs from "dayjs";
 
@@ -17,6 +17,16 @@ const BackupRecoveryPage = () => {
   const [retentionDays, setRetentionDays] = useState("30");
   const [savingSettings, setSavingSettings] = useState(false);
 
+  // S3 Cloud Storage state
+  const [s3Enabled, setS3Enabled] = useState(false);
+  const [s3Provider, setS3Provider] = useState("aws");
+  const [s3AccessKey, setS3AccessKey] = useState("");
+  const [s3SecretKey, setS3SecretKey] = useState("");
+  const [s3Region, setS3Region] = useState("");
+  const [s3Bucket, setS3Bucket] = useState("");
+  const [s3Endpoint, setS3Endpoint] = useState("");
+  const [savingS3, setSavingS3] = useState(false);
+
   const fetchBackupsAndSettings = async () => {
     setLoading(true);
     try {
@@ -31,6 +41,14 @@ const BackupRecoveryPage = () => {
         setScheduleEnabled(s.backup_schedule_enabled === "true");
         setCronPattern(s.backup_schedule_cron || "0 2 * * *");
         setRetentionDays(s.backup_schedule_retention_days || "30");
+
+        setS3Enabled(s.backup_s3_enabled === "true");
+        setS3Provider(s.backup_s3_provider || "aws");
+        setS3AccessKey(s.backup_s3_access_key || "");
+        setS3SecretKey(s.backup_s3_secret_key || "");
+        setS3Region(s.backup_s3_region || "");
+        setS3Bucket(s.backup_s3_bucket || "");
+        setS3Endpoint(s.backup_s3_endpoint || "");
       }
     } catch (err) {
       console.error(err);
@@ -92,6 +110,29 @@ const BackupRecoveryPage = () => {
       message.error("Failed to save schedule settings.");
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const handleSaveS3Settings = async () => {
+    setSavingS3(true);
+    try {
+      const res = await request("system-setting", "put", {
+        backup_s3_enabled: s3Enabled ? "true" : "false",
+        backup_s3_provider: s3Provider,
+        backup_s3_access_key: s3AccessKey,
+        backup_s3_secret_key: s3SecretKey,
+        backup_s3_region: s3Region,
+        backup_s3_bucket: s3Bucket,
+        backup_s3_endpoint: s3Endpoint
+      });
+      if (res && res.success) {
+        message.success("Cloud backup destination settings saved successfully.");
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to save cloud destination settings.");
+    } finally {
+      setSavingS3(false);
     }
   };
 
@@ -170,62 +211,132 @@ const BackupRecoveryPage = () => {
 
       <Spin spinning={loading}>
         <Row gutter={[24, 24]}>
-          {/* Scheduler Configuration Card */}
+          {/* Settings Left Column */}
           <Col xs={24} lg={8}>
-            <Card 
-              bordered={false} 
-              className="shadow-sm" 
-              style={{ borderRadius: 12 }}
-              title={
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span><SettingOutlined style={{ marginRight: 8 }} /><b>Scheduler Settings</b></span>
-                  <Switch checked={scheduleEnabled} onChange={(val) => setScheduleEnabled(val)} />
-                </div>
-              }
-            >
-              <Paragraph style={{ fontSize: 12, color: "#666" }}>
-                Automate your database backups on a recurring cron interval. System backup processes are run in the background.
-              </Paragraph>
+            <Space direction="vertical" style={{ width: "100%" }} size={24}>
               
-              <div style={{ margin: "16px 0" }}>
-                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 12 }}>Cron Expression</label>
-                <Input 
-                  value={cronPattern} 
-                  placeholder="e.g. 0 2 * * *" 
-                  onChange={(e) => setCronPattern(e.target.value)} 
-                  disabled={!scheduleEnabled}
-                />
-                <Text type="secondary" style={{ fontSize: 10 }}>
-                  Format: Min Hour Day Month Weekday (e.g. <Text code>0 2 * * *</Text> runs daily at 2:00 AM)
-                </Text>
-              </div>
-
-              <div style={{ margin: "16px 0" }}>
-                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 12 }}>Retention Period (Days)</label>
-                <Input 
-                  type="number" 
-                  value={retentionDays} 
-                  placeholder="30" 
-                  onChange={(e) => setRetentionDays(e.target.value)} 
-                  disabled={!scheduleEnabled}
-                />
-                <Text type="secondary" style={{ fontSize: 10 }}>
-                  Backups older than this will be deleted automatically.
-                </Text>
-              </div>
-
-              <Divider style={{ margin: "16px 0" }} />
-              
-              <Button 
-                type="primary" 
-                block 
-                style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}
-                onClick={handleSaveScheduleSettings}
-                loading={savingSettings}
+              {/* Scheduler Configuration Card */}
+              <Card 
+                bordered={false} 
+                className="shadow-sm" 
+                style={{ borderRadius: 12 }}
+                title={
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span><SettingOutlined style={{ marginRight: 8 }} /><b>Scheduler Settings</b></span>
+                    <Switch checked={scheduleEnabled} onChange={(val) => setScheduleEnabled(val)} />
+                  </div>
+                }
               >
-                Save Schedule Config
-              </Button>
-            </Card>
+                <Paragraph style={{ fontSize: 12, color: "#666" }}>
+                  Automate your database backups on a recurring cron interval. System backup processes are run in the background.
+                </Paragraph>
+                
+                <div style={{ margin: "16px 0" }}>
+                  <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 12 }}>Cron Expression</label>
+                  <Input 
+                    value={cronPattern} 
+                    placeholder="e.g. 0 2 * * *" 
+                    onChange={(e) => setCronPattern(e.target.value)} 
+                    disabled={!scheduleEnabled}
+                  />
+                  <Text type="secondary" style={{ fontSize: 10 }}>
+                    Format: Min Hour Day Month Weekday (e.g. <Text code>0 2 * * *</Text> runs daily at 2:00 AM)
+                  </Text>
+                </div>
+
+                <div style={{ margin: "16px 0" }}>
+                  <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 12 }}>Retention Period (Days)</label>
+                  <Input 
+                    type="number" 
+                    value={retentionDays} 
+                    placeholder="30" 
+                    onChange={(e) => setRetentionDays(e.target.value)} 
+                    disabled={!scheduleEnabled}
+                  />
+                  <Text type="secondary" style={{ fontSize: 10 }}>
+                    Backups older than this will be deleted automatically.
+                  </Text>
+                </div>
+
+                <Divider style={{ margin: "16px 0" }} />
+                
+                <Button 
+                  type="primary" 
+                  block 
+                  style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}
+                  onClick={handleSaveScheduleSettings}
+                  loading={savingSettings}
+                >
+                  Save Schedule Config
+                </Button>
+              </Card>
+
+              {/* Cloud S3 Integration Card */}
+              <Card 
+                bordered={false} 
+                className="shadow-sm" 
+                style={{ borderRadius: 12 }}
+                title={
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span><CloudUploadOutlined style={{ marginRight: 8 }} /><b>Cloud S3 Storage</b></span>
+                    <Switch checked={s3Enabled} onChange={(val) => setS3Enabled(val)} />
+                  </div>
+                }
+              >
+                <Paragraph style={{ fontSize: 12, color: "#666" }}>
+                  Upload generated database snapshots to secure offsite S3-compatible cloud storage automatically.
+                </Paragraph>
+
+                <div style={{ margin: "12px 0" }}>
+                  <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Cloud Provider</label>
+                  <Select value={s3Provider} onChange={(val) => setS3Provider(val)} style={{ width: "100%" }} disabled={!s3Enabled}>
+                    <Select.Option value="aws">Amazon Web Services (S3)</Select.Option>
+                    <Select.Option value="digitalocean">DigitalOcean Spaces</Select.Option>
+                    <Select.Option value="custom">Custom S3 Compatible</Select.Option>
+                  </Select>
+                </div>
+
+                <div style={{ margin: "12px 0" }}>
+                  <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Access Key ID</label>
+                  <Input value={s3AccessKey} placeholder="AKIAIOSFODNN7EXAMPLE" onChange={(e) => setS3AccessKey(e.target.value)} disabled={!s3Enabled} />
+                </div>
+
+                <div style={{ margin: "12px 0" }}>
+                  <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Secret Access Key</label>
+                  <Input.Password value={s3SecretKey} placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" onChange={(e) => setS3SecretKey(e.target.value)} disabled={!s3Enabled} />
+                </div>
+
+                <div style={{ margin: "12px 0" }}>
+                  <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 12 }}>S3 Region</label>
+                  <Input value={s3Region} placeholder="ap-southeast-1" onChange={(e) => setS3Region(e.target.value)} disabled={!s3Enabled} />
+                </div>
+
+                <div style={{ margin: "12px 0" }}>
+                  <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Bucket Name</label>
+                  <Input value={s3Bucket} placeholder="my-saas-backups" onChange={(e) => setS3Bucket(e.target.value)} disabled={!s3Enabled} />
+                </div>
+
+                {s3Provider !== "aws" && (
+                  <div style={{ margin: "12px 0" }}>
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Endpoint URL</label>
+                    <Input value={s3Endpoint} placeholder={s3Provider === 'digitalocean' ? 'sgp1.digitaloceanspaces.com' : 'https://endpoint.com'} onChange={(e) => setS3Endpoint(e.target.value)} disabled={!s3Enabled} />
+                  </div>
+                )}
+
+                <Divider style={{ margin: "16px 0" }} />
+                
+                <Button 
+                  type="primary" 
+                  block 
+                  style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}
+                  onClick={handleSaveS3Settings}
+                  loading={savingS3}
+                >
+                  Save Cloud Settings
+                </Button>
+              </Card>
+
+            </Space>
           </Col>
 
           {/* Backup List Card */}
