@@ -10,6 +10,74 @@ const PERM_TTL_SECONDS = 300; // 5 minutes
 
 const authMiddleware = (permission_name) => {
     return async (req, res, next) => {
+        // 1. Check for Developer Portal API Keys
+        const client_id = req.headers['x-client-id'] || req.headers['X-Client-Id'];
+        const client_secret = req.headers['x-client-secret'] || req.headers['X-Client-Secret'];
+
+        if (client_id && client_secret) {
+            try {
+                const [keys] = await db.query(
+                    "SELECT id, name, scopes, status FROM developer_keys WHERE client_id = ? AND client_secret = ?",
+                    [client_id, client_secret]
+                );
+
+                if (keys.length === 0) {
+                    return res.status(401).json({
+                        message: "Unauthorized - Invalid API credentials",
+                        error: "INVALID_API_CREDENTIALS"
+                    });
+                }
+
+                const key = keys[0];
+                if (key.status !== 'active') {
+                    return res.status(403).json({
+                        message: "Forbidden - Developer API Key is suspended or inactive",
+                        error: "API_KEY_INACTIVE"
+                    });
+                }
+
+                // Check Scopes
+                let scopes = [];
+                try {
+                    scopes = key.scopes ? JSON.parse(key.scopes) : [];
+                } catch (e) {
+                    scopes = [];
+                }
+
+                const isGet = req.method === "GET";
+                const requiredScope = isGet ? "read" : "write";
+
+                if (!scopes.includes(requiredScope)) {
+                    return res.status(403).json({
+                        message: `Forbidden - Missing required '${requiredScope}' scope for this action`,
+                        error: "INSUFFICIENT_API_SCOPE"
+                    });
+                }
+
+                // Inject mock admin auth context for downstream handlers
+                req.user_id = 0; // System/Developer
+                req.business_id = 1; // Platform Admin level bypass
+                req.branch_id = 0;
+                req.role_id = 1; // Owner
+                req.is_developer_api = true;
+                req.developer_key_name = key.name;
+                req.auth = {
+                    user_id: 0,
+                    business_id: 1,
+                    role_id: 1,
+                    username: `developer:${key.name}`
+                };
+
+                return next();
+            } catch (err) {
+                console.error("API Key Auth Error:", err);
+                return res.status(500).json({
+                    message: "Internal server error during API key authentication",
+                    error: "API_KEY_AUTH_FAILED"
+                });
+            }
+        }
+
         const authorization = req.headers.authorization;
         let token = null;
 
