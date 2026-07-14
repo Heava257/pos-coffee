@@ -57,6 +57,9 @@ import DigitalMenuBoard from "@/modules/pos/pages/DigitalMenuBoard";
 import ModuleConfigPage from "@/modules/platform/module/pages/ModuleConfigPage";
 import SystemModulePage from "@/modules/platform/module/pages/SystemModulePage";
 import SecurityDashboardPage from "@/modules/platform/pages/SecurityDashboardPage";
+import DeveloperPortalPage from "@/modules/platform/pages/DeveloperPortalPage";
+import PaymentGatewayPage from "@/modules/platform/pages/PaymentGatewayPage";
+import IntegrationCenterPage from "@/modules/platform/pages/IntegrationCenterPage";
 import StockTransferPage from "@/modules/inventory/transfer/pages/StockTransferPage";
 import { getProfile } from "@/app/store/profile.store";
 import SaasLandingPage from "@/modules/platform/pages/SaasLandingPage";
@@ -129,11 +132,11 @@ function App() {
             <Route path="/organization-directory" element={<BusinessPage />} />
             <Route path="/revenue-analytics" element={<HomePage />} />
             <Route path="/invoice-management" element={<ReportSale_Summary />} />
-            <Route path="/payment-gateway" element={<SettingsPage />} />
+            <Route path="/payment-gateway" element={<PaymentGatewayPage />} />
             <Route path="/app-marketplace" element={<SystemModulePage />} />
-            <Route path="/developer-portal" element={<SettingsPage />} />
-            <Route path="/api-management" element={<SettingsPage />} />
-            <Route path="/integration-center" element={<SettingsPage />} />
+            <Route path="/developer-portal" element={<DeveloperPortalPage />} />
+            <Route path="/api-management" element={<DeveloperPortalPage />} />
+            <Route path="/integration-center" element={<IntegrationCenterPage />} />
             <Route path="/threat-monitoring" element={<SecurityDashboardPage />} />
             <Route path="/audit-logs" element={<SecurityDashboardPage />} />
             <Route path="/compliance-center" element={<SecurityDashboardPage />} />
