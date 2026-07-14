@@ -1,5 +1,5 @@
-const mp = require("../../src/controller/modular_package.controller");
-const sm = require("../../src/controller/system_module.controller");
+const mp = require("./modular_package.controller");
+const sm = require("./system_module.controller");
 
 module.exports = {
     getListPackages: mp.getList,

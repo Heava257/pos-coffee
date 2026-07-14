@@ -1,5 +1,5 @@
-const { db, logError } = require("../util/helper");
-const { clearCache } = require("../util/redisClient");
+const { db, logError } = require("../../src/util/helper");
+const { clearCache } = require("../../src/util/redisClient");
 
 // 1. Get all platform categories with status for a specific business (Filtered by assigned Industry package)
 exports.getList = async (req, res) => {

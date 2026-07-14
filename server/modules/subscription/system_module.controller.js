@@ -1,4 +1,4 @@
-const { db, logError } = require("../util/helper");
+const { db, logError } = require("../../src/util/helper");
 
 exports.getList = async (req, res) => {
     try {
@@ -174,7 +174,7 @@ exports.saveMatrix = async (req, res) => {
             
             // 🚀 HYPER-SYNC: Clear Backend Cache so changes take effect immediately
             try {
-                require("../middleware/auth.middleware").clearCache();
+                require("../../middlewares/auth.middleware").clearCache();
             } catch (e) {}
             try {
                 require("../../middlewares/auth.middleware").clearCache();

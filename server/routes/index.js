@@ -53,9 +53,9 @@ registerRoute("/table", "/tables", "../modules/table/table.routes");
 
 // Special Compatibility Aliases for non-nested flat requests
 const orderController = require("../modules/order/order.controller");
-const dashboardController = require("../src/controller/dashboard.controller");
-const reportController = require("../src/controller/report.controller");
-const purchaseController = require("../src/controller/purchase.controller");
+const dashboardController = require("../modules/dashboard/dashboard.controller");
+const reportController = require("../modules/report/report.controller");
+const purchaseController = require("../modules/purchase/purchase.controller");
 
 router.get("/order-pending", authMiddleware(), orderController.getPendingOrders);
 router.get("/config", authMiddleware(), require("../modules/business/business.controller").getBusinessConfig);
@@ -77,9 +77,9 @@ router.get("/report_Customer", authMiddleware(), reportController.report_Custome
 router.get("/report_Purchase_Summary", authMiddleware(), reportController.report_Purchase_Summary);
 
 // Settings and Modular Packages Compatibility Routes
-const settingsController = require("../src/controller/settings.controller");
-const modularPackageController = require("../src/controller/modular_package.controller");
-const systemModuleController = require("../src/controller/system_module.controller");
+const settingsController = require("../modules/system-settings/settings.controller");
+const modularPackageController = require("../modules/subscription/modular_package.controller");
+const systemModuleController = require("../modules/subscription/system_module.controller");
 const uploadMiddleware = require("../middlewares/upload.middleware");
 
 router.get("/settings", authMiddleware(), settingsController.getSettings);

@@ -1,4 +1,4 @@
-const { db, logError } = require("../util/helper");
+const { db, logError } = require("../../src/util/helper");
 const axios = require("axios");
 
 exports.handleWebhook = async (req, res) => {

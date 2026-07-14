@@ -1,4 +1,4 @@
-const { db, logError } = require("../util/helper");
+const { db, logError } = require("../../src/util/helper");
 const fs = require('fs');
 const path = require('path');
 

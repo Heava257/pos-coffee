@@ -1,4 +1,4 @@
-const { db, logError } = require("../util/helper");
+const { db, logError } = require("../../src/util/helper");
 
 exports.getList = async (req, res) => {
   try {

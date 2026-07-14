@@ -1,4 +1,4 @@
-const { db, logError, sendTelegramMessage, setTelegramWebhook } = require("../util/helper");
+const { db, logError, sendTelegramMessage, setTelegramWebhook } = require("../../src/util/helper");
 
 exports.getSettings = async (req, res) => {
     try {

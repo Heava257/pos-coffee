@@ -4,15 +4,15 @@ const c = require("./order.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 
 // Relative to /api/v1/orders
-router.get("/", authMiddleware(), c.getList);
-router.get("/kds", authMiddleware(), c.getKDSOrders);
-router.get("/pending", authMiddleware(), c.getPendingOrders);
-router.get("/:order_id", authMiddleware(), c.getOrderDetail);
-router.post("/", authMiddleware(), c.create);
-router.put("/status", authMiddleware(), c.updateStatus);
-router.put("/kitchen-status", authMiddleware(), c.updateKitchenStatus);
-router.put("/send-to-kitchen", authMiddleware(), c.sendOrderToKitchen);
-router.put("/", authMiddleware(), c.update);
+router.get("/", authMiddleware("order"), c.getList);
+router.get("/kds", authMiddleware("kds"), c.getKDSOrders);
+router.get("/pending", authMiddleware("order"), c.getPendingOrders);
+router.get("/:order_id", authMiddleware("order"), c.getOrderDetail);
+router.post("/", authMiddleware("order"), c.create);
+router.put("/status", authMiddleware("order"), c.updateStatus);
+router.put("/kitchen-status", authMiddleware("kds"), c.updateKitchenStatus);
+router.put("/send-to-kitchen", authMiddleware("order"), c.sendOrderToKitchen);
+router.put("/", authMiddleware("order"), c.update);
 
 // Guest/Web Ordering Routes
 router.post("/web", c.createWebOrder);

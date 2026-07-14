@@ -4,8 +4,8 @@ const c = require("./expense.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 
 // Relative to /api/v1/expenses
-router.get("/type", authMiddleware(), c.getExpenseTypes);
-router.get("/", authMiddleware(), c.getList);
+router.get("/type", authMiddleware("expense"), c.getExpenseTypes);
+router.get("/", authMiddleware("expense"), c.getList);
 router.post("/", authMiddleware("expense"), c.create);
 router.put("/", authMiddleware("expense"), c.update);
 router.delete("/", authMiddleware("expense"), c.remove);

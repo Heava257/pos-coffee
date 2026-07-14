@@ -1,1 +1,1 @@
-module.exports = require("../../src/controller/stock.controller");
+module.exports = require("../stock/stock.controller");

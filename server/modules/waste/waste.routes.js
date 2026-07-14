@@ -4,7 +4,7 @@ const c = require("./waste.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 
 // Relative to /api/v1/waste
-router.get("/", authMiddleware(), c.getList);
+router.get("/", authMiddleware("waste"), c.getList);
 router.post("/", authMiddleware("waste"), c.create);
 
 module.exports = router;

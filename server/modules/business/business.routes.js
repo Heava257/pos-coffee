@@ -4,19 +4,19 @@ const c = require("./business.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 const uploadMiddleware = require("../../middlewares/upload.middleware");
 
-router.get("/", authMiddleware(), c.getList);
-router.post("/", authMiddleware(), uploadMiddleware.single("logo"), c.create);
-router.put("/", authMiddleware(), uploadMiddleware.single("logo"), c.update);
-router.delete("/", authMiddleware(), c.remove);
+router.get("/", authMiddleware("business"), c.getList);
+router.post("/", authMiddleware("business"), uploadMiddleware.single("logo"), c.create);
+router.put("/", authMiddleware("business"), uploadMiddleware.single("logo"), c.update);
+router.delete("/", authMiddleware("business"), c.remove);
 
-router.get("/config", authMiddleware(), c.getBusinessConfig);
-router.get("/exchange", authMiddleware(), c.getExchangeRate);
-router.get("/settings", authMiddleware(), c.getSettings);
-router.put("/settings", authMiddleware(), uploadMiddleware.fields([{ name: 'logo', maxCount: 1 }, { name: 'khqr_image', maxCount: 1 }]), c.updateSettings);
-router.get("/insights", authMiddleware(), c.getInsights);
-router.put("/plan", authMiddleware(), c.updatePlan);
-router.put("/status", authMiddleware(), c.updateStatus);
+router.get("/config", authMiddleware("config"), c.getBusinessConfig);
+router.get("/exchange", authMiddleware("exchange_rate"), c.getExchangeRate);
+router.get("/settings", authMiddleware("settings"), c.getSettings);
+router.put("/settings", authMiddleware("settings"), uploadMiddleware.fields([{ name: 'logo', maxCount: 1 }, { name: 'khqr_image', maxCount: 1 }]), c.updateSettings);
+router.get("/insights", authMiddleware("business"), c.getInsights);
+router.put("/plan", authMiddleware("business"), c.updatePlan);
+router.put("/status", authMiddleware("business"), c.updateStatus);
 router.get("/public-config", c.getPublicConfig);
-router.get("/smtp-health", authMiddleware(), c.getSMTPHealth);
+router.get("/smtp-health", authMiddleware("business"), c.getSMTPHealth);
 
 module.exports = router;

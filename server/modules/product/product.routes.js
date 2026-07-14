@@ -13,10 +13,10 @@ router.delete("/", authMiddleware("product"), c.remove);
 router.get("/business", authMiddleware("product"), c.getBusinessProducts);
 router.post("/link", authMiddleware("product"), c.linkToBranch);
 
-router.post("/new-barcode", authMiddleware(), c.generateBarcode);
-router.get("/check-barcode/:barcode", authMiddleware(), c.checkBarcode);
+router.post("/new-barcode", authMiddleware("product"), c.generateBarcode);
+router.get("/check-barcode/:barcode", authMiddleware("product"), c.checkBarcode);
 
-router.get("/favorite", authMiddleware(), c.getFavorites);
-router.post("/favorite", authMiddleware(), c.toggleFavorite);
+router.get("/favorite", authMiddleware("product"), c.getFavorites);
+router.post("/favorite", authMiddleware("product"), c.toggleFavorite);
 
 module.exports = router;

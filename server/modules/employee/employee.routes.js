@@ -4,10 +4,10 @@ const c = require("./employee.controller");
 const authMiddleware = require("../../middlewares/auth.middleware");
 
 // Relative to /api/v1/employees
-router.get("/", authMiddleware(), c.getList);
-router.get("/performance", authMiddleware(), c.getPerformance);
-router.post("/", authMiddleware(), c.create);
-router.put("/", authMiddleware(), c.update);
-router.delete("/", authMiddleware(), c.remove);
+router.get("/", authMiddleware("employee"), c.getList);
+router.get("/performance", authMiddleware("employee"), c.getPerformance);
+router.post("/", authMiddleware("employee"), c.create);
+router.put("/", authMiddleware("employee"), c.update);
+router.delete("/", authMiddleware("employee"), c.remove);
 
 module.exports = router;

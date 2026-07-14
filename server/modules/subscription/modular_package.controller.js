@@ -1,4 +1,4 @@
-const { db, logError } = require("../util/helper");
+const { db, logError } = require("../../src/util/helper");
 
 // 1. Get all modular packages
 exports.getList = async (req, res) => {

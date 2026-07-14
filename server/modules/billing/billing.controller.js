@@ -1,1 +1,1 @@
-module.exports = require("../../src/controller/plan.controller");
+module.exports = require("../plan/plan.controller");

@@ -2,7 +2,7 @@ const cron = require("node-cron");
 const { ImapFlow } = require("imapflow");
 const { simpleParser } = require("mailparser");
 const db = require("../config/database");
-const { _performUpgrade } = require("../src/controller/payment.controller");
+const { _performUpgrade } = require("../modules/payment/payment.controller");
 
 // Set lock flag to prevent concurrent runs
 let isRunning = false;

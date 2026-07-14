@@ -1,4 +1,4 @@
-const customerController = require("../../src/controller/customer.controller");
+const customerController = require("../customer/customer.controller");
 const db = require("../../config/database");
 
 module.exports = {
