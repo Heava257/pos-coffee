@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Table, Tag, Button, Space, Typography, Modal, Input, Checkbox, message, Tabs, Spin } from "antd";
+import { Table, Tag, Button, Space, Typography, Modal, Input, Checkbox, message, Tabs, Spin, Alert } from "antd";
 import { CodeOutlined, KeyOutlined, ApiOutlined, PlusOutlined, DeleteOutlined, CopyOutlined } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
 
@@ -14,6 +14,10 @@ const DeveloperPortalPage = () => {
   const [webhookModalVisible, setWebhookModalVisible] = useState(false);
   const [newKey, setNewKey] = useState({ name: "", scopes: [] });
   const [newWebhook, setNewWebhook] = useState({ url: "", events: [] });
+
+  // Key creation success display state
+  const [createdKey, setCreatedKey] = useState(null);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -51,7 +55,8 @@ const DeveloperPortalPage = () => {
         setApiKeys([res.key, ...apiKeys]);
         setKeyModalVisible(false);
         setNewKey({ name: "", scopes: [] });
-        message.success("API key generated successfully!");
+        setCreatedKey(res.key);
+        setSuccessModalVisible(true);
       }
     } catch (err) {
       console.error(err);
@@ -237,6 +242,55 @@ const DeveloperPortalPage = () => {
             value={newWebhook.events} 
             onChange={(checked) => setNewWebhook({ ...newWebhook, events: checked })} 
           />
+        </div>
+      </Modal>
+
+      {/* Success API Key Generated Modal */}
+      <Modal
+        title={<span style={{ color: "#1e4a2d" }}><KeyOutlined /> API Key Generated Successfully</span>}
+        open={successModalVisible}
+        onCancel={() => setSuccessModalVisible(false)}
+        footer={[
+          <Button type="primary" key="close" onClick={() => setSuccessModalVisible(false)} style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d", borderRadius: 8 }}>
+            I Have Saved the Secret Key
+          </Button>
+        ]}
+        width={550}
+        destroyOnClose
+      >
+        <div style={{ padding: "10px 0" }}>
+          <Alert
+            message="Warning"
+            description="Make sure to copy your client secret key now. You will not be able to see it again for security reasons!"
+            type="warning"
+            showIcon
+            style={{ marginBottom: 20, borderRadius: 8 }}
+          />
+          
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 12 }}>Key Name</label>
+            <Input value={createdKey?.name} readOnly style={{ borderRadius: 6 }} />
+          </div>
+          
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 12 }}>Client ID / Token (x-client-id)</label>
+            <Input 
+              value={createdKey?.client_id} 
+              readOnly 
+              style={{ borderRadius: 6 }}
+              addonAfter={<Button type="text" size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(createdKey?.client_id)} style={{ margin: -5 }} />}
+            />
+          </div>
+          
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 12 }}>Client Secret Key (x-client-secret)</label>
+            <Input.Password 
+              value={createdKey?.client_secret} 
+              readOnly 
+              style={{ borderRadius: 6 }}
+              addonAfter={<Button type="text" size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(createdKey?.client_secret)} style={{ margin: -5 }} />}
+            />
+          </div>
         </div>
       </Modal>
     </div>

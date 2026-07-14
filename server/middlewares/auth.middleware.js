@@ -47,7 +47,9 @@ const authMiddleware = (permission_name) => {
                 const isGet = req.method === "GET";
                 const requiredScope = isGet ? "read" : "write";
 
-                if (!scopes.includes(requiredScope)) {
+                const hasScope = scopes.includes(requiredScope) || scopes.some(s => s.startsWith(requiredScope + ":") || s === requiredScope);
+
+                if (!hasScope) {
                     return res.status(403).json({
                         message: `Forbidden - Missing required '${requiredScope}' scope for this action`,
                         error: "INSUFFICIENT_API_SCOPE"

@@ -52,6 +52,7 @@ exports.createKey = async (req, res) => {
         key: result.insertId.toString(),
         name,
         client_id,
+        client_secret,
         scopes: scopes || [],
         created: new Date().toISOString().split("T")[0],
         status: "active"
