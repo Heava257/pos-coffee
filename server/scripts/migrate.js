@@ -289,6 +289,8 @@ async function runMigrations() {
     ['payment_imap_port', '993'],
     ['payment_imap_user', ''],
     ['payment_imap_pass', ''],
+    ['audit_logs_cleanup_enabled', 'true'],
+    ['audit_logs_retention_days', '90'],
   ];
   for (const [key, val] of defaultSettings) {
     await ensureSetting(key, val);

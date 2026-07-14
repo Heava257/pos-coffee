@@ -1,4 +1,4 @@
-// Trigger Nodemon Reload to invalidate cache after global permissions mapping, settings update, S3 and Download routes, renew security, sidebar duplicate cleanup, and dashboard cleanup
+// Trigger Nodemon Reload to invalidate cache after global permissions mapping, settings update, S3 and Download routes, renew security, sidebar duplicate cleanup, dashboard cleanup, and audit logs fix
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -105,9 +105,9 @@ const server = http.createServer({
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, async () => {
-  console.log(`\u2705 Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 
-  // â”€â”€ Cron Jobs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Cron Jobs ─────────────────────────────────────────────────────────────
   try {
     const { startSubscriptionCron } = require('./src/util/cron');
     startSubscriptionCron();
@@ -116,12 +116,14 @@ app.listen(PORT, async () => {
     require('./jobs/salesSummary.job').start();
     require('./jobs/telegram.job').start();
     require('./jobs/emailPayment.job').start();
+    require('./jobs/auditLogsCleanup.job').start();
     console.log('\u2728 All background jobs registered.');
   } catch (jobErr) {
     console.error('Failed to start background jobs:', jobErr.message);
   }
 
-  // â”€â”€ C-3 FIX: Migrations run via a dedicated module, not inline â”€â”€
+  // ————————————————————————————————————————————————————————————————————————————
+  // C-3 FIX: Migrations run via a dedicated module, not inline —————————————————
   // Keeps index.js clean and prevents accidental privilege escalation on every boot.
   // IMPORTANT: The "EMERGENCY FIX" UPDATE statements (lines that set is_super_admin=1)
   // have been intentionally removed. Use the DB directly for one-time admin fixes.
