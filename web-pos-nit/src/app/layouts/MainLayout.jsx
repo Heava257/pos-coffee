@@ -94,7 +94,6 @@ const PLATFORM_MENU_STRUCTURE = [
     labelKey: 'platform_group_main',
     children: [
       { key: "dashboard", labelKey: "dashboard", label: "Platform Overview", icon: <DashboardOutlined /> },
-      { key: "global-dashboard", labelKey: "global_dashboard", label: "Global Dashboard", icon: <LineChartOutlined /> },
       { key: "organization-directory", labelKey: "organization_directory", label: "Organization Directory", icon: <ClusterOutlined /> },
       { key: "user", labelKey: "users", label: "User Management", icon: <TeamOutlined /> },
       { key: "role", labelKey: "roles", label: "Role & Permission Center", icon: <SafetyCertificateOutlined /> }
