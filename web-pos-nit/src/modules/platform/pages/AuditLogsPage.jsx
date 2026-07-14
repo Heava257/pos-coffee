@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, Table, Tag, Typography, Spin, Input, DatePicker, Select, Space, Button } from "antd";
+import { Card, Table, Tag, Typography, Spin, Input, DatePicker, Select, Space, Button, Alert } from "antd";
 import { HistoryOutlined, SearchOutlined, ReloadOutlined, FilterOutlined } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
 import dayjs from "dayjs";
@@ -16,17 +16,23 @@ const AuditLogsPage = () => {
   
   const [search, setSearch] = useState("");
   const [eventType, setEventType] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const fetchLogs = async () => {
     setLoading(true);
+    setErrorMsg("");
     try {
       const res = await request(`securities/logs?page=${page}&limit=${limit}`, "get");
       if (res && res.list) {
         setLogs(res.list);
         setTotal(res.total);
+      } else {
+        setErrorMsg("Failed to retrieve audit logs from server. Please check your admin privileges.");
       }
     } catch (err) {
-      console.error(err);
+      console.error("fetchLogs error:", err);
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to load audit logs.";
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
@@ -36,15 +42,24 @@ const AuditLogsPage = () => {
     fetchLogs();
   }, [page, limit]);
 
-  const filteredLogs = logs.filter(log => {
+  const filteredLogs = Array.isArray(logs) ? logs.filter(log => {
+    if (!log) return false;
+    
+    const ipStr = String(log.ip || "").toLowerCase();
+    const endpointStr = String(log.endpoint || "").toLowerCase();
+    const detailsStr = typeof log.details === 'object' 
+      ? JSON.stringify(log.details).toLowerCase() 
+      : String(log.details || "").toLowerCase();
+    const searchStr = String(search || "").toLowerCase();
+
     const matchesSearch = 
-      log.ip.toLowerCase().includes(search.toLowerCase()) ||
-      (log.endpoint && log.endpoint.toLowerCase().includes(search.toLowerCase())) ||
-      (log.details && log.details.toLowerCase().includes(search.toLowerCase()));
+      ipStr.includes(searchStr) ||
+      endpointStr.includes(searchStr) ||
+      detailsStr.includes(searchStr);
     
     const matchesType = eventType ? log.event_type === eventType : true;
     return matchesSearch && matchesType;
-  });
+  }) : [];
 
   const columns = [
     {
@@ -60,9 +75,9 @@ const AuditLogsPage = () => {
       key: "event_type",
       render: (type) => {
         let color = "blue";
-        if (type.includes("FAIL") || type.includes("BLOCK") || type.includes("ATTACK")) color = "red";
-        if (type.includes("SUCCESS") || type.includes("LOGIN")) color = "green";
-        return <Tag color={color}>{type.replace(/_/g, " ").toUpperCase()}</Tag>;
+        if (type && (type.includes("FAIL") || type.includes("BLOCK") || type.includes("ATTACK"))) color = "red";
+        if (type && (type.includes("SUCCESS") || type.includes("LOGIN"))) color = "green";
+        return <Tag color={color}>{(type || "UNKNOWN").replace(/_/g, " ").toUpperCase()}</Tag>;
       },
       width: 150
     },
@@ -70,7 +85,7 @@ const AuditLogsPage = () => {
       title: "IP Address",
       dataIndex: "ip",
       key: "ip",
-      render: (ip) => <Text code>{ip}</Text>,
+      render: (ip) => <Text code>{ip || "N/A"}</Text>,
       width: 130
     },
     {
@@ -102,6 +117,17 @@ const AuditLogsPage = () => {
           Refresh Logs
         </Button>
       </div>
+
+      {errorMsg && (
+        <Alert
+          message="Server Error"
+          description={errorMsg}
+          type="error"
+          showIcon
+          closable
+          style={{ marginBottom: 20, borderRadius: 8 }}
+        />
+      )}
 
       <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12, marginBottom: 20 }}>
         <Space size="middle" wrap style={{ marginBottom: 16 }}>
