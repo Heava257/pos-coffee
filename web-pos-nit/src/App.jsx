@@ -63,6 +63,7 @@ import IntegrationCenterPage from "@/modules/platform/pages/IntegrationCenterPag
 import AuditLogsPage from "@/modules/platform/pages/AuditLogsPage";
 import BackupRecoveryPage from "@/modules/platform/pages/BackupRecoveryPage";
 import InfrastructureMonitoringPage from "@/modules/platform/pages/InfrastructureMonitoringPage";
+import FeatureFlagsPage from "@/modules/platform/pages/FeatureFlagsPage";
 import StockTransferPage from "@/modules/inventory/transfer/pages/StockTransferPage";
 import { getProfile } from "@/app/store/profile.store";
 import SaasLandingPage from "@/modules/platform/pages/SaasLandingPage";
@@ -144,7 +145,7 @@ function App() {
             <Route path="/audit-logs" element={<AuditLogsPage />} />
             <Route path="/compliance-center" element={<SecurityDashboardPage />} />
             <Route path="/data-governance" element={<SecurityDashboardPage />} />
-            <Route path="/feature-flags" element={<SystemModulePage />} />
+            <Route path="/feature-flags" element={<FeatureFlagsPage />} />
             <Route path="/notification-center" element={<SettingsPage />} />
             <Route path="/backup-recovery" element={<BackupRecoveryPage />} />
             <Route path="/infrastructure-monitoring" element={<InfrastructureMonitoringPage />} />
