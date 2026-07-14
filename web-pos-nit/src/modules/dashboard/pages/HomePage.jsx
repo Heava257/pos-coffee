@@ -259,9 +259,9 @@ function HomePage() {
       </Row>
 
       {/* 🚀 AI Sales Forecasting Widget */}
-      <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
-        <Col span={24}>
-          {aiForecast ? (
+      {aiForecast && (
+        <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+          <Col span={24}>
             <Card 
               bordered={false} 
               className="premium-main-card" 
@@ -301,55 +301,9 @@ function HomePage() {
                 )}
               </Row>
             </Card>
-          ) : (
-            <Card 
-              bordered={false} 
-              className="premium-main-card" 
-              style={{ position: 'relative', overflow: 'hidden' }}
-              title={<Space><RobotOutlined style={{ color: '#888' }} /> <strong style={{ fontWeight: 900, color: '#888' }}>AI Sales Forecasting & Demand Analytics</strong></Space>}
-            >
-              {/* Blurred background representation to make it look premium and real */}
-              <div style={{ filter: 'blur(4px)', opacity: 0.3, pointerEvents: 'none' }}>
-                <Paragraph style={{ fontSize: 13, marginBottom: 20 }}>
-                  Next week's predicted product category demand calculated using AutoRegressive Moving Average (ARMA-1) models trained on historical sales logs.
-                </Paragraph>
-                <Row gutter={[16, 16]}>
-                  {[1, 2, 3].map((item) => (
-                    <Col xs={24} md={8} key={item}>
-                      <div style={{ background: '#f8fafc', padding: 18, borderRadius: 16, border: '1px solid #edf2f7', height: 100 }} />
-                    </Col>
-                  ))}
-                </Row>
-              </div>
-              
-              {/* Locked Overlay */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                background: 'rgba(255, 255, 255, 0.8)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 24,
-                textAlign: 'center',
-                zIndex: 10
-              }}>
-                <div style={{ background: '#fff', padding: 16, borderRadius: '50%', boxShadow: '0 8px 30px rgba(0,0,0,0.08)', marginBottom: 12 }}>
-                  <span style={{ fontSize: 24 }}>🔒</span>
-                </div>
-                <Title level={5} style={{ margin: 0, color: '#1e4a2d', fontWeight: 'bold' }}>AI Sales Forecasting is Locked</Title>
-                <Paragraph style={{ color: '#666', fontSize: 12, maxWidth: 400, marginTop: 4, marginBottom: 0 }}>
-                  {aiError || "This premium machine learning feature is currently disabled by the Platform Owner. Please contact your system administrator to unlock."}
-                </Paragraph>
-              </div>
-            </Card>
-          )}
-        </Col>
-      </Row>
+          </Col>
+        </Row>
+      )}
     </div>
   );
 
