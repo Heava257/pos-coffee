@@ -1,4 +1,4 @@
-// Trigger Nodemon Reload to clear in-memory MockRedis permissions cache
+// Trigger Nodemon Reload to invalidate cache after business 49 plan upgrade
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
