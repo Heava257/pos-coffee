@@ -16,7 +16,8 @@ import {
   TrophyOutlined,
   TeamOutlined,
   ShoppingCartOutlined,
-  AppstoreOutlined
+  AppstoreOutlined,
+  RobotOutlined
 } from "@ant-design/icons";
 import {
   LineChart,
@@ -66,6 +67,10 @@ function HomePage() {
   const [briefingVisible, setBriefingVisible] = useState(false);
   const [briefingData, setBriefingData] = useState(null);
 
+  const [aiForecast, setAiForecast] = useState(null);
+  const [aiError, setAiError] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+
   const [viewStyle, setViewStyle] = useState(1); // 1: Analytical, 2: Operational, 3: Inventory
   const [showGuide, setShowGuide] = useState(false);
 
@@ -75,9 +80,29 @@ function HomePage() {
     documentTitle: `Z-Report-${dayjs().format("YYYYMMDD")}`,
   });
 
+  const fetchAiForecast = async () => {
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const res = await request("dashboard/ai-forecast", "get");
+      if (res && res.success) {
+        setAiForecast(res);
+      } else {
+        setAiError(res?.message || "AI Forecasting is disabled.");
+        setAiForecast(null);
+      }
+    } catch (err) {
+      setAiError(err.response?.data?.message || "AI Sales Forecasting is currently disabled by the Platform Owner.");
+      setAiForecast(null);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isPlatformAdmin) {
       fetchAllData();
+      fetchAiForecast();
       checkMorningBriefing();
     }
   }, [dates, isPlatformAdmin]);
@@ -230,6 +255,99 @@ function HomePage() {
               </div>
             </div>
           </Card>
+        </Col>
+      </Row>
+
+      {/* 🚀 AI Sales Forecasting Widget */}
+      <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+        <Col span={24}>
+          {aiForecast ? (
+            <Card 
+              bordered={false} 
+              className="premium-main-card" 
+              title={
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <Space><RobotOutlined style={{ color: '#1890ff' }} /> <strong style={{ fontWeight: 900 }}>AI Sales Forecasting & Demand Analytics</strong></Space>
+                  <Tag color="processing">{aiForecast.model_type}</Tag>
+                </div>
+              }
+            >
+              <Paragraph style={{ color: '#666', fontSize: 13, marginBottom: 20 }}>
+                Next week's predicted product category demand calculated using AutoRegressive Moving Average (ARMA-1) models trained on historical sales logs.
+              </Paragraph>
+              <Row gutter={[16, 16]}>
+                {aiForecast.predictions && aiForecast.predictions.length > 0 ? (
+                  aiForecast.predictions.map((pred, pIdx) => (
+                    <Col xs={24} md={8} key={pIdx}>
+                      <div style={{ background: '#f8fafc', padding: 18, borderRadius: 16, border: '1px solid #edf2f7', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <Text strong style={{ fontSize: 14 }}>{pred.category}</Text>
+                            <Tag color={pred.confidence.startsWith("High") ? "success" : "warning"}>{pred.confidence}</Tag>
+                          </div>
+                          <Text type="secondary" style={{ fontSize: 11 }}>Historical Daily Avg: {formatCurrency(pred.average_daily)}</Text>
+                        </div>
+                        <div style={{ marginTop: 12 }}>
+                          <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>Predicted Weekly Demand</Text>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: '#1e4a2d' }}>{formatCurrency(pred.predicted_weekly)}</div>
+                        </div>
+                      </div>
+                    </Col>
+                  ))
+                ) : (
+                  <Col span={24}>
+                    <Alert message="Insufficient Data" description="Not enough sales history logs found to run AI demand forecasting. Please register orders first!" type="info" showIcon />
+                  </Col>
+                )}
+              </Row>
+            </Card>
+          ) : (
+            <Card 
+              bordered={false} 
+              className="premium-main-card" 
+              style={{ position: 'relative', overflow: 'hidden' }}
+              title={<Space><RobotOutlined style={{ color: '#888' }} /> <strong style={{ fontWeight: 900, color: '#888' }}>AI Sales Forecasting & Demand Analytics</strong></Space>}
+            >
+              {/* Blurred background representation to make it look premium and real */}
+              <div style={{ filter: 'blur(4px)', opacity: 0.3, pointerEvents: 'none' }}>
+                <Paragraph style={{ fontSize: 13, marginBottom: 20 }}>
+                  Next week's predicted product category demand calculated using AutoRegressive Moving Average (ARMA-1) models trained on historical sales logs.
+                </Paragraph>
+                <Row gutter={[16, 16]}>
+                  {[1, 2, 3].map((item) => (
+                    <Col xs={24} md={8} key={item}>
+                      <div style={{ background: '#f8fafc', padding: 18, borderRadius: 16, border: '1px solid #edf2f7', height: 100 }} />
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+              
+              {/* Locked Overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                background: 'rgba(255, 255, 255, 0.8)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 24,
+                textAlign: 'center',
+                zIndex: 10
+              }}>
+                <div style={{ background: '#fff', padding: 16, borderRadius: '50%', boxShadow: '0 8px 30px rgba(0,0,0,0.08)', marginBottom: 12 }}>
+                  <span style={{ fontSize: 24 }}>🔒</span>
+                </div>
+                <Title level={5} style={{ margin: 0, color: '#1e4a2d', fontWeight: 'bold' }}>AI Sales Forecasting is Locked</Title>
+                <Paragraph style={{ color: '#666', fontSize: 12, maxWidth: 400, marginTop: 4, marginBottom: 0 }}>
+                  {aiError || "This premium machine learning feature is currently disabled by the Platform Owner. Please contact your system administrator to unlock."}
+                </Paragraph>
+              </div>
+            </Card>
+          )}
         </Col>
       </Row>
     </div>

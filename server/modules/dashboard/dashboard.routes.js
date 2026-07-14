@@ -5,6 +5,7 @@ const authMiddleware = require("../../middlewares/auth.middleware");
 
 router.get("/morning-briefing", authMiddleware(), c.getMorningBriefing);
 router.get("/admin", authMiddleware(), c.getAdminDashboard);
+router.get("/ai-forecast", authMiddleware(), c.getAiForecast);
 router.get("/", authMiddleware(), c.getList);
 
 module.exports = router;

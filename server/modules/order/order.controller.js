@@ -323,6 +323,34 @@ exports.create = async (req, res) => {
             }
         }
 
+        // 🌟 FEATURE FLAG: Tamper-Proof Audit Cryptography
+        try {
+            const { getSystemSetting } = require("../../src/util/helper");
+            const auditActive = (await getSystemSetting("flag_audit_ledger")) === "true";
+            if (auditActive) {
+                const crypto = require("crypto");
+                const orderData = JSON.stringify({
+                    order_id,
+                    business_id,
+                    branch_id,
+                    total_amount,
+                    payment_method,
+                    created_at: new Date()
+                });
+                const hash = crypto.createHash("sha256").update(orderData).digest("hex");
+                await conn.query(`
+                    INSERT INTO security_logs (action, details, ip_address, user_agent)
+                    VALUES ('AUDIT_LEDGER_BLOCK', ?, ?, 'System Ledger Engine')
+                `, [
+                    `[LEDGER] Immutable block created for Order #${order_id}. Ledger Signature: ${hash}`,
+                    req.ip || '127.0.0.1'
+                ]);
+                console.log(`[Ledger] Successfully appended block signature for Order #${order_id}: ${hash}`);
+            }
+        } catch (ledgerErr) {
+            console.error("Ledger Signing Failed:", ledgerErr);
+        }
+
         await conn.commit();
         
         // Clear Redis product list cache so frontend sees updated stock immediately

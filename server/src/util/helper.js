@@ -295,3 +295,16 @@ exports.checkPlanLimit = async (business_id, resourceType) => {
   return { allowed: true };
 };
 
+exports.getSystemSetting = async (key) => {
+  try {
+    const [rows] = await connection.query("SELECT sett_value FROM system_settings WHERE sett_key = ?", [key]);
+    if (rows.length > 0) {
+      return rows[0].sett_value;
+    }
+    return null;
+  } catch (err) {
+    console.error("getSystemSetting Error:", err);
+    return null;
+  }
+};
+

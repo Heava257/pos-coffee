@@ -27,12 +27,20 @@ exports.getExchangeRate = async (req, res) => {
 
 exports.getBalanceData = async (req, res) => {
     try {
+        const { getSystemSetting } = require("../../src/util/helper");
+        const multiCurrencyActive = (await getSystemSetting("flag_multicurrency")) === "true";
+
+        const data = [
+            { currency: "USD", availableBalance: "$45,680.00", flag: "🇺🇸", gradient: "linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)" },
+            { currency: "KHR", availableBalance: "៛12,500,000", flag: "🇰🇭", gradient: "linear-gradient(135deg, #c0a060 0%, #d4af37 100%)" }
+        ];
+
+        if (multiCurrencyActive) {
+            data.push({ currency: "EUR", availableBalance: "€1,250.00", flag: "🇪🇺", gradient: "linear-gradient(135deg, #2b32b2 0%, #1477d2 100%)" });
+        }
+
         res.json({
-            data: [
-                { currency: "USD", availableBalance: "$45,680.00", flag: "🇺🇸", gradient: "linear-gradient(135deg, #1e4a2d 0%, #2d6a3e 100%)" },
-                { currency: "KHR", availableBalance: "៛12,500,000", flag: "🇰🇭", gradient: "linear-gradient(135deg, #c0a060 0%, #d4af37 100%)" },
-                { currency: "EUR", availableBalance: "€1,250.00", flag: "🇪🇺", gradient: "linear-gradient(135deg, #2b32b2 0%, #1477d2 100%)" }
-            ],
+            data,
             success: true
         });
     } catch (error) {
