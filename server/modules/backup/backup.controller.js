@@ -122,3 +122,27 @@ exports.testS3Connection = async (req, res) => {
     res.status(500).json({ success: false, error: error.message || "Failed to establish handshake with S3 bucket." });
   }
 };
+
+// 5. Download Backup File
+exports.downloadBackup = async (req, res) => {
+  try {
+    if (req.business_id !== 1) {
+      return res.status(403).json({ error: "Forbidden", message: "Platform admin access only." });
+    }
+
+    const { filename } = req.params;
+    if (!filename) return res.status(400).json({ message: "Filename is required." });
+
+    // Prevent directory traversal attacks
+    const safeName = path.basename(filename);
+    const filePath = path.join(BACKUP_DIR, safeName);
+
+    if (fs.existsSync(filePath)) {
+      res.download(filePath, safeName);
+    } else {
+      res.status(404).json({ message: "Backup file not found." });
+    }
+  } catch (error) {
+    logError("backup.downloadBackup", error, res);
+  }
+};

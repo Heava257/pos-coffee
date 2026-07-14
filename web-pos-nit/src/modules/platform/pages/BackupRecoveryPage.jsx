@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Card, Table, Tag, Button, Space, Typography, Popconfirm, message, Spin, Alert, Switch, Input, Row, Col, Divider, Select } from "antd";
 import { CloudDownloadOutlined, PlusOutlined, DeleteOutlined, SyncOutlined, DatabaseOutlined, SettingOutlined, CloudUploadOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
+import { Config } from "@/shared/utils/config";
+import { getAcccessToken } from "@/app/store/profile.store";
+import axios from "axios";
 import dayjs from "dayjs";
 
 const { Title, Text, Paragraph } = Typography;
@@ -92,6 +95,37 @@ const BackupRecoveryPage = () => {
     } catch (err) {
       console.error(err);
       message.error("Failed to delete backup file.");
+    }
+  };
+
+  const handleDownloadBackup = async (filename) => {
+    const key = "download_progress";
+    message.loading({ content: `Downloading database backup snapshot ${filename}...`, key });
+    try {
+      const token = getAcccessToken();
+      const response = await axios({
+        url: `${Config.base_url}backup/download/${filename}`,
+        method: "GET",
+        responseType: "blob",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      message.success({ content: "Backup snapshot downloaded successfully!", key, duration: 3 });
+    } catch (err) {
+      console.error(err);
+      message.error({ content: "Failed to download backup snapshot.", key });
     }
   };
 
@@ -195,16 +229,27 @@ const BackupRecoveryPage = () => {
       title: "Actions",
       key: "actions",
       render: (_, r) => (
-        <Popconfirm
-          title="Are you sure you want to delete this backup?"
-          onConfirm={() => handleDeleteBackup(r.filename)}
-          okText="Yes"
-          cancelText="No"
-        >
-          <Button size="small" danger icon={<DeleteOutlined />}>Delete</Button>
-        </Popconfirm>
+        <Space size="middle">
+          <Button 
+            size="small" 
+            type="primary" 
+            icon={<CloudDownloadOutlined />} 
+            onClick={() => handleDownloadBackup(r.filename)}
+            style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}
+          >
+            Download
+          </Button>
+          <Popconfirm
+            title="Are you sure you want to delete this backup?"
+            onConfirm={() => handleDeleteBackup(r.filename)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button size="small" danger icon={<DeleteOutlined />}>Delete</Button>
+          </Popconfirm>
+        </Space>
       ),
-      width: 120
+      width: 220
     }
   ];
 

@@ -1,4 +1,4 @@
-// Trigger Nodemon Reload to invalidate cache after global permissions mapping and flags update
+// Trigger Nodemon Reload to invalidate cache after global permissions mapping and flags update and S3 route registration
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
