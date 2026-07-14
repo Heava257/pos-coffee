@@ -1,4 +1,4 @@
-
+// Trigger Nodemon Reload to clear in-memory MockRedis permissions cache
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
