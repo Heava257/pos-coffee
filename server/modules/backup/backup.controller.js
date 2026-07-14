@@ -26,7 +26,7 @@ exports.getBackups = async (req, res) => {
         return {
           id: idx.toString(),
           filename: file,
-          size_mb: parseFloat(stats.size / (1024 * 1024)).toFixed(2),
+          size_bytes: stats.size,
           created_at: stats.birthtime
         };
       })
@@ -98,7 +98,7 @@ exports.createBackup = async (req, res) => {
       message: "Database backup snapshot generated successfully.",
       file: {
         filename,
-        size_mb: parseFloat(fs.statSync(outputPath).size / (1024 * 1024)).toFixed(2),
+        size_bytes: fs.statSync(outputPath).size,
         created_at: new Date()
       }
     });

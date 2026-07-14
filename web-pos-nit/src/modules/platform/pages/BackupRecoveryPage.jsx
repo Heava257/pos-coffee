@@ -62,6 +62,15 @@ const BackupRecoveryPage = () => {
     }
   };
 
+  const formatSize = (bytes) => {
+    if (!bytes && bytes !== 0) return "0 Bytes";
+    const k = 1024;
+    const dm = 2;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+  };
+
   const columns = [
     {
       title: "Backup File Name",
@@ -71,9 +80,9 @@ const BackupRecoveryPage = () => {
     },
     {
       title: "File Size",
-      dataIndex: "size_mb",
-      key: "size_mb",
-      render: (size) => <Tag color="blue">{size} MB</Tag>
+      dataIndex: "size_bytes",
+      key: "size_bytes",
+      render: (bytes) => <Tag color="blue">{formatSize(bytes)}</Tag>
     },
     {
       title: "Created Timestamp",
