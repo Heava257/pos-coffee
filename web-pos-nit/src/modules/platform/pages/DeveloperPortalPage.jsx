@@ -1,63 +1,104 @@
-import React, { useState } from "react";
-import { Card, Table, Tag, Button, Space, Typography, Modal, Input, Checkbox, Select, message, Tabs, Alert } from "antd";
-import { CodeOutlined, KeyOutlined, ApiOutlined, PlusOutlined, DeleteOutlined, CopyOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import React, { useState, useEffect } from "react";
+import { Table, Tag, Button, Space, Typography, Modal, Input, Checkbox, message, Tabs, Spin } from "antd";
+import { CodeOutlined, KeyOutlined, ApiOutlined, PlusOutlined, DeleteOutlined, CopyOutlined } from "@ant-design/icons";
+import { request } from "@/shared/utils/helper";
 
 const { Title, Text, Paragraph } = Typography;
 
 const DeveloperPortalPage = () => {
-  const [apiKeys, setApiKeys] = useState([
-    { key: "1", name: "TechWorld POS Integration", client_id: "pk_live_51M...", scopes: ["read:orders", "write:products"], created: "2026-05-12", status: "active" },
-    { key: "2", name: "Internal Reporting Bot", client_id: "pk_live_92A...", scopes: ["read:revenue", "read:users"], created: "2026-06-01", status: "active" }
-  ]);
-
-  const [webhooks, setWebhooks] = useState([
-    { id: "1", url: "https://api.techworld.com/webhooks/pos", events: ["order.created", "payment.received"], status: "active", created: "2026-05-14" }
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [apiKeys, setApiKeys] = useState([]);
+  const [webhooks, setWebhooks] = useState([]);
 
   const [keyModalVisible, setKeyModalVisible] = useState(false);
   const [webhookModalVisible, setWebhookModalVisible] = useState(false);
   const [newKey, setNewKey] = useState({ name: "", scopes: [] });
   const [newWebhook, setNewWebhook] = useState({ url: "", events: [] });
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const keysRes = await request("developer/keys", "get");
+      if (keysRes && keysRes.success) {
+        setApiKeys(keysRes.list);
+      }
+      const hooksRes = await request("developer/webhooks", "get");
+      if (hooksRes && hooksRes.success) {
+        setWebhooks(hooksRes.list);
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to load developer configurations.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     message.success("Copied to clipboard!");
   };
 
-  const handleCreateKey = () => {
+  const handleCreateKey = async () => {
     if (!newKey.name) return message.error("Please enter a name");
-    const newEntry = {
-      key: Date.now().toString(),
-      name: newKey.name,
-      client_id: `pk_live_${Math.random().toString(36).substr(2, 8).toUpperCase()}...`,
-      scopes: newKey.scopes,
-      created: new Date().toISOString().split("T")[0],
-      status: "active"
-    };
-    setApiKeys([...apiKeys, newEntry]);
-    setKeyModalVisible(false);
-    setNewKey({ name: "", scopes: [] });
-    message.success("API key generated successfully!");
+    try {
+      const res = await request("developer/keys", "post", newKey);
+      if (res && res.success) {
+        setApiKeys([res.key, ...apiKeys]);
+        setKeyModalVisible(false);
+        setNewKey({ name: "", scopes: [] });
+        message.success("API key generated successfully!");
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to generate API Key.");
+    }
   };
 
-  const handleDeleteKey = (key) => {
-    setApiKeys(apiKeys.filter(item => item.key !== key));
-    message.success("API key revoked.");
+  const handleDeleteKey = async (id) => {
+    try {
+      const res = await request(`developer/keys/${id}`, "delete");
+      if (res && res.success) {
+        setApiKeys(apiKeys.filter(item => item.key !== id));
+        message.success("API key revoked.");
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to revoke API key.");
+    }
   };
 
-  const handleCreateWebhook = () => {
+  const handleCreateWebhook = async () => {
     if (!newWebhook.url) return message.error("Please enter a URL");
-    const newEntry = {
-      id: Date.now().toString(),
-      url: newWebhook.url,
-      events: newWebhook.events,
-      status: "active",
-      created: new Date().toISOString().split("T")[0]
-    };
-    setWebhooks([...webhooks, newEntry]);
-    setWebhookModalVisible(false);
-    setNewWebhook({ url: "", events: [] });
-    message.success("Webhook endpoint registered successfully!");
+    try {
+      const res = await request("developer/webhooks", "post", newWebhook);
+      if (res && res.success) {
+        setWebhooks([res.webhook, ...webhooks]);
+        setWebhookModalVisible(false);
+        setNewWebhook({ url: "", events: [] });
+        message.success("Webhook endpoint registered successfully!");
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to register webhook.");
+    }
+  };
+
+  const handleDeleteWebhook = async (id) => {
+    try {
+      const res = await request(`developer/webhooks/${id}`, "delete");
+      if (res && res.success) {
+        setWebhooks(webhooks.filter(w => w.id !== id));
+        message.success("Webhook endpoint deleted.");
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to delete webhook.");
+    }
   };
 
   const keyColumns = [
@@ -105,7 +146,7 @@ const DeveloperPortalPage = () => {
       title: "Actions", 
       key: "actions", 
       render: (_, r) => (
-        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => setWebhooks(webhooks.filter(w => w.id !== r.id))}>Delete</Button>
+        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteWebhook(r.id)}>Delete</Button>
       ) 
     }
   ];
@@ -121,35 +162,37 @@ const DeveloperPortalPage = () => {
         </Paragraph>
       </div>
 
-      <Tabs defaultActiveKey="1" style={{ background: "#fff", padding: 24, borderRadius: 12, boxShadow: "0 4px 15px rgba(0,0,0,0.02)" }}>
-        <Tabs.TabPane tab={<span><KeyOutlined /> API Credentials</span>} key="1">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <div>
-              <Text strong style={{ fontSize: 16 }}>Platform API Keys</Text>
-              <br />
-              <Text type="secondary" style={{ fontSize: 12 }}>Keys used to authenticate external systems with the SaaS API.</Text>
+      <Spin spinning={loading}>
+        <Tabs defaultActiveKey="1" style={{ background: "#fff", padding: 24, borderRadius: 12, boxShadow: "0 4px 15px rgba(0,0,0,0.02)" }}>
+          <Tabs.TabPane tab={<span><KeyOutlined /> API Credentials</span>} key="1">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <Text strong style={{ fontSize: 16 }}>Platform API Keys</Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: 12 }}>Keys used to authenticate external systems with the SaaS API.</Text>
+              </div>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setKeyModalVisible(true)} style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}>
+                Generate API Key
+              </Button>
             </div>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setKeyModalVisible(true)} style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}>
-              Generate API Key
-            </Button>
-          </div>
-          <Table columns={keyColumns} dataSource={apiKeys} pagination={false} size="small" />
-        </Tabs.TabPane>
+            <Table columns={keyColumns} dataSource={apiKeys} pagination={false} size="small" />
+          </Tabs.TabPane>
 
-        <Tabs.TabPane tab={<span><ApiOutlined /> Webhooks</span>} key="2">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <div>
-              <Text strong style={{ fontSize: 16 }}>Webhook Endpoints</Text>
-              <br />
-              <Text type="secondary" style={{ fontSize: 12 }}>Subscribe to real-time events happening in your SaaS ecosystem.</Text>
+          <Tabs.TabPane tab={<span><ApiOutlined /> Webhooks</span>} key="2">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <Text strong style={{ fontSize: 16 }}>Webhook Endpoints</Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: 12 }}>Subscribe to real-time events happening in your SaaS ecosystem.</Text>
+              </div>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setWebhookModalVisible(true)} style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}>
+                Add Endpoint
+              </Button>
             </div>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setWebhookModalVisible(true)} style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}>
-              Add Endpoint
-            </Button>
-          </div>
-          <Table columns={webhookColumns} dataSource={webhooks} pagination={false} size="small" />
-        </Tabs.TabPane>
-      </Tabs>
+            <Table columns={webhookColumns} dataSource={webhooks} pagination={false} size="small" />
+          </Tabs.TabPane>
+        </Tabs>
+      </Spin>
 
       {/* API Key Modal */}
       <Modal

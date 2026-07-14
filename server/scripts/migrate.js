@@ -231,6 +231,53 @@ async function runMigrations() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
 
+  // 1. Developer Portal API Keys Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS developer_keys (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(150) NOT NULL,
+      client_id VARCHAR(100) UNIQUE NOT NULL,
+      client_secret VARCHAR(255) NOT NULL,
+      scopes TEXT NULL,
+      status VARCHAR(50) DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  // 2. Webhook Endpoints Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS webhook_endpoints (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      url VARCHAR(500) NOT NULL,
+      events TEXT NULL,
+      status VARCHAR(50) DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  // 3. Payment Gateways Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS payment_gateways (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(100) UNIQUE NOT NULL,
+      merchant_id VARCHAR(255) DEFAULT NULL,
+      api_key VARCHAR(255) DEFAULT NULL,
+      secure_hash VARCHAR(255) DEFAULT NULL,
+      currency VARCHAR(50) DEFAULT 'USD/KHR',
+      status VARCHAR(50) DEFAULT 'inactive',
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  // Pre-seed payment gateways
+  await db.query(`
+    INSERT IGNORE INTO payment_gateways (id, name, merchant_id, api_key, secure_hash, currency, status) VALUES
+    (1, 'ABA PayWay', 'm_aba_coffee', 'api_aba_live_******************', 'hash_aba_live_******************', 'USD/KHR', 'active'),
+    (2, 'Stripe', 'acct_stripe_1120', 'sk_live_51M******************', 'hash_stripe_live_******************', 'USD', 'active'),
+    (3, 'Wing Pay', 'm_wing_489', 'key_wing_live_******************', 'hash_wing_live_******************', 'USD/KHR', 'inactive'),
+    (4, 'Acleda X-Pay', 'ac_xpay_902', 'sk_acleda_live_******************', 'hash_acleda_live_******************', 'KHR', 'inactive')
+  `);
+
   // ── System Settings seed ───────────────────────────────────────────────────
   const defaultSettings = [
     ['payway_merchant_id', ''],
