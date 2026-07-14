@@ -3,7 +3,7 @@ const RedisStore = require("rate-limit-redis").default || require("rate-limit-re
 const { redis, isConnected } = require("./redisClient");
 
 // Check if Redis is connected at startup, fallback to MemoryStore if not
-const store = isConnected()
+const store = (isConnected() && !redis.isMock)
   ? new RedisStore({
       // @ts-ignore
       sendCommand: (...args) => redis.call(...args),

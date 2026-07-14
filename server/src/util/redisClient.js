@@ -58,6 +58,7 @@ if (redisConnectionURL) {
     constructor() {
       super();
       this.status = 'ready'; // set to ready to show as healthy and active
+      this.isMock = true; // flag to bypass complex rate limiter SCRIPT commands
       this.store = new Map();
       process.nextTick(() => {
         this.emit('connect');
