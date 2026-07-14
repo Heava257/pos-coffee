@@ -393,8 +393,9 @@ exports.getAiForecast = async (req, res) => {
     const aiActive = (await getSystemSetting("flag_ai_analytics")) === "true";
 
     if (!aiActive) {
-      return res.status(403).json({ 
+      return res.json({ 
         success: false, 
+        locked: true,
         message: "AI Sales Forecasting is currently disabled by the Platform Owner." 
       });
     }
