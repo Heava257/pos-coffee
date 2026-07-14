@@ -44,7 +44,21 @@ import {
   DownOutlined,
   UserAddOutlined,
   CustomerServiceOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  WarningOutlined,
+  HistoryOutlined,
+  BarChartOutlined,
+  FileTextOutlined,
+  DashboardOutlined,
+  CodeOutlined,
+  ApiOutlined,
+  ClusterOutlined,
+  SlidersOutlined,
+  NotificationOutlined,
+  CloudDownloadOutlined,
+  WalletOutlined,
+  AppstoreAddOutlined,
+  NodeIndexOutlined
 } from "@ant-design/icons";
 import {
   getPermission,
@@ -71,6 +85,70 @@ import { useLanguage, translations } from "@/app/store/language.store";
 import OnboardingTour from "@/shared/components/OnboardingTour";
 import { HelpCircle } from "lucide-react";
 const { Header, Content, Footer, Sider } = Layout;
+
+const PLATFORM_MENU_STRUCTURE = [
+  {
+    type: 'group',
+    label: 'MAIN',
+    labelKey: 'platform_group_main',
+    children: [
+      { key: "dashboard", labelKey: "dashboard", label: "Platform Overview", icon: <DashboardOutlined /> },
+      { key: "global-dashboard", labelKey: "global_dashboard", label: "Global Dashboard", icon: <LineChartOutlined /> },
+      { key: "business", labelKey: "business", label: "Tenant Management", icon: <ShopOutlined /> },
+      { key: "organization-directory", labelKey: "organization_directory", label: "Organization Directory", icon: <ClusterOutlined /> },
+      { key: "user", labelKey: "users", label: "User Management", icon: <TeamOutlined /> },
+      { key: "role", labelKey: "roles", label: "Role & Permission Center", icon: <SafetyCertificateOutlined /> }
+    ]
+  },
+  {
+    type: 'group',
+    label: 'BUSINESS OPERATIONS',
+    labelKey: 'platform_group_business',
+    children: [
+      { key: "system-subscriptions", labelKey: "system_subscriptions", label: "Subscription Management", icon: <HistoryOutlined /> },
+      { key: "plans", labelKey: "plans", label: "Plans & Pricing", icon: <CreditCardOutlined /> },
+      { key: "revenue-analytics", labelKey: "revenue_analytics", label: "Revenue Analytics", icon: <BarChartOutlined /> },
+      { key: "invoice-management", labelKey: "invoice_management", label: "Invoice Management", icon: <FileTextOutlined /> },
+      { key: "payment-gateway", labelKey: "payment_gateway", label: "Payment Gateway Control", icon: <WalletOutlined /> }
+    ]
+  },
+  {
+    type: 'group',
+    label: 'ECOSYSTEM',
+    labelKey: 'platform_group_ecosystem',
+    children: [
+      { key: "system-modules", labelKey: "system_modules", label: "Business Modules Marketplace", icon: <AppstoreOutlined /> },
+      { key: "app-marketplace", labelKey: "app_marketplace", label: "App Marketplace", icon: <AppstoreAddOutlined /> },
+      { key: "developer-portal", labelKey: "developer_portal", label: "Developer Portal", icon: <CodeOutlined /> },
+      { key: "api-management", labelKey: "api_management", label: "API Management", icon: <ApiOutlined /> },
+      { key: "integration-center", labelKey: "integration_center", label: "Integration Center", icon: <NodeIndexOutlined /> }
+    ]
+  },
+  {
+    type: 'group',
+    label: 'SECURITY & GOVERNANCE',
+    labelKey: 'platform_group_security',
+    children: [
+      { key: "security-logs", labelKey: "security_logs", label: "Security Center", icon: <LockOutlined /> },
+      { key: "threat-monitoring", labelKey: "threat_monitoring", label: "Threat Monitoring", icon: <WarningOutlined /> },
+      { key: "audit-logs", labelKey: "audit_logs", label: "Audit Logs", icon: <HistoryOutlined /> },
+      { key: "compliance-center", labelKey: "compliance_center", label: "Compliance Center", icon: <FileProtectOutlined /> },
+      { key: "data-governance", labelKey: "data_governance", label: "Data Governance", icon: <DatabaseOutlined /> }
+    ]
+  },
+  {
+    type: 'group',
+    label: 'SYSTEM CONTROL',
+    labelKey: 'platform_group_system',
+    children: [
+      { key: "settings", labelKey: "settings", label: "System Configuration", icon: <SettingOutlined /> },
+      { key: "feature-flags", labelKey: "feature_flags", label: "Feature Flags", icon: <SlidersOutlined /> },
+      { key: "notification-center", labelKey: "notification_center", label: "Notification Center", icon: <NotificationOutlined /> },
+      { key: "backup-recovery", labelKey: "backup_recovery", label: "Backup & Disaster Recovery", icon: <CloudDownloadOutlined /> },
+      { key: "infrastructure-monitoring", labelKey: "infrastructure_monitoring", label: "Infrastructure Monitoring", icon: <DashboardOutlined /> }
+    ]
+  }
+];
 
 // Menu keys used for mapping translations
 const MENU_STRUCTURE = [
@@ -268,6 +346,7 @@ const MainLayout = () => {
   const [notifications, setNotifications] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [tourVisible, setTourVisible] = useState(false);
+  const [profileMenuExpanded, setProfileMenuExpanded] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -556,7 +635,25 @@ const MainLayout = () => {
         '/user',
         '/role',
         '/permission',
-        '/settings'
+        '/settings',
+        '/global-dashboard',
+        '/organization-directory',
+        '/revenue-analytics',
+        '/invoice-management',
+        '/payment-gateway',
+        '/app-marketplace',
+        '/developer-portal',
+        '/api-management',
+        '/integration-center',
+        '/threat-monitoring',
+        '/audit-logs',
+        '/compliance-center',
+        '/data-governance',
+        '/feature-flags',
+        '/notification-center',
+        '/backup-recovery',
+        '/infrastructure-monitoring',
+        '/security-logs'
       ];
       if (adminRoutes.some(route => currentPath === route || currentPath.startsWith(route + "/"))) {
         return;
@@ -613,6 +710,17 @@ const MainLayout = () => {
   // Reactive menu filtering
   const items = React.useMemo(() => {
     if (!permissions || !Array.isArray(permissions)) return [];
+
+    if (profile?.business_id === 1) {
+      return PLATFORM_MENU_STRUCTURE.map(item => ({
+        ...item,
+        label: t[item.labelKey] || item.label,
+        children: item.children ? item.children.map(child => ({
+          ...child,
+          label: t[child.labelKey] || child.label
+        })) : undefined
+      }));
+    }
 
     // Helper to check permission safely
     const checkPath = (key) => {
@@ -838,6 +946,15 @@ const MainLayout = () => {
         background: "#5E4DC8",
       }}
     >
+      <style>{`
+        .sb-footer-sub-item:hover {
+          background: rgba(255,255,255,0.08) !important;
+          color: #fff !important;
+        }
+        .po-profile-toggle:hover {
+          background: rgba(255,255,255,0.1) !important;
+        }
+      `}</style>
       <OnboardingTour 
         visible={tourVisible} 
         profile={profile}
@@ -916,49 +1033,112 @@ const MainLayout = () => {
             </div>
 
             {/* ── Sidebar Footer ── */}
-            <div style={{ padding: "8px 0", borderTop: `1px solid ${SB.border}`, flexShrink: 0 }}>
-              {/* Support */}
-              <div
-                style={{
-                  margin: "2px 12px",
-                  padding: "8px 12px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  cursor: "pointer",
-                  color: SB.text,
-                  borderRadius: 8,
-                  transition: "all 0.2s",
-                  justifyContent: isSidebarCollapsed ? "center" : "flex-start"
-                }}
-                className="sb-footer-item"
-                onClick={() => window.open('https://t.me/your_support', '_blank')}
-              >
-                <CustomerServiceOutlined style={{ fontSize: 16 }} />
-                {!isSidebarCollapsed && <span style={{ fontSize: 12.5, fontWeight: 500 }}>Support</span>}
-              </div>
+            {profile?.business_id === 1 ? (
+              <div style={{ padding: "8px 0", borderTop: `1px solid ${SB.border}`, flexShrink: 0 }}>
+                {/* Platform Owner Profile Drawer Section */}
+                {!isSidebarCollapsed && (
+                  <div style={{ padding: "0 12px 8px" }}>
+                    <div 
+                      onClick={() => setProfileMenuExpanded(!profileMenuExpanded)}
+                      style={{ 
+                        display: "flex", alignItems: "center", justifyContent: "space-between", 
+                        padding: "8px", borderRadius: 8, cursor: "pointer", background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.08)", transition: "all 0.2s"
+                      }}
+                      className="po-profile-toggle"
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <Avatar size={32} src={ImgUser} icon={<UserOutlined />} style={{ border: "1px solid #c0a060" }} />
+                        <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2, textAlign: "left" }}>
+                          <Text style={{ fontSize: 11.5, color: "#fff", fontWeight: "bold" }}>Platform Owner</Text>
+                          <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.6)", fontWeight: "500" }}>Super Administrator</Text>
+                        </div>
+                      </div>
+                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 10 }}>{profileMenuExpanded ? "▼" : "▲"}</span>
+                    </div>
 
-              {/* Logout */}
-              <div
-                style={{
-                  margin: "2px 12px",
-                  padding: "8px 12px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  cursor: "pointer",
-                  color: "#ef4444",
-                  borderRadius: 8,
-                  transition: "all 0.2s",
-                  justifyContent: isSidebarCollapsed ? "center" : "flex-start"
-                }}
-                className="sb-footer-item-logout"
-                onClick={onLoginOut}
-              >
-                <LogoutOutlined style={{ fontSize: 16 }} />
-                {!isSidebarCollapsed && <span style={{ fontSize: 12.5, fontWeight: 500 }}>Logout</span>}
+                    {profileMenuExpanded && (
+                      <div style={{ 
+                        display: "flex", flexDirection: "column", gap: 1, marginTop: 8, 
+                        background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "4px" 
+                      }}>
+                        <div onClick={() => navigate('/profile')} style={{ padding: "6px 12px", fontSize: "11px", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: "6px" }} className="sb-footer-sub-item">Profile Settings</div>
+                        <div onClick={() => navigate('/settings')} style={{ padding: "6px 12px", fontSize: "11px", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: "6px" }} className="sb-footer-sub-item">Company Information</div>
+                        <div onClick={() => navigate('/security-logs')} style={{ padding: "6px 12px", fontSize: "11px", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: "6px" }} className="sb-footer-sub-item">Security Settings</div>
+                        <div onClick={() => navigate('/settings')} style={{ padding: "6px 12px", fontSize: "11px", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: "6px" }} className="sb-footer-sub-item">API Keys</div>
+                        <div onClick={() => navigate('/settings')} style={{ padding: "6px 12px", fontSize: "11px", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: "6px" }} className="sb-footer-sub-item">Billing Owner Settings</div>
+                        <Divider style={{ margin: "4px 0", borderColor: "rgba(255,255,255,0.08)" }} />
+                        <div onClick={onLoginOut} style={{ padding: "6px 12px", fontSize: "11px", color: "#ff4d4f", cursor: "pointer", borderRadius: "6px", fontWeight: "bold" }} className="sb-footer-sub-item">Logout</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {isSidebarCollapsed && (
+                  <div style={{ textAlign: "center", padding: "8px 0" }}>
+                    <Dropdown
+                      menu={{
+                        items: [
+                          { key: 'profile', label: 'Profile Settings', onClick: () => navigate('/profile') },
+                          { key: 'company', label: 'Company Information', onClick: () => navigate('/settings') },
+                          { key: 'security', label: 'Security Settings', onClick: () => navigate('/security-logs') },
+                          { key: 'api', label: 'API Keys', onClick: () => navigate('/settings') },
+                          { key: 'billing', label: 'Billing Owner Settings', onClick: () => navigate('/settings') },
+                          { type: 'divider' },
+                          { key: 'logout', label: 'Logout', danger: true, onClick: onLoginOut }
+                        ]
+                      }}
+                      placement="rightBottom"
+                    >
+                      <Avatar size={32} src={ImgUser} icon={<UserOutlined />} style={{ border: "1px solid #c0a060", cursor: "pointer" }} />
+                    </Dropdown>
+                  </div>
+                )}
               </div>
-            </div>
+            ) : (
+              <div style={{ padding: "8px 0", borderTop: `1px solid ${SB.border}`, flexShrink: 0 }}>
+                {/* Support */}
+                <div
+                  style={{
+                    margin: "2px 12px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    cursor: "pointer",
+                    color: SB.text,
+                    borderRadius: 8,
+                    transition: "all 0.2s",
+                    justifyContent: isSidebarCollapsed ? "center" : "flex-start"
+                  }}
+                  className="sb-footer-item"
+                  onClick={() => window.open('https://t.me/your_support', '_blank')}
+                >
+                  <CustomerServiceOutlined style={{ fontSize: 16 }} />
+                  {!isSidebarCollapsed && <span style={{ fontSize: 12.5, fontWeight: 500 }}>Support</span>}
+                </div>
+
+                {/* Logout */}
+                <div
+                  style={{
+                    margin: "2px 12px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    cursor: "pointer",
+                    color: "#ef4444",
+                    borderRadius: 8,
+                    transition: "all 0.2s",
+                    justifyContent: isSidebarCollapsed ? "center" : "flex-start"
+                  }}
+                  className="sb-footer-item-logout"
+                  onClick={onLoginOut}
+                >
+                  <LogoutOutlined style={{ fontSize: 16 }} />
+                  {!isSidebarCollapsed && <span style={{ fontSize: 12.5, fontWeight: 500 }}>Logout</span>}
+                </div>
+              </div>
+            )}
           </div>
         </Sider>
       )}

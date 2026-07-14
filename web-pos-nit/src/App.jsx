@@ -123,6 +123,26 @@ function App() {
             <Route path="/system-subscriptions" element={<PlanPage />} />
             <Route path="/system-modules" element={<SystemModulePage />} />
             <Route path="/security-logs" element={<SecurityDashboardPage />} />
+            
+            {/* Platform Owner Alias Routes */}
+            <Route path="/global-dashboard" element={<HomePage />} />
+            <Route path="/organization-directory" element={<BusinessPage />} />
+            <Route path="/revenue-analytics" element={<HomePage />} />
+            <Route path="/invoice-management" element={<ReportSale_Summary />} />
+            <Route path="/payment-gateway" element={<SettingsPage />} />
+            <Route path="/app-marketplace" element={<SystemModulePage />} />
+            <Route path="/developer-portal" element={<SettingsPage />} />
+            <Route path="/api-management" element={<SettingsPage />} />
+            <Route path="/integration-center" element={<SettingsPage />} />
+            <Route path="/threat-monitoring" element={<SecurityDashboardPage />} />
+            <Route path="/audit-logs" element={<SecurityDashboardPage />} />
+            <Route path="/compliance-center" element={<SecurityDashboardPage />} />
+            <Route path="/data-governance" element={<SecurityDashboardPage />} />
+            <Route path="/feature-flags" element={<SystemModulePage />} />
+            <Route path="/notification-center" element={<SettingsPage />} />
+            <Route path="/backup-recovery" element={<SecurityDashboardPage />} />
+            <Route path="/infrastructure-monitoring" element={<SecurityDashboardPage />} />
+
             <Route path="/my-plan" element={<MyPlanPage />} />
             <Route path="/payment/result" element={<PaymentResultPage />} />
             <Route path="/order" element={<OrderPage />} />
