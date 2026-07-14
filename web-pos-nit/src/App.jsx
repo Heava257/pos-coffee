@@ -60,6 +60,8 @@ import SecurityDashboardPage from "@/modules/platform/pages/SecurityDashboardPag
 import DeveloperPortalPage from "@/modules/platform/pages/DeveloperPortalPage";
 import PaymentGatewayPage from "@/modules/platform/pages/PaymentGatewayPage";
 import IntegrationCenterPage from "@/modules/platform/pages/IntegrationCenterPage";
+import AuditLogsPage from "@/modules/platform/pages/AuditLogsPage";
+import BackupRecoveryPage from "@/modules/platform/pages/BackupRecoveryPage";
 import StockTransferPage from "@/modules/inventory/transfer/pages/StockTransferPage";
 import { getProfile } from "@/app/store/profile.store";
 import SaasLandingPage from "@/modules/platform/pages/SaasLandingPage";
@@ -138,12 +140,12 @@ function App() {
             <Route path="/api-management" element={<DeveloperPortalPage />} />
             <Route path="/integration-center" element={<IntegrationCenterPage />} />
             <Route path="/threat-monitoring" element={<SecurityDashboardPage />} />
-            <Route path="/audit-logs" element={<SecurityDashboardPage />} />
+            <Route path="/audit-logs" element={<AuditLogsPage />} />
             <Route path="/compliance-center" element={<SecurityDashboardPage />} />
             <Route path="/data-governance" element={<SecurityDashboardPage />} />
             <Route path="/feature-flags" element={<SystemModulePage />} />
             <Route path="/notification-center" element={<SettingsPage />} />
-            <Route path="/backup-recovery" element={<SecurityDashboardPage />} />
+            <Route path="/backup-recovery" element={<BackupRecoveryPage />} />
             <Route path="/infrastructure-monitoring" element={<SecurityDashboardPage />} />
 
             <Route path="/my-plan" element={<MyPlanPage />} />

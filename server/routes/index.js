@@ -53,6 +53,7 @@ registerRoute("/shift", "/shifts", "../modules/shift/shift.routes");
 registerRoute("/table", "/tables", "../modules/table/table.routes");
 registerRoute("/developer", "/developers", "../modules/developer/developer.routes");
 registerRoute("/payment-gateway", "/payment-gateways", "../modules/payment_gateway/payment_gateway.routes");
+registerRoute("/backup", "/backups", "../modules/backup/backup.routes");
 
 // Special Compatibility Aliases for non-nested flat requests
 const orderController = require("../modules/order/order.controller");
