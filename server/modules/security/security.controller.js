@@ -132,7 +132,8 @@ exports.getServerStatus = async (req, res) => {
       cpu: {
         cores: cpuCores,
         usage_pct: cpuUsagePct,
-        load_avg: loadAvg
+        load_avg: loadAvg,
+        model: os.cpus()[0]?.model || "Unknown Processor"
       },
       ram: {
         total_mb: Math.round(totalMemBytes / (1024 * 1024)),
@@ -147,6 +148,12 @@ exports.getServerStatus = async (req, res) => {
       database: {
         status: dbStatus,
         latency_ms: dbLatency
+      },
+      os_info: {
+        platform: os.platform(),
+        release: os.release(),
+        hostname: os.hostname(),
+        arch: os.arch()
       },
       uptime_seconds: Math.round(os.uptime())
     });
