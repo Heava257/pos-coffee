@@ -179,6 +179,10 @@ export const alertAPIError = (err) => {
     }
 
   } else if (err.code === "ERR_NETWORK") {
+    if (localStorage.getItem("flag_offline_mode") === "true") {
+      console.warn("Network connection lost. Offline Mode is active. Bypassing connection error alert.");
+      return;
+    }
     const networkMsg = activeLang === "kh"
       ? "មិនអាចភ្ជាប់ទៅកាន់ម៉ាស៊ីនមេបានទេ។ សូមពិនិត្យមើលថាតើប្រព័ន្ធដំណើរការដែរឬទេ។"
       : "Cannot connect to server. Please check if the backend is running.";

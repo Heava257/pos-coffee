@@ -1172,6 +1172,53 @@ function PosPage() {
     }));
   }, [userId, profile]);
 
+  const syncOfflineOrders = async () => {
+    const queueStr = localStorage.getItem("offline_orders_queue");
+    if (!queueStr) return;
+
+    let queue = [];
+    try {
+      queue = JSON.parse(queueStr);
+    } catch(e) {
+      queue = [];
+    }
+
+    if (queue.length === 0) return;
+
+    message.loading({ content: `Syncing ${queue.length} offline orders...`, key: 'offline-sync' });
+
+    let successCount = 0;
+    const remainingQueue = [];
+
+    for (const order of queue) {
+      try {
+        const { offline, order_no, ...syncPayload } = order;
+        const res = await request("order", "post", syncPayload);
+        if (res && !res.error) {
+          successCount++;
+        } else {
+          remainingQueue.push(order);
+        }
+      } catch (err) {
+        remainingQueue.push(order);
+      }
+    }
+
+    if (successCount > 0) {
+      localStorage.setItem("offline_orders_queue", JSON.stringify(remainingQueue));
+      message.success({ 
+        content: `Successfully synchronized ${successCount} offline orders to server!`, 
+        key: 'offline-sync', 
+        duration: 4 
+      });
+      getPendingOrders();
+      getList();
+      getMaterials();
+    } else {
+      message.destroy('offline-sync');
+    }
+  };
+
   // ── initial data ──
   useEffect(() => {
     if (userId) {
@@ -1181,12 +1228,21 @@ function PosPage() {
       if (isPermission("Table Management")) {
         getPendingOrders();
       }
+
+      syncOfflineOrders();
+      window.addEventListener('online', syncOfflineOrders);
+
       const iv = setInterval(() => {
         if (isPermission("Table Management")) {
           getPendingOrders();
         }
+        syncOfflineOrders();
       }, 5000); // Poll every 5 seconds for better responsiveness
-      return () => clearInterval(iv);
+
+      return () => {
+        clearInterval(iv);
+        window.removeEventListener('online', syncOfflineOrders);
+      };
     }
   }, [userId]);
 
@@ -2949,8 +3005,88 @@ function PosPage() {
           message.error(`Order failed! ${res?.message || res?.error || ""}`);
         }
       } catch (err) {
-        console.error(err);
-        message.error(t.order_failed || "Order failed!");
+        console.error("Order submission failed:", err);
+        const offlineActive = localStorage.getItem("flag_offline_mode") === "true";
+        const isNetworkErr = err.code === "ERR_NETWORK" || !navigator.onLine || err.message?.includes("Network Error");
+
+        if (offlineActive && isNetworkErr) {
+          const offlineOrderNo = `OFF-${Date.now()}`;
+          const cachedQueueStr = localStorage.getItem("offline_orders_queue") || "[]";
+          let cachedQueue = [];
+          try {
+            cachedQueue = JSON.parse(cachedQueueStr);
+          } catch(e) {
+            cachedQueue = [];
+          }
+
+          const offlineOrder = {
+            ...param,
+            order_no: offlineOrderNo,
+            offline: true,
+            created_at: new Date().toISOString()
+          };
+
+          cachedQueue.push(offlineOrder);
+          localStorage.setItem("offline_orders_queue", JSON.stringify(cachedQueue));
+
+          window.dispatchEvent(new Event("order-completed"));
+          const key = `open${Date.now()}`;
+          const btn = (
+            <Space>
+              <Button type="primary" size="small" icon={<PrinterOutlined />} onClick={() => {
+                handlePrintInvoice();
+              }}>
+                Print Invoice
+              </Button>
+              <Button size="small" icon={<TagOutlined />} onClick={() => {
+                handlePrintLabel();
+              }}>
+                Print Label
+              </Button>
+              <Button size="small" onClick={() => {
+                notification.destroy(key);
+                handleClearCart(true);
+              }}>
+                Done
+              </Button>
+            </Space>
+          );
+
+          notification.success({
+            message: "Offline Checkout Successful!",
+            description: `Order cached locally. Receipt ID: #${offlineOrderNo}. Order will sync when connection returns.`,
+            action: btn,
+            key,
+            duration: 10,
+            placement: 'top'
+          });
+
+          const currentPrintCart = [...state.cart_list];
+          const currentPrintSummary = {
+            ...objSummary,
+            order_no: offlineOrderNo,
+            order_date: new Date().toISOString(),
+            order_type: orderType,
+            received_usd: cashReceivedUSD,
+            received_khr: cashReceivedKHR
+          };
+
+          setState(prev => ({
+            ...prev,
+            printCart: currentPrintCart,
+            printSummary: currentPrintSummary
+          }));
+
+          setObjSummary((p) => ({
+            ...p,
+            order_no: offlineOrderNo,
+            order_date: new Date().toISOString(),
+          }));
+
+          triggerAutoPrintWorkflow(false);
+        } else {
+          message.error(t.order_failed || "Order failed!");
+        }
       }
     };
 
