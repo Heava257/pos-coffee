@@ -228,6 +228,19 @@ exports.getAdminDashboard = async (req, res) => {
       GROUP BY p.name
     `);
 
+    const [categoryDist] = await db.query(`
+      SELECT COALESCE(NULLIF(business_nature, ''), 'Coffee & Cafe') as category, COUNT(id) as value
+      FROM businesses
+      GROUP BY business_nature
+    `);
+
+    const [criticalAlerts] = await db.query(`
+      SELECT id, event_type, ip, endpoint, created_at
+      FROM security_logs
+      ORDER BY id DESC
+      LIMIT 5
+    `);
+
     const [recentUsers] = await db.query(`
       SELECT u.id, u.name, b.name as business_name, u.created_at, r.name as role_name
       FROM users u
@@ -289,6 +302,8 @@ exports.getAdminDashboard = async (req, res) => {
       bizStats, 
       newestBusinesses, 
       planDist, 
+      categoryDist,
+      criticalAlerts,
       recentUsers, 
       success: true,
       systemHealth: {
