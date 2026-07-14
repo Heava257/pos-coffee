@@ -2,13 +2,8 @@ const authService = require("./auth.service");
 const jwt = require("jsonwebtoken");
 const config = require("../../config");
 const db = require("../../config/database");
-
-const logError = (apiName, error, res) => {
-  console.error(`🔥 Error in ${apiName}:`, error);
-  res.status(500).json({
-    message: error.message || "An unexpected error occurred."
-  });
-};
+const loginRateLimiter = require("../../src/util/loginRateLimiter");
+const { logError } = require("../../src/util/logError");
 
 class AuthController {
   async register(req, res) {
@@ -24,6 +19,7 @@ class AuthController {
   async login(req, res) {
     try {
       const result = await authService.login(req.body.email, req.body.password, req.body.remember);
+      try { loginRateLimiter.resetKey(req.ip); } catch (e) {}
       res.json(result);
     } catch (error) {
       logError("auth.login", error, res);
@@ -33,6 +29,7 @@ class AuthController {
   async googleLogin(req, res) {
     try {
       const result = await authService.googleLogin(req.body.access_token);
+      try { loginRateLimiter.resetKey(req.ip); } catch (e) {}
       res.json(result);
     } catch (error) {
       logError("auth.googleLogin", error, res);
@@ -42,6 +39,7 @@ class AuthController {
   async loginByPassword(req, res) {
     try {
       const result = await authService.loginByPassword(req.body.id, req.body.password, req.business_id);
+      try { loginRateLimiter.resetKey(req.ip); } catch (e) {}
       res.json(result);
     } catch (error) {
       logError("auth.loginByPassword", error, res);
@@ -51,6 +49,7 @@ class AuthController {
   async verifyManager(req, res) {
     try {
       const result = await authService.verifyManager(req.body.username, req.body.password, req.business_id);
+      try { loginRateLimiter.resetKey(req.ip); } catch (e) {}
       res.json({
         success: true,
         message: "Manager verification successful",
@@ -183,6 +182,7 @@ class AuthController {
   async forgotPassword(req, res) {
     try {
       await authService.forgotPassword(req.body.email);
+      try { loginRateLimiter.resetKey(req.ip); } catch (e) {}
       res.json({ success: true, message: "6-digit OTP code has been sent to your email!" });
     } catch (error) {
       logError("auth.forgotPassword", error, res);
@@ -193,6 +193,7 @@ class AuthController {
     try {
       const { email, otp, new_password } = req.body;
       await authService.resetPassword(email, otp, new_password);
+      try { loginRateLimiter.resetKey(req.ip); } catch (e) {}
       res.json({ success: true, message: "Password has been reset successfully!" });
     } catch (error) {
       logError("auth.resetPassword", error, res);
@@ -203,6 +204,7 @@ class AuthController {
     try {
       const { email, otp } = req.body;
       await authService.verifyOtp(email, otp);
+      try { loginRateLimiter.resetKey(req.ip); } catch (e) {}
       res.json({ success: true, message: "OTP verified successfully!" });
     } catch (error) {
       logError("auth.verifyOtp", error, res);

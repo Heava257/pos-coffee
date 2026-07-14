@@ -19,6 +19,7 @@ module.exports = {
     PASSWORD: isProd ? requireEnv('DB_PROD_PASSWORD') : requireEnv('DB_PASSWORD'),
     DATABASE: isProd ? requireEnv('DB_PROD_DATABASE') : (process.env.DB_DATABASE || 'coffee_saas'),
     PORT:     isProd ? (process.env.DB_PROD_PORT || 3306) : (process.env.DB_PORT || 3306),
+    SSL:      process.env.DB_SSL === 'true',
   },
 
   token: {
