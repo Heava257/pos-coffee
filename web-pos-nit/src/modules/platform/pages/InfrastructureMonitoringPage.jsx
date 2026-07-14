@@ -294,23 +294,48 @@ const InfrastructureMonitoringPage = () => {
 
         {/* Database & Cache Engine status */}
         <Col xs={24} md={12}>
-          <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12 }} title="Database Engine">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <Text strong><DatabaseOutlined style={{ marginRight: 8, color: "#1e4a2d" }} /> MySQL Connection</Text>
-              <Tag color={database.status === "healthy" ? "success" : "error"}>{database.status.toUpperCase()}</Tag>
+          <Card 
+            bordered={false} 
+            className="shadow-sm" 
+            style={{ borderRadius: 12, height: "100%", display: "flex", flexDirection: "column" }}
+            bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}
+            title="Database Engine"
+          >
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <Text strong><DatabaseOutlined style={{ marginRight: 8, color: "#1e4a2d" }} /> MySQL Connection</Text>
+                <Tag color={database.status === "healthy" ? "success" : "error"}>{database.status.toUpperCase()}</Tag>
+              </div>
+              <Statistic title="DB Query Latency" value={database.latency_ms} suffix="ms" valueStyle={{ color: database.latency_ms > 100 ? "#cf1322" : "#3f8600" }} />
             </div>
-            <Statistic title="DB Query Latency" value={database.latency_ms} suffix="ms" valueStyle={{ color: database.latency_ms > 100 ? "#cf1322" : "#3f8600" }} />
+            <Text type="secondary" style={{ fontSize: "11px", display: "block", marginTop: 12 }}>
+              Active relational database storage for multi-tenant SaaS schema, order processing, and catalogs.
+            </Text>
           </Card>
         </Col>
 
         <Col xs={24} md={12}>
-          <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12 }} title="Cache Engine">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <Text strong><BugOutlined style={{ marginRight: 8, color: "#1e4a2d" }} /> Redis Cache</Text>
-              <Tag color={redis.status === "healthy" ? "success" : "default"}>{redis.status.toUpperCase()}</Tag>
+          <Card 
+            bordered={false} 
+            className="shadow-sm" 
+            style={{ borderRadius: 12, height: "100%", display: "flex", flexDirection: "column" }}
+            bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}
+            title="Cache Engine"
+          >
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <Text strong><BugOutlined style={{ marginRight: 8, color: "#1e4a2d" }} /> Redis Cache</Text>
+                <Tag color={redis.status === "healthy" ? "success" : "default"}>{redis.status.toUpperCase()}</Tag>
+              </div>
+              <Statistic 
+                title="Cache Latency" 
+                value={redis.status === "healthy" ? 0 : "N/A"} 
+                suffix={redis.status === "healthy" ? "ms" : ""} 
+                valueStyle={{ color: redis.status === "healthy" ? "#3f8600" : "#888" }} 
+              />
             </div>
-            <Text type="secondary" style={{ fontSize: "12px", display: "block", marginTop: 4 }}>
-              Active connections used for API rate limiting, session caching, and immediate token blacklisting.
+            <Text type="secondary" style={{ fontSize: "11px", display: "block", marginTop: 12 }}>
+              Active memory cache used for API rate limiting, session revocation caching, and blacklists.
             </Text>
           </Card>
         </Col>
