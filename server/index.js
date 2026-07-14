@@ -1,4 +1,4 @@
-// Trigger Nodemon Reload to invalidate cache after global permissions mapping
+// Trigger Nodemon Reload to invalidate cache after global permissions mapping and flags update
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');

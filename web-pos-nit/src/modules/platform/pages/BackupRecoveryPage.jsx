@@ -137,12 +137,28 @@ const BackupRecoveryPage = () => {
     }
   };
 
-  const handleTestS3Connection = () => {
+  const handleTestS3Connection = async () => {
     setTestingS3(true);
-    setTimeout(() => {
+    try {
+      const res = await request("backup/test-s3", "post", {
+        provider: s3Provider,
+        accessKey: s3AccessKey,
+        secretKey: s3SecretKey,
+        region: s3Region,
+        bucket: s3Bucket,
+        endpoint: s3Endpoint
+      });
+      if (res && res.success) {
+        message.success(res.message || "S3 bucket connection test successful! Handshake established.");
+      } else {
+        message.error(res.error || res.message || "Failed to establish connection handshake.");
+      }
+    } catch (err) {
+      console.error(err);
+      message.error(err.message || "S3 connection failed. Verify keys and network configurations.");
+    } finally {
       setTestingS3(false);
-      message.success("S3 bucket connection test successful! Handshake established.");
-    }, 1500);
+    }
   };
 
   const formatSize = (bytes) => {

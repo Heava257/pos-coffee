@@ -74,3 +74,51 @@ exports.deleteBackup = async (req, res) => {
     logError("backup.deleteBackup", error, res);
   }
 };
+
+// 4. Test S3 Connection Handshake
+const { S3Client, ListObjectsV2Command } = require("@aws-sdk/client-s3");
+
+exports.testS3Connection = async (req, res) => {
+  try {
+    if (req.business_id !== 1) {
+      return res.status(403).json({ error: "Forbidden", message: "Platform admin access only." });
+    }
+
+    const { provider, accessKey, secretKey, region, bucket, endpoint } = req.body;
+
+    if (!accessKey || !secretKey || !bucket) {
+      return res.status(400).json({ success: false, message: "Access Key, Secret Key, and Bucket Name are required for handshake." });
+    }
+
+    const s3Config = {
+      region: region || "us-east-1",
+      credentials: {
+        accessKeyId: accessKey,
+        secretAccessKey: secretKey
+      }
+    };
+
+    if (provider !== "aws" && endpoint) {
+      let endpointUrl = endpoint;
+      if (!endpointUrl.startsWith("http://") && !endpointUrl.startsWith("https://")) {
+        endpointUrl = `https://${endpointUrl}`;
+      }
+      s3Config.endpoint = endpointUrl;
+    }
+
+    const s3Client = new S3Client(s3Config);
+    
+    // List 1 object to test connection and credentials permissions
+    await s3Client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        MaxKeys: 1
+      })
+    );
+
+    res.json({ success: true, message: "S3 connection test successful! Handshake established with bucket." });
+  } catch (error) {
+    console.error("[S3 Test Connection Error]:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to establish handshake with S3 bucket." });
+  }
+};
