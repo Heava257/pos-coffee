@@ -77,10 +77,10 @@ const IntegrationCenterPage = () => {
   const handleTestTelegram = async () => {
     setTesting(true);
     try {
-      const res = await request("business/test-telegram", "post", {
+      const res = await request("system-setting/test-telegram", "post", {
         telegram_token: telegramToken,
         telegram_chat_id: telegramChatId,
-        test_message: "🔔 *PlatformOS Security Alert Test*\nThis is a high-fidelity system integration validation test from the Platform Owner console."
+        test_message: "🔔 <b>PlatformOS Security Alert Test</b>\nThis is a high-fidelity system integration validation test from the Platform Owner console."
       });
 
       if (res && res.success) {

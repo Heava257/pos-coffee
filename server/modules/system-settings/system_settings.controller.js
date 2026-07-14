@@ -1,6 +1,7 @@
 const { db, logError } = require("../../src/util/helper");
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 const backupScheduler = require("../../src/service/backupScheduler.service");
 
 exports.getSystemSettings = async (req, res) => {
@@ -67,5 +68,38 @@ exports.updateSystemSettings = async (req, res) => {
         res.json({ success: true, message: "System settings updated successfully" });
     } catch (error) {
         logError("system_settings.updateSystemSettings", error, res);
+    }
+};
+
+exports.testTelegram = async (req, res) => {
+    try {
+        if (req.business_id !== 1) {
+            return res.status(403).json({ error: "Forbidden", message: "Access denied." });
+        }
+
+        const { telegram_token, telegram_chat_id, test_message } = req.body;
+        if (!telegram_token || !telegram_chat_id) {
+            return res.status(400).json({ success: false, message: "Bot Token and Target Chat ID are required." });
+        }
+
+        const text = test_message || "🔔 <b>PlatformOS Integration Test</b>\nConnection handshake established successfully!";
+
+        const response = await axios.post(`https://api.telegram.org/bot${telegram_token}/sendMessage`, {
+            chat_id: telegram_chat_id,
+            text: text,
+            parse_mode: "HTML"
+        });
+
+        if (response.data && response.data.ok) {
+            return res.json({ success: true, message: "Test alert sent successfully!" });
+        } else {
+            return res.status(400).json({ success: false, message: "Telegram API error: " + JSON.stringify(response.data) });
+        }
+    } catch (error) {
+        console.error("testTelegram error:", error.message);
+        res.status(500).json({ 
+            success: false, 
+            message: "Connection failed: " + (error.response?.data?.description || error.message) 
+        });
     }
 };

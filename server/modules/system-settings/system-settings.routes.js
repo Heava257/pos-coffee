@@ -8,5 +8,6 @@ const uploadMiddleware = require("../../middlewares/upload.middleware");
 router.get("/public", c.getPublicSystemSettings);
 router.get("/", authMiddleware("system-settings"), c.getSystemSettings);
 router.put("/", authMiddleware("system-settings"), uploadMiddleware.single("khqr_image"), c.updateSystemSettings);
+router.post("/test-telegram", authMiddleware("system-settings"), c.testTelegram);
 
 module.exports = router;
