@@ -206,6 +206,19 @@ exports.updateStatus = async (req, res) => {
 
         await db.query("UPDATE businesses SET status = ? WHERE id = ?", [status, id]);
         res.json({ message: `Business ${status} successfully` });
+
+        // Trigger webhook if suspended
+        if (status === 'suspended') {
+            try {
+                const { dispatch: dispatchWebhook } = require("../../src/util/webhookDispatcher");
+                dispatchWebhook("tenant.suspended", {
+                    business_id: id,
+                    status
+                });
+            } catch (webhookErr) {
+                console.error("Webhook Dispatch Failed:", webhookErr);
+            }
+        }
     } catch (error) {
         logError("business.updateStatus", error, res);
     }

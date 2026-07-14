@@ -143,6 +143,23 @@ exports.create = async (req, res) => {
         await clearCache(`products_biz_${business_id}_branch_*`);
         await clearCache(`categories_biz_${business_id}`);
         res.json({ success: true, message: "Product created and added to branch!" });
+
+        // Trigger webhook event
+        try {
+            const { dispatch: dispatchWebhook } = require("../../src/util/webhookDispatcher");
+            dispatchWebhook("product.created", {
+                product_id,
+                business_id,
+                branch_id,
+                name,
+                category_id,
+                price,
+                cost_price,
+                qty
+            });
+        } catch (webhookErr) {
+            console.error("Webhook Dispatch Failed:", webhookErr);
+        }
     } catch (error) {
         if (conn) await conn.rollback();
         logError("product.create", error, res);

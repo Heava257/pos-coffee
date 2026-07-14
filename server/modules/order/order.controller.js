@@ -363,6 +363,29 @@ exports.create = async (req, res) => {
 
         res.json({ success: true, message: "Order Placed Successfully!", order_id });
 
+        // Trigger webhook event
+        try {
+            const { dispatch: dispatchWebhook } = require("../../src/util/webhookDispatcher");
+            dispatchWebhook("order.created", {
+                order_id,
+                business_id,
+                branch_id,
+                order_type,
+                table_no,
+                total_amount,
+                payment_method,
+                customer_name,
+                cart_items: cart_items.map(item => ({
+                    product_id: item.product_id,
+                    name: item.name,
+                    qty: item.qty,
+                    price: item.price
+                }))
+            });
+        } catch (webhookErr) {
+            console.error("Webhook Dispatch Failed:", webhookErr);
+        }
+
         // --- ASYNC TELEGRAM NOTIFICATION ---
         try {
             const { sendTelegramMessage } = require("../../src/util/helper");
