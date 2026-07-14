@@ -1,4 +1,4 @@
-// Trigger Nodemon Reload to invalidate cache after global permissions mapping, settings update, S3 and Download routes, renew security, sidebar duplicate cleanup, dashboard cleanup, audit logs fix, and UI settings
+// Trigger Nodemon Reload to invalidate cache after global permissions mapping, settings update, S3 and Download routes, renew security, sidebar duplicate cleanup, dashboard cleanup, audit logs fix, UI settings, and integration test endpoint
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');

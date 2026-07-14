@@ -20,11 +20,11 @@ const DeveloperPortalPage = () => {
     try {
       const keysRes = await request("developer/keys", "get");
       if (keysRes && keysRes.success) {
-        setApiKeys(keysRes.list);
+        setApiKeys(keysRes.list || []);
       }
       const hooksRes = await request("developer/webhooks", "get");
       if (hooksRes && hooksRes.success) {
-        setWebhooks(hooksRes.list);
+        setWebhooks(hooksRes.list || []);
       }
     } catch (err) {
       console.error(err);
@@ -110,7 +110,7 @@ const DeveloperPortalPage = () => {
       key: "scopes", 
       render: (scopes) => (
         <Space size={[0, 4]} wrap>
-          {scopes.map(s => <Tag color="blue" key={s}>{s}</Tag>)}
+          {Array.isArray(scopes) && scopes.map(s => <Tag color="blue" key={s}>{s}</Tag>)}
         </Space>
       ) 
     },
@@ -136,7 +136,7 @@ const DeveloperPortalPage = () => {
       key: "events", 
       render: (events) => (
         <Space size={[0, 4]} wrap>
-          {events.map(e => <Tag color="purple" key={e}>{e}</Tag>)}
+          {Array.isArray(events) && events.map(e => <Tag color="purple" key={e}>{e}</Tag>)}
         </Space>
       ) 
     },
