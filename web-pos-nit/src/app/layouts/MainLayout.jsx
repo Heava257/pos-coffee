@@ -58,7 +58,8 @@ import {
   CloudDownloadOutlined,
   WalletOutlined,
   AppstoreAddOutlined,
-  NodeIndexOutlined
+  NodeIndexOutlined,
+  DatabaseOutlined
 } from "@ant-design/icons";
 import {
   getPermission,
