@@ -1,4 +1,4 @@
-// Trigger Nodemon Reload to invalidate cache after business 49 plan upgrade
+// Trigger Nodemon Reload to invalidate cache after global permissions mapping
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
