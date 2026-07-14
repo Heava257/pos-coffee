@@ -58,24 +58,24 @@ const dashboardController = require("../modules/dashboard/dashboard.controller")
 const reportController = require("../modules/report/report.controller");
 const purchaseController = require("../modules/purchase/purchase.controller");
 
-router.get("/order-pending", authMiddleware(), orderController.getPendingOrders);
-router.get("/config", authMiddleware(), require("../modules/business/business.controller").getBusinessConfig);
-router.get("/admin-dashboard", authMiddleware(), dashboardController.getAdminDashboard);
+router.get("/order-pending", authMiddleware("order"), orderController.getPendingOrders);
+router.get("/config", authMiddleware("config"), require("../modules/business/business.controller").getBusinessConfig);
+router.get("/admin-dashboard", authMiddleware("dashboard"), dashboardController.getAdminDashboard);
 
 // Purchase Flat Routes
-router.get("/purchase-details", authMiddleware(), purchaseController.getDetails);
-router.get("/purchases-details", authMiddleware(), purchaseController.getDetails);
-router.post("/purchase-receive", authMiddleware(), purchaseController.receive);
-router.post("/purchase-approve", authMiddleware(), purchaseController.approve);
+router.get("/purchase-details", authMiddleware("purchase"), purchaseController.getDetails);
+router.get("/purchases-details", authMiddleware("purchase"), purchaseController.getDetails);
+router.post("/purchase-receive", authMiddleware("purchase"), purchaseController.receive);
+router.post("/purchase-approve", authMiddleware("purchase"), purchaseController.approve);
 
 // Flat Compatibility Routes for Reports
-router.get("/top_sales", authMiddleware(), reportController.top_sale);
-router.get("/top-sales", authMiddleware(), reportController.top_sale);
-router.get("/report_Sale_Sammary", authMiddleware(), reportController.report_Sale_Summary);
-router.get("/report_Sale_Summary", authMiddleware(), reportController.report_Sale_Summary);
-router.get("/report_Expense_Summary", authMiddleware(), reportController.report_Expense_Summary);
-router.get("/report_Customer", authMiddleware(), reportController.report_Customer);
-router.get("/report_Purchase_Summary", authMiddleware(), reportController.report_Purchase_Summary);
+router.get("/top_sales", authMiddleware("Top_Sale"), reportController.top_sale);
+router.get("/top-sales", authMiddleware("Top_Sale"), reportController.top_sale);
+router.get("/report_Sale_Sammary", authMiddleware("report_Sale_Summary"), reportController.report_Sale_Summary);
+router.get("/report_Sale_Summary", authMiddleware("report_Sale_Summary"), reportController.report_Sale_Summary);
+router.get("/report_Expense_Summary", authMiddleware("report_Expense_Summary"), reportController.report_Expense_Summary);
+router.get("/report_Customer", authMiddleware("report_Sale_Summary"), reportController.report_Customer);
+router.get("/report_Purchase_Summary", authMiddleware("report_Sale_Summary"), reportController.report_Purchase_Summary);
 
 // Settings and Modular Packages Compatibility Routes
 const settingsController = require("../modules/system-settings/settings.controller");
@@ -83,43 +83,43 @@ const modularPackageController = require("../modules/subscription/modular_packag
 const systemModuleController = require("../modules/subscription/system_module.controller");
 const uploadMiddleware = require("../middlewares/upload.middleware");
 
-router.get("/settings", authMiddleware(), settingsController.getSettings);
-router.put("/settings", authMiddleware(), uploadMiddleware.single("upload_logo"), settingsController.updateSettings);
-router.post("/settings/test-telegram", authMiddleware(), settingsController.testTelegramNotification);
+router.get("/settings", authMiddleware("settings"), settingsController.getSettings);
+router.put("/settings", authMiddleware("settings"), uploadMiddleware.single("upload_logo"), settingsController.updateSettings);
+router.post("/settings/test-telegram", authMiddleware("settings"), settingsController.testTelegramNotification);
 
-router.get("/modular_package", authMiddleware(), modularPackageController.getList);
-router.get("/modular_packages", authMiddleware(), modularPackageController.getList);
-router.post("/modular_package", authMiddleware(), modularPackageController.create);
-router.put("/modular_package", authMiddleware(), modularPackageController.update);
-router.get("/modular_package/permissions", authMiddleware(), modularPackageController.getPermissions);
+router.get("/modular_package", authMiddleware("subscription"), modularPackageController.getList);
+router.get("/modular_packages", authMiddleware("subscription"), modularPackageController.getList);
+router.post("/modular_package", authMiddleware("subscription"), modularPackageController.create);
+router.put("/modular_package", authMiddleware("subscription"), modularPackageController.update);
+router.get("/modular_package/permissions", authMiddleware("subscription"), modularPackageController.getPermissions);
 
-router.get("/system_module", authMiddleware(), systemModuleController.getList);
-router.get("/system_modules", authMiddleware(), systemModuleController.getList);
-router.post("/system_module", authMiddleware(), systemModuleController.create);
-router.put("/system_module", authMiddleware(), systemModuleController.update);
-router.delete("/system_module", authMiddleware(), systemModuleController.remove);
+router.get("/system_module", authMiddleware("subscription"), systemModuleController.getList);
+router.get("/system_modules", authMiddleware("subscription"), systemModuleController.getList);
+router.post("/system_module", authMiddleware("subscription"), systemModuleController.create);
+router.put("/system_module", authMiddleware("subscription"), systemModuleController.update);
+router.delete("/system_module", authMiddleware("subscription"), systemModuleController.remove);
 
-router.get("/permission_matrix", authMiddleware(), systemModuleController.getMatrix);
-router.get("/permission_matrices", authMiddleware(), systemModuleController.getMatrix);
-router.post("/permission_matrix", authMiddleware(), systemModuleController.saveMatrix);
-router.post("/permission_matrices", authMiddleware(), systemModuleController.saveMatrix);
+router.get("/permission_matrix", authMiddleware("subscription"), systemModuleController.getMatrix);
+router.get("/permission_matrices", authMiddleware("subscription"), systemModuleController.getMatrix);
+router.post("/permission_matrix", authMiddleware("subscription"), systemModuleController.saveMatrix);
+router.post("/permission_matrices", authMiddleware("subscription"), systemModuleController.saveMatrix);
 
 const planController = require("../modules/plan/plan.controller");
-router.get("/my-plan", authMiddleware(), planController.getBusinessPlan);
-router.get("/my-plan/billing-history", authMiddleware(), planController.getBillingHistory);
-router.post("/my-plan/upgrade", authMiddleware(), planController.selfUpgrade);
-router.get("/system-subscriptions", authMiddleware(), planController.getSystemSubscriptions);
-router.put("/system-subscriptions", authMiddleware(), planController.updateSystemSubscription);
-router.post("/system-subscriptions/send-reminder", authMiddleware(), planController.sendManualReminder);
+router.get("/my-plan", authMiddleware("my-plan"), planController.getBusinessPlan);
+router.get("/my-plan/billing-history", authMiddleware("my-plan"), planController.getBillingHistory);
+router.post("/my-plan/upgrade", authMiddleware("my-plan"), planController.selfUpgrade);
+router.get("/system-subscriptions", authMiddleware("system-subscriptions"), planController.getSystemSubscriptions);
+router.put("/system-subscriptions", authMiddleware("system-subscriptions"), planController.updateSystemSubscription);
+router.post("/system-subscriptions/send-reminder", authMiddleware("system-subscriptions"), planController.sendManualReminder);
 
-router.get("/user-switch-list", authMiddleware(), require("../modules/user/user.controller").getStaffSwitchList);
+router.get("/user-switch-list", authMiddleware("user"), require("../modules/user/user.controller").getStaffSwitchList);
 
-router.get("/exchange_rate", authMiddleware(), require("../modules/business/business.controller").getExchangeRate);
-router.get("/exchange-rate", authMiddleware(), require("../modules/business/business.controller").getExchangeRate);
+router.get("/exchange_rate", authMiddleware("exchange_rate"), require("../modules/business/business.controller").getExchangeRate);
+router.get("/exchange-rate", authMiddleware("exchange_rate"), require("../modules/business/business.controller").getExchangeRate);
 
-router.get("/order-kds", authMiddleware(), orderController.getKDSOrders);
-router.put("/order-kitchen-status", authMiddleware(), orderController.updateKitchenStatus);
-router.put("/order-send-to-kitchen", authMiddleware(), orderController.sendOrderToKitchen);
+router.get("/order-kds", authMiddleware("kds"), orderController.getKDSOrders);
+router.put("/order-kitchen-status", authMiddleware("kds"), orderController.updateKitchenStatus);
+router.put("/order-send-to-kitchen", authMiddleware("order"), orderController.sendOrderToKitchen);
 
 const orderWebRouter = express.Router();
 orderWebRouter.post("/", orderController.createWebOrder);
@@ -130,9 +130,9 @@ router.use("/order-web", orderWebRouter);
 
 // Barcode compatibility routes for frontend flat requests
 const productController = require("../modules/product/product.controller");
-router.post("/new_barcode", authMiddleware(), productController.generateBarcode);
-router.post("/new-barcode", authMiddleware(), productController.generateBarcode);
-router.get("/check_barcode/:barcode", authMiddleware(), productController.checkBarcode);
-router.get("/check-barcode/:barcode", authMiddleware(), productController.checkBarcode);
+router.post("/new_barcode", authMiddleware("product"), productController.generateBarcode);
+router.post("/new-barcode", authMiddleware("product"), productController.generateBarcode);
+router.get("/check_barcode/:barcode", authMiddleware("product"), productController.checkBarcode);
+router.get("/check-barcode/:barcode", authMiddleware("product"), productController.checkBarcode);
 
 module.exports = router;
