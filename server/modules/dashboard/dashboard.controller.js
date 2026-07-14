@@ -210,7 +210,18 @@ exports.getAdminDashboard = async (req, res) => {
         (SELECT COUNT(id) FROM businesses) as total_businesses,
         (SELECT COUNT(id) FROM businesses WHERE status = 'active') as active_businesses,
         (SELECT COUNT(id) FROM users) as total_users,
-        (SELECT COUNT(id) FROM branches) as total_branches
+        (SELECT COUNT(id) FROM branches) as total_branches,
+        (
+          SELECT COALESCE(SUM(
+            CASE 
+              WHEN plan_id = 2 THEN 30.00
+              WHEN plan_id = 3 THEN 800.00
+              ELSE 0.00
+            END
+          ), 0.00) 
+          FROM businesses 
+          WHERE status = 'active'
+        ) as mrr
     `);
 
     const [newestBusinesses] = await db.query(`

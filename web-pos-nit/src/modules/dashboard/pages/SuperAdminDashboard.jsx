@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { request } from "@/shared/utils/helper";
-import { Row, Col, Card, Statistic, Table, Tag, Typography, Spin, Badge, Button, Space, Tooltip as AntTooltip, List, Alert } from "antd";
+import { Row, Col, Card, Statistic, Table, Tag, Typography, Spin, Badge, Button, Space, Input, List, Progress, Tooltip as AntTooltip } from "antd";
 import {
   ShopOutlined,
   TeamOutlined,
@@ -17,11 +17,14 @@ import {
   AppstoreOutlined,
   CloudServerOutlined,
   ArrowUpOutlined,
+  ArrowDownOutlined,
   ThunderboltOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  SearchOutlined,
+  CreditCardOutlined
 } from "@ant-design/icons";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
 import dayjs from "dayjs";
@@ -124,36 +127,88 @@ const SuperAdminDashboard = () => {
 
   // simulated line chart data
   const revenueChartData = [
-    { name: "Jul", Standard: 4000, Premium: 2400 },
-    { name: "Aug", Standard: 5000, Premium: 3000 },
-    { name: "Sep", Standard: 4800, Premium: 3500 },
-    { name: "Oct", Standard: 6000, Premium: 4000 },
-    { name: "Nov", Standard: 7500, Premium: 4500 },
-    { name: "Dec", Standard: 8500, Premium: 5200 },
-    { name: "Jan", Standard: 9000, Premium: 5800 },
-    { name: "Feb", Standard: 9500, Premium: 6000 },
-    { name: "Mar", Standard: 11000, Premium: 7200 },
-    { name: "Apr", Standard: 12500, Premium: 8500 },
-    { name: "May", Standard: 13000, Premium: 9200 },
-    { name: "Jun", Standard: 14500, Premium: 10500 }
+    { name: "Jul", Revenue: 4000, Subscription: 2400 },
+    { name: "Aug", Revenue: 5000, Subscription: 3000 },
+    { name: "Sep", Revenue: 4800, Subscription: 3500 },
+    { name: "Oct", Revenue: 6000, Subscription: 4000 },
+    { name: "Nov", Revenue: 7500, Subscription: 4500 },
+    { name: "Dec", Revenue: 8500, Subscription: 5200 },
+    { name: "Jan", Revenue: 9000, Subscription: 5800 },
+    { name: "Feb", Revenue: 9500, Subscription: 6000 },
+    { name: "Mar", Revenue: 11000, Subscription: 7200 },
+    { name: "Apr", Revenue: 12500, Subscription: 8500 },
+    { name: "May", Revenue: 13000, Subscription: 9200 },
+    { name: "Jun", Revenue: 14500, Subscription: 10500 }
+  ];
+
+  // simulated tenant growth data matching the image
+  const tenantGrowthData = [
+    { name: "Jul", New: 500, Active: 3000, Banned: 50 },
+    { name: "Aug", New: 800, Active: 3800, Banned: 80 },
+    { name: "Sep", New: 1200, Active: 5000, Banned: 100 },
+    { name: "Oct", New: 1500, Active: 6500, Banned: 120 },
+    { name: "Nov", New: 2200, Active: 8700, Banned: 150 },
+    { name: "Dec", New: 2800, Active: 11500, Banned: 180 },
+    { name: "Jan", New: 3200, Active: 14700, Banned: 220 }
+  ];
+
+  // Usage Analytics Table Data matching the image
+  const usageMetrics = [
+    { key: "1", metric: "Bandwidth", usage: "12.4 TB", trend: "+10.2%", status: "up" },
+    { key: "2", metric: "CPU Usage (Avg)", usage: "24.6%", trend: "-4.5%", status: "down" },
+    { key: "3", metric: "Database Load", usage: "65.2%", trend: "+7.8%", status: "up" },
+    { key: "4", metric: "Email Volume", usage: "3.6M", trend: "+11.0%", status: "up" },
+    { key: "5", metric: "Webhook Delivery", usage: "98.7%", trend: "+2.1%", status: "up" }
+  ];
+
+  const usageColumns = [
+    {
+      title: "Metric",
+      dataIndex: "metric",
+      key: "metric",
+      render: (text) => <span style={{ fontWeight: "600" }}>{text}</span>
+    },
+    {
+      title: "Usage",
+      dataIndex: "usage",
+      key: "usage",
+      render: (text) => <Text code>{text}</Text>
+    },
+    {
+      title: "Trend",
+      dataIndex: "trend",
+      key: "trend",
+      render: (text, record) => (
+        <span style={{ color: record.status === 'up' ? '#52c41a' : '#ff4d4f', fontWeight: "bold" }}>
+          {record.status === 'up' ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {text}
+        </span>
+      )
+    }
   ];
 
   return (
     <div style={{ padding: "24px 0" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+      {/* Top Search Bar & Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", gap: "16px", flexWrap: "wrap" }}>
         <div>
           <Title level={2} style={{ margin: 0, color: "#1e4a2d", fontWeight: "bold" }}>
             <CloudServerOutlined style={{ marginRight: "10px" }} />
             Platform Overview
           </Title>
           <Paragraph style={{ color: "#666", margin: "4px 0 0 0" }}>
-            Real-time visibility across your global SaaS ecosystem, system alerts, and infrastructure health.
+            Real-time visibility across your global SaaS ecosystem.
           </Paragraph>
         </div>
-        <Button type="primary" icon={<ReloadOutlined />} onClick={fetchAdminData} style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}>
-          Refresh Overview
-        </Button>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <Input
+            placeholder="Search tenants, users, invoices, logs..."
+            prefix={<SearchOutlined />}
+            style={{ width: 300, borderRadius: "8px" }}
+          />
+          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchAdminData} style={{ backgroundColor: "#1e4a2d", borderColor: "#1e4a2d" }}>
+            Refresh All
+          </Button>
+        </div>
       </div>
 
       <Spin spinning={loading}>
@@ -182,10 +237,11 @@ const SuperAdminDashboard = () => {
           <Col xs={24} sm={8} lg={4}>
             <Card bordered={false} className="shadow-sm border-left-blue">
               <Statistic
-                title="Total Locations"
-                value={data.bizStats?.total_branches || 0}
-                prefix={<DeploymentUnitOutlined style={{ color: "#1890ff" }} />}
+                title="Monthly Revenue"
+                value={Number(data.bizStats?.mrr || 0)}
+                prefix={<CreditCardOutlined style={{ color: "#1890ff" }} />}
                 valueStyle={{ color: "#1e4a2d", fontWeight: "bold" }}
+                precision={2}
               />
             </Card>
           </Col>
@@ -216,7 +272,7 @@ const SuperAdminDashboard = () => {
                 title="System Uptime"
                 value={formatUptime(serverStatus?.uptime_seconds)}
                 prefix={<DashboardOutlined style={{ color: "#fa8c16" }} />}
-                valueStyle={{ color: "#1e4a2d", fontWeight: "bold", fontSize: "18px" }}
+                valueStyle={{ color: "#1e4a2d", fontWeight: "bold", fontSize: "16px" }}
               />
             </Card>
           </Col>
@@ -226,56 +282,69 @@ const SuperAdminDashboard = () => {
         <Row gutter={[24, 24]}>
           {/* Left Column: Analytics Charts & Tables */}
           <Col xs={24} lg={17}>
-            {/* Revenue Analytics Line Chart */}
-            <Card bordered={false} className="shadow-sm" style={{ marginBottom: "24px", borderRadius: "12px" }} title={<b>Revenue Analytics (Subscription Sales)</b>}>
-              <div style={{ height: 320 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={revenueChartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                    <YAxis axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} />
-                    <Legend />
-                    <Line type="monotone" dataKey="Standard" stroke="#1e4a2d" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
-                    <Line type="monotone" dataKey="Premium" stroke="#c0a060" strokeWidth={3} dot={{ r: 4 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-
+            {/* Revenue Analytics Line Chart & Tenant Growth side-by-side */}
             <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-              {/* Plan Distribution Pie Chart */}
               <Col xs={24} md={12}>
-                <Card bordered={false} className="shadow-sm" style={{ borderRadius: "12px" }} title={<b>Subscription Distribution</b>}>
-                  <div style={{ height: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Card bordered={false} className="shadow-sm" style={{ borderRadius: "12px" }} title={<b>Revenue Analytics</b>}>
+                  <div style={{ height: 250 }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={data.planDist} dataKey="value" nameKey="category" innerRadius={50} outerRadius={75} paddingAngle={4}>
-                          {data.planDist.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend verticalAlign="bottom" height={36} />
-                      </PieChart>
+                      <LineChart data={revenueChartData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                        <YAxis axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} />
+                        <Line type="monotone" dataKey="Revenue" stroke="#1e4a2d" strokeWidth={3} dot={false} />
+                        <Line type="monotone" dataKey="Subscription" stroke="#c0a060" strokeWidth={3} dot={false} />
+                      </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </Card>
               </Col>
 
-              {/* Industry Category Pie Chart */}
+              <Col xs={24} md={12}>
+                <Card bordered={false} className="shadow-sm" style={{ borderRadius: "12px" }} title={<b>Tenant Growth</b>}>
+                  <div style={{ height: 250 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={tenantGrowthData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                        <YAxis axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }} />
+                        <Area type="monotone" dataKey="Active" stackId="1" stroke="#2d6a42" fill="#2d6a42" fillOpacity={0.6} />
+                        <Area type="monotone" dataKey="New" stackId="2" stroke="#c0a060" fill="#c0a060" fillOpacity={0.6} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+
+            <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+              {/* Usage Analytics Grid */}
+              <Col xs={24} md={12}>
+                <Card bordered={false} className="shadow-sm" style={{ borderRadius: "12px" }} title={<b>Usage Analytics</b>}>
+                  <Table
+                    columns={usageColumns}
+                    dataSource={usageMetrics}
+                    pagination={false}
+                    size="small"
+                  />
+                </Card>
+              </Col>
+
+              {/* Business Category Pie Chart */}
               <Col xs={24} md={12}>
                 <Card bordered={false} className="shadow-sm" style={{ borderRadius: "12px" }} title={<b>Business Category Distribution</b>}>
-                  <div style={{ height: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={data.categoryDist} dataKey="value" nameKey="category" innerRadius={50} outerRadius={75} paddingAngle={4}>
+                        <Pie data={data.categoryDist} dataKey="value" nameKey="category" innerRadius={45} outerRadius={65} paddingAngle={4}>
                           {data.categoryDist.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
                         <Tooltip />
-                        <Legend verticalAlign="bottom" height={36} />
+                        <Legend verticalAlign="bottom" height={24} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -358,15 +427,15 @@ const SuperAdminDashboard = () => {
             <Card bordered={false} className="shadow-sm" style={{ borderRadius: "12px" }} title={<b>Support Overview</b>}>
               <Row gutter={8} justify="space-around" style={{ textAlign: "center", marginTop: "10px" }}>
                 <Col span={8}>
-                  <div style={{ fontSize: "20px", fontWeight: "bold", color: "#fa8c16" }}>12</div>
+                  <div style={{ fontSize: "20px", fontWeight: "bold", color: "#fa8c16" }}>128</div>
                   <div style={{ fontSize: "10px", color: "#888" }}>Open</div>
                 </Col>
                 <Col span={8}>
-                  <div style={{ fontSize: "20px", fontWeight: "bold", color: "#1890ff" }}>4</div>
+                  <div style={{ fontSize: "20px", fontWeight: "bold", color: "#1890ff" }}>42</div>
                   <div style={{ fontSize: "10px", color: "#888" }}>Pending</div>
                 </Col>
                 <Col span={8}>
-                  <div style={{ fontSize: "20px", fontWeight: "bold", color: "#52c41a" }}>38</div>
+                  <div style={{ fontSize: "20px", fontWeight: "bold", color: "#52c41a" }}>86</div>
                   <div style={{ fontSize: "10px", color: "#888" }}>Resolved</div>
                 </Col>
               </Row>
