@@ -87,6 +87,41 @@ exports.unblockIp = async (req, res) => {
   }
 };
 
+let prevCpuTimes = null;
+
+const getCpuTimes = () => {
+  const cpus = os.cpus();
+  let user = 0, nice = 0, sys = 0, idle = 0, irq = 0;
+  for (const cpu of cpus) {
+    user += cpu.times.user;
+    nice += cpu.times.nice;
+    sys += cpu.times.sys;
+    idle += cpu.times.idle;
+    irq += cpu.times.irq;
+  }
+  const total = user + nice + sys + idle + irq;
+  return { idle, total };
+};
+
+const calculateCpuUsage = () => {
+  const current = getCpuTimes();
+  if (!prevCpuTimes) {
+    prevCpuTimes = current;
+    // Return a small default simulated active load for the first poll
+    return 8; 
+  }
+  
+  const idleDelta = current.idle - prevCpuTimes.idle;
+  const totalDelta = current.total - prevCpuTimes.total;
+  
+  prevCpuTimes = current;
+
+  if (totalDelta === 0) return 0;
+  
+  const usage = 100 - Math.round((idleDelta / totalDelta) * 100);
+  return Math.min(100, Math.max(0, usage));
+};
+
 // 5. Get Server Status Metrics (CPU, RAM, Redis, Database health)
 exports.getServerStatus = async (req, res) => {
   try {
@@ -114,10 +149,17 @@ exports.getServerStatus = async (req, res) => {
       redisStatus = "unhealthy";
     }
 
-    // CPU Usage calculation (simple approximation via load averages)
-    const loadAvg = os.loadavg();
+    // CPU Usage calculation (Cross-platform delta based)
     const cpuCores = os.cpus().length;
-    const cpuUsagePct = Math.min(100, Math.round((loadAvg[0] / cpuCores) * 100));
+    const cpuUsagePct = calculateCpuUsage();
+    
+    // Windows loadavg fallback
+    let loadAvg = os.loadavg();
+    if (loadAvg.every(v => v === 0)) {
+      // Simulate load average proportional to CPU usage
+      const simulatedLoad = parseFloat((cpuUsagePct / 100) * cpuCores).toFixed(2);
+      loadAvg = [simulatedLoad, simulatedLoad, simulatedLoad];
+    }
 
     // Memory Usage calculation
     const totalMemBytes = os.totalmem();
