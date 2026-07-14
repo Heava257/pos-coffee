@@ -107,8 +107,6 @@ const PLATFORM_MENU_STRUCTURE = [
     children: [
       { key: "system-subscriptions", labelKey: "system_subscriptions", label: "Subscription Management", icon: <HistoryOutlined /> },
       { key: "plans", labelKey: "plans", label: "Plans & Pricing", icon: <CreditCardOutlined /> },
-      { key: "revenue-analytics", labelKey: "revenue_analytics", label: "Revenue Analytics", icon: <BarChartOutlined /> },
-      { key: "invoice-management", labelKey: "invoice_management", label: "Invoice Management", icon: <FileTextOutlined /> },
       { key: "payment-gateway", labelKey: "payment_gateway", label: "Payment Gateway Control", icon: <WalletOutlined /> }
     ]
   },
@@ -118,9 +116,7 @@ const PLATFORM_MENU_STRUCTURE = [
     labelKey: 'platform_group_ecosystem',
     children: [
       { key: "system-modules", labelKey: "system_modules", label: "Business Modules Marketplace", icon: <AppstoreOutlined /> },
-      { key: "app-marketplace", labelKey: "app_marketplace", label: "App Marketplace", icon: <AppstoreAddOutlined /> },
       { key: "developer-portal", labelKey: "developer_portal", label: "Developer Portal", icon: <CodeOutlined /> },
-      { key: "api-management", labelKey: "api_management", label: "API Management", icon: <ApiOutlined /> },
       { key: "integration-center", labelKey: "integration_center", label: "Integration Center", icon: <NodeIndexOutlined /> }
     ]
   },
@@ -130,10 +126,7 @@ const PLATFORM_MENU_STRUCTURE = [
     labelKey: 'platform_group_security',
     children: [
       { key: "security-logs", labelKey: "security_logs", label: "Security Center", icon: <LockOutlined /> },
-      { key: "threat-monitoring", labelKey: "threat_monitoring", label: "Threat Monitoring", icon: <WarningOutlined /> },
-      { key: "audit-logs", labelKey: "audit_logs", label: "Audit Logs", icon: <HistoryOutlined /> },
-      { key: "compliance-center", labelKey: "compliance_center", label: "Compliance Center", icon: <FileProtectOutlined /> },
-      { key: "data-governance", labelKey: "data_governance", label: "Data Governance", icon: <DatabaseOutlined /> }
+      { key: "audit-logs", labelKey: "audit_logs", label: "Audit Logs", icon: <HistoryOutlined /> }
     ]
   },
   {
@@ -143,7 +136,6 @@ const PLATFORM_MENU_STRUCTURE = [
     children: [
       { key: "settings", labelKey: "settings", label: "System Configuration", icon: <SettingOutlined /> },
       { key: "feature-flags", labelKey: "feature_flags", label: "Feature Flags", icon: <SlidersOutlined /> },
-      { key: "notification-center", labelKey: "notification_center", label: "Notification Center", icon: <NotificationOutlined /> },
       { key: "backup-recovery", labelKey: "backup_recovery", label: "Backup & Disaster Recovery", icon: <CloudDownloadOutlined /> },
       { key: "infrastructure-monitoring", labelKey: "infrastructure_monitoring", label: "Infrastructure Monitoring", icon: <DashboardOutlined /> }
     ]
