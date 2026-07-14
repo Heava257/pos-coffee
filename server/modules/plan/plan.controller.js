@@ -38,6 +38,66 @@ exports.updatePlan = async (req, res) => {
     }
 };
 
+exports.createPlan = async (req, res) => {
+    try {
+        const { name, max_branches, max_staff, max_products, max_categories, price, billing_cycle, is_active, active_modules } = req.body;
+        
+        if (!name || price === undefined) {
+            return res.status(400).json({ message: "Name and price are required." });
+        }
+
+        const [result] = await db.query(`
+            INSERT INTO subscription_plans 
+            (name, max_branches, max_staff, max_products, max_categories, price, billing_cycle, is_active, active_modules)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            name, 
+            max_branches || 1, 
+            max_staff || 2, 
+            max_products || 50, 
+            max_categories || 5, 
+            price || 0.00, 
+            billing_cycle || 'monthly', 
+            is_active === undefined ? 1 : is_active, 
+            active_modules || 'POS'
+        ]);
+
+        res.json({
+            message: "Plan created successfully",
+            id: result.insertId,
+            success: true
+        });
+    } catch (error) {
+        logError("plan.createPlan", error, res);
+    }
+};
+
+exports.deletePlan = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ message: "Plan ID is required." });
+        }
+
+        // Verify if there are businesses using this plan
+        const [check] = await db.query("SELECT COUNT(*) as count FROM businesses WHERE plan_id = ?", [id]);
+        if (check[0].count > 0) {
+            return res.status(400).json({ 
+                message: `Cannot delete plan. There are ${check[0].count} businesses active on this plan.` 
+            });
+        }
+
+        await db.query("DELETE FROM subscription_plans WHERE id = ?", [id]);
+
+        res.json({
+            message: "Plan deleted successfully",
+            success: true
+        });
+    } catch (error) {
+        logError("plan.deletePlan", error, res);
+    }
+};
+
 exports.getBusinessPlan = async (req, res) => {
     try {
         const { business_id } = req;

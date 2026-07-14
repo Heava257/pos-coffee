@@ -7,6 +7,8 @@ const authMiddleware = require("../../middlewares/auth.middleware");
 router.get("/public", c.getAllPlans);
 router.get("/", authMiddleware("plans"), c.getAllPlans);
 router.put("/", authMiddleware("plans"), c.updatePlan);
+router.post("/", authMiddleware("plans"), c.createPlan);
+router.delete("/:id", authMiddleware("plans"), c.deletePlan);
 router.get("/my-plan", authMiddleware("my-plan"), c.getBusinessPlan);
 router.get("/my-plan/billing-history", authMiddleware("my-plan"), c.getBillingHistory);
 router.post("/my-plan/upgrade", authMiddleware("my-plan"), c.selfUpgrade);
