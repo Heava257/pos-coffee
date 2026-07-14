@@ -268,6 +268,16 @@ export const request = (url = "", method = "get", data = {}) => {
     .then(async (res) => {
       setServerSatus(200);
 
+      // Auto-update local storage token if returned in response body
+      if (res.data && res.data.access_token) {
+        const isCustomerPath = window.location.pathname.includes("/customer");
+        if (!isCustomerPath) {
+          const remember = localStorage.getItem("remember_me") === "true";
+          const storage = remember ? localStorage : sessionStorage;
+          storage.setItem("access_token", res.data.access_token);
+        }
+      }
+
       // 🛡️ SILENT PERMISSION RE-SYNC
       // If backend detects a role change, it sends this header
       if (res.headers && res.headers["x-permissions-updated"] === "true" && !url.includes("auth/profile")) {
