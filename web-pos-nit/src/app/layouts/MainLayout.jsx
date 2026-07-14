@@ -95,7 +95,6 @@ const PLATFORM_MENU_STRUCTURE = [
     children: [
       { key: "dashboard", labelKey: "dashboard", label: "Platform Overview", icon: <DashboardOutlined /> },
       { key: "global-dashboard", labelKey: "global_dashboard", label: "Global Dashboard", icon: <LineChartOutlined /> },
-      { key: "business", labelKey: "business", label: "Tenant Management", icon: <ShopOutlined /> },
       { key: "organization-directory", labelKey: "organization_directory", label: "Organization Directory", icon: <ClusterOutlined /> },
       { key: "user", labelKey: "users", label: "User Management", icon: <TeamOutlined /> },
       { key: "role", labelKey: "roles", label: "Role & Permission Center", icon: <SafetyCertificateOutlined /> }
@@ -808,7 +807,7 @@ const MainLayout = () => {
         }
 
         // 2. Platform Admin Exceptions (Critical Security)
-        const platformAdminModules = ["plans", "business", "service-blueprints", "system-modules", "permission", "role", "system-subscriptions", "modular_package", "global-category", "security-logs"];
+        const platformAdminModules = ["plans", "business", "organization-directory", "service-blueprints", "system-modules", "permission", "role", "system-subscriptions", "modular_package", "global-category", "security-logs"];
         if (platformAdminModules.includes(newItem.key)) {
           // These modules are strictly for the SaaS owner
           if (profile?.business_id !== 1) return null;

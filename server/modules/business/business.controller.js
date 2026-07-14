@@ -317,16 +317,29 @@ exports.updatePlan = async (req, res) => {
     try {
         if (req.business_id !== 1) return res.status(403).json({ message: "Forbidden" });
         const { business_id, plan_id, plan_type, package_id, active_modules, duration_days } = req.body;
-        const modulesStr = Array.isArray(active_modules) ? active_modules.join(",") : (active_modules || "POS");
 
         const conn = await db.getConnection();
         try {
             await conn.beginTransaction();
 
+            // Fetch current business details first
+            const [currentBiz] = await conn.query("SELECT plan_id, plan_type, package_id, active_modules FROM businesses WHERE id = ?", [business_id]);
+            if (currentBiz.length === 0) {
+                conn.release();
+                return res.status(404).json({ success: false, message: "Business not found" });
+            }
+
+            const finalPlanId = plan_id !== undefined ? plan_id : currentBiz[0].plan_id;
+            const finalPlanType = plan_type !== undefined ? plan_type : currentBiz[0].plan_type;
+            const finalPackageId = package_id !== undefined ? package_id : currentBiz[0].package_id;
+            const finalActiveModules = active_modules !== undefined 
+                ? (Array.isArray(active_modules) ? active_modules.join(",") : active_modules)
+                : currentBiz[0].active_modules;
+
             // 1. Update business table
             await conn.query(
                 "UPDATE businesses SET plan_id = ?, plan_type = ?, package_id = ?, active_modules = ? WHERE id = ?", 
-                [plan_id, plan_type || 'standard', package_id || null, modulesStr, business_id]
+                [finalPlanId, finalPlanType, finalPackageId, finalActiveModules, business_id]
             );
 
             // 2. Set existing active subscriptions to expired
