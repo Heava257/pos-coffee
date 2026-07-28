@@ -10,6 +10,7 @@ router.get("/pending", authMiddleware("order"), c.getPendingOrders);
 router.get("/:order_id", authMiddleware("order"), c.getOrderDetail);
 router.post("/", authMiddleware("order"), c.create);
 router.put("/status", authMiddleware("order"), c.updateStatus);
+router.put("/rollback", authMiddleware("order"), c.rollbackOrder);
 router.put("/kitchen-status", authMiddleware("kds"), c.updateKitchenStatus);
 router.put("/send-to-kitchen", authMiddleware("order"), c.sendOrderToKitchen);
 router.put("/", authMiddleware("order"), c.update);

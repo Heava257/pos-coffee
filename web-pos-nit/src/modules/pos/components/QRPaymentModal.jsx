@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Modal, Button, message, Spin, Image } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Modal, Button, message, Spin, Image, Space, Alert } from 'antd';
 import QRCode from 'react-qr-code';
-import { QrcodeOutlined, CopyOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { 
+  QrcodeOutlined, CopyOutlined, CheckCircleOutlined, 
+  WarningOutlined, FieldTimeOutlined, DollarOutlined, ReloadOutlined 
+} from '@ant-design/icons';
 import { Config } from '@/shared/utils/config';
 import { useLanguage, translations } from '@/app/store/language.store';
 import { useProfileStore } from '@/app/store/profileStore';
-
+import { request } from '@/shared/utils/helper';
 
 const CRC16 = (data) => {
   let crc = 0xFFFF;
@@ -21,28 +24,24 @@ const generateKHQR = (merchantId, name, amount, orderNo, currency = "USD") => {
   const f = (id, val) => id + String(val).length.toString().padStart(2, '0') + String(val);
   const numAmount = Number(amount) || 0;
 
-  // Safe Merchant Name: EMVCo strict requirement for Tag 59 is ASCII only.
   const safeName = name.replace(/[^\x00-\x7F]/g, "").trim().substring(0, 25) || "POS COFFEE";
 
-  // Tag 29 — Bakong Solo/Individual Merchant Account Info
-  // Per NBC KHQR Spec: Sub-tag 00 = the Bakong Account ID itself (NO Sub-tag 01)
-  // e.g. "pong_chiva@bkrt" goes directly into Sub-tag 00
   const subTag00 = f("00", merchantId);
   const merchantInfo = f("29", subTag00);
 
   let payload =
-    f("00", "01") + // Payload Format Indicator
-    f("01", "12") + // Method 12 = Dynamic (Wing/Bakong P2P compatible — use static KHQR image for ABA)
-    merchantInfo +  // Tag 29: Bakong Account
-    f("52", "5999") + // Merchant Category Code
-    f("53", currency === "USD" ? "840" : "116") + // Currency
-    f("54", numAmount.toFixed(2)) + // Amount
-    f("58", "KH") + // Country Code
-    f("59", safeName) + // Merchant Name (ASCII only)
-    f("60", "PHNOM PENH") + // City
-    f("62", f("01", String(orderNo))); // Bill Number (Order No)
+    f("00", "01") + 
+    f("01", "12") + 
+    merchantInfo +  
+    f("52", "5999") + 
+    f("53", currency === "USD" ? "840" : "116") + 
+    f("54", numAmount.toFixed(2)) + 
+    f("58", "KH") + 
+    f("59", safeName) + 
+    f("60", "PHNOM PENH") + 
+    f("62", f("01", String(orderNo))); 
 
-  payload += "6304"; // CRC placeholder
+  payload += "6304"; 
   return payload + CRC16(payload);
 };
 
@@ -53,22 +52,101 @@ const QRPaymentModal = ({ open, onClose, paymentLink, orderNo, total, branchInfo
   const hasShopMgmtPerm = permissions?.some(p => p.route_key?.toLowerCase().replace(/^\/+|\/+$/g, '') === 'shop_managment');
 
   const [copying, setCopying] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(15);
+  const [isTimedOut, setIsTimedOut] = useState(false);
+  const [rollingBack, setRollingBack] = useState(false);
+  const [switchingToCash, setSwitchingToCash] = useState(false);
+  const timerRef = useRef(null);
 
   const staticQR = branchInfo?.khqr_image;
-  // Only use merchant ID if explicitly configured for this branch — no shared fallback
   const merchantId = branchInfo?.payment_merchant_id || null;
   const receiverName = branchInfo?.payment_receiver_name || branchInfo?.name || "POS COFFEE";
   const branchName = branchInfo?.name || "Branch";
 
   let dynamicKHQR = null;
-  // Only generate dynamic QR when NO static image is uploaded.
-  // Static KHQR image (from bank app) = universally compatible (Wing, ABA, Acleda).
-  // Dynamic generated QR = Wing/Bakong only.
   if (merchantId && total > 0 && !staticQR) {
     dynamicKHQR = generateKHQR(merchantId, receiverName, total, orderNo);
   }
 
   const isNotConfigured = !dynamicKHQR && !staticQR && !paymentLink;
+
+  useEffect(() => {
+    if (open && orderNo && orderNo !== "TEMP") {
+      setTimeLeft(15);
+      setIsTimedOut(false);
+      
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            handleTimeout();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [open, orderNo]);
+
+  const handleTimeout = async () => {
+    setIsTimedOut(true);
+    setRollingBack(true);
+    try {
+      await request("order/rollback", "put", { order_id: orderNo });
+      message.error(lang === 'kh' ? "ប្រតិបត្តិការបានហួសពេលកំណត់! ការលក់ត្រូវបានលុបចោលស្វ័យប្រវត្តពីម៉ាស៊ីនមេ។" : "Payment timeout! Transaction rolled back on server.");
+    } catch (err) {
+      console.error("Rollback failed:", err);
+    } finally {
+      setRollingBack(false);
+    }
+  };
+
+  const handleCashFallback = async () => {
+    setSwitchingToCash(true);
+    try {
+      const res = await request("order", "put", {
+        order_id: orderNo,
+        payment_method: "Cash",
+        status: "completed",
+        total_paid: total
+      });
+      if (res && !res.error) {
+        message.success(lang === 'kh' ? "បានប្តូរទៅបង់ប្រាក់សុទ្ធជោគជ័យ!" : "Switched to Cash payment successfully!");
+        if (onClose) {
+          onClose(true); 
+        }
+      } else {
+        message.error(res?.message || "Failed to switch to cash");
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Cash fallback failed");
+    } finally {
+      setSwitchingToCash(false);
+    }
+  };
+
+  const handleCancelOrRetry = async () => {
+    if (!isTimedOut && orderNo && orderNo !== "TEMP") {
+      setRollingBack(true);
+      try {
+        await request("order/rollback", "put", { order_id: orderNo });
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setRollingBack(false);
+      }
+    }
+    if (onClose) {
+      onClose(false); 
+    }
+  };
 
   const handleCopyLink = async () => {
     try {
@@ -90,27 +168,74 @@ const QRPaymentModal = ({ open, onClose, paymentLink, orderNo, total, branchInfo
           <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f0f7f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <QrcodeOutlined style={{ fontSize: '18px', color: '#1e4a2d' }} />
           </div>
-          <span style={{ fontWeight: 700, fontSize: 16 }}>Payment QR Code</span>
+          <span style={{ fontWeight: 700, fontSize: 16 }}>
+            {isTimedOut ? "Payment Session Expired" : "Payment QR Code"}
+          </span>
         </div>
       }
       open={open}
-      onCancel={onClose}
+      onCancel={handleCancelOrRetry}
       footer={[
-        (paymentLink || dynamicKHQR) && (
+        (paymentLink || dynamicKHQR) && !isTimedOut && (
           <Button key="copy" icon={<CopyOutlined />} onClick={handleCopyLink} loading={copying}>
             Copy {dynamicKHQR ? "QR Data" : "Link"}
           </Button>
         ),
-        <Button key="close" type="primary" onClick={onClose} style={{ background: '#1e4a2d', borderColor: '#1e4a2d', fontWeight: 600 }}>
-          Done
-        </Button>
+        isTimedOut ? (
+          <Space key="timeout-actions" style={{ width: '100%', justifyContent: 'flex-end' }}>
+            <Button 
+              danger 
+              icon={<DollarOutlined />} 
+              onClick={handleCashFallback} 
+              loading={switchingToCash}
+              style={{ background: '#f5222d', borderColor: '#f5222d', color: '#fff' }}
+            >
+              {lang === 'kh' ? "បង់ប្រាក់សុទ្ធជំនួសវិញ" : "Pay with Cash Fallback"}
+            </Button>
+            <Button 
+              icon={<ReloadOutlined />} 
+              onClick={handleCancelOrRetry}
+            >
+              {lang === 'kh' ? "ព្យាយាមម្តងទៀត" : "Retry/Cancel"}
+            </Button>
+          </Space>
+        ) : (
+          <Button key="close" type="primary" onClick={handleCancelOrRetry} style={{ background: '#1e4a2d', borderColor: '#1e4a2d', fontWeight: 600 }} loading={rollingBack}>
+            Cancel
+          </Button>
+        )
       ]}
       width={dynamicKHQR || staticQR || paymentLink ? 560 : 420}
       centered
       styles={{ body: { padding: '24px' } }}
     >
       <div style={{ padding: '4px 0' }}>
-        {dynamicKHQR ? (
+        {/* Countdown Alert */}
+        {!isTimedOut && !isNotConfigured && (
+          <Alert
+            message={
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span><FieldTimeOutlined /> {lang === 'kh' ? "ពេលវេលានៅសល់សម្រាប់បង់ប្រាក់៖" : "Time remaining to pay:"}</span>
+                <span style={{ fontWeight: 'bold', color: timeLeft <= 5 ? '#f5222d' : '#1e4a2d', fontSize: '15px' }}>{timeLeft}s</span>
+              </div>
+            }
+            type={timeLeft <= 5 ? "warning" : "info"}
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        {isTimedOut && (
+          <Alert
+            message={lang === 'kh' ? "ប្រតិបត្តិការបានហួសពេលកំណត់!" : "Payment Gateway Session Expired"}
+            description={lang === 'kh' ? "ទិន្នន័យត្រូវបានលុបចោលពី Server រួចរាល់។ សូមជ្រើសរើសបង់ប្រាក់សុទ្ធ ឬព្យាយាមម្តងទៀត។" : "The payment session timed out. Transaction has been rolled back automatically to prevent stock mismatch. Please choose a cash fallback or retry checkout."}
+            type="error"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        {!isTimedOut && dynamicKHQR && (
           <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
             <div style={{
               background: '#fff',
@@ -164,7 +289,9 @@ const QRPaymentModal = ({ open, onClose, paymentLink, orderNo, total, branchInfo
               </div>
             </div>
           </div>
-        ) : staticQR ? (
+        )}
+
+        {!isTimedOut && staticQR && (
           <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
             <div style={{ flexShrink: 0, width: 232 }}>
               <Image
@@ -185,7 +312,9 @@ const QRPaymentModal = ({ open, onClose, paymentLink, orderNo, total, branchInfo
               </div>
             </div>
           </div>
-        ) : isNotConfigured ? (
+        )}
+
+        {isNotConfigured && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <div style={{ width: 64, height: 64, borderRadius: 32, background: '#fff7e6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
               <WarningOutlined style={{ fontSize: 32, color: '#faad14' }} />
@@ -230,7 +359,9 @@ const QRPaymentModal = ({ open, onClose, paymentLink, orderNo, total, branchInfo
               )}
             </div>
           </div>
-        ) : paymentLink ? (
+        )}
+
+        {!isTimedOut && paymentLink && (
           <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
             <div style={{
               background: '#fff',
@@ -263,10 +394,6 @@ const QRPaymentModal = ({ open, onClose, paymentLink, orderNo, total, branchInfo
                 Scan or click "Copy Link" to complete payment via the secure link.
               </div>
             </div>
-          </div>
-        ) : (
-          <div style={{ padding: '60px 0', textAlign: 'center' }}>
-            <Spin size="large" tip="Generating Secure QR Code..." />
           </div>
         )}
       </div>

@@ -4487,11 +4487,14 @@ function PosPage() {
 
       <QRPaymentModal
         open={qrModalVisible}
-        onClose={() => {
+        onClose={(success) => {
           setQrModalVisible(false);
           setPaymentData({ paymentLink: "", orderNo: "", total: 0 });
-          // Trigger print workflow for all order types after QR payment
-          triggerAutoPrintWorkflow(false);
+          if (success) {
+            handleClearCart(true);
+            // Trigger print workflow for all order types after QR payment
+            triggerAutoPrintWorkflow(false);
+          }
         }}
         paymentLink={paymentData.paymentLink}
         orderNo={paymentData.orderNo}

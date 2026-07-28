@@ -78,6 +78,34 @@ const deductStock = async (conn, productId, qtyMultiplier, business_id, branch_i
 };
 exports.deductStock = deductStock;
 
+// Helper: Refund Stock (Rollback)
+const refundStock = async (conn, productId, qtyMultiplier, business_id, branch_id, plan_id = 0) => {
+    try {
+        let recipe = [];
+        if (plan_id >= 6) {
+            const [rows] = await conn.query(
+                "SELECT raw_material_id, qty as quantity, waste_factor FROM recipe_detail WHERE product_id = ? AND business_id = ?",
+                [productId, business_id]
+            );
+            recipe = rows;
+        }
+
+        if (recipe.length > 0) {
+            for (const ingredient of recipe) {
+                const refundQty = (ingredient.quantity * qtyMultiplier) * (1 + (ingredient.waste_factor || 0) / 100);
+                await conn.query("UPDATE raw_material SET qty = qty + ? WHERE id = ?", [refundQty, ingredient.raw_material_id]);
+            }
+        } else {
+            await conn.query(
+                "UPDATE branch_products SET stock_qty = stock_qty + ? WHERE product_id = ? AND branch_id = ?",
+                [qtyMultiplier, productId, branch_id]
+            );
+        }
+    } catch (e) {
+        console.error("Stock Refund Error:", e);
+    }
+};
+
 // 1. Create New Order (The Core Sale Point)
 exports.create = async (req, res) => {
     const conn = await db.getConnection();
@@ -676,6 +704,67 @@ exports.updateStatus = async (req, res) => {
         res.json({ success: true, message: "Status Updated" });
     } catch (error) {
         logError("order.updateStatus", error, res);
+    }
+};
+
+// 5.1 Rollback Order (For Payment Timeout / Cancel)
+exports.rollbackOrder = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const { order_id } = req.body;
+        const { business_id, branch_id, plan_id } = req;
+
+        if (!order_id) {
+            return res.status(400).json({ success: false, message: "Order ID is required" });
+        }
+
+        // Fetch the order to ensure it belongs to the tenant and is unpaid
+        const [orders] = await conn.query(
+            "SELECT id, status, branch_id FROM orders WHERE id = ? AND business_id = ?",
+            [order_id, business_id]
+        );
+
+        if (orders.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        const order = orders[0];
+        if (order.status !== 'unpaid') {
+            await conn.rollback();
+            return res.status(400).json({ success: false, message: "Only unpaid orders can be rolled back" });
+        }
+
+        // Fetch all items to refund stock
+        const [details] = await conn.query(
+            "SELECT product_id, qty FROM order_details WHERE order_id = ?",
+            [order_id]
+        );
+
+        for (const item of details) {
+            await refundStock(conn, item.product_id, item.qty, business_id, order.branch_id, plan_id || 0);
+        }
+
+        // Mark the order as cancelled
+        await conn.query(
+            "UPDATE orders SET status = 'cancelled', kitchen_status = 'cancelled' WHERE id = ?",
+            [order_id]
+        );
+
+        // Mark details as cancelled
+        await conn.query(
+            "UPDATE order_details SET kitchen_status = 'cancelled' WHERE order_id = ?",
+            [order_id]
+        );
+
+        await conn.commit();
+        res.json({ success: true, message: "Order rolled back and stock restored successfully" });
+    } catch (error) {
+        if (conn) await conn.rollback();
+        logError("order.rollbackOrder", error, res);
+    } finally {
+        if (conn) conn.release();
     }
 };
 
