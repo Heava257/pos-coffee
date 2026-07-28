@@ -245,7 +245,7 @@ const SettingsPage = () => {
 
     return (
         <div style={{ padding: "32px", background: "#f4f1eb", minHeight: "100vh" }}>
-            <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div style={{ maxWidth: "100%", margin: "0 auto" }}>
                 <div style={{ marginBottom: "24px" }}>
                     <Title level={2} style={{ color: "#1e4a2d", display: "flex", alignItems: "center", gap: "12px" }}>
                         <SettingOutlined /> {t.menu_setting}
@@ -805,7 +805,7 @@ const PrinterSettingsTab = () => {
     };
 
     return (
-        <div style={{ paddingTop: 24, paddingBottom: 24, maxWidth: 800 }}>
+        <div style={{ paddingTop: 24, paddingBottom: 24, maxWidth: "100%" }}>
             <Title level={4}><PrinterOutlined /> {t.printing_workflow_header}</Title>
             <Divider />
 
@@ -1017,7 +1017,7 @@ const ThemeCustomizerTab = ({ lang, t }) => {
     };
 
     return (
-        <div style={{ paddingTop: 24, paddingBottom: 24, maxWidth: 900 }}>
+        <div style={{ paddingTop: 24, paddingBottom: 24, maxWidth: "100%" }}>
             <style jsx="true">{`
                 .preset-hover {
                     transition: transform 0.2s ease, border-color 0.2s ease;
