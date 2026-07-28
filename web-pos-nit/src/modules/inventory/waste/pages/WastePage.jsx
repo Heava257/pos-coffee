@@ -38,10 +38,10 @@ const WastePage = () => {
 
     const onFinish = async (values) => {
         const res = await request("waste", "post", values);
-        if (res && res.success) {
+        if (res && res.success && res.data) {
             setIsModalOpen(false);
             form.resetFields();
-            fetchList();
+            setList(prev => [res.data, ...prev]);
         }
     };
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { request } from "@/shared/utils/helper";
-import { Row, Col, Card, Statistic, Table, Tag, Typography, Spin, Badge, Button, Space, Input, List, Progress, Tooltip as AntTooltip } from "antd";
+import { Row, Col, Card, Statistic, Table, Tag, Typography, Spin, Badge, Button, Space, Input, List, Progress, Tooltip as AntTooltip, Modal } from "antd";
 import {
   ShopOutlined,
   TeamOutlined,
@@ -49,6 +49,8 @@ const SuperAdminDashboard = () => {
 
   const [serverStatus, setServerStatus] = useState(null);
   const [sessionsCount, setSessionsCount] = useState(0);
+  const [alertsModalOpen, setAlertsModalOpen] = useState(false);
+  const [activitiesModalOpen, setActivitiesModalOpen] = useState(false);
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -367,12 +369,18 @@ const SuperAdminDashboard = () => {
           {/* Right Column: Real-Time Intelligence & Support */}
           <Col xs={24} lg={7}>
             {/* Real-time Intelligence: Critical Security Alerts */}
-            <Card bordered={false} className="shadow-sm" style={{ marginBottom: "24px", borderRadius: "12px" }} title={<span><ThunderboltOutlined style={{ color: "#d48806", marginRight: "8px" }} /><b>Real-time Intelligence</b></span>}>
+            <Card
+              bordered={false}
+              className="shadow-sm"
+              style={{ marginBottom: "24px", borderRadius: "12px" }}
+              title={<span><ThunderboltOutlined style={{ color: "#d48806", marginRight: "8px" }} /><b>Real-time Intelligence</b></span>}
+              extra={<Button type="link" onClick={() => setAlertsModalOpen(true)} style={{ padding: 0 }}>View All</Button>}
+            >
               <div style={{ marginBottom: "16px" }}>
                 <Badge count={data.criticalAlerts?.length || 0} style={{ backgroundColor: "#d46b08" }} /> <Text strong style={{ marginLeft: "8px" }}>Critical Alerts</Text>
               </div>
               <List
-                dataSource={data.criticalAlerts}
+                dataSource={data.criticalAlerts ? data.criticalAlerts.slice(0, 4) : []}
                 renderItem={(item) => (
                   <List.Item style={{ padding: "12px 0", borderBottom: "1px solid #f1f5f9" }}>
                     <List.Item.Meta
@@ -393,9 +401,15 @@ const SuperAdminDashboard = () => {
             </Card>
 
             {/* Recent Activities Feed */}
-            <Card bordered={false} className="shadow-sm" style={{ marginBottom: "24px", borderRadius: "12px" }} title={<b>Recent Activities</b>}>
+            <Card
+              bordered={false}
+              className="shadow-sm"
+              style={{ marginBottom: "24px", borderRadius: "12px" }}
+              title={<b>Recent Activities</b>}
+              extra={<Button type="link" onClick={() => setActivitiesModalOpen(true)} style={{ padding: 0 }}>View All</Button>}
+            >
               <List
-                dataSource={data.activityFeed}
+                dataSource={data.activityFeed ? data.activityFeed.slice(0, 4) : []}
                 renderItem={(item) => {
                   let title = "System Event";
                   let color = "blue";
@@ -443,6 +457,73 @@ const SuperAdminDashboard = () => {
           </Col>
         </Row>
       </Spin>
+
+      {/* Critical Security Alerts Modal */}
+      <Modal
+        title={<b>All Critical Security Alerts</b>}
+        open={alertsModalOpen}
+        onCancel={() => setAlertsModalOpen(false)}
+        footer={null}
+        width={600}
+        bodyStyle={{ maxHeight: "400px", overflowY: "auto" }}
+      >
+        <List
+          dataSource={data.criticalAlerts}
+          renderItem={(item) => (
+            <List.Item style={{ padding: "12px 0", borderBottom: "1px solid #f1f5f9" }}>
+              <List.Item.Meta
+                avatar={<WarningOutlined style={{ color: "#cf1322", fontSize: "18px", marginTop: "4px" }} />}
+                title={<Text style={{ fontSize: "13px", fontWeight: "bold" }}>{item.event_type.replace(/_/g, " ").toUpperCase()}</Text>}
+                description={
+                  <div style={{ fontSize: "11px", color: "#666" }}>
+                    IP: <Text code>{item.ip}</Text>
+                    <br />
+                    Time: {dayjs(item.created_at).format("YYYY-MM-DD HH:mm:ss A")}
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+        />
+      </Modal>
+
+      {/* Recent Activities Modal */}
+      <Modal
+        title={<b>All Recent Activities</b>}
+        open={activitiesModalOpen}
+        onCancel={() => setActivitiesModalOpen(false)}
+        footer={null}
+        width={600}
+        bodyStyle={{ maxHeight: "400px", overflowY: "auto" }}
+      >
+        <List
+          dataSource={data.activityFeed}
+          renderItem={(item) => {
+            let title = "System Event";
+            let color = "blue";
+            if (item.type === "order") {
+              title = `New order processed by ${item.business_name}`;
+              color = "green";
+            } else if (item.type === "product") {
+              title = `${item.item_name || 'Item'} added by ${item.business_name}`;
+              color = "orange";
+            } else if (item.type === "staff") {
+              title = `Staff ${item.item_name || 'User'} registered by ${item.business_name}`;
+              color = "purple";
+            }
+
+            return (
+              <List.Item style={{ padding: "12px 0", borderBottom: "1px solid #f1f5f9" }}>
+                <List.Item.Meta
+                  avatar={<Badge status={color === 'green' ? 'success' : color === 'orange' ? 'warning' : 'processing'} style={{ marginTop: "8px" }} />}
+                  title={<span style={{ fontSize: "12px", fontWeight: "bold" }}>{title}</span>}
+                  description={<span style={{ fontSize: "10px", color: "#888" }}>{dayjs(item.created_at).format("YYYY-MM-DD HH:mm:ss")}</span>}
+                />
+              </List.Item>
+            );
+          }}
+        />
+      </Modal>
 
       <style jsx>{`
         .border-left-gold { border-left: 4px solid #c0a060; }

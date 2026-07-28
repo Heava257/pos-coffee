@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Breadcrumb, Button, ConfigProvider, Dropdown, Input, Layout, Menu, Tag, theme, Drawer, Divider, Space, Alert, Tooltip, Select, Modal, Typography, Avatar, message } from "antd";
 const { Title, Text } = Typography;
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
@@ -6,7 +6,7 @@ import "@/app/theme/theme.css";
 import packageJson from "@/../package.json";
 import logo from "@/assets/business_default_logo.png";
 import ImgUser from "@/assets/profile.png";
-import { MdOutlineMarkEmailUnread, MdRestaurantMenu, MdCompareArrows, MdInventory2, MdWarningAmber, MdNotifications, MdCampaign } from "react-icons/md";
+import { MdOutlineMarkEmailUnread, MdRestaurantMenu, MdCompareArrows, MdInventory2, MdWarningAmber, MdNotifications, MdCampaign, MdVolumeUp, MdVolumeOff } from "react-icons/md";
 import { IoMdNotificationsOutline } from "react-icons/io";
 import {
   CoffeeOutlined,
@@ -59,7 +59,14 @@ import {
   WalletOutlined,
   AppstoreAddOutlined,
   NodeIndexOutlined,
-  DatabaseOutlined
+  DatabaseOutlined,
+  MoonOutlined,
+  SunOutlined,
+  HeartOutlined,
+  MessageOutlined,
+  BookOutlined,
+  LikeOutlined,
+  UserSwitchOutlined
 } from "@ant-design/icons";
 import {
   getPermission,
@@ -116,7 +123,8 @@ const PLATFORM_MENU_STRUCTURE = [
     children: [
       { key: "system-modules", labelKey: "system_modules", label: "Business Modules Marketplace", icon: <AppstoreOutlined /> },
       { key: "developer-portal", labelKey: "developer_portal", label: "Developer Portal", icon: <CodeOutlined /> },
-      { key: "integration-center", labelKey: "integration_center", label: "Integration Center", icon: <NodeIndexOutlined /> }
+      { key: "integration-center", labelKey: "integration_center", label: "Integration Center", icon: <NodeIndexOutlined /> },
+      { key: "notification-center", labelKey: "notification_center", label: "Notification Center", icon: <NotificationOutlined /> }
     ]
   },
   {
@@ -137,6 +145,37 @@ const PLATFORM_MENU_STRUCTURE = [
       { key: "feature-flags", labelKey: "feature_flags", label: "Feature Flags", icon: <SlidersOutlined /> },
       { key: "backup-recovery", labelKey: "backup_recovery", label: "Backup & Disaster Recovery", icon: <CloudDownloadOutlined /> },
       { key: "infrastructure-monitoring", labelKey: "infrastructure_monitoring", label: "Infrastructure Monitoring", icon: <DashboardOutlined /> }
+    ]
+  },
+  {
+    type: 'group',
+    label: 'DEVOPS CENTER',
+    labelKey: 'platform_group_devops',
+    children: [
+      { key: "devops-deployment-history", labelKey: "devops_deployment_history", label: "Deployment History", icon: <HistoryOutlined /> },
+      { key: "devops-version-management", labelKey: "devops_version_management", label: "Version Management", icon: <SlidersOutlined /> },
+      { key: "devops-environment", labelKey: "devops_environment", label: "Environment", icon: <ClusterOutlined /> },
+      { key: "devops-health-checks", labelKey: "devops_health_checks", label: "Health Checks", icon: <HeartOutlined /> },
+      { key: "devops-docker-status", labelKey: "devops_docker_status", label: "Docker Status", icon: <DatabaseOutlined /> },
+      { key: "devops-kubernetes-status", labelKey: "devops_kubernetes_status", label: "Kubernetes Status", icon: <PartitionOutlined /> },
+      { key: "devops-queue-monitoring", labelKey: "devops_queue_monitoring", label: "Queue Monitoring", icon: <LineChartOutlined /> },
+      { key: "devops-feature-flags", labelKey: "devops_feature_flags", label: "Feature Flags", icon: <AppstoreOutlined /> },
+      { key: "devops-maintenance-mode", labelKey: "devops_maintenance_mode", label: "Maintenance Mode", icon: <WarningOutlined /> }
+    ]
+  },
+  {
+    type: 'group',
+    label: 'HELP & SUPPORT',
+    labelKey: 'menu_group_support',
+    children: [
+      { key: "support-center", labelKey: "support_center", label: "Support Center", icon: <CustomerServiceOutlined /> },
+      { key: "support-tickets", labelKey: "support_tickets", label: "Support Tickets", icon: <FileTextOutlined /> },
+      { key: "live-chat", labelKey: "live_chat", label: "Live Chat", icon: <MessageOutlined /> },
+      { key: "remote-assistance", labelKey: "remote_assistance", label: "Remote Assistance", icon: <DesktopOutlined /> },
+      { key: "login-as-tenant", labelKey: "login_as_tenant", label: "Login As Tenant", icon: <UserSwitchOutlined /> },
+      { key: "knowledge-base", labelKey: "knowledge_base", label: "Knowledge Base", icon: <BookOutlined /> },
+      { key: "feedback", labelKey: "feedback", label: "Feedback", icon: <LikeOutlined /> },
+      { key: "bug-reports", labelKey: "bug_reports", label: "Bug Reports", icon: <WarningOutlined /> }
     ]
   }
 ];
@@ -303,6 +342,20 @@ const MENU_STRUCTURE = [
       },
     ]
   },
+  {
+    type: 'group',
+    labelKey: 'menu_group_support',
+    children: [
+      { key: "support-center", labelKey: "support_center", icon: <CustomerServiceOutlined /> },
+      { key: "support-tickets", labelKey: "support_tickets", icon: <FileTextOutlined /> },
+      { key: "live-chat", labelKey: "live_chat", icon: <MessageOutlined /> },
+      { key: "remote-assistance", labelKey: "remote_assistance", icon: <DesktopOutlined /> },
+      { key: "login-as-tenant", labelKey: "login_as_tenant", icon: <UserSwitchOutlined /> },
+      { key: "knowledge-base", labelKey: "knowledge_base", icon: <BookOutlined /> },
+      { key: "feedback", labelKey: "feedback", icon: <LikeOutlined /> },
+      { key: "bug-reports", labelKey: "bug_reports", icon: <WarningOutlined /> }
+    ]
+  }
 ];
 
 
@@ -335,6 +388,9 @@ const MainLayout = () => {
   const [totalOrders, setTotalOrders] = useState(0);
   const [notifCount, setNotifCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
+  const [isMuted, setIsMuted] = useState(localStorage.getItem("notif_muted") === "true");
+  const prevUnreadIdsRef = useRef([]);
+  const isFirstLoadRef = useRef(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const [tourVisible, setTourVisible] = useState(false);
   const [profileMenuExpanded, setProfileMenuExpanded] = useState(false);
@@ -344,7 +400,7 @@ const MainLayout = () => {
       fetchCurrentShift();
       fetchStaffList();
       fetchHeaderData();
-      
+
       const completed = localStorage.getItem(`has_completed_tour_v1_plan_${profile.plan_id || 1}_user_${profile.id}`) === "true";
       if (!completed && !isPlatformOwner) {
         setTourVisible(true);
@@ -379,14 +435,53 @@ const MainLayout = () => {
     };
   }, [location.pathname, profile]);
 
+  const playNotificationSound = () => {
+    const muted = localStorage.getItem("notif_muted") === "true";
+    if (muted) return;
+    try {
+      const context = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, context.currentTime); // A5 note
+      oscillator.frequency.exponentialRampToValueAtTime(1320, context.currentTime + 0.1); // E6 note
+      
+      gain.gain.setValueAtTime(0.1, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.3);
+      
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.3);
+    } catch (e) {
+      console.log("Audio play blocked", e);
+    }
+  };
+
   const fetchHeaderData = async () => {
     try {
       if (!profile || profile === "" || profile === "null") return;
       // 1. Fetch Notifications
       const notifRes = await request("notification", "get");
       if (notifRes && notifRes.list) {
+        const unreadNotifs = notifRes.list.filter(n => !n.is_read);
+        const currentUnreadIds = unreadNotifs.map(n => n.id);
+
         setNotifications(notifRes.list);
-        setNotifCount(notifRes.list.filter(n => !n.is_read).length);
+        setNotifCount(unreadNotifs.length);
+
+        if (isFirstLoadRef.current) {
+          isFirstLoadRef.current = false;
+        } else {
+          // Check if there are any new unread notification IDs that were not in prevUnreadIdsRef.current
+          const hasNewNotif = currentUnreadIds.some(id => !prevUnreadIdsRef.current.includes(id));
+          if (hasNewNotif) {
+            playNotificationSound();
+          }
+        }
+        prevUnreadIdsRef.current = currentUnreadIds;
       }
       // 2. Fetch Total Orders (Today's Summary Order Count)
       const dashRes = await request("dashboard", "get");
@@ -397,6 +492,13 @@ const MainLayout = () => {
       console.error("Error fetching header data:", e);
     }
   };
+
+  // Poll for notifications every 10 seconds
+  useEffect(() => {
+    if (!profile) return;
+    const pollInterval = setInterval(fetchHeaderData, 10000);
+    return () => clearInterval(pollInterval);
+  }, [profile]);
 
   const handleMarkAllRead = async () => {
     try {
@@ -465,6 +567,83 @@ const MainLayout = () => {
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [openKeys, setOpenKeys] = useState([]);
 
+  const [themeMode, setThemeMode] = useState(localStorage.getItem('theme_mode') || 'system');
+
+  const applyThemeMode = (mode) => {
+    localStorage.setItem('theme_mode', mode);
+    setThemeMode(mode);
+
+    let isDark = false;
+    if (mode === 'dark') {
+      isDark = true;
+    } else if (mode === 'light') {
+      isDark = false;
+    } else {
+      isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    if (isDark) {
+      document.body.classList.add('dark-theme-mode');
+      document.body.classList.remove('light-theme-mode');
+    } else {
+      document.body.classList.add('light-theme-mode');
+      document.body.classList.remove('dark-theme-mode');
+    }
+  };
+
+  useEffect(() => {
+    applyThemeMode(themeMode);
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = (e) => {
+      if (localStorage.getItem('theme_mode') === 'system') {
+        if (e.matches) {
+          document.body.classList.add('dark-theme-mode');
+          document.body.classList.remove('light-theme-mode');
+        } else {
+          document.body.classList.add('light-theme-mode');
+          document.body.classList.remove('dark-theme-mode');
+        }
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+  }, [themeMode]);
+
+  const themeMenuItems = [
+    {
+      key: "light",
+      label: (
+        <Space>
+          <SunOutlined />
+          <span>{lang === 'kh' ? 'Light Mode (ភ្លឺ)' : 'Light Mode'}</span>
+        </Space>
+      ),
+      onClick: () => applyThemeMode("light")
+    },
+    {
+      key: "dark",
+      label: (
+        <Space>
+          <MoonOutlined />
+          <span>{lang === 'kh' ? 'Dark Mode (ងងឹត)' : 'Dark Mode'}</span>
+        </Space>
+      ),
+      onClick: () => applyThemeMode("dark")
+    },
+    {
+      key: "system",
+      label: (
+        <Space>
+          <DesktopOutlined />
+          <span>{lang === 'kh' ? 'System Mode (តាមប្រព័ន្ធ)' : 'System Mode'}</span>
+        </Space>
+      ),
+      onClick: () => applyThemeMode("system")
+    }
+  ];
+
   // Dynamic Theme Injected based on Layout
   useEffect(() => {
     const getLayoutType = () => {
@@ -488,7 +667,7 @@ const MainLayout = () => {
     document.documentElement.style.setProperty('--primary-color', theme.primary);
     document.documentElement.style.setProperty('--accent-color', theme.accent);
     document.documentElement.style.setProperty('--primary-shadow', theme.shadow);
-    
+
     // Custom style overrides from settings panel
     const customSidebarBg = localStorage.getItem('theme_sidebar_bg');
     const customPageBg = localStorage.getItem('theme_page_bg');
@@ -500,6 +679,10 @@ const MainLayout = () => {
     document.documentElement.style.setProperty('--sidebar-bg-color', customSidebarBg || theme.sidebarBg || theme.primary);
     document.documentElement.style.setProperty('--active-icon-bg', customSidebarBg || theme.activeIconBg || theme.primary);
     document.documentElement.style.setProperty('--theme-milk-bg', customPageBg || '#f4f1eb');
+
+    const customBgImage = localStorage.getItem('theme_bg_image');
+    document.documentElement.style.setProperty('--theme-bg-image', customBgImage ? `url(${customBgImage})` : 'none');
+
     document.documentElement.style.setProperty('--sidebar-active-text', customActiveText || theme.primary);
     document.documentElement.style.setProperty('--sidebar-inactive-text', customInactiveText || 'rgba(255, 255, 255, 0.75)');
     document.documentElement.style.setProperty('--sidebar-active-icon-bg', customActiveIconBg || customSidebarBg || theme.activeIconBg || theme.primary);
@@ -613,6 +796,21 @@ const MainLayout = () => {
     // always allow profile page for everyone (they need to edit their own info)
     if (currentPath === '/profile') return;
 
+    // Special Case: always allow Help & Support routes for any logged-in user
+    const supportRoutes = [
+      '/support-center',
+      '/support-tickets',
+      '/live-chat',
+      '/remote-assistance',
+      '/login-as-tenant',
+      '/knowledge-base',
+      '/feedback',
+      '/bug-reports'
+    ];
+    if (supportRoutes.some(route => currentPath === route || currentPath.startsWith(route + "/"))) {
+      return;
+    }
+
     // Special Case: always allow administrative routes for system admin (Business ID 1)
     if (profile?.business_id === 1) {
       const adminRoutes = [
@@ -644,7 +842,17 @@ const MainLayout = () => {
         '/notification-center',
         '/backup-recovery',
         '/infrastructure-monitoring',
-        '/security-logs'
+        '/security-logs',
+        '/devops',
+        '/devops-deployment-history',
+        '/devops-version-management',
+        '/devops-environment',
+        '/devops-health-checks',
+        '/devops-docker-status',
+        '/devops-kubernetes-status',
+        '/devops-queue-monitoring',
+        '/devops-feature-flags',
+        '/devops-maintenance-mode'
       ];
       if (adminRoutes.some(route => currentPath === route || currentPath.startsWith(route + "/"))) {
         return;
@@ -716,6 +924,17 @@ const MainLayout = () => {
     // Helper to check permission safely
     const checkPath = (key) => {
       if (!key && key !== "") return false;
+      const supportRoutes = [
+        'support-center',
+        'support-tickets',
+        'live-chat',
+        'remote-assistance',
+        'login-as-tenant',
+        'knowledge-base',
+        'feedback',
+        'bug-reports'
+      ];
+      if (supportRoutes.includes(key)) return true;
       const targetPath = (key === "" || key === "dashboard") ? "/" : "/" + key;
       const adminRoutes = [
         'dashboard',
@@ -865,9 +1084,21 @@ const MainLayout = () => {
   };
 
   const onLoginOut = () => {
-    setProfileStore(null); // Updated: Clear Zustand store
-    setLogout();
-    navigate("/login");
+    Modal.confirm({
+      title: lang === 'kh' ? 'ចាកចេញពីគណនី?' : 'Logout Confirmation',
+      icon: <WarningOutlined style={{ color: '#ff4d4f' }} />,
+      content: lang === 'kh' ? 'តើអ្នកពិតជាចង់ចាកចេញពីប្រព័ន្ធមែនទេ?' : 'Are you sure you want to log out of the system?',
+      okText: lang === 'kh' ? 'ចាកចេញ' : 'Logout',
+      okButtonProps: { danger: true, style: { borderRadius: '8px' } },
+      cancelText: lang === 'kh' ? 'បោះបង់' : 'Cancel',
+      cancelButtonProps: { style: { borderRadius: '8px' } },
+      centered: true,
+      onOk() {
+        setProfileStore(null); // Updated: Clear Zustand store
+        setLogout();
+        navigate("/login");
+      }
+    });
   };
 
   const toggleMobileDrawer = () => {
@@ -946,14 +1177,14 @@ const MainLayout = () => {
           background: rgba(255,255,255,0.1) !important;
         }
       `}</style>
-      <OnboardingTour 
-        visible={tourVisible} 
+      <OnboardingTour
+        visible={tourVisible}
         profile={profile}
         navigate={navigate}
         onClose={() => {
           localStorage.setItem(`has_completed_tour_v1_plan_${profile.plan_id || 1}_user_${profile.id}`, "true");
           setTourVisible(false);
-        }} 
+        }}
       />
       {/* Desktop Sidebar */}
       {!isMobile && !isFullScreen && (
@@ -1024,68 +1255,7 @@ const MainLayout = () => {
             </div>
 
             {/* ── Sidebar Footer ── */}
-            {profile?.business_id === 1 ? (
-              <div style={{ padding: "8px 0", borderTop: `1px solid ${SB.border}`, flexShrink: 0 }}>
-                {/* Platform Owner Profile Drawer Section */}
-                {!isSidebarCollapsed && (
-                  <div style={{ padding: "0 12px 8px" }}>
-                    <div 
-                      onClick={() => setProfileMenuExpanded(!profileMenuExpanded)}
-                      style={{ 
-                        display: "flex", alignItems: "center", justifyContent: "space-between", 
-                        padding: "8px", borderRadius: 8, cursor: "pointer", background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.08)", transition: "all 0.2s"
-                      }}
-                      className="po-profile-toggle"
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <Avatar size={32} src={ImgUser} icon={<UserOutlined />} style={{ border: "1px solid #c0a060" }} />
-                        <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2, textAlign: "left" }}>
-                          <Text style={{ fontSize: 11.5, color: "#fff", fontWeight: "bold" }}>Platform Owner</Text>
-                          <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.6)", fontWeight: "500" }}>Super Administrator</Text>
-                        </div>
-                      </div>
-                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 10 }}>{profileMenuExpanded ? "▼" : "▲"}</span>
-                    </div>
-
-                    {profileMenuExpanded && (
-                      <div style={{ 
-                        display: "flex", flexDirection: "column", gap: 1, marginTop: 8, 
-                        background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "4px" 
-                      }}>
-                        <div onClick={() => navigate('/profile')} style={{ padding: "6px 12px", fontSize: "11px", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: "6px" }} className="sb-footer-sub-item">Profile Settings</div>
-                        <div onClick={() => navigate('/settings')} style={{ padding: "6px 12px", fontSize: "11px", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: "6px" }} className="sb-footer-sub-item">Company Information</div>
-                        <div onClick={() => navigate('/security-logs')} style={{ padding: "6px 12px", fontSize: "11px", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: "6px" }} className="sb-footer-sub-item">Security Settings</div>
-                        <div onClick={() => navigate('/settings')} style={{ padding: "6px 12px", fontSize: "11px", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: "6px" }} className="sb-footer-sub-item">API Keys</div>
-                        <div onClick={() => navigate('/settings')} style={{ padding: "6px 12px", fontSize: "11px", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: "6px" }} className="sb-footer-sub-item">Billing Owner Settings</div>
-                        <Divider style={{ margin: "4px 0", borderColor: "rgba(255,255,255,0.08)" }} />
-                        <div onClick={onLoginOut} style={{ padding: "6px 12px", fontSize: "11px", color: "#ff4d4f", cursor: "pointer", borderRadius: "6px", fontWeight: "bold" }} className="sb-footer-sub-item">Logout</div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {isSidebarCollapsed && (
-                  <div style={{ textAlign: "center", padding: "8px 0" }}>
-                    <Dropdown
-                      menu={{
-                        items: [
-                          { key: 'profile', label: 'Profile Settings', onClick: () => navigate('/profile') },
-                          { key: 'company', label: 'Company Information', onClick: () => navigate('/settings') },
-                          { key: 'security', label: 'Security Settings', onClick: () => navigate('/security-logs') },
-                          { key: 'api', label: 'API Keys', onClick: () => navigate('/settings') },
-                          { key: 'billing', label: 'Billing Owner Settings', onClick: () => navigate('/settings') },
-                          { type: 'divider' },
-                          { key: 'logout', label: 'Logout', danger: true, onClick: onLoginOut }
-                        ]
-                      }}
-                      placement="rightBottom"
-                    >
-                      <Avatar size={32} src={ImgUser} icon={<UserOutlined />} style={{ border: "1px solid #c0a060", cursor: "pointer" }} />
-                    </Dropdown>
-                  </div>
-                )}
-              </div>
-            ) : (
+            {profile?.business_id !== 1 && (
               <div style={{ padding: "8px 0", borderTop: `1px solid ${SB.border}`, flexShrink: 0 }}>
                 {/* Support */}
                 <div
@@ -1106,27 +1276,6 @@ const MainLayout = () => {
                 >
                   <CustomerServiceOutlined style={{ fontSize: 16 }} />
                   {!isSidebarCollapsed && <span style={{ fontSize: 12.5, fontWeight: 500 }}>Support</span>}
-                </div>
-
-                {/* Logout */}
-                <div
-                  style={{
-                    margin: "2px 12px",
-                    padding: "8px 12px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    cursor: "pointer",
-                    color: "#ef4444",
-                    borderRadius: 8,
-                    transition: "all 0.2s",
-                    justifyContent: isSidebarCollapsed ? "center" : "flex-start"
-                  }}
-                  className="sb-footer-item-logout"
-                  onClick={onLoginOut}
-                >
-                  <LogoutOutlined style={{ fontSize: 16 }} />
-                  {!isSidebarCollapsed && <span style={{ fontSize: 12.5, fontWeight: 500 }}>Logout</span>}
                 </div>
               </div>
             )}
@@ -1419,6 +1568,31 @@ const MainLayout = () => {
                 </Dropdown>
               )}
 
+              {/* 🌓 Theme Mode Toggle */}
+              <Tooltip title={lang === 'kh' ? 'ប្តូររចនាបថពណ៌ (Dark/Light/System)' : 'Change Theme Mode (Dark/Light/System)'}>
+                <Dropdown
+                  menu={{ items: themeMenuItems }}
+                  trigger={['click']}
+                  placement="bottomRight"
+                >
+                  <div
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 38, height: 38, borderRadius: '50%', cursor: 'pointer',
+                      background: 'rgba(255,255,255,0.4)',
+                      border: '1.5px solid var(--theme-dark-green)',
+                      boxShadow: '0 2px 10px rgba(30, 74, 45, 0.1)',
+                      color: 'var(--theme-dark-green)', transition: 'all 0.2s',
+                    }}
+                    className="header-icon-btn"
+                  >
+                    {themeMode === "dark" ? <MoonOutlined style={{ fontSize: 16 }} /> :
+                      themeMode === "light" ? <SunOutlined style={{ fontSize: 16 }} /> :
+                        <DesktopOutlined style={{ fontSize: 16 }} />}
+                  </div>
+                </Dropdown>
+              </Tooltip>
+
               {/* 🌐 Language Toggle */}
               <Tooltip title={lang === 'kh' ? 'Switch to English' : 'ប្តូរភាសាខ្មែរ'}>
                 <div
@@ -1448,27 +1622,54 @@ const MainLayout = () => {
                   getPopupContainer={() => document.getElementById('header-notif-dropdown-anchor')}
                   dropdownRender={() => (
                     <div style={{
-                      background: '#fff', padding: '12px', borderRadius: '16px',
+                      background: 'var(--theme-cream-card-bg)', padding: '12px', borderRadius: '16px',
                       boxShadow: '0 12px 30px rgba(0,0,0,0.12)', width: '320px',
-                      border: '1px solid #e2e8f0', zIndex: 10000
+                      border: '1px solid rgba(255,255,255,0.08)', zIndex: 10000
                     }}>
                       <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '0 4px' }}>
                         <Text style={{ fontWeight: 800, fontSize: '13px', color: 'var(--theme-dark-green)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           {t.notifications || 'Notifications'} ({notifCount})
                         </Text>
-                        {notifCount > 0 && (
-                          <Button
-                            type="text"
-                            size="small"
-                            onClick={handleMarkAllRead}
-                            style={{ fontSize: '11px', fontWeight: 700, color: 'var(--theme-accent-green)', padding: 0, height: 'auto' }}
-                          >
-                            {t.mark_all_read || 'Mark read'}
-                          </Button>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <Tooltip title={isMuted ? "Unmute notification sound" : "Mute notification sound"}>
+                            <Button
+                              type="text"
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newMute = !isMuted;
+                                setIsMuted(newMute);
+                                localStorage.setItem("notif_muted", newMute ? "true" : "false");
+                                message.info(newMute ? "Sound notifications muted" : "Sound notifications active");
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '26px',
+                                height: '26px',
+                                padding: 0,
+                                borderRadius: '50%',
+                                color: isMuted ? '#999' : 'var(--theme-accent-green)',
+                              }}
+                            >
+                              {isMuted ? <MdVolumeOff size={16} /> : <MdVolumeUp size={16} />}
+                            </Button>
+                          </Tooltip>
+                          {notifCount > 0 && (
+                            <Button
+                              type="text"
+                              size="small"
+                              onClick={handleMarkAllRead}
+                              style={{ fontSize: '11px', fontWeight: 700, color: 'var(--theme-accent-green)', padding: 0, height: 'auto' }}
+                            >
+                              {t.mark_all_read || 'Mark read'}
+                            </Button>
+                          )}
+                        </div>
                       </div>
 
-                      <Divider style={{ margin: '6px 0', borderColor: '#f1f5f9' }} />
+                      <Divider style={{ margin: '6px 0', borderColor: 'rgba(255,255,255,0.08)' }} />
 
                       <div style={{ maxHeight: '280px', overflowY: 'auto', padding: '4px 0' }}>
                         {notifications.length > 0 ? (
@@ -1476,15 +1677,15 @@ const MainLayout = () => {
                             // Determine icon + navigation route based on type
                             const notifIconColor = item.type === 'inventory' ? '#f59e0b'
                               : item.type === 'subscription' ? '#ef4444'
-                              : item.type === 'system' ? 'var(--theme-dark-green)'
-                              : '#6366f1';
+                                : item.type === 'system' ? 'var(--theme-dark-green)'
+                                  : '#6366f1';
                             const NotifIconComp = item.type === 'inventory' ? MdInventory2
                               : item.type === 'subscription' ? MdWarningAmber
-                              : item.type === 'system' ? MdNotifications
-                              : MdCampaign;
+                                : item.type === 'system' ? MdNotifications
+                                  : MdCampaign;
                             const notifRoute = item.type === 'inventory' ? '/stock'
                               : item.type === 'subscription' ? '/subscription'
-                              : null;
+                                : null;
                             return (
                               <div
                                 key={item.id}
@@ -1499,13 +1700,13 @@ const MainLayout = () => {
                                   gap: '10px',
                                   padding: '10px 12px',
                                   borderRadius: '12px',
-                                  background: item.is_read ? '#fafafa' : 'rgba(30, 74, 45, 0.04)',
+                                  background: item.is_read ? 'var(--theme-milk-bg)' : 'rgba(30, 74, 45, 0.04)',
                                   marginBottom: '8px',
                                   border: item.is_read
-                                    ? '1.5px solid #f0f0f0'
+                                    ? '1.5px solid rgba(255,255,255,0.05)'
                                     : `1.5px solid ${notifIconColor}40`,
                                   borderLeft: item.is_read
-                                    ? '3px solid #e2e8f0'
+                                    ? '3px solid rgba(255,255,255,0.15)'
                                     : `3px solid ${notifIconColor}`,
                                   cursor: notifRoute ? 'pointer' : 'default',
                                 }}
@@ -1524,7 +1725,7 @@ const MainLayout = () => {
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%', minWidth: 0 }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <Text style={{ fontSize: '12px', fontWeight: item.is_read ? 600 : 700, color: '#1e293b' }}>
+                                    <Text style={{ fontSize: '12px', fontWeight: item.is_read ? 600 : 700, color: 'inherit' }}>
                                       {item.title}
                                     </Text>
                                     <Text style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0, marginLeft: '6px' }}>
@@ -1571,7 +1772,7 @@ const MainLayout = () => {
                       {/* See More Footer */}
                       {notifications.length > 0 && (
                         <>
-                          <Divider style={{ margin: '8px 0', borderColor: '#f1f5f9' }} />
+                          <Divider style={{ margin: '8px 0', borderColor: 'rgba(255, 255, 255, 0.08)' }} />
                           <div
                             onClick={() => { navigate('/notifications'); setNotifOpen(false); }}
                             style={{
@@ -1652,23 +1853,27 @@ const MainLayout = () => {
                   getPopupContainer={() => document.getElementById('header-profile-dropdown-anchor')}
                   dropdownRender={() => (
                     <div style={{
-                      background: '#fff', padding: '12px', borderRadius: '16px',
+                      background: 'var(--theme-cream-card-bg)', padding: '12px', borderRadius: '16px',
                       boxShadow: '0 12px 30px rgba(0,0,0,0.1)', minWidth: '240px',
-                      border: '1px solid #f1f5f9', zIndex: 10000
+                      border: '1px solid rgba(255, 255, 255, 0.08)', zIndex: 10000
                     }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <div onClick={() => navigate('/profile')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} className="profile-menu-item">
                           <UserOutlined style={{ fontSize: '14px', color: '#c0a060' }} />
-                          <Text style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>View Profile</Text>
+                          <Text style={{ fontSize: '12.5px', fontWeight: 600, color: 'inherit' }}>View Profile</Text>
                         </div>
                         {(profile?.role_code === 'owner' || profile?.business_id === 1) && (
                           <div onClick={() => navigate('/user')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} className="profile-menu-item">
                             <UserAddOutlined style={{ fontSize: '14px', color: '#64748b' }} />
-                            <Text style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>Add account</Text>
+                            <Text style={{ fontSize: '12.5px', fontWeight: 600, color: 'inherit' }}>Add account</Text>
                           </div>
                         )}
+                        <div onClick={onLoginOut} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }} className="profile-menu-item">
+                          <LogoutOutlined style={{ fontSize: '14px', color: '#ef4444' }} />
+                          <Text style={{ fontSize: '12.5px', fontWeight: 600, color: '#ef4444' }}>Logout</Text>
+                        </div>
                       </div>
-                      <Divider style={{ margin: '8px 0', borderColor: '#f1f5f9' }} />
+                      <Divider style={{ margin: '8px 0', borderColor: 'rgba(255, 255, 255, 0.08)' }} />
                       <div style={{ marginTop: '8px' }}>
                         <div style={{ padding: '0 8px 8px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <div style={{ width: '3px', height: '12px', background: '#64748b', borderRadius: '2px' }} />
@@ -1724,8 +1929,6 @@ const MainLayout = () => {
             className="admin-body"
             style={{
               background: "transparent",
-              borderRadius: "16px",
-              border: "1.5px solid rgba(30, 74, 45, 0.2)",
               padding: getContentPadding(),
               boxShadow: "none",
               minHeight: `calc(100vh - ${isMobile ? '160px' : '180px'})`,
@@ -1903,5 +2106,7 @@ const MainLayout = () => {
     </Layout>
   );
 };
+
+
 
 export default MainLayout;

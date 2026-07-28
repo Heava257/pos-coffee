@@ -8,6 +8,8 @@ router.get("/", authMiddleware("business"), c.getList);
 router.post("/", authMiddleware("business"), uploadMiddleware.single("logo"), c.create);
 router.put("/", authMiddleware("business"), uploadMiddleware.single("logo"), c.update);
 router.delete("/", authMiddleware("business"), c.remove);
+router.post("/verify-owner", authMiddleware("business"), c.verifyOwner);
+
 
 router.get("/config", authMiddleware("config"), c.getBusinessConfig);
 router.get("/exchange", authMiddleware("exchange_rate"), c.getExchangeRate);

@@ -114,12 +114,18 @@ function RawMaterialPage() {
             method = "put";
         }
         const res = await request("raw_material", method, params);
-        if (res && !res.error) {
+        if (res && !res.error && res.data) {
             message.success(res.message);
+            const editId = form.getFieldValue("id");
+            setState((prev) => ({
+                ...prev,
+                list: editId
+                    ? prev.list.map((item) => (item.id === editId ? res.data : item))
+                    : [res.data, ...prev.list],
+            }));
             onCloseModal();
-            getList();
         } else {
-            message.error(res.message || t.something_went_wrong);
+            message.error(res?.message || t.something_went_wrong);
         }
     };
 
@@ -172,7 +178,10 @@ function RawMaterialPage() {
                 const res = await request("raw_material", "delete", { id: item.id });
                 if (res && !res.error) {
                     message.success(res.message);
-                    getList();
+                    setState((prev) => ({
+                        ...prev,
+                        list: prev.list.filter((x) => x.id !== item.id),
+                    }));
                 }
             },
         });

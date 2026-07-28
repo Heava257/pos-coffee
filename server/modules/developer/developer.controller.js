@@ -37,22 +37,23 @@ exports.createKey = async (req, res) => {
     if (!name) return res.status(400).json({ message: "Key name is required." });
 
     const client_id = "pk_live_" + crypto.randomBytes(8).toString("hex").toUpperCase();
-    const client_secret = "sk_live_" + crypto.randomBytes(24).toString("hex");
+    const plain_secret = "sk_live_" + crypto.randomBytes(24).toString("hex");
+    const hashed_secret = crypto.createHash("sha256").update(plain_secret).digest("hex");
     const scopeStr = JSON.stringify(scopes || []);
 
     const [result] = await db.query(
       "INSERT INTO developer_keys (name, client_id, client_secret, scopes, status) VALUES (?, ?, ?, ?, 'active')",
-      [name, client_id, client_secret, scopeStr]
+      [name, client_id, hashed_secret, scopeStr]
     );
 
     res.json({
       success: true,
-      message: "API key generated successfully.",
+      message: "API key generated successfully. Please copy the Secret Key now, as it will not be shown again for security.",
       key: {
         key: result.insertId.toString(),
         name,
         client_id,
-        client_secret,
+        client_secret: plain_secret,
         scopes: scopes || [],
         created: new Date().toISOString().split("T")[0],
         status: "active"
@@ -86,11 +87,12 @@ exports.getWebhooks = async (req, res) => {
       return res.status(403).json({ error: "Forbidden", message: "Platform admin access only." });
     }
 
-    const [hooks] = await db.query("SELECT id, url, events, status, created_at FROM webhook_endpoints ORDER BY id DESC");
+    const [hooks] = await db.query("SELECT id, url, secret, events, status, created_at FROM webhook_endpoints ORDER BY id DESC");
     
     const formatted = hooks.map(h => ({
       id: h.id.toString(),
       url: h.url,
+      secret: h.secret || "N/A",
       events: h.events ? JSON.parse(h.events) : [],
       status: h.status,
       created: h.created_at.toISOString().split("T")[0]
@@ -112,11 +114,12 @@ exports.createWebhook = async (req, res) => {
     const { url, events } = req.body;
     if (!url) return res.status(400).json({ message: "Webhook URL is required." });
 
+    const secret = "whsec_" + crypto.randomBytes(24).toString("hex");
     const eventStr = JSON.stringify(events || []);
 
     const [result] = await db.query(
-      "INSERT INTO webhook_endpoints (url, events, status) VALUES (?, ?, 'active')",
-      [url, eventStr]
+      "INSERT INTO webhook_endpoints (url, secret, events, status) VALUES (?, ?, ?, 'active')",
+      [url, secret, eventStr]
     );
 
     res.json({
@@ -125,6 +128,7 @@ exports.createWebhook = async (req, res) => {
       webhook: {
         id: result.insertId.toString(),
         url,
+        secret,
         events: events || [],
         status: "active",
         created: new Date().toISOString().split("T")[0]

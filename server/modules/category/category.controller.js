@@ -94,7 +94,7 @@ exports.create = async (req, res) => {
     const image = req.file ? req.file.path : req.body.image;
 
     const sql = "INSERT INTO categories (business_id, name, industry_code, image, default_moods, default_sizes, default_addons) VALUES (1, ?, ?, ?, ?, ?, ?)";
-    const [data] = await db.query(sql, [
+    const [result] = await db.query(sql, [
       name, 
       industry_code || 'coffee_cafe',
       image, 
@@ -106,9 +106,11 @@ exports.create = async (req, res) => {
     // Clear Category Cache globally when changed
     await clearCache("categories_biz_*");
 
+    const [newRows] = await db.query("SELECT * FROM categories WHERE id = ?", [result.insertId]);
+
     res.json({
       success: true,
-      data,
+      data: newRows[0],
       message: "Global category created successfully!"
     });
   } catch (error) {
@@ -144,8 +146,11 @@ exports.update = async (req, res) => {
 
     await clearCache("categories_biz_*");
 
+    const [updatedRows] = await db.query("SELECT * FROM categories WHERE id = ?", [id]);
+
     res.json({
       success: true,
+      data: updatedRows[0],
       message: "Global category updated successfully!"
     });
   } catch (error) {

@@ -244,7 +244,9 @@ export default function LoginPage() {
         store.setPermissions(res.permission);
 
         const r = res.profile;
-        const isAdmin = r.is_super_admin === 1 || ["Owner","Executive","Admin"].includes(r.role_name);
+        const isAdmin = r?.is_super_admin === 1 ||
+          r?.business_id === 1 ||
+          ["Owner", "Executive", "Admin", "PlatForm Owner", "Platform Owner"].includes(r?.role_name);
         navigate(isAdmin ? "/dashboard" : "/invoices");
         message.success("Logged in successfully with Google");
       } else if (res?.not_registered) {
@@ -291,7 +293,9 @@ export default function LoginPage() {
         store.setPermissions(res.permission);
 
         const r = res.profile;
-        const isAdmin = r.is_super_admin === 1 || ["Owner","Executive","Admin"].includes(r.role_name);
+        const isAdmin = r?.is_super_admin === 1 ||
+          r?.business_id === 1 ||
+          ["Owner", "Executive", "Admin", "PlatForm Owner", "Platform Owner"].includes(r?.role_name);
         navigate(isAdmin ? "/dashboard" : "/invoices");
       } else {
         message.error(res?.message || "Login failed");

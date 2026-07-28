@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Card, Table, Tag, Button, Space, Typography, Modal, Input, Switch, message, Spin, Alert } from "antd";
-import { CreditCardOutlined, SafetyOutlined, EditOutlined, TransactionOutlined } from "@ant-design/icons";
+import { Card, Table, Tag, Button, Space, Typography, Modal, Input, Switch, message, Spin, Alert, Form, Row, Col, Divider, Upload } from "antd";
+import { CreditCardOutlined, SafetyOutlined, EditOutlined, TransactionOutlined, MailOutlined, BankOutlined, KeyOutlined, TeamOutlined, PlusOutlined, CheckCircleOutlined, SettingOutlined } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
+import { Config } from "@/shared/utils/config";
+import dayjs from "dayjs";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -11,6 +13,13 @@ const PaymentGatewayPage = () => {
   const [activeGateway, setActiveGateway] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [editForm, setEditForm] = useState({ merchant_id: "", api_key: "", secure_hash: "" });
+  const [transactionLogs, setTransactionLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  const [systemForm] = Form.useForm();
+  const [fileList, setFileList] = useState([]);
+  const [sysLoading, setSysLoading] = useState(false);
+  const [systemSettings, setSystemSettings] = useState({});
 
   const fetchGateways = async () => {
     setLoading(true);
@@ -27,8 +36,55 @@ const PaymentGatewayPage = () => {
     }
   };
 
+  const fetchLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const res = await request("payment-gateway/transactions", "get");
+      if (res && res.success) {
+        setTransactionLogs(res.list || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch gateway transaction logs:", err);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const fetchSystemSettings = async () => {
+    try {
+      const res = await request("system-settings", "get");
+      if (res && res.success) {
+        const cleaned = {};
+        Object.keys(res.settings).forEach(key => {
+          const v = res.settings[key];
+          if (key === "payway_allow_simulation") {
+            cleaned[key] = v === "true";
+          } else {
+            cleaned[key] = (v === "null" || v === "undefined") ? "" : v;
+          }
+        });
+        setSystemSettings(cleaned);
+        systemForm.setFieldsValue(cleaned);
+        if (cleaned.payway_khqr_image) {
+          setFileList([{
+            uid: '-1',
+            name: 'khqr.png',
+            status: 'done',
+            url: Config.getFullImagePath(res.settings.payway_khqr_image),
+          }]);
+        } else {
+          setFileList([]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load system settings:", err);
+    }
+  };
+
   useEffect(() => {
     fetchGateways();
+    fetchLogs();
+    fetchSystemSettings();
   }, []);
 
   const handleEdit = (gw) => {
@@ -85,6 +141,36 @@ const PaymentGatewayPage = () => {
     }
   };
 
+  const handleSaveSystemSettings = async (values) => {
+    setSysLoading(true);
+    try {
+      const formData = new FormData();
+      
+      Object.keys(values).forEach(key => {
+        if (values[key] !== undefined) {
+          formData.append(key, values[key]);
+        }
+      });
+
+      if (fileList.length > 0 && fileList[0].originFileObj) {
+        formData.append("khqr_image", fileList[0].originFileObj);
+      } else if (fileList.length === 0 && systemSettings.payway_khqr_image) {
+        formData.append("image_remove", "1");
+      }
+
+      const res = await request("system-settings", "put", formData);
+      if (res && res.success) {
+        message.success("Manual payment and IMAP settings updated successfully!");
+        fetchSystemSettings();
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to save settings.");
+    } finally {
+      setSysLoading(false);
+    }
+  };
+
   const columns = [
     { title: "Gateway Partner", dataIndex: "name", key: "name", render: (t) => <Text strong style={{ color: "#1e4a2d" }}>{t}</Text> },
     { title: "Merchant Identifier", dataIndex: "merchant_id", key: "merchant_id", render: (t) => <Text code>{t || "Not Configured"}</Text> },
@@ -113,15 +199,13 @@ const PaymentGatewayPage = () => {
     }
   ];
 
-  // simulated logs
-  const transactionLogs = [
-    { key: "1", time: "2026-07-14 22:04:12", gateway: "ABA PayWay", amount: "$8.50", tenant: "Coffee Hub", status: "success" },
-    { key: "2", time: "2026-07-14 21:58:30", gateway: "Stripe", amount: "$30.00", tenant: "RetailMart", status: "success" },
-    { key: "3", time: "2026-07-14 21:12:05", gateway: "ABA PayWay", amount: "$12.00", tenant: "PharmaPlus", status: "failed", reason: "Insufficient balance" }
-  ];
-
   const logColumns = [
-    { title: "Timestamp", dataIndex: "time", key: "time" },
+    { 
+      title: "Timestamp", 
+      dataIndex: "time", 
+      key: "time",
+      render: (t) => dayjs(t).format("YYYY-MM-DD HH:mm:ss A")
+    },
     { title: "Gateway", dataIndex: "gateway", key: "gateway" },
     { title: "Amount", dataIndex: "amount", key: "amount" },
     { title: "Tenant", dataIndex: "tenant", key: "tenant" },
@@ -154,8 +238,93 @@ const PaymentGatewayPage = () => {
         </Card>
       </Spin>
 
-      <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12 }} title={<span><TransactionOutlined style={{ marginRight: 8 }} /><b>Recent Platform Transaction Logs</b></span>}>
-        <Table columns={logColumns} dataSource={transactionLogs} pagination={false} size="small" />
+      <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12, marginBottom: 24 }} title={<span><TransactionOutlined style={{ marginRight: 8 }} /><b>Recent Platform Transaction Logs</b></span>}>
+        <Table columns={logColumns} dataSource={transactionLogs} pagination={false} size="small" loading={logsLoading} rowKey="key" />
+      </Card>
+
+      <Card 
+        bordered={false} 
+        className="shadow-sm" 
+        style={{ borderRadius: 12 }} 
+        title={<span><SettingOutlined style={{ marginRight: 8 }} /><b>Manual Payment & IMAP Reader Settings</b></span>}
+      >
+        <div style={{ marginBottom: 20 }}>
+          <Text type="secondary">Configure fallback payment options, Telegram notification link, and personal Gmail IMAP listener settings for manual transactions.</Text>
+        </div>
+        
+        <Form form={systemForm} layout="vertical" onFinish={handleSaveSystemSettings}>
+          <Row gutter={24}>
+            <Col span={12}>
+              <Form.Item name="payway_receiver_name" label="Receiver Account Name" tooltip="The name displayed to customers in bank apps">
+                <Input prefix={<TeamOutlined />} placeholder="e.g. COFFEE SaaS PLATFORM" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="telegram_support_link" label="Telegram Support Link" tooltip="Link for clients to contact for manual/payment queries">
+                <Input prefix={<MailOutlined />} placeholder="e.g. https://t.me/your_telegram_username" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="payway_allow_simulation" label="Allow Payment Simulation" valuePropName="checked" tooltip="Enable/Disable simulated success payment button for testing/debugging">
+                <Switch checkedChildren="Enabled" unCheckedChildren="Disabled" />
+              </Form.Item>
+            </Col>
+            
+            <Col span={24}>
+              <Divider orientation="left" style={{ fontSize: 13, color: '#999', margin: "12px 0 24px 0" }}>ABA Personal Account Notification Reader (Gmail IMAP)</Divider>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="payment_imap_user" label="Gmail Address" tooltip="Gmail account that receives ABA transaction email notifications">
+                <Input placeholder="e.g. growme.payment@gmail.com" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="payment_imap_pass" label="Gmail App Password" tooltip="Gmail App Password (16 characters) created in Google Account Settings">
+                <Input.Password placeholder="e.g. abcd efgh ijkl mnop" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="payment_imap_host" label="IMAP Host" tooltip="IMAP server address. Default is imap.gmail.com">
+                <Input placeholder="imap.gmail.com" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="payment_imap_port" label="IMAP Port" tooltip="IMAP port. Default is 993">
+                <Input placeholder="993" />
+              </Form.Item>
+            </Col>
+
+            <Col span={24}>
+              <Divider orientation="left" style={{ fontSize: 13, color: '#999', margin: "12px 0 24px 0" }}>Master KHQR Image (Fallback)</Divider>
+              <Form.Item label="Upload Platform QR">
+                <Upload
+                  listType="picture-card"
+                  fileList={fileList}
+                  onChange={({ fileList }) => setFileList(fileList)}
+                  beforeUpload={() => false}
+                  maxCount={1}
+                >
+                  {fileList.length < 1 && (
+                    <div>
+                      <PlusOutlined />
+                      <div style={{ marginTop: 8 }}>Upload QR</div>
+                    </div>
+                  )}
+                </Upload>
+                <Text type="secondary" style={{ fontSize: 11 }}>This image will be shown if dynamic QR generation is disabled or fails.</Text>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={sysLoading}
+            icon={<CheckCircleOutlined />}
+            style={{ height: 40, borderRadius: 8, background: '#1e4a2d', borderColor: '#1e4a2d', marginTop: 16 }}
+          >
+            Save Master Settings
+          </Button>
+        </Form>
       </Card>
 
       {/* Configuration Modal */}

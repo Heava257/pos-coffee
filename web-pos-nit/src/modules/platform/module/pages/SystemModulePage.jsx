@@ -109,16 +109,17 @@ const MatrixTable = ({ data, planMappings, modMappings, onToggle, onBulkToggle, 
         return (
             <div 
                 onClick={() => setActiveTarget({ type, id })}
+                className={`system-modules-sidebar-item ${isActive ? 'is-active' : ''}`}
                 style={{ 
-                    padding: '8px 12px', borderRadius: '10px', cursor: 'pointer',
+                    padding: '10px 14px', borderRadius: '10px', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: isActive ? '#f0fdf4' : 'transparent',
-                    transition: 'all 0.2s', marginBottom: '2px'
+                    background: isActive ? 'rgba(34, 197, 94, 0.12)' : 'transparent',
+                    transition: 'all 0.2s', marginBottom: '4px'
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ color: isActive ? '#166534' : '#64748b', fontSize: '14px' }}>{icon}</div>
-                    <Text strong style={{ color: isActive ? '#166534' : '#475569', fontSize: '13px' }}>{name}</Text>
+                    <div style={{ color: isActive ? 'var(--theme-accent-green, #166534)' : '#64748b', fontSize: '14px' }}>{icon}</div>
+                    <Text strong style={{ color: isActive ? 'var(--theme-accent-green, #166534)' : 'inherit', fontSize: '13px' }}>{name}</Text>
                 </div>
                 {enabledCount > 0 && (
                     <Text type="secondary" style={{ fontSize: '10px', opacity: 0.7 }}>
@@ -132,9 +133,9 @@ const MatrixTable = ({ data, planMappings, modMappings, onToggle, onBulkToggle, 
     if (!activeTarget) return null;
 
     return (
-        <div style={{ display: 'flex', gap: '12px', height: 'calc(100vh - 180px)', borderRadius: '20px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', gap: '16px', height: 'calc(100vh - 180px)', borderRadius: '20px' }}>
             {/* Sidebar */}
-            <div style={{ width: '240px', background: '#fff', padding: '16px', border: '1px solid #f1f5f9', borderRadius: '20px', overflowY: 'auto' }}>
+            <div className="system-modules-sidebar" style={{ width: '240px', padding: '16px', overflowY: 'auto', background: '#fff', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
                 <div style={{ marginBottom: 24 }}>
                     <Text strong style={{ fontSize: '10px', color: '#94a3b8', letterSpacing: '0.05em', display: 'block', marginBottom: 8 }}>PLAN (BASE PACKAGE)</Text>
                     {data.plans.map(p => (
@@ -150,11 +151,11 @@ const MatrixTable = ({ data, planMappings, modMappings, onToggle, onBulkToggle, 
             </div>
 
             {/* Main Matrix */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', border: '1px solid #f1f5f9', borderRadius: '20px' }}>
-                <div style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9' }}>
+            <div className="system-modules-matrix" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: 36, height: 36, borderRadius: '10px', background: '#f0fdf4', color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                            <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(34, 197, 94, 0.15)', color: 'var(--theme-accent-green, #166534)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
                                 {activeTarget.type === 'plan' ? <SafetyCertificateOutlined /> : <AppstoreOutlined />}
                             </div>
                             <div>
@@ -172,8 +173,8 @@ const MatrixTable = ({ data, planMappings, modMappings, onToggle, onBulkToggle, 
                         if (perms.length === 0) return null;
                         const enabledCount = perms.filter(p => currentMapping.includes(p.id)).length;
                         return (
-                            <div key={group.name} style={{ marginBottom: 20 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                            <div key={group.name} style={{ marginBottom: 24 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                                     <Space size={8}>
                                         <div style={{ width: 24, height: 24, borderRadius: '6px', background: `${group.color}10`, color: group.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
                                             {group.icon}
@@ -185,8 +186,8 @@ const MatrixTable = ({ data, planMappings, modMappings, onToggle, onBulkToggle, 
                                     </Space>
                                     <Text type="secondary" style={{ fontSize: '11px' }}>{enabledCount}/{perms.length}</Text>
                                 </div>
-                                <div style={{ border: '1px solid #f1f5f9', borderRadius: '12px', overflow: 'hidden' }}>
-                                    {perms.map((perm, idx) => {
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    {perms.map((perm) => {
                                         const isEnabled = currentMapping.includes(perm.id);
 
                                         // Smart Logic: Check if this permission is already in any BASE PLAN
@@ -194,12 +195,15 @@ const MatrixTable = ({ data, planMappings, modMappings, onToggle, onBulkToggle, 
                                         const isRedundant = activeTarget.type === 'mod' && plansProvidingThis.length > 0;
 
                                         return (
-                                            <div key={perm.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', background: isEnabled ? '#fff' : '#fafafa', borderBottom: idx === perms.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
+                                            <div 
+                                                key={perm.id} 
+                                                className={`system-modules-item ${isEnabled ? 'is-enabled' : ''}`}
+                                            >
                                                 <Space size={12}>
                                                     <div style={{ color: isEnabled ? group.color : '#94a3b8', fontSize: '16px' }}>{getPermIcon(perm.route_key)}</div>
                                                     <div>
                                                         <Space align="center" size={8}>
-                                                            <Text strong style={{ fontSize: '13px', lineHeight: '18px' }}>{perm.route_key}</Text>
+                                                            <Text strong style={{ fontSize: '13px', lineHeight: '18px', color: 'inherit' }}>{perm.route_key}</Text>
                                                             {isRedundant && (
                                                                 <Tooltip title={`មុខងារនេះមានរួចហើយក្នុង៖ ${plansProvidingThis.map(p => p.name).join(', ')}`}>
                                                                     <Tag color="orange" style={{ fontSize: '10px', height: '18px', lineHeight: '16px', margin: 0, borderRadius: '4px' }}>

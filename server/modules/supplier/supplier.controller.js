@@ -26,11 +26,14 @@ exports.create = async (req, res) => {
     const { name, code, tel, email, address, website, note } = req.body;
 
     const sql = "INSERT INTO suppliers (business_id, name, code, tel, email, address, website, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    const [data] = await db.query(sql, [business_id, name, code, tel, email, address, website, note]);
+    const [result] = await db.query(sql, [business_id, name, code, tel, email, address, website, note]);
+
+    const [newRows] = await db.query("SELECT * FROM suppliers WHERE id = ?", [result.insertId]);
 
     res.json({
       success: true,
-      message: "Supplier added successfully!"
+      message: "Supplier added successfully!",
+      data: newRows[0]
     });
   } catch (error) {
     logError("supplier.create", error, res);
@@ -45,7 +48,13 @@ exports.update = async (req, res) => {
     const sql = "UPDATE suppliers SET name = ?, code = ?, tel = ?, email = ?, address = ?, website = ?, note = ? WHERE id = ? AND business_id = ?";
     await db.query(sql, [name, code, tel, email, address, website, note, id, business_id]);
 
-    res.json({ message: "Supplier updated successfully!" });
+    const [updatedRows] = await db.query("SELECT * FROM suppliers WHERE id = ?", [id]);
+
+    res.json({
+      success: true,
+      message: "Supplier updated successfully!",
+      data: updatedRows[0]
+    });
   } catch (error) {
     logError("supplier.update", error, res);
   }

@@ -65,17 +65,23 @@ function RolePage() {
         });
         if (res && !res.error) {
           message.success(res.message);
-          const updatedList = await getList();
-          if (selectedGroup) {
-            const bizId = selectedGroup.business_id;
-            const bizName = selectedGroup.business_name;
-            const bizRoles = updatedList.filter(r => (r.business_id || 1) === bizId);
-            setSelectedGroup({
-              business_id: bizId,
-              business_name: bizName,
-              roles: bizRoles
-            });
-          }
+          setState(prev => {
+            const newList = prev.list.filter(r => r.id !== item.id);
+            if (selectedGroup) {
+              const bizId = selectedGroup.business_id;
+              const bizName = selectedGroup.business_name;
+              const bizRoles = newList.filter(r => (r.business_id || 1) === bizId);
+              setSelectedGroup({
+                business_id: bizId,
+                business_name: bizName,
+                roles: bizRoles
+              });
+            }
+            return {
+              ...prev,
+              list: newList
+            };
+          });
         }
       },
     });
@@ -90,24 +96,34 @@ function RolePage() {
     };
     const method = editingRole?.id ? "put" : "post";
     const res = await request("role", method, data);
-    if (res && !res.error) {
+    if (res && !res.error && res.data) {
       message.success(res.message);
-      const updatedList = await getList();
-      if (selectedGroup) {
-        const bizId = selectedGroup.business_id;
-        const bizName = selectedGroup.business_name;
-        const bizRoles = updatedList.filter(r => (r.business_id || 1) === bizId);
-        setSelectedGroup({
-          business_id: bizId,
-          business_name: bizName,
-          roles: bizRoles
-        });
-      }
+      setState(prev => {
+        const isUpdate = !!editingRole?.id;
+        const newList = isUpdate
+          ? prev.list.map(r => r.id === editingRole.id ? res.data : r)
+          : [res.data, ...prev.list];
+          
+        if (selectedGroup) {
+          const bizId = selectedGroup.business_id;
+          const bizName = selectedGroup.business_name;
+          const bizRoles = newList.filter(r => (r.business_id || 1) === bizId);
+          setSelectedGroup({
+            business_id: bizId,
+            business_name: bizName,
+            roles: bizRoles
+          });
+        }
+        return {
+          ...prev,
+          list: newList
+        };
+      });
       setRoleFormVisible(false);
       setEditingRole(null);
       form.resetFields();
     } else {
-      message.warning(res.error);
+      message.warning(res?.error || "Operation failed");
     }
   };
 

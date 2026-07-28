@@ -52,12 +52,14 @@ exports.create = async (req, res) => {
         }
 
         const sql = "INSERT INTO branches (business_id, name, province, district, location, phone, khqr_image, is_main, payment_merchant_id, payment_api_key, payment_receiver_name, payment_provider, payment_api_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        const [data] = await db.query(sql, [business_id, name, province || null, district || null, location, phone, khqr_image, is_main, payment_merchant_id || null, payment_api_key || null, payment_receiver_name || null, payment_provider || 'KHQR', payment_api_url || null]);
+        const [result] = await db.query(sql, [business_id, name, province || null, district || null, location, phone, khqr_image, is_main, payment_merchant_id || null, payment_api_key || null, payment_receiver_name || null, payment_provider || 'KHQR', payment_api_url || null]);
+
+        const [newRows] = await db.query("SELECT * FROM branches WHERE id = ?", [result.insertId]);
 
         res.json({
             success: true,
             message: "Branch created successfully!",
-            id: data.insertId
+            data: newRows[0]
         });
     } catch (error) {
         logError("branch.create", error, res);
@@ -95,7 +97,13 @@ exports.update = async (req, res) => {
         const sql = "UPDATE branches SET name = ?, province = ?, district = ?, location = ?, phone = ?, khqr_image = ?, is_main = ?, payment_merchant_id = ?, payment_api_key = ?, payment_receiver_name = ?, payment_provider = ?, payment_api_url = ? WHERE id = ? AND business_id = ?";
         await db.query(sql, [name, province || null, district || null, location, phone, khqr_image, isMainVal, payment_merchant_id || null, payment_api_key || null, payment_receiver_name || null, payment_provider || 'KHQR', payment_api_url || null, id, business_id]);
 
-        res.json({ message: "Branch updated successfully!" });
+        const [updatedRows] = await db.query("SELECT * FROM branches WHERE id = ?", [id]);
+
+        res.json({
+            success: true,
+            message: "Branch updated successfully!",
+            data: updatedRows[0]
+        });
     } catch (error) {
         logError("branch.update", error, res);
     }

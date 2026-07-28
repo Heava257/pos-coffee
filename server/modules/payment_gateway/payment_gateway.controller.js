@@ -29,6 +29,18 @@ exports.updateGateway = async (req, res) => {
       [merchant_id, api_key, secure_hash, id]
     );
 
+    // Sync to system_settings if ABA PayWay (ID 1)
+    if (parseInt(id) === 1) {
+      await db.query(
+        "UPDATE system_settings SET sett_value = ? WHERE sett_key = 'payway_merchant_id'",
+        [merchant_id]
+      );
+      await db.query(
+        "UPDATE system_settings SET sett_value = ? WHERE sett_key = 'payway_api_key'",
+        [api_key]
+      );
+    }
+
     res.json({ success: true, message: "Gateway credentials updated successfully." });
   } catch (error) {
     logError("payment_gateway.updateGateway", error, res);
@@ -53,5 +65,42 @@ exports.toggleGatewayStatus = async (req, res) => {
     res.json({ success: true, message: `Gateway status set to ${status}.` });
   } catch (error) {
     logError("payment_gateway.toggleGatewayStatus", error, res);
+  }
+};
+
+// 4. Get Platformwide transaction logs
+exports.getTransactionLogs = async (req, res) => {
+  try {
+    if (req.business_id !== 1) {
+      return res.status(403).json({ error: "Forbidden", message: "Platform admin access only." });
+    }
+
+    const [logs] = await db.query(`
+      SELECT 
+        o.id AS \`key\`,
+        o.created_at AS time,
+        o.payment_method AS gateway,
+        o.total_amount AS amount,
+        b.name AS tenant,
+        o.status
+      FROM orders o
+      INNER JOIN businesses b ON o.business_id = b.id
+      ORDER BY o.id DESC
+      LIMIT 10
+    `);
+
+    // Format fields (e.g. time, amount)
+    const formatted = logs.map(l => ({
+      key: l.key.toString(),
+      time: l.time,
+      gateway: l.gateway || "N/A",
+      amount: `$${Number(l.amount || 0).toFixed(2)}`,
+      tenant: l.tenant || "Unknown Shop",
+      status: l.status === "completed" || l.status === "paid" || l.status === "success" ? "success" : "failed"
+    }));
+
+    res.json({ list: formatted, success: true });
+  } catch (error) {
+    logError("payment_gateway.getTransactionLogs", error, res);
   }
 };

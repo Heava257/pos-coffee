@@ -142,7 +142,31 @@ exports.create = async (req, res) => {
         await conn.commit();
         await clearCache(`products_biz_${business_id}_branch_*`);
         await clearCache(`categories_biz_${business_id}`);
-        res.json({ success: true, message: "Product created and added to branch!" });
+
+        const [newRows] = await conn.query(`
+            SELECT 
+                p.id, p.name, p.image, p.category_id, p.status, p.barcode, p.brand, p.description,
+                p.sizes, p.addons, p.moods, p.discount, p.product_type,
+                p.expiry_date, p.strength, p.generic_name,
+                bp.price, bp.cost_price, bp.stock_qty AS qty, bp.is_available, bp.min_stock_alert,
+                c.name as category_name,
+                (SELECT EXISTS (
+                    SELECT 1 FROM recipe_detail rd 
+                    JOIN raw_material rm ON rd.raw_material_id = rm.id 
+                    WHERE rd.product_id = p.id AND rd.business_id = p.business_id AND rm.qty < rd.qty
+                )) as is_recipe_oos,
+                (SELECT MIN(FLOOR(rm.qty / rd.qty)) 
+                 FROM recipe_detail rd 
+                 JOIN raw_material rm ON rd.raw_material_id = rm.id 
+                 WHERE rd.product_id = p.id AND rd.business_id = p.business_id
+                ) as estimated_servings
+            FROM products p
+            LEFT JOIN branch_products bp ON p.id = bp.product_id AND bp.branch_id = ?
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.id = ?
+        `, [Number(branch_id), Number(product_id)]);
+
+        res.json({ success: true, message: "Product created and added to branch!", data: newRows[0] });
 
         // Trigger webhook event
         try {
@@ -232,7 +256,31 @@ exports.update = async (req, res) => {
         await conn.commit();
         await clearCache(`products_biz_${business_id}_branch_*`);
         await clearCache(`categories_biz_${business_id}`);
-        res.json({ success: true, message: "Product updated successfully!" });
+
+        const [updatedRows] = await conn.query(`
+            SELECT 
+                p.id, p.name, p.image, p.category_id, p.status, p.barcode, p.brand, p.description,
+                p.sizes, p.addons, p.moods, p.discount, p.product_type,
+                p.expiry_date, p.strength, p.generic_name,
+                bp.price, bp.cost_price, bp.stock_qty AS qty, bp.is_available, bp.min_stock_alert,
+                c.name as category_name,
+                (SELECT EXISTS (
+                    SELECT 1 FROM recipe_detail rd 
+                    JOIN raw_material rm ON rd.raw_material_id = rm.id 
+                    WHERE rd.product_id = p.id AND rd.business_id = p.business_id AND rm.qty < rd.qty
+                )) as is_recipe_oos,
+                (SELECT MIN(FLOOR(rm.qty / rd.qty)) 
+                 FROM recipe_detail rd 
+                 JOIN raw_material rm ON rd.raw_material_id = rm.id 
+                 WHERE rd.product_id = p.id AND rd.business_id = p.business_id
+                ) as estimated_servings
+            FROM products p
+            LEFT JOIN branch_products bp ON p.id = bp.product_id AND bp.branch_id = ?
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.id = ?
+        `, [Number(branch_id), Number(id)]);
+
+        res.json({ success: true, message: "Product updated successfully!", data: updatedRows[0] });
     } catch (error) {
         if (conn) await conn.rollback();
         logError("product.update", error, res);

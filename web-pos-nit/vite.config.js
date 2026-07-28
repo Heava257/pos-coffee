@@ -22,8 +22,10 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_GIT_HASH': JSON.stringify(gitHash),
   },
-  preview: {
-    allowedHosts: true
+  server: {
+    host: '127.0.0.1',
+    port: 5173,
+    cors: true
   },
   base: '/', 
 })

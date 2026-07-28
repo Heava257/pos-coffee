@@ -65,7 +65,26 @@ import AuditLogsPage from "@/modules/platform/pages/AuditLogsPage";
 import BackupRecoveryPage from "@/modules/platform/pages/BackupRecoveryPage";
 import InfrastructureMonitoringPage from "@/modules/platform/pages/InfrastructureMonitoringPage";
 import FeatureFlagsPage from "@/modules/platform/pages/FeatureFlagsPage";
+import NotificationCenterPage from "@/modules/platform/pages/NotificationCenterPage";
 import StockTransferPage from "@/modules/inventory/transfer/pages/StockTransferPage";
+import DevOpsCenterPage from "@/modules/platform/pages/DevOpsCenterPage";
+import DevOpsDeploymentHistoryPage from "@/modules/platform/pages/DevOpsDeploymentHistoryPage";
+import DevOpsVersionManagementPage from "@/modules/platform/pages/DevOpsVersionManagementPage";
+import DevOpsEnvironmentPage from "@/modules/platform/pages/DevOpsEnvironmentPage";
+import DevOpsHealthChecksPage from "@/modules/platform/pages/DevOpsHealthChecksPage";
+import DevOpsDockerStatusPage from "@/modules/platform/pages/DevOpsDockerStatusPage";
+import DevOpsKubernetesStatusPage from "@/modules/platform/pages/DevOpsKubernetesStatusPage";
+import DevOpsQueueMonitoringPage from "@/modules/platform/pages/DevOpsQueueMonitoringPage";
+import DevOpsFeatureFlagsPage from "@/modules/platform/pages/DevOpsFeatureFlagsPage";
+import DevOpsMaintenanceModePage from "@/modules/platform/pages/DevOpsMaintenanceModePage";
+import SupportCenterPage from "@/modules/platform/pages/SupportCenterPage";
+import SupportTicketsPage from "@/modules/platform/pages/SupportTicketsPage";
+import LiveChatPage from "@/modules/platform/pages/LiveChatPage";
+import RemoteAssistancePage from "@/modules/platform/pages/RemoteAssistancePage";
+import LoginAsTenantPage from "@/modules/platform/pages/LoginAsTenantPage";
+import KnowledgeBasePage from "@/modules/platform/pages/KnowledgeBasePage";
+import FeedbackPage from "@/modules/platform/pages/FeedbackPage";
+import BugReportsPage from "@/modules/platform/pages/BugReportsPage";
 import { getProfile } from "@/app/store/profile.store";
 import SaasLandingPage from "@/modules/platform/pages/SaasLandingPage";
 import LegalPage from "@/modules/platform/pages/LegalPage";
@@ -194,9 +213,31 @@ function App() {
             <Route path="/compliance-center" element={<SecurityDashboardPage />} />
             <Route path="/data-governance" element={<SecurityDashboardPage />} />
             <Route path="/feature-flags" element={<FeatureFlagsPage />} />
-            <Route path="/notification-center" element={<SettingsPage />} />
+            <Route path="/notification-center" element={<NotificationCenterPage />} />
             <Route path="/backup-recovery" element={<BackupRecoveryPage />} />
             <Route path="/infrastructure-monitoring" element={<InfrastructureMonitoringPage />} />
+
+            {/* DevOps Center Routes */}
+             <Route path="/devops" element={<DevOpsCenterPage />} />
+             <Route path="/devops-deployment-history" element={<DevOpsDeploymentHistoryPage />} />
+             <Route path="/devops-version-management" element={<DevOpsVersionManagementPage />} />
+             <Route path="/devops-environment" element={<DevOpsEnvironmentPage />} />
+             <Route path="/devops-health-checks" element={<DevOpsHealthChecksPage />} />
+             <Route path="/devops-docker-status" element={<DevOpsDockerStatusPage />} />
+             <Route path="/devops-kubernetes-status" element={<DevOpsKubernetesStatusPage />} />
+             <Route path="/devops-queue-monitoring" element={<DevOpsQueueMonitoringPage />} />
+             <Route path="/devops-feature-flags" element={<DevOpsFeatureFlagsPage />} />
+             <Route path="/devops-maintenance-mode" element={<DevOpsMaintenanceModePage />} />
+
+            {/* Support Center Routes */}
+            <Route path="/support-center" element={<SupportCenterPage />} />
+            <Route path="/support-tickets" element={<SupportTicketsPage />} />
+            <Route path="/live-chat" element={<LiveChatPage />} />
+            <Route path="/remote-assistance" element={<RemoteAssistancePage />} />
+            <Route path="/login-as-tenant" element={<LoginAsTenantPage />} />
+            <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+            <Route path="/feedback" element={<FeedbackPage />} />
+            <Route path="/bug-reports" element={<BugReportsPage />} />
 
             <Route path="/my-plan" element={<MyPlanPage />} />
             <Route path="/payment/result" element={<PaymentResultPage />} />

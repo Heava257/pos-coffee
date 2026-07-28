@@ -26,7 +26,7 @@ exports.create = async (req, res) => {
         const { product_id, raw_material_id, qty, reason } = req.body;
 
         // 1. Insert Waste Record
-        await conn.query(`
+        const [insertResult] = await conn.query(`
             INSERT INTO waste (business_id, branch_id, product_id, raw_material_id, qty, reason, created_by)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `, [business_id, branch_id, product_id || null, raw_material_id || null, qty, reason, user_id]);
@@ -57,7 +57,17 @@ exports.create = async (req, res) => {
         }
 
         await conn.commit();
-        res.json({ success: true, message: "Waste recorded successfully!" });
+
+        const [newRows] = await conn.query(`
+            SELECT w.*, p.name as product_name, rm.name as rm_name, u.name as staff_name
+            FROM waste w
+            LEFT JOIN products p ON w.product_id = p.id
+            LEFT JOIN raw_material rm ON w.raw_material_id = rm.id
+            LEFT JOIN users u ON w.created_by = u.id
+            WHERE w.id = ?
+        `, [insertResult.insertId]);
+
+        res.json({ success: true, message: "Waste recorded successfully!", data: newRows[0] });
     } catch (error) {
         await conn.rollback();
         logError("waste.create", error, res);

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
     Table, Button, Card, Row, Col, Input,
     Modal, Form, message, Tag, Space,
-    Typography, Divider, Badge, Tooltip, Statistic,
+    Typography, Divider, Badge, Tooltip, Statistic, Popover,
     Select, Checkbox, Tabs, Spin, Progress
 } from "antd";
 import dayjs from "dayjs";
@@ -28,7 +28,9 @@ import {
     LockOutlined,
     InfoCircleOutlined,
     DeleteOutlined,
-    AppstoreOutlined
+    AppstoreOutlined,
+    MoreOutlined,
+    SettingOutlined
 } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
 import { Config } from "@/shared/utils/config";
@@ -196,12 +198,16 @@ const BusinessPage = () => {
                 res = await request("business", "post", values);
             }
             
-            if (res) {
+            if (res && res.success && res.data) {
                 message.success("Operation successful!");
                 setVisible(false);
                 form.resetFields();
                 setPasswordVal("");
-                getList();
+                if (visible === 'edit' || visible === 'renew') {
+                    setList(prev => prev.map(item => item.id === res.data.id ? res.data : item));
+                } else {
+                    setList(prev => [res.data, ...prev]);
+                }
             }
         } catch (error) {
             message.error(error.message || "Operation failed");
@@ -212,9 +218,9 @@ const BusinessPage = () => {
         const newStatus = record.status === 'active' ? 'suspended' : 'active';
         try {
             const res = await request("business/status", "put", { id: record.id, status: newStatus });
-            if (res) {
+            if (res && res.success && res.data) {
                 message.success(`Business ${newStatus} successfully`);
-                getList();
+                setList(prev => prev.map(item => item.id === record.id ? res.data : item));
             }
         } catch (error) {
             message.error("Status update failed");
@@ -233,7 +239,7 @@ const BusinessPage = () => {
                     const res = await request("business", "delete", { id: record.id });
                     if (res) {
                         message.success("Business deleted successfully");
-                        getList();
+                        setList(prev => prev.filter(item => item.id !== record.id));
                     }
                 } catch (error) {
                     message.error(error.message || "Failed to delete business. It may have existing sales data.");
@@ -242,10 +248,23 @@ const BusinessPage = () => {
         });
     };
 
+    const handleVerifyOwner = async (record) => {
+        try {
+            const res = await request("business/verify-owner", "post", { business_id: record.id });
+            if (res) {
+                message.success(lang === 'kh' ? "បានបញ្ជាក់អ៊ីមែលម្ចាស់ហាងជោគជ័យ!" : "Owner email verified successfully!");
+                getList();
+            }
+        } catch (error) {
+            message.error(error.message || "Verification failed");
+        }
+    };
+
     const columns = [
         {
             title: "Business / Enterprise",
             dataIndex: "name",
+            width: 250,
             render: (text, record) => {
                 const hasLogo = record.logo && typeof record.logo === 'string' && record.logo.trim() !== '' && record.logo !== 'null' && record.logo !== 'undefined';
                 return (
@@ -289,9 +308,22 @@ const BusinessPage = () => {
         {
             title: "Owner",
             dataIndex: "owner_name",
+            width: 220,
             render: (text, record) => (
-                <div>
-                    <Text strong style={{ fontSize: '13px' }}>{text}</Text><br/>
+                <div style={{ whiteSpace: 'nowrap' }}>
+                    <Space size={4} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        <Text strong style={{ fontSize: '13px' }}>{text}</Text>
+                        {record.is_verified === 1 ? (
+                            <Tooltip title={lang === 'kh' ? "បានបញ្ជាក់អ៊ីមែលរួចរាល់" : "Email Verified"}>
+                                <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '12px' }} />
+                            </Tooltip>
+                        ) : (
+                            <Tooltip title={lang === 'kh' ? "មិនទាន់បញ្ជាក់អ៊ីមែល" : "Email Not Verified"}>
+                                <StopOutlined style={{ color: '#ff4d4f', fontSize: '12px' }} />
+                            </Tooltip>
+                        )}
+                    </Space>
+                    <br/>
                     <Text type="secondary" style={{ fontSize: '11px' }}>{record.email}</Text>
                 </div>
             )
@@ -299,6 +331,7 @@ const BusinessPage = () => {
         {
             title: "Plan",
             dataIndex: "plan_name",
+            width: 120,
             render: (name) => {
                 let color = "default";
                 const lowerName = name?.toLowerCase() || "";
@@ -312,11 +345,13 @@ const BusinessPage = () => {
         {
             title: "Status",
             dataIndex: "status",
+            width: 120,
             render: (status) => <Badge status={status === 'active' ? 'success' : 'error'} text={status?.toUpperCase()} />
         },
         {
             title: "Registered Date",
             dataIndex: "created_at",
+            width: 160,
             render: (created_at) => (
                 <div style={{ lineHeight: '1.4' }}>
                     <Text style={{ fontSize: '13px', fontWeight: 600, display: 'block' }}>
@@ -331,6 +366,7 @@ const BusinessPage = () => {
         {
             title: "Last Active",
             dataIndex: "last_active",
+            width: 160,
             render: (last_active) => (
                 <div style={{ lineHeight: '1.4' }}>
                     <Text style={{ fontSize: '13px', fontWeight: 600, display: 'block', color: last_active ? '#2d6a3e' : '#64748b' }}>
@@ -345,51 +381,104 @@ const BusinessPage = () => {
         {
             title: "Management",
             key: "actions",
-            align: 'right',
-            render: (record) => (
-                <Space>
-                    <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(record)}>View</Button>
-                    <Button 
-                        icon={<AppstoreOutlined />} 
-                        onClick={() => {
-                            setSelectedBiz(record);
-                            setCatVisible(true);
-                        }}
-                        style={{ color: '#2d6a3e' }}
-                    >
-                        Categories
-                    </Button>
-                    <Button icon={<CrownOutlined />} onClick={() => {
-                        setVisible('renew');
-                        form.setFieldsValue({ business_id: record.id, plan_id: record.plan_id, duration_days: 30 });
-                    }} style={{ color: '#c0a060' }}>Renew</Button>
-                    <Button icon={<EditOutlined />} onClick={() => {
-                        setVisible('edit');
-                        form.setFieldsValue({
-                            ...record,
-                            business_name: record.name,
-                            active_modules: record.active_modules?.split(',')
-                        });
-                    }} type="link">Edit</Button>
-                    <Button 
-                        danger={record.status === 'active'}
-                        icon={record.status === 'active' ? <StopOutlined /> : <CheckCircleOutlined />}
-                        onClick={() => toggleStatus(record)}
-                        disabled={record.id === 1}
-                    >
-                        {record.status === 'active' ? "Suspend" : "Activate"}
-                    </Button>
-                    <Tooltip title="Delete Business">
+            align: 'center',
+            width: 100,
+            render: (record) => {
+                const popoverContent = (
+                    <Space size={8}>
+                        {record.is_verified !== 1 && (
+                            <Tooltip title={lang === 'kh' ? "បញ្ជាក់អ៊ីមែល" : "Verify Email"}>
+                                <Button 
+                                    shape="circle" 
+                                    icon={<SafetyCertificateOutlined />} 
+                                    onClick={() => handleVerifyOwner(record)}
+                                    style={{ color: '#10b981', borderColor: '#10b981' }}
+                                />
+                            </Tooltip>
+                        )}
+                        <Tooltip title={lang === 'kh' ? "មើលព័ត៌មានលម្អិត" : "View Details"}>
+                            <Button 
+                                shape="circle" 
+                                icon={<EyeOutlined />} 
+                                onClick={() => handleViewDetail(record)}
+                            />
+                        </Tooltip>
+                        <Tooltip title={lang === 'kh' ? "គ្រប់គ្រងប្រភេទ" : "Manage Categories"}>
+                            <Button 
+                                shape="circle" 
+                                icon={<AppstoreOutlined />} 
+                                onClick={() => {
+                                    setSelectedBiz(record);
+                                    setCatVisible(true);
+                                }}
+                                style={{ color: '#2d6a3e', borderColor: '#2d6a3e' }}
+                            />
+                        </Tooltip>
+                        <Tooltip title={lang === 'kh' ? "បន្តគម្រោង" : "Renew Subscription"}>
+                            <Button 
+                                shape="circle" 
+                                icon={<CrownOutlined />} 
+                                onClick={() => {
+                                    setVisible('renew');
+                                    form.setFieldsValue({ business_id: record.id, plan_id: record.plan_id, duration_days: 30 });
+                                }} 
+                                style={{ color: '#c0a060', borderColor: '#c0a060' }}
+                            />
+                        </Tooltip>
+                        <Tooltip title={lang === 'kh' ? "កែសម្រួលព័ត៌មាន" : "Edit Business"}>
+                            <Button 
+                                shape="circle" 
+                                icon={<EditOutlined />} 
+                                onClick={() => {
+                                    setVisible('edit');
+                                    form.setFieldsValue({
+                                        ...record,
+                                        business_name: record.name,
+                                        active_modules: record.active_modules?.split(',')
+                                    });
+                                }} 
+                                style={{ color: '#1890ff', borderColor: '#1890ff' }}
+                            />
+                        </Tooltip>
+                        {record.id !== 1 && (
+                            <Tooltip title={record.status === 'active' ? (lang === 'kh' ? "ផ្អាកដំណើរការ" : "Suspend") : (lang === 'kh' ? "បើកដំណើរការ" : "Activate")}>
+                                <Button 
+                                    shape="circle" 
+                                    danger={record.status === 'active'}
+                                    icon={record.status === 'active' ? <StopOutlined /> : <CheckCircleOutlined />}
+                                    onClick={() => toggleStatus(record)}
+                                />
+                            </Tooltip>
+                        )}
+                        {record.id !== 1 && (
+                            <Tooltip title={lang === 'kh' ? "លុបចោល" : "Delete Business"}>
+                                <Button 
+                                    shape="circle" 
+                                    danger 
+                                    icon={<DeleteOutlined />} 
+                                    onClick={() => onClickDelete(record)}
+                                />
+                            </Tooltip>
+                        )}
+                    </Space>
+                );
+
+                return (
+                    <Popover content={popoverContent} trigger="click" placement="left">
                         <Button 
-                            danger
-                            type="text"
-                            icon={<DeleteOutlined />} 
-                            onClick={() => onClickDelete(record)}
-                            disabled={record.id === 1}
+                            shape="circle" 
+                            icon={<SettingOutlined />} 
+                            style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                borderColor: '#1e4a2d',
+                                color: '#1e4a2d'
+                            }} 
                         />
-                    </Tooltip>
-                </Space>
-            )
+                    </Popover>
+                );
+            }
         }
     ];
 
@@ -441,7 +530,7 @@ const BusinessPage = () => {
                     </Space>
                 </div>}
             >
-                <Table columns={columns} dataSource={filteredList} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
+                <Table columns={columns} dataSource={filteredList} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} scroll={{ x: 'max-content' }} />
             </Card>
 
             {/* Category Assignment Modal */}

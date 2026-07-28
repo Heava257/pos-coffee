@@ -137,10 +137,10 @@ const InfrastructureMonitoringPage = () => {
       {/* Header section */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <Title level={3} style={{ color: "#1e4a2d", margin: 0 }}>
+          <Title level={3} style={{ color: "var(--theme-dark-green, #1e4a2d)", margin: 0 }}>
             <DashboardOutlined style={{ marginRight: 8 }} /> Infrastructure Monitoring
           </Title>
-          <Paragraph style={{ color: "#666", marginTop: 4 }}>
+          <Paragraph style={{ color: "inherit", opacity: 0.8, marginTop: 4 }}>
             Monitor physical CPU cores, RAM allocation, Redis connection state, and DB database latency in real-time.
           </Paragraph>
         </div>
@@ -176,11 +176,11 @@ const InfrastructureMonitoringPage = () => {
                 <Space direction="vertical" size={8} style={{ width: "100%" }}>
                   <div>
                     <Text type="secondary" style={{ fontSize: 12 }}>CPU Processing Load</Text>
-                    <div style={{ fontSize: "20px", fontWeight: "bold", color: "#1e4a2d" }}>{cpu.usage_pct}%</div>
+                    <div style={{ fontSize: "20px", fontWeight: "bold", color: "var(--theme-accent-green, #1e4a2d)" }}>{cpu.usage_pct}%</div>
                   </div>
 
                   {/* Dynamic Neon Mini-Line Chart */}
-                  <div style={{ height: 60, width: "100%", background: "#f9f9f9", borderRadius: 8, overflow: "hidden", position: "relative" }}>
+                  <div style={{ height: 60, width: "100%", background: "var(--theme-milk-bg)", borderRadius: 8, overflow: "hidden", position: "relative" }}>
                     <svg width="100%" height="100%" viewBox="0 0 300 60" preserveAspectRatio="none" style={{ display: "block" }}>
                       <defs>
                         <linearGradient id="cpuGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -226,11 +226,11 @@ const InfrastructureMonitoringPage = () => {
                 <Space direction="vertical" size={6} style={{ width: "100%" }}>
                   <div>
                     <Text type="secondary" style={{ fontSize: 12 }}>Physical Memory Usage</Text>
-                    <div style={{ fontSize: "20px", fontWeight: "bold", color: "#1e4a2d" }}>{ram.used_mb} MB <span style={{ fontSize: "12px", fontWeight: "normal", color: "#888" }}>/ {ram.total_mb} MB</span></div>
+                    <div style={{ fontSize: "20px", fontWeight: "bold", color: "var(--theme-accent-green, #1e4a2d)" }}>{ram.used_mb} MB <span style={{ fontSize: "12px", fontWeight: "normal", color: "#888" }}>/ {ram.total_mb} MB</span></div>
                   </div>
 
                   {/* Dynamic Neon Mini-Line Chart */}
-                  <div style={{ height: 60, width: "100%", background: "#f9f9f9", borderRadius: 8, overflow: "hidden", position: "relative" }}>
+                  <div style={{ height: 60, width: "100%", background: "var(--theme-milk-bg)", borderRadius: 8, overflow: "hidden", position: "relative" }}>
                     <svg width="100%" height="100%" viewBox="0 0 300 60" preserveAspectRatio="none" style={{ display: "block" }}>
                       <defs>
                         <linearGradient id="ramGrad" x1="0%" y1="0%" x2="0%" y2="100%">

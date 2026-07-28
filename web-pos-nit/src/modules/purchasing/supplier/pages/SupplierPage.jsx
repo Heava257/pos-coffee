@@ -53,7 +53,8 @@ function SupplierPage() {
   };
   const onFinish = async (items) => {
     var method = "post";
-    if (form.getFieldValue("id")) {
+    const editId = form.getFieldValue("id");
+    if (editId) {
       method = "put";
     }
     setState((p) => ({
@@ -62,12 +63,24 @@ function SupplierPage() {
     }));
     const res = await request("supplier", method, {
       ...items,
-      id: form.getFieldValue("id"),
+      id: editId,
     });
-    if (res && !res.error) {
-      getList();
+    if (res && !res.error && res.data) {
       closeModal();
       message.success(res.message);
+      setState((p) => {
+        const newList = editId
+          ? p.list.map((item) => (item.id === editId ? res.data : item))
+          : [res.data, ...p.list];
+        return {
+          ...p,
+          list: newList,
+          loading: false,
+        };
+      });
+    } else {
+      message.error(res?.message || "Operation failed");
+      setState((p) => ({ ...p, loading: false }));
     }
   };
   const onClickBtnEdit = (items) => {

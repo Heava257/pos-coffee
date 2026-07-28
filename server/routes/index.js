@@ -54,6 +54,8 @@ registerRoute("/table", "/tables", "../modules/table/table.routes");
 registerRoute("/developer", "/developers", "../modules/developer/developer.routes");
 registerRoute("/payment-gateway", "/payment-gateways", "../modules/payment_gateway/payment_gateway.routes");
 registerRoute("/backup", "/backups", "../modules/backup/backup.routes");
+registerRoute("/devops", "/devops", "../modules/devops/devops.routes");
+registerRoute("/support", "/support", "../modules/support/support.routes");
 
 // Special Compatibility Aliases for non-nested flat requests
 const orderController = require("../modules/order/order.controller");
@@ -110,10 +112,10 @@ router.post("/permission_matrices", authMiddleware("subscription"), systemModule
 const planController = require("../modules/plan/plan.controller");
 router.get("/my-plan", authMiddleware("my-plan"), planController.getBusinessPlan);
 router.get("/my-plan/billing-history", authMiddleware("my-plan"), planController.getBillingHistory);
-router.post("/my-plan/upgrade", authMiddleware("my-plan"), planController.selfUpgrade);
 router.get("/system-subscriptions", authMiddleware("system-subscriptions"), planController.getSystemSubscriptions);
 router.put("/system-subscriptions", authMiddleware("system-subscriptions"), planController.updateSystemSubscription);
 router.post("/system-subscriptions/send-reminder", authMiddleware("system-subscriptions"), planController.sendManualReminder);
+
 
 router.get("/user-switch-list", authMiddleware("user"), require("../modules/user/user.controller").getStaffSwitchList);
 

@@ -94,11 +94,11 @@ const TablePage = () => {
         setLoading(true);
         try {
             const res = await request("table", "post", { ...values, branch_id: selectedBranch });
-            if (res && res.success) {
+            if (res && res.success && res.data) {
                 message.success(res.message);
                 setVisible(false);
                 form.resetFields();
-                getList();
+                setList(prev => [res.data, ...prev]);
             } else {
                 message.error(res?.message || t.operation_failed);
             }
@@ -120,7 +120,7 @@ const TablePage = () => {
                 const res = await request("table", "delete", { id });
                 if (res) {
                     message.success(t.success);
-                    getList();
+                    setList(prev => prev.filter(item => item.id !== id));
                 }
             }
         });

@@ -249,6 +249,7 @@ async function runMigrations() {
     CREATE TABLE IF NOT EXISTS webhook_endpoints (
       id INT AUTO_INCREMENT PRIMARY KEY,
       url VARCHAR(500) NOT NULL,
+      secret VARCHAR(255) NULL,
       events TEXT NULL,
       status VARCHAR(50) DEFAULT 'active',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -291,6 +292,24 @@ async function runMigrations() {
     ['payment_imap_pass', ''],
     ['audit_logs_cleanup_enabled', 'true'],
     ['audit_logs_retention_days', '90'],
+    ['smtp_host', 'smtp.gmail.com'],
+    ['smtp_port', '587'],
+    ['smtp_user', ''],
+    ['smtp_pass', ''],
+    ['smtp_from', ''],
+    ['sms_sid', ''],
+    ['sms_token', ''],
+    ['sms_sender', ''],
+    ['firebase_project_id', ''],
+    ['firebase_client_email', ''],
+    ['firebase_private_key', ''],
+    ['firebase_app_id', ''],
+    ['telegram_bot_token', ''],
+    ['telegram_chat_id', ''],
+    ['maintenance_active', 'false'],
+    ['maintenance_title', 'System Under Scheduled Maintenance'],
+    ['maintenance_message', 'We are currently upgrading our platform resources. We will be back shortly.'],
+    ['maintenance_eta', '2 hours'],
   ];
   for (const [key, val] of defaultSettings) {
     await ensureSetting(key, val);
@@ -414,6 +433,9 @@ async function runMigrations() {
   try {
     await db.query('UPDATE users SET is_verified = 1 WHERE is_verified = 0 OR is_verified IS NULL');
   } catch (err) { /* column may not exist yet */ }
+
+  // ── Webhook Endpoints Secret Column Alteration ──
+  await safeAlter('ALTER TABLE webhook_endpoints ADD COLUMN secret VARCHAR(255) NULL AFTER url', 'webhook_endpoints.secret');
 
   console.log('✅ All migrations complete.');
 }

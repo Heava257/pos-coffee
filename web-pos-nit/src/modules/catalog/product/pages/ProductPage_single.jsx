@@ -713,9 +713,21 @@ function ProductPage() {
     setIsSubmitting(true);
     try {
       const res = await request("product", method, params);
-      if (res && !res.error) {
+      if (res && !res.error && res.data) {
         message.success(t.product_saved || "Product Saved Successfully");
-        getList();
+        const isUpdate = !!form.getFieldValue("id");
+        if (isUpdate) {
+          setState((prev) => ({
+            ...prev,
+            list: prev.list.map((p) => (p.id === form.getFieldValue("id") ? res.data : p)),
+          }));
+        } else {
+          setState((prev) => ({
+            ...prev,
+            list: [res.data, ...prev.list],
+            total: prev.total + 1
+          }));
+        }
         onCloseModal();
       } else {
         res.error?.barcode && message.error(res.error?.barcode);
@@ -913,7 +925,11 @@ function ProductPage() {
         const res = await request("product", "delete", item);
         if (res && !res.error) {
           message.success(t.product_deleted);
-          getList();
+          setState((prev) => ({
+            ...prev,
+            list: prev.list.filter((p) => p.id !== item.id),
+            total: prev.total - 1
+          }));
         }
       },
     });

@@ -98,13 +98,28 @@ const BranchPage = () => {
 
             const method = editId ? "put" : "post";
             const res = await request("branch", method, formData);
-            if (res) {
+            if (res && res.success && res.data) {
                 message.success(res.message || (editId ? t.update_branch : t.add_new_branch) + " " + t.success);
                 setVisible(false);
                 form.resetFields();
+                if (editId) {
+                    setList(prev => prev.map(item => {
+                        if (item.id === editId) return res.data;
+                        if (res.data.is_main === '1') {
+                            return { ...item, is_main: '0' };
+                        }
+                        return item;
+                    }));
+                } else {
+                    setList(prev => {
+                        const newList = res.data.is_main === '1' 
+                            ? prev.map(item => ({ ...item, is_main: '0' }))
+                            : prev;
+                        return [res.data, ...newList];
+                    });
+                }
                 setEditId(null);
                 setFileList([]);
-                getList();
             }
         } catch (error) {
             message.error(error.message || t.operation_failed);
@@ -151,7 +166,7 @@ const BranchPage = () => {
                 const res = await request("branch", "delete", { id });
                 if (res) {
                     message.success(t.success);
-                    getList();
+                    setList(prev => prev.filter(item => item.id !== id));
                 }
             }
         });

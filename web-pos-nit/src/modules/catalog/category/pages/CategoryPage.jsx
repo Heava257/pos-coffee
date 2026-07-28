@@ -69,10 +69,20 @@ function CategoryPage() {
 
   const onFinish = async (values) => {
     const res = await request("category", values.id ? "put" : "post", values);
-    if (res && !res.error) {
+    if (res && !res.error && res.data) {
       message.success(t.success);
       onCloseModal();
-      getList();
+      if (values.id) {
+        setState((prev) => ({
+          ...prev,
+          list: prev.list.map((c) => (c.id === values.id ? res.data : c)),
+        }));
+      } else {
+        setState((prev) => ({
+          ...prev,
+          list: [res.data, ...prev.list],
+        }));
+      }
     } else {
       message.error(t.failed);
     }
@@ -93,7 +103,10 @@ function CategoryPage() {
         const res = await request("category", "delete", { id: item.id });
         if (res && !res.error) {
           message.success(t.success);
-          getList();
+          setState((prev) => ({
+            ...prev,
+            list: prev.list.filter((c) => c.id !== item.id),
+          }));
         } else {
           message.error(res?.message || t.failed);
         }

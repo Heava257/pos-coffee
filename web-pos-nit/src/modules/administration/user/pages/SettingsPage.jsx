@@ -42,7 +42,10 @@ import {
     ShoppingOutlined,
     GiftOutlined,
     CalendarOutlined,
-    BgColorsOutlined
+    BgColorsOutlined,
+    UploadOutlined,
+    FileImageOutlined,
+    CloseOutlined
 } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
 import { Config } from "@/shared/utils/config";
@@ -441,7 +444,7 @@ const SettingsPage = () => {
                                                             <Option value="฿">฿ (THB)</Option>
                                                         </Select>
                                                     </Form.Item>
- 
+
                                                     <Form.Item
                                                         label={t.exchange_rate_label}
                                                         name="kh_exchange_rate"
@@ -453,9 +456,9 @@ const SettingsPage = () => {
                                                             parser={value => value.replace(/\$\s?|(,*)/g, '')}
                                                         />
                                                     </Form.Item>
- 
+
                                                     <Divider />
- 
+
                                                     <Form.Item label={t.vat_tax_label} name="tax_percent">
                                                         <InputNumber
                                                             style={{ width: "100%" }}
@@ -465,7 +468,7 @@ const SettingsPage = () => {
                                                             prefix={<PercentageOutlined />}
                                                         />
                                                     </Form.Item>
- 
+
                                                     <Form.Item label={t.service_charge_label} name="service_charge">
                                                         <InputNumber
                                                             style={{ width: "100%" }}
@@ -476,7 +479,7 @@ const SettingsPage = () => {
                                                         />
                                                     </Form.Item>
                                                 </Card>
- 
+
                                                 <Button
                                                     type="primary"
                                                     htmlType="submit"
@@ -908,9 +911,38 @@ const ThemeCustomizerTab = ({ lang, t }) => {
     const [inactiveText, setInactiveText] = useState(localStorage.getItem('theme_inactive_text_color') || 'rgba(255, 255, 255, 0.75)');
     const [activeIconBg, setActiveIconBg] = useState(localStorage.getItem('theme_active_icon_bg') || '#1e4a2d');
     const [activeIconColor, setActiveIconColor] = useState(localStorage.getItem('theme_active_icon_color') || '#ffffff');
+    const [bgImage, setBgImage] = useState(localStorage.getItem('theme_bg_image') || '');
 
     const menuPresets = ['#1e4a2d', '#00932a', '#3d2314', '#1d3557', '#1f2937'];
     const pagePresets = ['#f4f1eb', '#f0f4f8', '#ffffff', '#fdfbf7', '#f0f7f4'];
+
+    const updateBgImage = (url) => {
+        setBgImage(url);
+        if (url) {
+            localStorage.setItem('theme_bg_image', url);
+            document.documentElement.style.setProperty('--theme-bg-image', `url(${url})`);
+        } else {
+            localStorage.removeItem('theme_bg_image');
+            document.documentElement.style.setProperty('--theme-bg-image', 'none');
+        }
+    };
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 2.5 * 1024 * 1024) {
+            message.error(lang === 'kh' ? "ទំហំរូបភាពត្រូវតែតូចជាង 2.5MB!" : "Image size must be less than 2.5MB!");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            updateBgImage(reader.result);
+            message.success(lang === 'kh' ? "បានផ្លាស់ប្តូររូបភាព Wallpaper ជោគជ័យ!" : "Wallpaper image set successfully!");
+        };
+        reader.readAsDataURL(file);
+    };
 
     const updateSidebarBg = (color) => {
         setSidebarBg(color);
@@ -961,7 +993,8 @@ const ThemeCustomizerTab = ({ lang, t }) => {
         localStorage.removeItem('theme_active_icon_bg');
         localStorage.removeItem('theme_active_icon_color');
         localStorage.removeItem('theme_active_pill_bg');
-        
+        localStorage.removeItem('theme_bg_image');
+
         // Restore defaults
         setSidebarBg('#1e4a2d');
         setPageBg('#f4f1eb');
@@ -969,6 +1002,7 @@ const ThemeCustomizerTab = ({ lang, t }) => {
         setInactiveText('rgba(255, 255, 255, 0.75)');
         setActiveIconBg('#1e4a2d');
         setActiveIconColor('#ffffff');
+        setBgImage('');
 
         document.documentElement.style.setProperty('--sidebar-bg-color', '#1e4a2d');
         document.documentElement.style.setProperty('--active-icon-bg', '#1e4a2d');
@@ -977,228 +1011,300 @@ const ThemeCustomizerTab = ({ lang, t }) => {
         document.documentElement.style.setProperty('--sidebar-inactive-text', 'rgba(255, 255, 255, 0.75)');
         document.documentElement.style.setProperty('--sidebar-active-icon-bg', '#1e4a2d');
         document.documentElement.style.setProperty('--sidebar-active-icon-color', '#ffffff');
+        document.documentElement.style.setProperty('--theme-bg-image', 'none');
 
         message.success(lang === 'kh' ? "បានស្តាររចនាបថដើមជោគជ័យ!" : "Restored default theme styles successfully!");
     };
 
     return (
-        <div style={{ paddingTop: 24, paddingBottom: 24, maxWidth: 800 }}>
-            <style>{`
-                .preset-circle-menu-0 { background-color: #1e4a2d !important; }
-                .preset-circle-menu-1 { background-color: #00932a !important; }
-                .preset-circle-menu-2 { background-color: #3d2314 !important; }
-                .preset-circle-menu-3 { background-color: #1d3557 !important; }
-                .preset-circle-menu-4 { background-color: #1f2937 !important; }
-
-                .preset-circle-page-0 { background-color: #f4f1eb !important; }
-                .preset-circle-page-1 { background-color: #f0f4f8 !important; }
-                .preset-circle-page-2 { background-color: #ffffff !important; }
-                .preset-circle-page-3 { background-color: #fdfbf7 !important; }
-                .preset-circle-page-4 { background-color: #f0f7f4 !important; }
+        <div style={{ paddingTop: 24, paddingBottom: 24, maxWidth: 900 }}>
+            <style jsx="true">{`
+                .preset-hover {
+                    transition: transform 0.2s ease, border-color 0.2s ease;
+                }
+                .preset-hover:hover {
+                    transform: scale(1.1);
+                }
+                .preset-card-hover {
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                }
+                .preset-card-hover:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 14px rgba(0,0,0,0.12) !important;
+                }
             `}</style>
-            <Card 
-                title={<Space><BgColorsOutlined /> <span>{lang === 'kh' ? 'កំណត់រចនាបថ និងពណ៌ប្រព័ន្ធ' : 'Theme Customization & Colors'}</span></Space>}
-                style={{ borderRadius: "16px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)", marginBottom: 24 }}
-            >
-                <div style={{ marginBottom: 32 }}>
-                    <Title level={5} style={{ marginBottom: 16 }}>
-                        1. {lang === 'kh' ? 'ពណ៌ Background របស់ Menu (៥ ជម្រើស ឬ ជ្រើសរើសដោយខ្លួនឯង)' : 'Menu Background Color (5 Presets or Custom)'}
-                    </Title>
-                    <Space size={24} align="center" wrap>
-                        <Space size={12}>
-                            {menuPresets.map((color, idx) => (
-                                <div 
-                                    key={color}
-                                    onClick={() => updateSidebarBg(color)}
-                                    className={`preset-circle-menu-${idx}`}
-                                    style={{
-                                        width: 44,
-                                        height: 44,
-                                        borderRadius: '50%',
-                                        cursor: 'pointer',
-                                        border: sidebarBg.toLowerCase() === color.toLowerCase() ? '4px solid #c0a060' : '2px solid #e8e3d8',
-                                        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 16,
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {sidebarBg.toLowerCase() === color.toLowerCase() && (
-                                        <span style={{ color: '#ffffff', fontWeight: 'bold' }}>✓</span>
-                                    )}
-                                </div>
-                            ))}
-                        </Space>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 16, borderLeft: '1px solid #e8e3d8' }}>
-                            <span style={{ fontSize: 13, color: '#666' }}>{lang === 'kh' ? 'ពណ៌ផ្ទាល់ខ្លួន៖' : 'Custom:'}</span>
-                            <input 
-                                type="color" 
-                                value={sidebarBg.startsWith('rgba') ? '#1e4a2d' : sidebarBg}
-                                onChange={(e) => updateSidebarBg(e.target.value)}
-                                style={{ width: 44, height: 36, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer' }}
-                            />
-                            <Input 
-                                value={sidebarBg} 
-                                onChange={(e) => updateSidebarBg(e.target.value)}
-                                style={{ width: 100 }}
-                            />
-                        </div>
-                    </Space>
-                </div>
-
-                <div style={{ marginBottom: 32 }}>
-                    <Title level={5} style={{ marginBottom: 16 }}>
-                        2. {lang === 'kh' ? 'ពណ៌ផ្ទៃក្រោយទំព័រ (៥ ជម្រើស ឬ ជ្រើសរើសដោយខ្លួនឯង)' : 'Page Background Color (5 Presets or Custom)'}
-                    </Title>
-                    <Space size={24} align="center" wrap>
-                        <Space size={12}>
-                            {pagePresets.map((color, idx) => (
-                                <div 
-                                    key={color}
-                                    onClick={() => updatePageBg(color)}
-                                    className={`preset-circle-page-${idx}`}
-                                    style={{
-                                        width: 44,
-                                        height: 44,
-                                        borderRadius: '50%',
-                                        cursor: 'pointer',
-                                        border: pageBg.toLowerCase() === color.toLowerCase() ? '4px solid #c0a060' : '2px solid #e8e3d8',
-                                        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 16,
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {pageBg.toLowerCase() === color.toLowerCase() && (
-                                        <span style={{ color: '#333333', fontWeight: 'bold' }}>✓</span>
-                                    )}
-                                </div>
-                            ))}
-                        </Space>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 16, borderLeft: '1px solid #e8e3d8' }}>
-                            <span style={{ fontSize: 13, color: '#666' }}>{lang === 'kh' ? 'ពណ៌ផ្ទាល់ខ្លួន៖' : 'Custom:'}</span>
-                            <input 
-                                type="color" 
-                                value={pageBg.startsWith('rgba') ? '#f4f1eb' : pageBg}
-                                onChange={(e) => updatePageBg(e.target.value)}
-                                style={{ width: 44, height: 36, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer' }}
-                            />
-                            <Input 
-                                value={pageBg} 
-                                onChange={(e) => updatePageBg(e.target.value)}
-                                style={{ width: 100 }}
-                            />
-                        </div>
-                    </Space>
-                </div>
-
-                <div style={{ marginBottom: 32 }}>
-                    <Title level={5} style={{ marginBottom: 16 }}>
-                        3. {lang === 'kh' ? 'កែតម្រូវពណ៌លម្អិតរបស់ Menu (Custom Colors)' : 'Customize Menu Colors'}
-                    </Title>
-                    <Row gutter={[24, 24]}>
-                        <Col xs={24} sm={12}>
-                            <Card size="small" style={{ borderRadius: 12, border: '1px solid #e8e3d8', background: '#fafaf9' }}>
-                                <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                                    {lang === 'kh' ? 'ពណ៌អក្សរពេល Active (ជ្រើសរើស)' : 'Active Item Text Color'}
-                                </Text>
-                                <Space>
-                                    <input 
-                                        type="color" 
-                                        value={activeText}
-                                        onChange={(e) => updateActiveText(e.target.value)}
-                                        style={{ width: 44, height: 36, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer' }}
-                                    />
-                                    <Input 
-                                        value={activeText} 
-                                        onChange={(e) => updateActiveText(e.target.value)}
-                                        style={{ width: 100 }}
-                                    />
-                                </Space>
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={12}>
-                            <Card size="small" style={{ borderRadius: 12, border: '1px solid #e8e3d8', background: '#fafaf9' }}>
-                                <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                                    {lang === 'kh' ? 'ពណ៌អក្សរធម្មតា (មិនទាន់ជ្រើស)' : 'Inactive Item Text Color'}
-                                </Text>
-                                <Space>
-                                    <input 
-                                        type="color" 
-                                        value={inactiveText.startsWith('rgba') ? '#ffffff' : inactiveText}
-                                        onChange={(e) => updateInactiveText(e.target.value)}
-                                        style={{ width: 44, height: 36, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer' }}
-                                    />
-                                    <Input 
-                                        value={inactiveText} 
-                                        onChange={(e) => updateInactiveText(e.target.value)}
-                                        style={{ width: 120 }}
-                                    />
-                                </Space>
-                            </Card>
-                        </Col>
-
-                        <Col xs={24} sm={12}>
-                            <Card size="small" style={{ borderRadius: 12, border: '1px solid #e8e3d8', background: '#fafaf9' }}>
-                                <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                                    {lang === 'kh' ? 'ពណ៌រង្វង់ Icon ពេល Active' : 'Active Icon Background Color'}
-                                </Text>
-                                <Space>
-                                    <input 
-                                        type="color" 
-                                        value={activeIconBg}
-                                        onChange={(e) => updateActiveIconBg(e.target.value)}
-                                        style={{ width: 44, height: 36, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer' }}
-                                    />
-                                    <Input 
-                                        value={activeIconBg} 
-                                        onChange={(e) => updateActiveIconBg(e.target.value)}
-                                        style={{ width: 100 }}
-                                    />
-                                </Space>
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={12}>
-                            <Card size="small" style={{ borderRadius: 12, border: '1px solid #e8e3d8', background: '#fafaf9' }}>
-                                <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                                    {lang === 'kh' ? 'ពណ៌សញ្ញា Icon ពេល Active' : 'Active Icon Graphic Color'}
-                                </Text>
-                                <Space>
-                                    <input 
-                                        type="color" 
-                                        value={activeIconColor}
-                                        onChange={(e) => updateActiveIconColor(e.target.value)}
-                                        style={{ width: 44, height: 36, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer' }}
-                                    />
-                                    <Input 
-                                        value={activeIconColor} 
-                                        onChange={(e) => updateActiveIconColor(e.target.value)}
-                                        style={{ width: 100 }}
-                                    />
-                                </Space>
-                            </Card>
-                        </Col>
-                    </Row>
-                </div>
-
-                <Divider />
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button 
-                        danger 
-                        type="dashed" 
-                        size="large"
-                        onClick={handleReset}
-                        style={{ borderRadius: 10 }}
+            <Row gutter={[24, 24]}>
+                {/* 1. Sidebar Menu Background */}
+                <Col xs={24} md={12}>
+                    <Card
+                        title={<Space><SettingOutlined style={{ color: '#1e4a2d' }} /> <span>{lang === 'kh' ? 'ពណ៌ Background របស់ Menu' : 'Menu Background Color'}</span></Space>}
+                        style={{ borderRadius: "16px", height: '100%', boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
                     >
-                        {lang === 'kh' ? 'ស្តាររចនាបថដើមឡើងវិញ' : 'Reset to Default Theme'}
-                    </Button>
-                </div>
-            </Card>
+                        <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
+                            {lang === 'kh' ? 'ជ្រើសរើសពណ៌ស្រាប់ ឬពណ៌ផ្ទាល់ខ្លួនសម្រាប់ Menu ចំហៀង' : 'Select a preset or custom color for the sidebar menu.'}
+                        </Text>
+                        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                            <Space size={10} wrap>
+                                {menuPresets.map((color, idx) => (
+                                    <div
+                                        key={color}
+                                        onClick={() => updateSidebarBg(color)}
+                                        style={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: '50%',
+                                            cursor: 'pointer',
+                                            backgroundColor: color,
+                                            border: sidebarBg.toLowerCase() === color.toLowerCase() ? '3px solid #c0a060' : '2px solid rgba(0,0,0,0.1)',
+                                            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#fff',
+                                            fontWeight: 'bold'
+                                        }}
+                                        className="preset-hover"
+                                    >
+                                        {sidebarBg.toLowerCase() === color.toLowerCase() && "✓"}
+                                    </div>
+                                ))}
+                            </Space>
+                            <Divider style={{ margin: '12px 0' }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <Text strong style={{ fontSize: 13 }}>{lang === 'kh' ? 'ពណ៌ផ្ទាល់ខ្លួន៖' : 'Custom:'}</Text>
+                                <input
+                                    type="color"
+                                    value={sidebarBg.startsWith('rgba') ? '#1e4a2d' : sidebarBg}
+                                    onChange={(e) => updateSidebarBg(e.target.value)}
+                                    style={{ width: 40, height: 32, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer', padding: 0 }}
+                                />
+                                <Input
+                                    value={sidebarBg}
+                                    onChange={(e) => updateSidebarBg(e.target.value)}
+                                    style={{ width: 120, borderRadius: 8 }}
+                                />
+                            </div>
+                        </Space>
+                    </Card>
+                </Col>
+
+                {/* 2. Page Background Color */}
+                <Col xs={24} md={12}>
+                    <Card
+                        title={<Space><BgColorsOutlined style={{ color: '#c0a060' }} /> <span>{lang === 'kh' ? 'ពណ៌ផ្ទៃក្រោយទំព័រ' : 'Page Background Color'}</span></Space>}
+                        style={{ borderRadius: "16px", height: '100%', boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                    >
+                        <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
+                            {lang === 'kh' ? 'ជ្រើសរើសពណ៌ស្រាប់ ឬពណ៌ផ្ទាល់ខ្លួនសម្រាប់ផ្ទៃក្រោយទំព័រ' : 'Select a preset or custom color for the page background.'}
+                        </Text>
+                        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                            <Space size={10} wrap>
+                                {pagePresets.map((color, idx) => (
+                                    <div
+                                        key={color}
+                                        onClick={() => updatePageBg(color)}
+                                        style={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: '50%',
+                                            cursor: 'pointer',
+                                            backgroundColor: color,
+                                            border: pageBg.toLowerCase() === color.toLowerCase() ? '3px solid #c0a060' : '2px solid rgba(0,0,0,0.1)',
+                                            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#333',
+                                            fontWeight: 'bold'
+                                        }}
+                                        className="preset-hover"
+                                    >
+                                        {pageBg.toLowerCase() === color.toLowerCase() && "✓"}
+                                    </div>
+                                ))}
+                            </Space>
+                            <Divider style={{ margin: '12px 0' }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <Text strong style={{ fontSize: 13 }}>{lang === 'kh' ? 'ពណ៌ផ្ទាល់ខ្លួន៖' : 'Custom:'}</Text>
+                                <input
+                                    type="color"
+                                    value={pageBg.startsWith('rgba') ? '#f4f1eb' : pageBg}
+                                    onChange={(e) => updatePageBg(e.target.value)}
+                                    style={{ width: 40, height: 32, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer', padding: 0 }}
+                                />
+                                <Input
+                                    value={pageBg}
+                                    onChange={(e) => updatePageBg(e.target.value)}
+                                    style={{ width: 120, borderRadius: 8 }}
+                                />
+                            </div>
+                        </Space>
+                    </Card>
+                </Col>
+
+                {/* 3. Page Background Wallpaper */}
+                <Col xs={24}>
+                    <Card
+                        title={<Space><FileImageOutlined style={{ color: '#52c41a' }} /> <span>{lang === 'kh' ? 'រូបភាពផ្ទៃក្រោយទំព័រ (Wallpaper)' : 'Page Background Wallpaper'}</span></Space>}
+                        style={{ borderRadius: "16px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                    >
+                        <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
+                            {lang === 'kh' ? 'ផ្ទុកឡើងរូបភាពផ្ទាល់ខ្លួន ឬជ្រើសរើសរូបភាពគំរូ Coffee ដ៏ស្រស់ស្អាតខាងក្រោម' : 'Upload a custom wallpaper or choose from the coffee presets below.'}
+                        </Text>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+                            <Button
+                                type="primary"
+                                icon={<UploadOutlined />}
+                                onClick={() => document.getElementById('wallpaper-upload-input').click()}
+                                style={{ borderRadius: 8, background: '#1e4a2d', borderColor: '#1e4a2d' }}
+                            >
+                                {lang === 'kh' ? 'ផ្ទុកឡើងរូបភាព (Upload)' : 'Upload Wallpaper'}
+                            </Button>
+                            <input
+                                id="wallpaper-upload-input"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileUpload}
+                                style={{ display: 'none' }}
+                            />
+
+                            {bgImage && (
+                                <Button
+                                    danger
+                                    type="primary"
+                                    ghost
+                                    icon={<CloseOutlined />}
+                                    onClick={() => updateBgImage('')}
+                                    style={{ borderRadius: 8 }}
+                                >
+                                    {lang === 'kh' ? 'លុបរូបភាពចេញ' : 'Remove Wallpaper'}
+                                </Button>
+                            )}
+                        </div>
+
+                        <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 12, fontWeight: 'bold' }}>
+                            {lang === 'kh' ? 'រូបភាពគំរូ Coffee Presets៖' : 'Coffee Presets:'}
+                        </Text>
+                        <Row gutter={[16, 16]}>
+                            {[
+                                { name: "Flatlay Coffee", url: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=400" },
+                                { name: "Cozy Shop", url: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?q=80&w=400" },
+                                { name: "Coffee Beans", url: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=400" },
+                                { name: "Abstract Gradient", url: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=400" }
+                            ].map((preset, idx) => (
+                                <Col xs={12} sm={6} key={idx}>
+                                    <div
+                                        onClick={() => updateBgImage(preset.url)}
+                                        style={{
+                                            position: 'relative',
+                                            height: 90,
+                                            borderRadius: 12,
+                                            overflow: 'hidden',
+                                            cursor: 'pointer',
+                                            border: bgImage === preset.url ? '3px solid #c0a060' : '1px solid rgba(0,0,0,0.1)',
+                                            boxShadow: '0 4px 10px rgba(0,0,0,0.08)'
+                                        }}
+                                        className="preset-card-hover"
+                                    >
+                                        <img src={preset.url} alt={preset.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            padding: '4px 8px',
+                                            background: 'rgba(0,0,0,0.6)',
+                                            color: '#fff',
+                                            fontSize: 10,
+                                            textAlign: 'center'
+                                        }}>
+                                            {preset.name}
+                                        </div>
+                                        {bgImage === preset.url && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: '100%',
+                                                height: '100%',
+                                                background: 'rgba(30,74,45,0.4)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: '#ffffff',
+                                                fontWeight: 'bold',
+                                                fontSize: 16
+                                            }}>
+                                                ✓
+                                            </div>
+                                        )}
+                                    </div>
+                                </Col>
+                            ))}
+                        </Row>
+                    </Card>
+                </Col>
+
+                {/* 4. Customize Menu Colors */}
+                <Col xs={24}>
+                    <Card
+                        title={<Space><SettingOutlined style={{ color: '#722ed1' }} /> <span>{lang === 'kh' ? 'កែតម្រូវពណ៌លម្អិតរបស់ Menu' : 'Customize Menu Colors'}</span></Space>}
+                        style={{ borderRadius: "16px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" }}
+                    >
+                        <Row gutter={[20, 20]}>
+                            {[
+                                { title: lang === 'kh' ? 'ពណ៌អក្សរពេល Active (ជ្រើសរើស)' : 'Active Item Text Color', val: activeText, set: updateActiveText },
+                                { title: lang === 'kh' ? 'ពណ៌អក្សរធម្មតា (មិនទាន់ជ្រើស)' : 'Inactive Item Text Color', val: inactiveText, set: updateInactiveText, isRgba: true },
+                                { title: lang === 'kh' ? 'ពណ៌រង្វង់ Icon ពេល Active' : 'Active Icon Background Color', val: activeIconBg, set: updateActiveIconBg },
+                                { title: lang === 'kh' ? 'ពណ៌សញ្ញា Icon ពេល Active' : 'Active Icon Graphic Color', val: activeIconColor, set: updateActiveIconColor }
+                            ].map((item, idx) => (
+                                <Col xs={24} sm={12} key={idx}>
+                                    <div style={{
+                                        padding: '16px',
+                                        borderRadius: 12,
+                                        border: '1px solid rgba(0,0,0,0.06)',
+                                        background: 'rgba(255,255,255,0.4)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 10
+                                    }}>
+                                        <Text strong style={{ fontSize: 13 }}>{item.title}</Text>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input
+                                                type="color"
+                                                value={(item.isRgba && item.val.startsWith('rgba')) ? '#ffffff' : item.val}
+                                                onChange={(e) => item.set(e.target.value)}
+                                                style={{ width: 36, height: 32, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer', padding: 0 }}
+                                            />
+                                            <Input
+                                                value={item.val}
+                                                onChange={(e) => item.set(e.target.value)}
+                                                style={{ borderRadius: 8 }}
+                                            />
+                                        </div>
+                                    </div>
+                                </Col>
+                            ))}
+                        </Row>
+                    </Card>
+                </Col>
+
+                {/* 5. Reset Action */}
+                <Col xs={24}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                        <Button
+                            danger
+                            type="dashed"
+                            size="large"
+                            onClick={handleReset}
+                            style={{ borderRadius: 10 }}
+                        >
+                            {lang === 'kh' ? 'ស្តាររចនាបថដើមឡើងវិញ' : 'Reset to Default Theme'}
+                        </Button>
+                    </div>
+                </Col>
+            </Row>
         </div>
     );
 };

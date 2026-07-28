@@ -20,6 +20,11 @@ body,
 .ant-layout,
 .ant-layout-content {
   background-color: var(--theme-milk-bg) !important;
+  background-image: var(--theme-bg-image, none) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
 }
 
 /* Card custom styling with dark green border */
@@ -126,14 +131,14 @@ textarea,
 
 /* Ensure inner inputs inside affix wrappers, selects, or pickers do not have their own borders/backgrounds */
 .ant-input-affix-wrapper .ant-input,
-.ant-input-affix-wrapper > .ant-input,
+.ant-input-affix-wrapper>.ant-input,
 .ant-input-affix-wrapper input,
 .ant-select-selection-search-input,
 .ant-picker input,
 .ant-input-number input,
 .ant-input-number-input,
 .admin-body .ant-input-affix-wrapper .ant-input,
-.admin-body .ant-input-affix-wrapper > .ant-input,
+.admin-body .ant-input-affix-wrapper>.ant-input,
 .admin-body .ant-input-affix-wrapper input,
 .admin-body .ant-select-selection-search-input,
 .admin-body .ant-picker input,
@@ -818,6 +823,7 @@ textarea,
 .notif-navigate-btn {
   transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
+
 .notif-navigate-btn:hover {
   transform: scale(1.18) translate(2px, -2px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
@@ -1013,20 +1019,27 @@ textarea:not(.pos-page-root *) {
 /* --- All Pages Background Standardization (Milk & Cream) --- */
 
 /* Force the main layout content area and top-level page containers to inherit the milk background */
+/* Force the main layout content area to be transparent so wallpaper shows through */
 .admin-body {
-  background-color: var(--theme-milk-bg) !important;
-  background: var(--theme-milk-bg) !important;
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
-.admin-body>div,
-.admin-body>form,
+/* Make page containers, forms, and cards have a beautiful solid border by default (without wallpaper) */
 .admin-body>.page-container,
-.admin-body>.main-container {
-  background-color: var(--theme-milk-bg) !important;
-  background: var(--theme-milk-bg) !important;
+.admin-body>.main-container,
+.ant-card {
+  border: 1.5px solid var(--theme-border-color, rgba(30, 74, 45, 0.2)) !important;
+  border-radius: 20px !important;
 }
 
-/* Override all hardcoded white inline backgrounds on elements to use the theme cream color */
+body.dark-theme-mode .admin-body>.page-container,
+body.dark-theme-mode .admin-body>.main-container,
+body.dark-theme-mode .ant-card {
+  border: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Override all hardcoded white inline backgrounds on elements to use the same glassmorphic theme */
 .admin-body div[style*="#fff"]:not(.pos-page-root *),
 .admin-body div[style*="#ffffff"]:not(.pos-page-root *),
 .admin-body div[style*="white"]:not(.pos-page-root *),
@@ -1039,13 +1052,22 @@ textarea:not(.pos-page-root *) {
 .admin-body section[style*="#ffffff"]:not(.pos-page-root *),
 .admin-body section[style*="white"]:not(.pos-page-root *),
 .admin-body section[style*="rgb(255, 255, 255)"]:not(.pos-page-root *) {
-  background-color: var(--theme-cream-card-bg) !important;
-  background: var(--theme-cream-card-bg) !important;
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 20px !important;
 }
 
-/* Also make sure standard page layouts/cards from Ant Design follow the cream card bg */
+/* Also make sure standard page layouts/cards from Ant Design follow the cream card bg or glassmorphic blur when wallpaper is active */
 .ant-card {
-  background-color: var(--theme-cream-card-bg) !important;
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
 }
 
 /* Ensure OrderPage/Daily closing dashboard cards get the exact standard dark green border and cream background */
@@ -1195,7 +1217,7 @@ textarea:not(.pos-page-root *) {
   background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%) !important;
   background-color: #0f2027 !important;
   border: none !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
   color: #ffffff !important;
 }
 
@@ -1209,4 +1231,1306 @@ textarea:not(.pos-page-root *) {
 /* Force semi-transparent overlay background for the remaining days badge */
 .days-remaining-badge {
   background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   DARK THEME MODE OVERRIDES (Solid Dark Slate Theme)
+   ────────────────────────────────────────────────────────── */
+body.dark-theme-mode {
+  --theme-milk-bg: #121824;
+  /* Dark slate background */
+  --theme-cream-card-bg: #1e293b;
+  /* Dark card background */
+  --theme-dark-green: #38bdf8;
+  /* Accent color in dark mode */
+  --sidebar-bg-color: #0f172a;
+  /* Deep dark sidebar background */
+  --sidebar-active-pill-bg: #121824;
+  /* Active menu matches the dark milk bg */
+  color: #f1f5f9 !important;
+}
+
+/* Sidebar selected item styling in Dark Mode to match deep dark slate background */
+body.dark-theme-mode .ant-layout-sider .ant-menu-item.ant-menu-item-selected,
+body.dark-theme-mode .ant-layout-sider .ant-menu-submenu-title.ant-menu-item-selected,
+body.dark-theme-mode #root .ant-layout-sider .ant-menu-item.ant-menu-item-selected,
+body.dark-theme-mode #root .ant-layout-sider .ant-menu-sub .ant-menu-item.ant-menu-item-selected {
+  background: #121824 !important;
+}
+
+body.dark-theme-mode #root .ant-layout-sider .ant-menu-item.ant-menu-item-selected::before,
+body.dark-theme-mode #root .ant-layout-sider .ant-menu-sub .ant-menu-item.ant-menu-item-selected::before {
+  box-shadow: 16px 16px 0 0 #121824 !important;
+}
+
+body.dark-theme-mode #root .ant-layout-sider .ant-menu-item.ant-menu-item-selected::after,
+body.dark-theme-mode #root .ant-layout-sider .ant-menu-sub .ant-menu-item.ant-menu-item-selected::after {
+  box-shadow: 16px -16px 0 0 #121824 !important;
+}
+
+/* Page body and card layout overrides in Dark Mode */
+body.dark-theme-mode .admin-body>.page-container,
+body.dark-theme-mode .admin-body>.main-container,
+body.dark-theme-mode .ant-card {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+}
+
+/* Dark mode text and headings readability overrides */
+body.dark-theme-mode .ant-card-title,
+body.dark-theme-mode .ant-typography,
+body.dark-theme-mode h1,
+body.dark-theme-mode h2,
+body.dark-theme-mode h3,
+body.dark-theme-mode h4,
+body.dark-theme-mode h5,
+body.dark-theme-mode h6,
+body.dark-theme-mode span,
+body.dark-theme-mode label,
+body.dark-theme-mode p,
+body.dark-theme-mode li,
+body.dark-theme-mode strong,
+body.dark-theme-mode .ant-statistic-title,
+body.dark-theme-mode .ant-statistic-content {
+  color: #f1f5f9 !important;
+}
+
+/* Tables in Dark Mode */
+body.dark-theme-mode .ant-table {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode .ant-table-thead>tr>th {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body.dark-theme-mode .ant-table-tbody>tr>td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Form fields, inputs, and selectors in Dark Mode */
+body.dark-theme-mode .ant-input,
+body.dark-theme-mode .ant-input-number,
+body.dark-theme-mode .ant-select-selector,
+body.dark-theme-mode .ant-picker,
+body.dark-theme-mode .ant-input-affix-wrapper {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+/* Ensure inner inputs inside wrappers do not have their own backgrounds or borders in Dark Mode */
+body.dark-theme-mode .ant-input-affix-wrapper .ant-input,
+body.dark-theme-mode .ant-input-affix-wrapper>.ant-input,
+body.dark-theme-mode .ant-input-affix-wrapper input,
+body.dark-theme-mode .ant-input-number input,
+body.dark-theme-mode .ant-input-number-input,
+body.dark-theme-mode .ant-select-selection-search-input,
+body.dark-theme-mode .ant-picker input {
+  background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode .ant-input-prefix,
+body.dark-theme-mode .ant-input-suffix {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+body.dark-theme-mode .ant-select-arrow,
+body.dark-theme-mode .ant-select-selection-item {
+  color: #f1f5f9 !important;
+}
+
+/* Buttons in Dark Mode */
+body.dark-theme-mode .ant-btn-default {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode .ant-btn-default:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   WALLPAPER-ACTIVE GLASSMORPHIC STYLING OVERRIDES
+   ────────────────────────────────────────────────────────── */
+body.has-bg-wallpaper {
+  background-image: var(--theme-bg-image, none) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+
+/* Force the main layout content area to be transparent so wallpaper shows through */
+body.has-bg-wallpaper .admin-body {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Make page containers, forms, and cards translucent with high-end glassmorphic blur when wallpaper is active */
+body.has-bg-wallpaper .admin-body>.page-container,
+body.has-bg-wallpaper .admin-body>.main-container,
+body.has-bg-wallpaper .ant-card {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+body.has-bg-wallpaper .ant-table,
+body.has-bg-wallpaper .ant-table-container,
+body.has-bg-wallpaper .ant-table-tbody>tr>td {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+body.has-bg-wallpaper .ant-table-thead>tr>th {
+  background-color: rgba(30, 74, 45, 0.08) !important;
+  background: rgba(30, 74, 45, 0.08) !important;
+  color: var(--theme-dark-green, #1e4a2d) !important;
+  border-bottom: 1px solid rgba(30, 74, 45, 0.12) !important;
+}
+
+body.has-bg-wallpaper .ant-table-tbody>tr:hover>td {
+  background-color: rgba(30, 74, 45, 0.04) !important;
+  background: rgba(30, 74, 45, 0.04) !important;
+}
+
+/* Override all hardcoded white inline backgrounds on elements when wallpaper is active */
+body.has-bg-wallpaper .admin-body div[style*="#fff"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body div[style*="#ffffff"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body div[style*="white"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body div[style*="rgb(255, 255, 255)"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body form[style*="#fff"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body form[style*="#ffffff"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body form[style*="white"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body form[style*="rgb(255, 255, 255)"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body section[style*="#fff"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body section[style*="#ffffff"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body section[style*="white"]:not(.pos-page-root *),
+body.has-bg-wallpaper .admin-body section[style*="rgb(255, 255, 255)"]:not(.pos-page-root *) {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 20px !important;
+}
+
+/* Keep the old curved notch active menu item style but make it translucent when wallpaper is active */
+body.has-bg-wallpaper .ant-layout-sider .ant-menu-item.ant-menu-item-selected,
+body.has-bg-wallpaper .ant-layout-sider .ant-menu-submenu-title.ant-menu-item-selected,
+body.has-bg-wallpaper #root .ant-layout-sider .ant-menu-item.ant-menu-item-selected,
+body.has-bg-wallpaper #root .ant-layout-sider .ant-menu-sub .ant-menu-item.ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.35) !important;
+  border-radius: 24px 0 0 24px !important;
+  border-start-start-radius: 24px !important;
+  border-start-end-radius: 0 !important;
+  border-end-start-radius: 24px !important;
+  border-end-end-radius: 0 !important;
+  margin-left: 12px !important;
+  margin-inline-start: 12px !important;
+  margin-inline-end: 0 !important;
+  width: calc(100% - 12px) !important;
+  max-width: calc(100% - 12px) !important;
+}
+
+body.has-bg-wallpaper #root .ant-layout-sider .ant-menu-item.ant-menu-item-selected::before,
+body.has-bg-wallpaper #root .ant-layout-sider .ant-menu-sub .ant-menu-item.ant-menu-item-selected::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  right: 0 !important;
+  top: -32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  box-shadow: 16px 16px 0 0 rgba(255, 255, 255, 0.35) !important;
+  z-index: 10 !important;
+}
+
+body.has-bg-wallpaper #root .ant-layout-sider .ant-menu-item.ant-menu-item-selected::after,
+body.has-bg-wallpaper #root .ant-layout-sider .ant-menu-sub .ant-menu-item.ant-menu-item-selected::after {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  right: 0 !important;
+  bottom: -32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  box-shadow: 16px -16px 0 0 rgba(255, 255, 255, 0.35) !important;
+  z-index: 10 !important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   DARK MODE TAG & BADGE CONTRAST OVERRIDES
+   ────────────────────────────────────────────────────────── */
+body.dark-theme-mode .ant-tag {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #e2e8f0 !important;
+}
+
+body.dark-theme-mode .ant-tag-success {
+  background-color: rgba(46, 204, 113, 0.2) !important;
+  border-color: rgba(46, 204, 113, 0.3) !important;
+  color: #2ecc71 !important;
+}
+
+body.dark-theme-mode .ant-tag-warning,
+body.dark-theme-mode .ant-tag-gold {
+  background-color: rgba(241, 196, 15, 0.2) !important;
+  border-color: rgba(241, 196, 15, 0.3) !important;
+  color: #f1c40f !important;
+}
+
+body.dark-theme-mode .ant-tag-error,
+body.dark-theme-mode .ant-tag-red {
+  background-color: rgba(231, 76, 60, 0.2) !important;
+  border-color: rgba(231, 76, 60, 0.3) !important;
+  color: #e74c3c !important;
+}
+
+body.dark-theme-mode .ant-tag-processing,
+body.dark-theme-mode .ant-tag-blue {
+  background-color: rgba(52, 152, 219, 0.2) !important;
+  border-color: rgba(52, 152, 219, 0.3) !important;
+  color: #3498db !important;
+}
+
+/* Exempt tags, badges, buttons and their child elements from the global white text rule in Dark Mode */
+body.dark-theme-mode .ant-tag,
+body.dark-theme-mode .ant-tag *,
+body.dark-theme-mode .ant-btn,
+body.dark-theme-mode .ant-btn *,
+body.dark-theme-mode .ant-badge,
+body.dark-theme-mode .ant-badge * {
+  color: inherit !important;
+}
+
+/* Ant Design Dropdown, Select Popups, and Tooltips in Dark Mode */
+body.dark-theme-mode .ant-dropdown-menu,
+body.dark-theme-mode .ant-select-dropdown,
+body.dark-theme-mode .ant-picker-dropdown {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.dark-theme-mode .ant-dropdown-menu-item,
+body.dark-theme-mode .ant-select-item {
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode .ant-dropdown-menu-item:hover,
+body.dark-theme-mode .ant-select-item-option-active {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark-theme-mode .ant-dropdown-menu-item span,
+body.dark-theme-mode .ant-select-item-option-content {
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode .ant-dropdown-menu-item:hover span {
+  color: #ffffff !important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   DARK MODE USER PROFILE CONTAINER OVERRIDES
+   ────────────────────────────────────────────────────────── */
+body.dark-theme-mode .profile-container {
+  background-color: var(--theme-cream-card-bg) !important;
+  background: var(--theme-cream-card-bg) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+body.dark-theme-mode .profile-container:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: var(--theme-accent-green) !important;
+}
+
+body.dark-theme-mode .txt-username {
+  color: #f1f5f9 !important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   DARK MODE OVERLAY OVERRIDES (MODALS, DRAWERS, POPOVERS)
+   ────────────────────────────────────────────────────────── */
+body.dark-theme-mode .ant-modal-content,
+body.dark-theme-mode .ant-modal-header,
+body.dark-theme-mode .ant-drawer-content,
+body.dark-theme-mode .ant-drawer-header,
+body.dark-theme-mode .ant-popover-inner {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark-theme-mode .ant-modal-title,
+body.dark-theme-mode .ant-drawer-title {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode .ant-drawer-close,
+body.dark-theme-mode .ant-modal-close {
+  color: #f1f5f9 !important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   DARK MODE WITH WALLPAPER GLASSMORPHIC OVERRIDES (ខ្មៅថ្លាៗ)
+   ────────────────────────────────────────────────────────── */
+body.dark-theme-mode.has-bg-wallpaper .admin-body {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .admin-body>.page-container,
+body.dark-theme-mode.has-bg-wallpaper .admin-body>.main-container,
+body.dark-theme-mode.has-bg-wallpaper .ant-card,
+body.dark-theme-mode.has-bg-wallpaper .admin-body div[style*="#fff"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body div[style*="#ffffff"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body div[style*="white"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body div[style*="rgb(255, 255, 255)"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body form[style*="#fff"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body form[style*="#ffffff"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body form[style*="white"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body form[style*="rgb(255, 255, 255)"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body section[style*="#fff"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body section[style*="#ffffff"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body section[style*="white"]:not(.pos-page-root *),
+body.dark-theme-mode.has-bg-wallpaper .admin-body section[style*="rgb(255, 255, 255)"]:not(.pos-page-root *) {
+  background-color: rgba(15, 23, 42, 0.55) !important;
+  background: rgba(15, 23, 42, 0.55) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   SYSTEM MODULES & GLASS CARD SPECIFIC STYLING OVERRIDES
+   ────────────────────────────────────────────────────────── */
+.glass-card {
+  background-color: var(--theme-cream-card-bg, #ffffff) !important;
+  background: var(--theme-cream-card-bg, #ffffff) !important;
+  border: 1.5px solid var(--theme-border-color, rgba(30, 74, 45, 0.15)) !important;
+  border-radius: 20px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
+}
+
+body.has-bg-wallpaper .glass-card {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+body.dark-theme-mode .glass-card {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .glass-card {
+  background-color: rgba(15, 23, 42, 0.55) !important;
+  background: rgba(15, 23, 42, 0.55) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Sidebar item styling inside Module Registry */
+.system-modules-sidebar-item {
+  transition: all 0.2s ease-in-out !important;
+}
+
+.system-modules-sidebar-item:hover {
+  background-color: rgba(34, 197, 94, 0.08) !important;
+}
+
+.system-modules-sidebar-item.is-active {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+}
+
+body.dark-theme-mode .system-modules-sidebar-item.is-active {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+}
+
+/* Individual feature item style */
+.system-modules-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 12px 18px !important;
+  border-radius: 12px !important;
+  background-color: var(--theme-milk-bg, #f4f1eb) !important;
+  background: var(--theme-milk-bg, #f4f1eb) !important;
+  border: 1px solid transparent !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: inherit !important;
+}
+
+.system-modules-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+}
+
+body.has-bg-wallpaper .system-modules-item {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.system-modules-item.is-enabled {
+  background-color: rgba(34, 197, 94, 0.08) !important;
+  background: rgba(34, 197, 94, 0.08) !important;
+  border: 1px solid rgba(34, 197, 94, 0.25) !important;
+}
+
+body.dark-theme-mode .system-modules-item {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .system-modules-item {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+body.dark-theme-mode .system-modules-item.is-enabled {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+  background: rgba(34, 197, 94, 0.15) !important;
+  border: 1px solid rgba(34, 197, 94, 0.35) !important;
+}
+
+/* Remove duplicate background, border, and shadows on parent wrappers when nested cards/tabs are present */
+.admin-body>div:has(.ant-card),
+.admin-body>div:has(.ant-tabs),
+.admin-body>div:has(.glass-card),
+.admin-body>div:has(.system-modules-sidebar),
+body.dark-theme-mode .admin-body>div:has(.ant-card),
+body.dark-theme-mode .admin-body>div:has(.ant-tabs),
+body.dark-theme-mode .admin-body>div:has(.system-modules-sidebar),
+body.has-bg-wallpaper .admin-body>div:has(.ant-card),
+body.has-bg-wallpaper .admin-body>div:has(.ant-tabs),
+body.has-bg-wallpaper .admin-body>div:has(.system-modules-sidebar),
+body.dark-theme-mode.has-bg-wallpaper .admin-body>div:has(.ant-card),
+body.dark-theme-mode.has-bg-wallpaper .admin-body>div:has(.ant-tabs),
+body.dark-theme-mode.has-bg-wallpaper .admin-body>div:has(.system-modules-sidebar) {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Recharts tooltips in Dark Mode and Wallpaper mode */
+body.dark-theme-mode .recharts-default-tooltip,
+body.dark-theme-mode.has-bg-wallpaper .recharts-default-tooltip {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-theme-mode .recharts-tooltip-item,
+body.dark-theme-mode.has-bg-wallpaper .recharts-tooltip-item,
+body.dark-theme-mode .recharts-default-tooltip .recharts-tooltip-label,
+body.dark-theme-mode.has-bg-wallpaper .recharts-default-tooltip .recharts-tooltip-label {
+  color: #f1f5f9 !important;
+}
+
+/* Ensure statistic values and titles look amazing on translucent white cards in wallpaper mode */
+body.has-bg-wallpaper .ant-statistic-title,
+body.dark-theme-mode.has-bg-wallpaper .ant-statistic-title {
+  color: #475569 !important;
+}
+body.has-bg-wallpaper .ant-statistic-content-value,
+body.dark-theme-mode.has-bg-wallpaper .ant-statistic-content-value {
+  color: #1e4a2d !important;
+}
+body.has-bg-wallpaper .ant-card-head-title,
+body.dark-theme-mode.has-bg-wallpaper .ant-card-head-title {
+  color: #1e293b !important;
+}
+body.has-bg-wallpaper .ant-card-body,
+body.dark-theme-mode.has-bg-wallpaper .ant-card-body {
+  color: #334155 !important;
+}
+
+/* Make tables transparent and use high-contrast dark green/slate text on translucent cards in Dark Wallpaper mode */
+body.dark-theme-mode.has-bg-wallpaper .ant-table,
+body.dark-theme-mode.has-bg-wallpaper .ant-table-container,
+body.dark-theme-mode.has-bg-wallpaper .ant-table-tbody > tr > td {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #1e293b !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .ant-table-thead>tr>th {
+  background-color: rgba(30, 74, 45, 0.08) !important;
+  background: rgba(30, 74, 45, 0.08) !important;
+  color: var(--theme-dark-green, #1e4a2d) !important;
+  border-bottom: 1px solid rgba(30, 74, 45, 0.12) !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .ant-table-tbody > tr:hover > td {
+  background-color: rgba(30, 74, 45, 0.04) !important;
+  background: rgba(30, 74, 45, 0.04) !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .ant-table-wrapper,
+body.dark-theme-mode.has-bg-wallpaper .ant-table-cell,
+body.dark-theme-mode.has-bg-wallpaper .ant-table-cell strong,
+body.dark-theme-mode.has-bg-wallpaper .ant-table-cell .ant-typography,
+body.dark-theme-mode.has-bg-wallpaper .ant-pagination-item a,
+body.dark-theme-mode.has-bg-wallpaper .ant-pagination-item-link,
+body.dark-theme-mode.has-bg-wallpaper .ant-table-empty .ant-empty-description {
+  color: #1e293b !important;
+}
+
+/* Ensure global admin page header titles and descriptions adapt to dark wallpaper background for high contrast */
+body.dark-theme-mode.has-bg-wallpaper .admin-body h2.ant-typography,
+body.dark-theme-mode.has-bg-wallpaper .admin-body span.ant-typography-secondary,
+body.dark-theme-mode.has-bg-wallpaper .admin-body div.ant-typography {
+  color: #ffffff !important;
+}
+
+/* POS option customization modal Dark Mode styling overrides */
+body.dark-theme-mode .ant-modal-content {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode .ant-modal-header {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+body.dark-theme-mode .ant-modal-header .ant-modal-title {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode .ant-modal-body {
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode .ant-modal-body div {
+  color: #cbd5e1 !important;
+}
+
+body.dark-theme-mode .ant-modal-close-icon {
+  color: #cbd5e1 !important;
+}
+
+/* Radio buttons inside modal */
+body.dark-theme-mode .ant-modal .ant-radio-button-wrapper {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+  color: #cbd5e1 !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode .ant-modal .ant-radio-button-wrapper:hover {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode .ant-modal .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+  background-color: #1e4a2d !important;
+  background: #1e4a2d !important;
+  color: #ffffff !important;
+  border-color: #1e4a2d !important;
+}
+
+body.dark-theme-mode .ant-modal .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) div {
+  color: #ffffff !important;
+}
+
+/* Add-ons checkbox wrappers */
+body.dark-theme-mode .ant-modal-body div[style*="background:"] {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode .ant-modal-body div[style*="background:"] span {
+  color: #cbd5e1 !important;
+}
+
+body.dark-theme-mode .ant-modal-body div[style*="background:"] .ant-checkbox-checked + span {
+  color: #ffffff !important;
+}
+
+/* Textarea input inside modal */
+body.dark-theme-mode .ant-modal-body textarea {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode .ant-modal-footer {
+  border-top: 1px solid #334155 !important;
+}
+
+body.dark-theme-mode .ant-modal-footer button {
+  border-radius: 8px !important;
+}
+
+/* POS page Dark Mode styling */
+body.dark-theme-mode .pos-page-root {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .pos-page-root {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Category Sidebar and main containers */
+body.dark-theme-mode .pos-page-root div[style*="background: rgb(255, 255, 255)"],
+body.dark-theme-mode .pos-page-root div[style*="background: rgb(253, 252, 251)"],
+body.dark-theme-mode .pos-page-root div[style*="background:#ffffff"],
+body.dark-theme-mode .pos-page-root div[style*="background: #ffffff"],
+body.dark-theme-mode .pos-page-root div[style*="background:#fafafa"],
+body.dark-theme-mode .pos-page-root div[style*="background: #fafafa"],
+body.dark-theme-mode .pos-page-root div[style*="background: rgb(248, 249, 250)"],
+body.dark-theme-mode .pos-page-root div[style*="background: #f8f9fa"] {
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+}
+
+/* Let's make sure if has-bg-wallpaper is NOT active, they get a solid dark slate background */
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-page-root div[style*="background: rgb(255, 255, 255)"],
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-page-root div[style*="background: rgb(253, 252, 251)"],
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-page-root div[style*="background:#ffffff"],
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-page-root div[style*="background: #ffffff"],
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-page-root div[style*="background:#fafafa"],
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-page-root div[style*="background: #fafafa"],
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-page-root div[style*="background: rgb(248, 249, 250)"],
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-page-root div[style*="background: #f8f9fa"] {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+}
+
+/* Category item elements */
+body.dark-theme-mode .pos-page-root div[style*="background: transparent"] {
+  color: #cbd5e1 !important;
+}
+body.dark-theme-mode .pos-page-root div[style*="background: transparent"]:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Category icons container background when not active */
+body.dark-theme-mode .pos-page-root div[style*="background: rgb(243, 244, 246)"],
+body.dark-theme-mode .pos-page-root div[style*="background: #f3f4f6"] {
+  background-color: #334155 !important;
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Search and Shift control container */
+body.dark-theme-mode .pos-search-shift-container {
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-search-shift-container {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+}
+
+/* Search input text color */
+body.dark-theme-mode .pos-search-shift-container input {
+  color: #ffffff !important;
+}
+
+/* Search input placeholder color */
+body.dark-theme-mode .pos-search-shift-container input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Sound Off, Grid, List and other white buttons */
+body.dark-theme-mode .pos-page-root button[style*="background: rgb(255, 255, 255)"],
+body.dark-theme-mode .pos-page-root button[style*="background: #ffffff"],
+body.dark-theme-mode .pos-page-root button[style*="background:#ffffff"] {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  color: #cbd5e1 !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode .pos-page-root button[style*="background: rgb(255, 255, 255)"]:hover,
+body.dark-theme-mode .pos-page-root button[style*="background: #ffffff"]:hover {
+  color: #ffffff !important;
+  background-color: #334155 !important;
+  background: #334155 !important;
+}
+
+/* Action button icons */
+body.dark-theme-mode .pos-page-root button .anticon {
+  color: #cbd5e1 !important;
+}
+
+/* The right Cart Panel (Receipt Panel) container and elements */
+body.dark-theme-mode .pos-page-root div[style*="width: 380px"],
+body.dark-theme-mode .pos-page-root div[style*="width:380px"],
+body.dark-theme-mode .pos-page-root div[style*="width: 420px"],
+body.dark-theme-mode .pos-page-root div[style*="width:420px"] {
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-page-root div[style*="width: 380px"],
+body.dark-theme-mode:not(.has-bg-wallpaper) .pos-page-root div[style*="width:380px"] {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+}
+
+/* Cart receipt lines and text */
+body.dark-theme-mode .pos-page-root .ant-typography {
+  color: #cbd5e1 !important;
+}
+
+body.dark-theme-mode .pos-page-root strong.ant-typography {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode .pos-page-root .ant-empty-description {
+  color: #94a3b8 !important;
+}
+
+/* Cart totals section backgrounds (gray blocks inside cart) */
+body.dark-theme-mode .pos-page-root div[style*="background: rgb(248, 250, 252)"],
+body.dark-theme-mode .pos-page-root div[style*="background: #f8fafc"],
+body.dark-theme-mode .pos-page-root div[style*="background:#f8fafc"] {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+  border-color: #1e293b !important;
+}
+
+/* Void and Place Order buttons style in Dark Mode */
+body.dark-theme-mode .pos-page-root button[style*="background: rgb(241, 245, 249)"],
+body.dark-theme-mode .pos-page-root button[style*="background: #f1f5f9"],
+body.dark-theme-mode .pos-page-root button[style*="background:#f1f5f9"] {
+  background-color: #334155 !important;
+  background: #334155 !important;
+  color: #cbd5e1 !important;
+  border-color: #475569 !important;
+}
+
+body.dark-theme-mode .pos-page-root button[style*="background: rgb(241, 245, 249)"]:hover,
+body.dark-theme-mode .pos-page-root button[style*="background: #f1f5f9"]:hover {
+  background-color: #475569 !important;
+  background: #475569 !important;
+  color: #ffffff !important;
+}
+
+/* Add-ons label colors */
+body.dark-theme-mode .pos-page-root span[style*="color: rgb(30, 74, 45)"],
+body.dark-theme-mode .pos-page-root span[style*="color: #1e4a2d"] {
+  color: #818cf8 !important;
+}
+
+/* POS cart items and payment button Dark Mode overrides */
+body.dark-theme-mode .pos-page-root div[style*="background: #fafaf9"],
+body.dark-theme-mode .pos-page-root div[style*="background:#fafaf9"],
+body.dark-theme-mode .pos-page-root div[style*="background: rgb(250, 250, 249)"] {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode .pos-page-root div[style*="background: #fafaf9"] span,
+body.dark-theme-mode .pos-page-root div[style*="background:#fafaf9"] span,
+body.dark-theme-mode .pos-page-root div[style*="background: rgb(250, 250, 249)"] span {
+  color: #cbd5e1 !important;
+}
+
+/* Selected active payment button background in Dark Mode */
+body.dark-theme-mode .pos-page-root div[style*="background:"][style*="border: 2px solid"] {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+  background: rgba(34, 197, 94, 0.15) !important;
+}
+
+/* Thumbnail container inside cart item */
+body.dark-theme-mode .pos-page-root div[style*="background: #f8f9fa"],
+body.dark-theme-mode .pos-page-root div[style*="background:#f8f9fa"],
+body.dark-theme-mode .pos-page-root div[style*="background: rgb(248, 249, 250)"] {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* POS note/options badge Dark Mode override */
+body.dark-theme-mode .pos-page-root span[style*="background: rgb(241, 248, 244)"],
+body.dark-theme-mode .pos-page-root span[style*="background:#f1f8f4"],
+body.dark-theme-mode .pos-page-root span[style*="background: #f1f8f4"] {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  color: #52c41a !important;
+}
+
+/* Closing & Orders Page (/order) Dark Mode overrides */
+body.dark-theme-mode div[style*="background: rgb(244, 246, 248)"],
+body.dark-theme-mode div[style*="background:#f4f6f8"],
+body.dark-theme-mode div[style*="background: #f4f6f8"] {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgb(244, 246, 248)"],
+body.dark-theme-mode.has-bg-wallpaper div[style*="background:#f4f6f8"],
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: #f4f6f8"] {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Page titles in closing page */
+body.dark-theme-mode h3.ant-typography,
+body.dark-theme-mode .ant-typography {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper h3.ant-typography,
+body.dark-theme-mode.has-bg-wallpaper .ant-typography {
+  color: #ffffff !important;
+}
+
+/* Filter container box */
+body.dark-theme-mode div[style*="background: rgb(248, 250, 252)"],
+body.dark-theme-mode div[style*="background:#f8fafc"],
+body.dark-theme-mode div[style*="background: #f8fafc"] {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgb(248, 250, 252)"],
+body.dark-theme-mode.has-bg-wallpaper div[style*="background:#f8fafc"],
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: #f8fafc"] {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* op-mini-card dark mode style */
+body.dark-theme-mode .op-mini-card {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode .op-mini-card div {
+  color: #cbd5e1 !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .op-mini-card {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #1e293b !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .op-mini-card div {
+  color: #1e293b !important;
+}
+
+/* Icon containers inside mini cards */
+body.dark-theme-mode .op-mini-card div[style*="background: rgb(241, 245, 249)"],
+body.dark-theme-mode .op-mini-card div[style*="background:#f1f5f9"],
+body.dark-theme-mode .op-mini-card div[style*="background: #f1f5f9"] {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .op-mini-card div[style*="background: rgb(241, 245, 249)"],
+body.dark-theme-mode.has-bg-wallpaper .op-mini-card div[style*="background:#f1f5f9"],
+body.dark-theme-mode.has-bg-wallpaper .op-mini-card div[style*="background: #f1f5f9"] {
+  background-color: rgba(30, 74, 45, 0.1) !important;
+  background: rgba(30, 74, 45, 0.1) !important;
+}
+
+/* Table overrides for closing page */
+body.dark-theme-mode.has-bg-wallpaper .premium-table,
+body.dark-theme-mode.has-bg-wallpaper .premium-table .ant-table,
+body.dark-theme-mode.has-bg-wallpaper .premium-table .ant-table-container,
+body.dark-theme-mode.has-bg-wallpaper .premium-table .ant-table-tbody > tr > td {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #1e293b !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .premium-table .ant-table-tbody > tr:hover > td {
+  background-color: rgba(30, 74, 45, 0.05) !important;
+}
+
+/* Tab segmented pill container and buttons */
+body.dark-theme-mode div[style*="background: rgb(241, 245, 249)"],
+body.dark-theme-mode div[style*="background:#f1f5f9"],
+body.dark-theme-mode div[style*="background: #f1f5f9"] {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+}
+
+body.dark-theme-mode .op-tab-btn {
+  background-color: transparent !important;
+  background: transparent !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+body.dark-theme-mode .op-tab-btn.active {
+  background-color: #059669 !important;
+  background: #059669 !important;
+  border-color: #059669 !important;
+  color: #ffffff !important;
+}
+
+/* Non-wallpaper table overrides for closing page */
+body.dark-theme-mode:not(.has-bg-wallpaper) .premium-table,
+body.dark-theme-mode:not(.not-has-bg-wallpaper) .premium-table .ant-table,
+body.dark-theme-mode:not(.has-bg-wallpaper) .premium-table .ant-table-container,
+body.dark-theme-mode:not(.has-bg-wallpaper) .premium-table .ant-table-content,
+body.dark-theme-mode:not(.has-bg-wallpaper) .premium-table .ant-table-tbody > tr > td {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+/* Table cell text color overrides for hardcoded dark slate styles in Dark Mode */
+body.dark-theme-mode .premium-table span[style*="color: #1e293b"],
+body.dark-theme-mode .premium-table span[style*="color:#1e293b"],
+body.dark-theme-mode .premium-table div[style*="color: #1e293b"],
+body.dark-theme-mode .premium-table div[style*="color:#1e293b"] {
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode .premium-table div[style*="color: #64748b"],
+body.dark-theme-mode .premium-table div[style*="color:#64748b"] {
+  color: #94a3b8 !important;
+}
+
+body.dark-theme-mode .premium-table .ant-typography {
+  color: #cbd5e1 !important;
+}
+
+/* Avatar default backgrounds inside table */
+body.dark-theme-mode .premium-table .ant-space div[style*="background: rgb(241, 245, 249)"],
+body.dark-theme-mode .premium-table .ant-space div[style*="background:#f1f5f9"] {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+}
+
+/* Table badge count overrides for Dark Mode */
+body.dark-theme-mode .premium-table .ant-scroll-number,
+body.dark-theme-mode .premium-table .ant-badge-count {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  color: #cbd5e1 !important;
+  box-shadow: none !important;
+  border: 1px solid #334155 !important;
+}
+
+/* Table summary row override in Dark Mode */
+body.dark-theme-mode .ant-table-summary tr,
+body.dark-theme-mode .ant-table-summary td {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode .ant-table-summary span,
+body.dark-theme-mode .ant-table-summary div,
+body.dark-theme-mode .ant-table-summary td strong {
+  color: #ffffff !important;
+}
+
+/* Ensure all table cell contents are light and visible in Dark Mode */
+body.dark-theme-mode .premium-table td div,
+body.dark-theme-mode .premium-table td span,
+body.dark-theme-mode .premium-table td {
+  color: #f1f5f9 !important;
+}
+
+/* KDS Dashboard Dark Mode styling overrides */
+body.dark-theme-mode .kds-top-bar h2,
+body.dark-theme-mode .kds-top-bar .ant-typography {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode .metric-glass-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .metric-glass-card {
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Light icon backgrounds inside metrics card */
+body.dark-theme-mode .metric-icon.active {
+  background: rgba(14, 165, 233, 0.15) !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-theme-mode .metric-icon.wait {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: #4ade80 !important;
+}
+
+body.dark-theme-mode .metric-icon.critical {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+}
+
+/* Values inside metric card */
+body.dark-theme-mode .m-val {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .m-val {
+  color: #1e293b !important;
+}
+
+body.dark-theme-mode .m-lbl {
+  color: #94a3b8 !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .m-lbl {
+  color: #475569 !important;
+}
+
+/* Order cards in KDS */
+body.dark-theme-mode .premium-kds-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .premium-kds-card {
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+body.dark-theme-mode .premium-kds-card .order-number {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .premium-kds-card .order-number {
+  color: #1e293b !important;
+}
+
+body.dark-theme-mode .premium-kds-card .ant-card-body {
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .premium-kds-card .ant-card-body {
+  color: #334155 !important;
+}
+
+/* Active Segmented control KDS */
+body.dark-theme-mode .premium-segmented {
+  background-color: #0f172a !important;
+  background: #0f172a !important;
+}
+
+/* Table QR Setup page Dark Mode overrides */
+body.dark-theme-mode div[style*="background: rgba(255, 255, 255, 0.85)"],
+body.dark-theme-mode div[style*="background:rgba(255, 255, 255, 0.85)"] {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode div[style*="background: rgba(255, 255, 255, 0.85)"] h2,
+body.dark-theme-mode div[style*="background: rgba(255, 255, 255, 0.85)"] span,
+body.dark-theme-mode div[style*="background: rgba(255, 255, 255, 0.85)"] button,
+body.dark-theme-mode div[style*="background: rgba(255, 255, 255, 0.85)"] div.ant-typography {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgba(255, 255, 255, 0.85)"],
+body.dark-theme-mode.has-bg-wallpaper div[style*="background:rgba(255, 255, 255, 0.85)"] {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgba(255, 255, 255, 0.85)"] h2,
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgba(255, 255, 255, 0.85)"] span,
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgba(255, 255, 255, 0.85)"] button,
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgba(255, 255, 255, 0.85)"] div.ant-typography {
+  color: #1e293b !important;
+}
+
+/* Products Page (/product) Header Dark Mode overrides */
+body.dark-theme-mode div[style*="background: rgba(255, 255, 255, 0.95)"],
+body.dark-theme-mode div[style*="background:rgba(255, 255, 255, 0.95)"] {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode div[style*="background: rgba(255, 255, 255, 0.95)"] h2,
+body.dark-theme-mode div[style*="background: rgba(255, 255, 255, 0.95)"] span,
+body.dark-theme-mode div[style*="background: rgba(255, 255, 255, 0.95)"] button,
+body.dark-theme-mode div[style*="background: rgba(255, 255, 255, 0.95)"] div.ant-typography {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgba(255, 255, 255, 0.95)"],
+body.dark-theme-mode.has-bg-wallpaper div[style*="background:rgba(255, 255, 255, 0.95)"] {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgba(255, 255, 255, 0.95)"] h2,
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgba(255, 255, 255, 0.95)"] span,
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgba(255, 255, 255, 0.95)"] button,
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: rgba(255, 255, 255, 0.95)"] div.ant-typography {
+  color: #1e293b !important;
+}
+
+/* Table action buttons overrides in Dark Mode */
+body.dark-theme-mode .ant-table-tbody button[style*="background: #f0fdf4"],
+body.dark-theme-mode .ant-table-tbody button[style*="background:#f0fdf4"],
+body.dark-theme-mode .ant-table-tbody button[style*="rgb(240, 253, 244)"],
+body.dark-theme-mode .ant-table-tbody button[style*="rgb(240,253,244)"] {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+  background: rgba(34, 197, 94, 0.15) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+}
+
+body.dark-theme-mode .ant-table-tbody button[style*="background: #eff6ff"],
+body.dark-theme-mode .ant-table-tbody button[style*="background:#eff6ff"],
+body.dark-theme-mode .ant-table-tbody button[style*="rgb(239, 246, 255)"],
+body.dark-theme-mode .ant-table-tbody button[style*="rgb(239,246,255)"] {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  background: rgba(59, 130, 246, 0.15) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+body.dark-theme-mode .ant-table-tbody button[style*="background: #fef2f2"],
+body.dark-theme-mode .ant-table-tbody button[style*="background:#fef2f2"],
+body.dark-theme-mode .ant-table-tbody button[style*="rgb(254, 242, 242)"],
+body.dark-theme-mode .ant-table-tbody button[style*="rgb(254,242,242)"] {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+/* Ant Design Alert component Dark Mode overrides */
+body.dark-theme-mode .ant-alert {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .ant-alert {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+body.dark-theme-mode .ant-alert-message,
+body.dark-theme-mode .ant-alert-description,
+body.dark-theme-mode .ant-alert span,
+body.dark-theme-mode .ant-alert p,
+body.dark-theme-mode .ant-alert li {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper .ant-alert-message,
+body.dark-theme-mode.has-bg-wallpaper .ant-alert-description,
+body.dark-theme-mode.has-bg-wallpaper .ant-alert span,
+body.dark-theme-mode.has-bg-wallpaper .ant-alert p,
+body.dark-theme-mode.has-bg-wallpaper .ant-alert li {
+  color: #1e293b !important;
+}
+
+/* Printer settings pro tip alert override in Dark Mode */
+body.dark-theme-mode div[style*="background: #fffbe6"],
+body.dark-theme-mode div[style*="background:#fffbe6"] {
+  background-color: #1e293b !important;
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: #fffbe6"],
+body.dark-theme-mode.has-bg-wallpaper div[style*="background:#fffbe6"] {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+body.dark-theme-mode div[style*="background: #fffbe6"] span,
+body.dark-theme-mode div[style*="background:#fffbe6"] span {
+  color: #ffffff !important;
+}
+
+body.dark-theme-mode.has-bg-wallpaper div[style*="background: #fffbe6"] span,
+body.dark-theme-mode.has-bg-wallpaper div[style*="background:#fffbe6"] span {
+  color: #1e293b !important;
 }

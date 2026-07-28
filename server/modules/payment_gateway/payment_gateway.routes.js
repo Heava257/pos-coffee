@@ -7,5 +7,6 @@ const authMiddleware = require("../../middlewares/auth.middleware");
 router.get("/", authMiddleware("settings"), c.getGateways);
 router.put("/configure", authMiddleware("settings"), c.updateGateway);
 router.put("/toggle", authMiddleware("settings"), c.toggleGatewayStatus);
+router.get("/transactions", authMiddleware("settings"), c.getTransactionLogs);
 
 module.exports = router;

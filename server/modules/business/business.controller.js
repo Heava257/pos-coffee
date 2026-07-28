@@ -12,7 +12,8 @@ exports.getList = async (req, res) => {
             SELECT b.*, p.name as plan_name,
                    (SELECT COUNT(*) FROM users WHERE business_id = b.id) as total_users,
                    (SELECT COUNT(*) FROM branches WHERE business_id = b.id) as total_branches,
-                   (SELECT end_date FROM subscriptions WHERE business_id = b.id AND status = 'active' ORDER BY end_date DESC LIMIT 1) as expiry_date
+                   (SELECT end_date FROM subscriptions WHERE business_id = b.id AND status = 'active' ORDER BY end_date DESC LIMIT 1) as expiry_date,
+                   (SELECT is_verified FROM users WHERE email = b.email LIMIT 1) as is_verified
             FROM businesses b
             JOIN subscription_plans p ON b.plan_id = p.id
             ORDER BY b.id DESC
@@ -181,7 +182,18 @@ exports.create = async (req, res) => {
                 console.error("Welcome Email background fail:", emailErr.message);
             }
 
-            res.json({ success: true, message: "Business and Owner created with 30-day active period!" });
+            const [newRows] = await db.query(`
+                SELECT b.*, p.name as plan_name,
+                       (SELECT COUNT(*) FROM users WHERE business_id = b.id) as total_users,
+                       (SELECT COUNT(*) FROM branches WHERE business_id = b.id) as total_branches,
+                       (SELECT end_date FROM subscriptions WHERE business_id = b.id AND status = 'active' ORDER BY end_date DESC LIMIT 1) as expiry_date,
+                       (SELECT is_verified FROM users WHERE email = b.email LIMIT 1) as is_verified
+                FROM businesses b
+                JOIN subscription_plans p ON b.plan_id = p.id
+                WHERE b.id = ?
+            `, [business_id]);
+
+            res.json({ success: true, message: "Business and Owner created with 30-day active period!", data: newRows[0] });
         } catch (err) {
             await conn.rollback();
             throw err;
@@ -205,7 +217,19 @@ exports.updateStatus = async (req, res) => {
         }
 
         await db.query("UPDATE businesses SET status = ? WHERE id = ?", [status, id]);
-        res.json({ message: `Business ${status} successfully` });
+
+        const [updatedRows] = await db.query(`
+            SELECT b.*, p.name as plan_name,
+                   (SELECT COUNT(*) FROM users WHERE business_id = b.id) as total_users,
+                   (SELECT COUNT(*) FROM branches WHERE business_id = b.id) as total_branches,
+                   (SELECT end_date FROM subscriptions WHERE business_id = b.id AND status = 'active' ORDER BY end_date DESC LIMIT 1) as expiry_date,
+                   (SELECT is_verified FROM users WHERE email = b.email LIMIT 1) as is_verified
+            FROM businesses b
+            JOIN subscription_plans p ON b.plan_id = p.id
+            WHERE b.id = ?
+        `, [id]);
+
+        res.json({ success: true, message: `Business ${status} successfully`, data: updatedRows[0] });
 
         // Trigger webhook if suspended
         if (status === 'suspended') {
@@ -314,7 +338,18 @@ exports.update = async (req, res) => {
             }
             
             await conn.commit();
-            res.json({ success: true, message: "Business updated successfully" });
+            const [updatedRows] = await db.query(`
+                SELECT b.*, p.name as plan_name,
+                       (SELECT COUNT(*) FROM users WHERE business_id = b.id) as total_users,
+                       (SELECT COUNT(*) FROM branches WHERE business_id = b.id) as total_branches,
+                       (SELECT end_date FROM subscriptions WHERE business_id = b.id AND status = 'active' ORDER BY end_date DESC LIMIT 1) as expiry_date,
+                       (SELECT is_verified FROM users WHERE email = b.email LIMIT 1) as is_verified
+                FROM businesses b
+                JOIN subscription_plans p ON b.plan_id = p.id
+                WHERE b.id = ?
+            `, [id]);
+
+            res.json({ success: true, message: "Business updated successfully", data: updatedRows[0] });
         } catch (err) {
             await conn.rollback();
             throw err;
@@ -386,7 +421,18 @@ exports.updatePlan = async (req, res) => {
             }
 
             await conn.commit();
-            res.json({ message: "Business subscription plan updated successfully" });
+            const [updatedRows] = await db.query(`
+                SELECT b.*, p.name as plan_name,
+                       (SELECT COUNT(*) FROM users WHERE business_id = b.id) as total_users,
+                       (SELECT COUNT(*) FROM branches WHERE business_id = b.id) as total_branches,
+                       (SELECT end_date FROM subscriptions WHERE business_id = b.id AND status = 'active' ORDER BY end_date DESC LIMIT 1) as expiry_date,
+                       (SELECT is_verified FROM users WHERE email = b.email LIMIT 1) as is_verified
+                FROM businesses b
+                JOIN subscription_plans p ON b.plan_id = p.id
+                WHERE b.id = ?
+            `, [business_id]);
+
+            res.json({ success: true, message: "Business subscription plan updated successfully", data: updatedRows[0] });
         } catch (err) {
             await conn.rollback();
             throw err;
@@ -604,6 +650,23 @@ exports.remove = async (req, res) => {
         logError("business.remove", error, res);
     }
 };
+
+exports.verifyOwner = async (req, res) => {
+    try {
+        const { business_id } = req.body;
+        if (!business_id) {
+            return res.status(400).json({ success: false, message: "Business ID is required" });
+        }
+        await db.query(
+            "UPDATE users SET is_verified = 1, verify_token = NULL WHERE business_id = ?",
+            [business_id]
+        );
+        res.json({ success: true, message: "Owner verified successfully!" });
+    } catch (error) {
+        logError("business.verifyOwner", error, res);
+    }
+};
+
 
 
 // Composite extensions added during modular migration

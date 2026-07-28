@@ -49,6 +49,11 @@ const start = () => {
                 logger: false
             });
 
+            // Prevent socket timeouts / connection errors from crashing the Node process
+            client.on("error", (err) => {
+                console.error("[EMAIL JOB IMAP CLIENT ERROR]", err.message);
+            });
+
             await client.connect();
             let lock = await client.getMailboxLock("INBOX");
 

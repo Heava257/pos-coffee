@@ -136,6 +136,12 @@ const DeveloperPortalPage = () => {
   const webhookColumns = [
     { title: "Endpoint URL", dataIndex: "url", key: "url", render: (t) => <Text strong>{t}</Text> },
     { 
+      title: "Webhook Secret Key", 
+      dataIndex: "secret", 
+      key: "secret", 
+      render: (t) => <Text code style={{ color: "#fa8c16" }}>{t || "N/A"}</Text> 
+    },
+    { 
       title: "Trigger Events", 
       dataIndex: "events", 
       key: "events", 
@@ -151,7 +157,10 @@ const DeveloperPortalPage = () => {
       title: "Actions", 
       key: "actions", 
       render: (_, r) => (
-        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteWebhook(r.id)}>Delete</Button>
+        <Space>
+          <Button size="small" icon={<CopyOutlined />} onClick={() => copyToClipboard(r.secret)}>Copy Secret</Button>
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteWebhook(r.id)}>Delete</Button>
+        </Space>
       ) 
     }
   ];

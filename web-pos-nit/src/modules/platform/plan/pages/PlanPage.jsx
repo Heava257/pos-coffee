@@ -174,10 +174,10 @@ const PlanPage = () => {
                 active_modules: values.active_modules ? values.active_modules.join(",") : ""
             };
             const res = await request("plans", "put", payload);
-            if (res && res.success) {
+            if (res && res.success && res.data) {
                 message.success("Plan updated successfully!");
                 setIsModalOpen(false);
-                fetchPlans();
+                setPlans(prev => prev.map(p => p.id === editingPlan.id ? res.data : p));
             }
         } catch (error) {
             console.error(error);
@@ -406,7 +406,7 @@ const PlanPage = () => {
                             className="premium-table"
                         />
                         <Divider />
-                        <div style={{ background: '#f4f1eb', padding: '20px', borderRadius: '16px' }}>
+                        <div style={{ background: 'var(--theme-milk-bg)', border: '1px solid rgba(255, 255, 255, 0.05)', padding: '20px', borderRadius: '16px' }}>
                             <Title level={4}>Plan Features Logic</Title>
                             <ul>
                                 <li><Text strong>Free Plan:</Text> Designed for single-shop testers. Hard limit of 1 branch.</li>
@@ -431,110 +431,6 @@ const PlanPage = () => {
                             loading={loading}
                         />
                     </TabPane>
-
-                    <TabPane
-                        tab={<span><SettingOutlined />Master Payment API</span>}
-                        key="payment_api"
-                    >
-                        <div style={{ padding: '0 10px' }}>
-                            <div style={{ marginBottom: 20 }}>
-                                <Title level={4}>Platform Master Payment Setup</Title>
-                                <Text type="secondary">Configure your bank credentials to receive plan upgrade payments from all clients.</Text>
-                            </div>
-
-                            <Card style={{ borderRadius: 16, border: '1px solid #f0f0f0', background: '#fdfdfd' }}>
-                                <Form form={systemForm} layout="vertical" onFinish={handleSaveSystemSettings}>
-                                    <Row gutter={24}>
-                                        <Col span={12}>
-                                            <Form.Item name="payway_merchant_id" label="Merchant ID" tooltip="Your ABA PayWay or Bank Merchant ID">
-                                                <Input prefix={<BankOutlined />} placeholder="e.g. M123456" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={12}>
-                                            <Form.Item name="payway_receiver_name" label="Receiver Name" tooltip="The name displayed to customers in bank apps">
-                                                <Input prefix={<TeamOutlined />} placeholder="e.g. COFFEE SaaS PLATFORM" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={24}>
-                                            <Form.Item name="payway_api_key" label="API Token Key (Master)" tooltip="The secret API key for dynamic transaction generation">
-                                                <Input.Password prefix={<KeyOutlined />} placeholder="Your Secret API Key" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={24}>
-                                            <Form.Item name="telegram_support_link" label="Telegram Support Link" tooltip="Link for clients to contact for manual/payment queries (e.g. https://t.me/your_telegram_username)">
-                                                <Input prefix={<MailOutlined />} placeholder="e.g. https://t.me/your_telegram_username" />
-                                            </Form.Item>
-                                        </Col>
-
-                                        <Col span={24}>
-                                            <Divider orientation="left" style={{ fontSize: 13, color: '#999' }}>ABA Personal Account Notification Reader (Gmail IMAP)</Divider>
-                                        </Col>
-                                        <Col span={12}>
-                                            <Form.Item name="payment_imap_user" label="Gmail Address" tooltip="Gmail account that receives ABA transaction email notifications">
-                                                <Input placeholder="e.g. growme.payment@gmail.com" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={12}>
-                                            <Form.Item name="payment_imap_pass" label="Gmail App Password" tooltip="Gmail App Password (16 characters) created in Google Account Settings">
-                                                <Input.Password placeholder="e.g. abcd efgh ijkl mnop" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={12}>
-                                            <Form.Item name="payment_imap_host" label="IMAP Host" tooltip="IMAP server address. Default is imap.gmail.com">
-                                                <Input placeholder="imap.gmail.com" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={12}>
-                                            <Form.Item name="payment_imap_port" label="IMAP Port" tooltip="IMAP port. Default is 993">
-                                                <Input placeholder="993" />
-                                            </Form.Item>
-                                        </Col>
-
-                                        <Col span={24}>
-                                            <Divider orientation="left" style={{ fontSize: 13, color: '#999' }}>Master KHQR Image (Fallback)</Divider>
-                                            <Form.Item label="Upload Platform QR">
-                                                <Upload
-                                                    listType="picture-card"
-                                                    fileList={fileList}
-                                                    onChange={({ fileList }) => setFileList(fileList)}
-                                                    beforeUpload={() => false}
-                                                    maxCount={1}
-                                                >
-                                                    {fileList.length < 1 && (
-                                                        <div>
-                                                            <PlusOutlined />
-                                                            <div style={{ marginTop: 8 }}>Upload QR</div>
-                                                        </div>
-                                                    )}
-                                                </Upload>
-                                                <Text type="secondary" style={{ fontSize: 11 }}>This image will be shown if dynamic QR generation is disabled or fails.</Text>
-                                            </Form.Item>
-                                        </Col>
-                                    </Row>
-                                    <Button
-                                        type="primary"
-                                        htmlType="submit"
-                                        loading={sysLoading}
-                                        icon={<CheckCircleOutlined />}
-                                        style={{ height: 40, borderRadius: 8, background: '#1e4a2d' }}
-                                    >
-                                        Save Master Configuration
-                                    </Button>
-                                </Form>
-                            </Card>
-
-                            <div style={{ marginTop: 24, padding: 16, background: '#e6f7ff', borderRadius: 12, border: '1px solid #91d5ff' }}>
-                                <Space align="start">
-                                    <QrcodeOutlined style={{ fontSize: 20, color: '#1890ff', marginTop: 4 }} />
-                                    <div>
-                                        <Text strong>Automatic Amount Detection</Text><br />
-                                        <Text size="small" type="secondary">When configured, the system will automatically generate a dynamic KHQR with the exact plan price (e.g. $29.00) when a client clicks upgrade. This prevents manual entry errors and speeds up the checkout process.</Text>
-                                    </div>
-                                </Space>
-                            </div>
-                        </div>
-                    </TabPane>
-
                     <TabPane
                         tab={<span><MonitorOutlined />Landing Page Setup</span>}
                         key="landing_page_setup"

@@ -69,12 +69,20 @@ exports.create = async (req, res) => {
     try {
         const { business_id, branch_id } = req;
         const { expense_type_id, amount, payment_method, description, expense_date, category_class, shift_id } = req.body;
-        const [data] = await db.query(
+        const [result] = await db.query(
             "INSERT INTO expense (business_id, branch_id, shift_id, expense_type_id, category_class, amount, payment_method, description, expense_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [business_id, branch_id, shift_id || null, expense_type_id, category_class || 'Operational', amount, payment_method || 'Cash', description, expense_date]
         );
 
-        res.json({ success: true, message: "Expense recorded!", data });
+        const [newRows] = await db.query(`
+            SELECT e.*, et.name as type_name, b.name as branch_name
+            FROM expense e
+            LEFT JOIN expense_type et ON e.expense_type_id = et.id
+            LEFT JOIN branches b ON e.branch_id = b.id
+            WHERE e.id = ?
+        `, [result.insertId]);
+
+        res.json({ success: true, message: "Expense recorded!", data: newRows[0] });
     } catch (error) {
         logError("expense.create", error, res);
     }
@@ -89,7 +97,16 @@ exports.update = async (req, res) => {
             "UPDATE expense SET expense_type_id=?, category_class=?, amount=?, payment_method=?, description=?, expense_date=?, shift_id=? WHERE id=? AND business_id=?",
             [expense_type_id, category_class || 'Operational', amount, payment_method || 'Cash', description, expense_date, shift_id || null, id, business_id]
         );
-        res.json({ success: true, message: "Expense updated!" });
+
+        const [updatedRows] = await db.query(`
+            SELECT e.*, et.name as type_name, b.name as branch_name
+            FROM expense e
+            LEFT JOIN expense_type et ON e.expense_type_id = et.id
+            LEFT JOIN branches b ON e.branch_id = b.id
+            WHERE e.id = ?
+        `, [id]);
+
+        res.json({ success: true, message: "Expense updated!", data: updatedRows[0] });
     } catch (error) {
         logError("expense.update", error, res);
     }

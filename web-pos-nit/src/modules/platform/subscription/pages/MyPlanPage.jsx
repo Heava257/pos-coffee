@@ -100,7 +100,7 @@ function MyPlanPage() {
     };
 
     const fetchAvailablePlans = async () => {
-        const res = await request("plans", "get");
+        const res = await request("plans/public", "get");
         if (res && res.success) setPlans(res.plans);
     };
 
@@ -877,7 +877,7 @@ const handleDownloadInvoice = async (tranId) => {
                             ) : (
                                 <div style={{ marginBottom: 12, textAlign: 'left', background: '#f9f9f9', padding: '10px 14px', borderRadius: '10px', border: '1px solid #eee' }}>
                                     <Text type="secondary" style={{ fontSize: '11.5px', display: 'block', marginBottom: '8px', lineHeight: '1.4' }}>
-                                        📌 <strong>ចំណាំ៖</strong> សូមផ្ទេរប្រាក់ឱ្យបានត្រឹមត្រូវទៅតាម QR Code ខាងលើ។ ប្រព័ន្ធនឹងស្កេនអ៊ីមែល និងធ្វើការ Upgrade គម្រោងជូនលោកអ្នកស្វ័យប្រវត្តក្នុងរយៈពេល ១ ទៅ ២ នាទី។
+                                        📌 <strong>ចំណាំ៖</strong> សូមផ្ទេរប្រាក់ឱ្យបានត្រឹមត្រូវទៅតាម QR Code ខាងលើ Pres. ប្រព័ន្ធនឹងស្កេនអ៊ីមែល និងធ្វើការ Upgrade គម្រោងជូនលោកអ្នកស្វ័យប្រវត្តក្នុងរយៈពេល ១ ទៅ ២ នាទី។
                                     </Text>
                                     <Button
                                         type="primary"
@@ -885,9 +885,19 @@ const handleDownloadInvoice = async (tranId) => {
                                         block
                                         style={{ background: '#24a1de', border: 'none', borderRadius: '10px', height: 42, fontWeight: 700, fontSize: '13.5px' }}
                                         onClick={() => {
-                                            const cleanLink = telegramLink.startsWith("http") ? telegramLink : `https://t.me/${telegramLink.replace("@", "")}`;
                                             const textMsg = `សួស្តីបង! ខ្ញុំបានបង់ប្រាក់សម្រាប់គម្រោង ${paymentSession.plan_name} ចំនួន $${paymentSession.amount} រួចហើយ។\n\nនេះជាលេខកូដប្រតិបត្តិការរបស់ខ្ញុំ៖ ${paymentSession.tran_id}`;
-                                            window.open(`${cleanLink}?text=${encodeURIComponent(textMsg)}`, "_blank");
+                                            
+                                            // Extract username to support auto-prefilling on Telegram
+                                            let username = telegramLink.replace(/https?:\/\/t\.me\//i, "").replace(/@/g, "").split("/")[0].split("?")[0];
+                                            if (!username) username = "growme_support";
+                                            
+                                            const finalLink = `https://t.me/${username}?text=${encodeURIComponent(textMsg)}`;
+
+                                            // Copy to clipboard as a silent fallback
+                                            navigator.clipboard.writeText(textMsg).catch(err => console.error(err));
+
+                                            message.success("កំពុងបើក Telegram និងបំពេញសារជូនដោយស្វ័យប្រវត្ត...");
+                                            window.open(finalLink, "_blank");
                                         }}
                                     >
                                         💬 ផ្ញើវិក្កយបត្រទៅកាន់ Telegram
@@ -900,7 +910,7 @@ const handleDownloadInvoice = async (tranId) => {
                                 <Text code style={{ fontSize: 10 }}>{paymentSession.tran_id}</Text>
                             </div>
 
-                            {import.meta.env.DEV && (
+                            {import.meta.env.DEV && (sys.payway_allow_simulation === "true" || sys.payway_allow_simulation === true) && (
                                 <>
                                     <Divider plain style={{ color: "#999", fontSize: 11, margin: "10px 0" }}>Developer Testing</Divider>
                                     <Button

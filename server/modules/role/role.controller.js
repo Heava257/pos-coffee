@@ -50,9 +50,18 @@ exports.create = async (req, res) => {
     const target_business_id = (my_business_id === 1 && business_id) ? business_id : my_business_id;
 
     const sql = "INSERT INTO roles (business_id, name, code) VALUES (?, ?, ?)";
-    const [data] = await db.query(sql, [target_business_id, name, code]);
+    const [result] = await db.query(sql, [target_business_id, name, code]);
+
+    const [newRows] = await db.query(`
+      SELECT r.*, b.name as business_name 
+      FROM roles r 
+      LEFT JOIN businesses b ON r.business_id = b.id 
+      WHERE r.id = ?
+    `, [result.insertId]);
+
     res.json({
-      data: data,
+      success: true,
+      data: newRows[0],
       message: "Insert success!",
     });
   } catch (error) {
@@ -74,9 +83,18 @@ exports.update = async (req, res) => {
       ? [name, code, id]
       : [name, code, id, my_business_id];
 
-    const [data] = await db.query(sql, params);
+    await db.query(sql, params);
+
+    const [updatedRows] = await db.query(`
+      SELECT r.*, b.name as business_name 
+      FROM roles r 
+      LEFT JOIN businesses b ON r.business_id = b.id 
+      WHERE r.id = ?
+    `, [id]);
+
     res.json({
-      data: data,
+      success: true,
+      data: updatedRows[0],
       message: "Data update success!",
     });
   } catch (error) {

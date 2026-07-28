@@ -106,12 +106,16 @@ const ExpensePage = () => {
             };
 
             const res = await request("expense", method, payload);
-            if (res) {
+            if (res && res.success && res.data) {
                 message.success(res.message);
                 setVisible(false);
                 form.resetFields();
+                if (editId) {
+                    setList(prev => prev.map(item => item.id === editId ? res.data : item));
+                } else {
+                    setList(prev => [res.data, ...prev]);
+                }
                 setEditId(null);
-                getList();
             }
         } catch (error) {
             message.error("Operation failed");
@@ -148,7 +152,7 @@ const ExpensePage = () => {
                 const res = await request("expense", "delete", { id });
                 if (res) {
                     message.success("Record voided successfully");
-                    getList();
+                    setList(prev => prev.filter(item => item.id !== id));
                 }
             }
         });

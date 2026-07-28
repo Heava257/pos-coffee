@@ -140,7 +140,19 @@ exports.register = async (req, res) => {
             params.push(id, bizId);
 
             await db.query(sql, params);
-            return res.json({ message: "User updated successfully" });
+
+            const [updatedRows] = await db.query(`
+                SELECT u.id, u.business_id, u.branch_id, u.name, u.email, u.status, u.tel, u.address, 
+                       u.image, u.is_super_admin, u.role_id, r.name as role_name, b.name as branch_name,
+                       biz.name as business_name, u.created_at
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                LEFT JOIN branches b ON u.branch_id = b.id
+                LEFT JOIN businesses biz ON u.business_id = biz.id
+                WHERE u.id = ?
+            `, [id]);
+
+            return res.json({ success: true, message: "User updated successfully", user: updatedRows[0] });
         } else {
             // Create new staff — check plan limits
             const { checkPlanLimit } = require("../../src/util/helper");
@@ -158,12 +170,23 @@ exports.register = async (req, res) => {
 
             const hashedPassword = await bcrypt.hash(password, 12);
             const defaultPin = pin_code || '1234';
-            await db.query(`
+            const [result] = await db.query(`
                 INSERT INTO users (business_id, branch_id, name, email, password, pin_code, role_id, is_super_admin, address, tel, status, image, is_verified) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             `, [bizId, branch_id, name, username, hashedPassword, defaultPin, role_id, is_super_admin || 0, address, tel, statusVal, image]);
 
-            return res.json({ message: "User created successfully!" });
+            const [newRows] = await db.query(`
+                SELECT u.id, u.business_id, u.branch_id, u.name, u.email, u.status, u.tel, u.address, 
+                       u.image, u.is_super_admin, u.role_id, r.name as role_name, b.name as branch_name,
+                       biz.name as business_name, u.created_at
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                LEFT JOIN branches b ON u.branch_id = b.id
+                LEFT JOIN businesses biz ON u.business_id = biz.id
+                WHERE u.id = ?
+            `, [result.insertId]);
+
+            return res.json({ success: true, message: "User created successfully!", user: newRows[0] });
         }
     } catch (error) {
         logError("user.register", error, res);

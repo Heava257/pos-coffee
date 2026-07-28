@@ -20,6 +20,7 @@ function PaymentResultPage() {
     const [status, setStatus] = useState("checking"); // 'checking' | 'paid' | 'pending' | 'failed'
     const [planName, setPlanName] = useState("");
     const [pollCount, setPollCount] = useState(0);
+    const [allowSimulation, setAllowSimulation] = useState(false);
     const MAX_POLLS = 10;
 
     useEffect(() => {
@@ -38,6 +39,7 @@ function PaymentResultPage() {
 
         const res = await request(`payment/status/${tran_id}`, "get");
         if (res && res.success) {
+            setAllowSimulation(res.allow_simulation || false);
             if (res.is_paid) {
                 setPlanName(res.plan_name);
                 setStatus("paid");
@@ -96,7 +98,7 @@ function PaymentResultPage() {
                             Please wait while we confirm your transaction with PayWay.
                         </Text>
                         {/* DEV simulate button */}
-                        {tran_id && (
+                        {tran_id && import.meta.env.DEV && allowSimulation && (
                             <div style={{ marginTop: 32 }}>
                                 <Alert
                                     type="warning"

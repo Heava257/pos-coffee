@@ -7,8 +7,21 @@ dotenv.config();
  * ដើម្បីជៀសវាងការបិទ Port ពីសំណាក់ cloud hosting providers និងដើម្បីអាចផ្ញើទៅកាន់ Personal Email បានយ៉ាងងាយស្រួល។
  */
 
-const PLATFORM_SENDER_EMAIL = process.env.SENDER_EMAIL || "pongchiva257@gmail.com";
-const BREVO_API_KEY = process.env.BREVO_API_KEY || process.env.SMTP_PASS; // Fallback to SMTP_PASS if it's the API key
+const requireEnv = (key, devDefault) => {
+  const val = process.env[key];
+  if (!val) {
+    if (process.env.APP_ENV === 'production') {
+      throw new Error(`[CONFIG] Missing critical production environment variable: ${key}.`);
+    }
+    if (devDefault !== undefined) return devDefault;
+    throw new Error(`[CONFIG] Missing required environment variable: ${key}. Set it in your .env file.`);
+  }
+  return val;
+};
+
+const PLATFORM_SENDER_EMAIL = requireEnv('SENDER_EMAIL', 'info@growme.com');
+const BREVO_API_KEY = requireEnv('BREVO_API_KEY', process.env.SMTP_PASS || 'mock_api_key');
+
 
 const sendBrevoAPI = async ({ to, subject, htmlContent, senderName }) => {
     try {

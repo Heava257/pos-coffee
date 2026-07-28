@@ -53,13 +53,14 @@ exports.create = async (req, res) => {
         const qr_api_url = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr_code_url)}`;
 
         const sql = "INSERT INTO branch_tables (business_id, branch_id, table_name, qr_code_url) VALUES (?, ?, ?, ?)";
-        const [data] = await db.query(sql, [business_id, branch_id, table_name, qr_code_url]);
+        const [result] = await db.query(sql, [business_id, branch_id, table_name, qr_code_url]);
+
+        const [newRows] = await db.query("SELECT * FROM branch_tables WHERE id = ?", [result.insertId]);
 
         res.json({
             success: true,
             message: "Table created successfully!",
-            id: data.insertId,
-            qr_code_url: qr_api_url
+            data: newRows[0]
         });
     } catch (error) {
         logError("table.create", error, res);

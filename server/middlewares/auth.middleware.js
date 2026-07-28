@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config');
 const db = require('../config/database');
+const crypto = require('crypto');
 const { getCache, setCache } = require('../src/util/redisClient');
 
 // H-7 FIX: Permission cache lives in Redis, not in-process memory.
@@ -16,9 +17,10 @@ const authMiddleware = (permission_name) => {
 
         if (client_id && client_secret) {
             try {
+                const hashed_secret = crypto.createHash("sha256").update(client_secret).digest("hex");
                 const [keys] = await db.query(
                     "SELECT id, name, scopes, status FROM developer_keys WHERE client_id = ? AND client_secret = ?",
-                    [client_id, client_secret]
+                    [client_id, hashed_secret]
                 );
 
                 if (keys.length === 0) {

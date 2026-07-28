@@ -241,7 +241,10 @@ function UserPage() {
         const res = await request("user", "delete", { id: item.id });
         if (res && !res.error) {
           message.success(t.success);
-          getList();
+          setState(prev => ({
+            ...prev,
+            list: prev.list.filter(u => u.id !== item.id)
+          }));
         } else {
           message.error(res.message || t.failed);
         }
@@ -315,9 +318,19 @@ function UserPage() {
     if (isUpdate) params.append("id", currentUserId);
 
     const res = await request("user", isUpdate ? "put" : "post", params);
-    if (res && !res.error) {
+    if (res && !res.error && res.user) {
       message.success(t.success);
-      getList();
+      if (isUpdate) {
+        setState(prev => ({
+          ...prev,
+          list: prev.list.map(u => u.id === currentUserId ? res.user : u)
+        }));
+      } else {
+        setState(prev => ({
+          ...prev,
+          list: [res.user, ...prev.list]
+        }));
+      }
       handleCloseModal();
     } else {
       message.error(res.message || t.failed);

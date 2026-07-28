@@ -90,7 +90,9 @@ const SaasLandingPage = () => {
 
   useEffect(() => {
     if (profile) {
-      const isAdmin = profile.is_super_admin === 1 || ["Owner", "Executive", "Admin"].includes(profile.role_name);
+      const isAdmin = profile?.is_super_admin === 1 ||
+        profile?.business_id === 1 ||
+        ["Owner", "Executive", "Admin", "PlatForm Owner", "Platform Owner"].includes(profile?.role_name);
       navigate(isAdmin ? "/dashboard" : "/invoices");
     }
   }, [profile]);

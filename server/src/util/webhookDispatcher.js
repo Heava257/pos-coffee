@@ -1,4 +1,5 @@
 const axios = require("axios");
+const crypto = require("crypto");
 const { db } = require("./helper");
 
 /**
@@ -13,7 +14,7 @@ const dispatch = async (event, payload) => {
   try {
     // 1. Fetch active webhooks from database
     const [hooks] = await db.query(
-      "SELECT id, url, events FROM webhook_endpoints WHERE status = 'active'"
+      "SELECT id, url, secret, events FROM webhook_endpoints WHERE status = 'active'"
     );
 
     for (const hook of hooks) {
@@ -28,17 +29,31 @@ const dispatch = async (event, payload) => {
       if (events.includes(event)) {
         console.log(`[Webhook Dispatcher] Dispatching event '${event}' to ${hook.url}...`);
         
-        // Trigger the HTTP POST call in the background
-        axios.post(hook.url, {
-          id: `wh_${Math.random().toString(36).substr(2, 9)}`,
+        const payloadData = {
+          id: `wh_${crypto.randomBytes(8).toString("hex")}`,
           event: event,
           created_at: new Date().toISOString(),
           data: payload
-        }, {
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "PlatformOS-Webhook-Dispatcher/2.0"
-          },
+        };
+        const bodyString = JSON.stringify(payloadData);
+
+        const headers = {
+          "Content-Type": "application/json",
+          "User-Agent": "PlatformOS-Webhook-Dispatcher/2.0"
+        };
+
+        // Compute HMAC-SHA256 signature if webhook secret is configured
+        if (hook.secret) {
+          const signature = crypto
+            .createHmac("sha256", hook.secret)
+            .update(bodyString)
+            .digest("hex");
+          headers["X-Platform-Signature"] = signature;
+        }
+
+        // Trigger the HTTP POST call in the background
+        axios.post(hook.url, bodyString, {
+          headers,
           timeout: 5000 // 5 seconds timeout
         }).then(response => {
           console.log(`[Webhook Dispatcher] Event '${event}' successfully delivered to ${hook.url} (Status: ${response.status})`);

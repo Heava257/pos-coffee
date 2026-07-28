@@ -40,11 +40,13 @@ exports.create = async (req, res) => {
       (business_id, branch_id, name, code, unit, price, qty, min_stock, par_level, status, image) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-        const [data] = await db.query(sql, [
+        const [result] = await db.query(sql, [
             business_id, branch_id, name, code, unit, price || 0, qty || 0, min_stock || 0, par_level || 0, status || 1, image
         ]);
 
-        res.json({ success: true, message: "Raw material added successfully!", data });
+        const [newRows] = await db.query("SELECT * FROM raw_material WHERE id = ?", [result.insertId]);
+
+        res.json({ success: true, message: "Raw material added successfully!", data: newRows[0] });
     } catch (error) {
         logError("raw_material.create", error, res);
     }
@@ -65,7 +67,9 @@ exports.update = async (req, res) => {
             name, code, unit, price, qty, min_stock, par_level, status, image, id, business_id
         ]);
 
-        res.json({ success: true, message: "Raw material updated successfully!" });
+        const [updatedRows] = await db.query("SELECT * FROM raw_material WHERE id = ?", [id]);
+
+        res.json({ success: true, message: "Raw material updated successfully!", data: updatedRows[0] });
     } catch (error) {
         logError("raw_material.update", error, res);
     }

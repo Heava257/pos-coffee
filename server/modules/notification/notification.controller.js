@@ -79,12 +79,14 @@ exports.createNotification = async (req, res) => {
       final_business_id = target_business_id === "all" ? null : target_business_id;
     }
 
-    await db.query(
+    const [result] = await db.query(
       "INSERT INTO system_notifications (business_id, title, message, type) VALUES (?, ?, ?, ?)",
       [final_business_id, title, message, type || 'system']
     );
 
-    res.json({ success: true, message: "Notification created successfully" });
+    const [newRows] = await db.query("SELECT * FROM system_notifications WHERE id = ?", [result.insertId]);
+
+    res.json({ success: true, message: "Notification created successfully", notification: newRows[0] });
   } catch (error) {
     logError("notification.createNotification", error, res);
   }

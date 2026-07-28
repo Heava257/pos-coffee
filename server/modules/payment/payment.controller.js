@@ -53,21 +53,29 @@ exports.createPayment = async (req, res) => {
         await ensurePaymentsTable(conn);
 
         const { business_id } = req;
-        const { plan_id, duration_days = 30 } = req.body;
+        const { plan_id } = req.body;
 
         if (!plan_id) {
             return res.status(400).json({ success: false, message: "plan_id is required" });
         }
 
-        // Fetch plan price
+        // Fetch plan details including billing cycle
         const [plans] = await conn.query(
-            "SELECT id, name, price FROM subscription_plans WHERE id = ?",
+            "SELECT id, name, price, billing_cycle FROM subscription_plans WHERE id = ?",
             [plan_id]
         );
         if (!plans.length) {
             return res.status(404).json({ success: false, message: "Plan not found" });
         }
         const plan = plans[0];
+
+        // Determine secure duration_days based on plan billing cycle from DB
+        let duration_days = 30; // default Monthly
+        if (plan.billing_cycle === "yearly") {
+            duration_days = 365;
+        } else if (plan.billing_cycle === "lifetime") {
+            duration_days = 36500; // 100 years
+        }
 
         // Validate: cannot downgrade
         const [biz] = await conn.query("SELECT plan_id FROM businesses WHERE id = ?", [business_id]);
@@ -106,26 +114,51 @@ exports.createPayment = async (req, res) => {
         const sysSettings = {};
         sysRows.forEach(row => sysSettings[row.sett_key] = row.sett_value);
 
-        const active_merchant_id = sysSettings.payway_merchant_id || config.payway.merchant_id;
-        const active_api_key = sysSettings.payway_api_key || config.payway.api_key;
+        // Fetch ABA PayWay credentials and status from payment_gateways table
+        const [gwRows] = await conn.query(
+            "SELECT merchant_id, api_key, status FROM payment_gateways WHERE name = 'ABA PayWay'"
+        );
+        let active_merchant_id = null;
+        let active_api_key = null;
 
-        // Build PayWay payload
-        const hash = crypto.createHmac("sha512", active_api_key)
-            .update(`merchant_id=${active_merchant_id}&tran_id=${tran_id}&amount=${amount}&req_time=${req_time}`)
-            .digest("base64");
+        if (gwRows.length > 0) {
+            // Row exists: respect the status set by the admin
+            if (gwRows[0].status === "active") {
+                active_merchant_id = gwRows[0].merchant_id;
+                active_api_key = gwRows[0].api_key;
+            }
+        } else {
+            // Only fall back to config/.env if no DB gateway record exists at all
+            active_merchant_id = sysSettings.payway_merchant_id || config.payway.merchant_id || null;
+            active_api_key = sysSettings.payway_api_key || config.payway.api_key || null;
+        }
 
-        const payway_payload = {
-            merchant_id: active_merchant_id,
-            tran_id,
-            amount,
-            req_time,
-            items: JSON.stringify([{ name: plan.name, quantity: 1, price: amount }]),
-            currency: "USD",
-            return_url: config.payway.return_url,
-            cancel_url: `${config.app_url}/my-plan`,
-            continue_success_url: `${config.app_url}/payment/result?tran_id=${tran_id}`,
-            hash,
-        };
+        // Build PayWay payload only if credentials are set
+        let payway_payload = null;
+        if (active_merchant_id && active_api_key) {
+            const hash = crypto.createHmac("sha512", active_api_key)
+                .update(`merchant_id=${active_merchant_id}&tran_id=${tran_id}&amount=${amount}&req_time=${req_time}`)
+                .digest("base64");
+
+            payway_payload = {
+                merchant_id: active_merchant_id,
+                tran_id,
+                amount,
+                req_time,
+                items: JSON.stringify([{ name: plan.name, quantity: 1, price: amount }]),
+                currency: "USD",
+                return_url: config.payway.return_url,
+                cancel_url: `${config.app_url}/my-plan`,
+                continue_success_url: `${config.app_url}/payment/result?tran_id=${tran_id}`,
+                hash,
+            };
+
+            // Set for frontend dynamic QR generator
+            sysSettings.payway_merchant_id = active_merchant_id;
+        } else {
+            // If inactive, ensure we clean it so frontend falls back to static QR
+            delete sysSettings.payway_merchant_id;
+        }
 
         conn.release();
         return res.json({
@@ -134,13 +167,13 @@ exports.createPayment = async (req, res) => {
             tran_id,
             amount,
             plan_name: plan.name,
-            payway_payload,                       // Frontend uses this to POST to PayWay
+            payway_payload,                       // Frontend uses this to POST to PayWay (null if inactive)
             payway_url: config.payway.base_url,   // PayWay checkout endpoint
             system_settings: sysSettings,         // For Dynamic KHQR on frontend
         });
 
     } catch (error) {
-        conn.release();
+        if (conn) conn.release();
         logError("payment.createPayment", error, res);
     }
 };
@@ -239,12 +272,18 @@ exports.checkPaymentStatus = async (req, res) => {
         }
 
         const payment = rows[0];
+        
+        // Fetch payway_allow_simulation setting from DB
+        const [sysRows] = await db.query("SELECT sett_value FROM system_settings WHERE sett_key = 'payway_allow_simulation'");
+        const allowSimulation = sysRows.length > 0 && sysRows[0].sett_value === "true";
+
         res.json({
             success: true,
             status: payment.status,      // 'pending' | 'paid' | 'failed'
             plan_name: payment.plan_name,
             amount: payment.amount,
             is_paid: payment.status === "paid",
+            allow_simulation: allowSimulation,
         });
     } catch (error) {
         logError("payment.checkPaymentStatus", error, res);
@@ -256,12 +295,20 @@ exports.checkPaymentStatus = async (req, res) => {
 //    Manually mark a payment as paid (for testing without real PayWay)
 // ══════════════════════════════════════════════════════════════════════
 exports.simulateSuccess = async (req, res) => {
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" || process.env.APP_ENV === "production") {
         return res.status(403).json({ message: "Not available in production" });
     }
 
     const conn = await db.getConnection();
     try {
+        // Fetch payway_allow_simulation setting from DB
+        const [sysRows] = await conn.query("SELECT sett_value FROM system_settings WHERE sett_key = 'payway_allow_simulation'");
+        const allowSimulation = sysRows.length > 0 && sysRows[0].sett_value === "true";
+        if (!allowSimulation) {
+            conn.release();
+            return res.status(403).json({ success: false, message: "Payment simulation is disabled by the Platform Admin." });
+        }
+
         const { tran_id } = req.body;
 
         const [rows] = await conn.query("SELECT * FROM payments WHERE tran_id = ?", [tran_id]);
