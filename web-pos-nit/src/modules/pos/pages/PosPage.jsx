@@ -38,6 +38,7 @@ import PrintInvoice from "@/modules/pos/components/PrintInvoice";
 import PrintKitchenTicket from "@/modules/pos/components/PrintKitchenTicket";
 import PrintShiftReport from "@/modules/pos/components/PrintShiftReport";
 import PrintLabel from "@/modules/pos/components/PrintLabel";
+import { addOfflineOrder, getOfflineOrders, deleteOfflineOrder } from "@/shared/utils/offlineDb";
 import QRPaymentModal from "@/modules/pos/components/QRPaymentModal";
 import { OpenShiftModal, CloseShiftModal } from "@/modules/pos/components/ShiftModal";
 import { PriceDisplay, useExchangeRate } from "@/app/providers/ExchangeRateProvider";
@@ -1173,39 +1174,34 @@ function PosPage() {
   }, [userId, profile]);
 
   const syncOfflineOrders = async () => {
-    const queueStr = localStorage.getItem("offline_orders_queue");
-    if (!queueStr) return;
-
     let queue = [];
     try {
-      queue = JSON.parse(queueStr);
+      queue = await getOfflineOrders();
     } catch(e) {
       queue = [];
     }
 
     if (queue.length === 0) return;
+    if (!navigator.onLine) return;
 
     message.loading({ content: `Syncing ${queue.length} offline orders...`, key: 'offline-sync' });
 
     let successCount = 0;
-    const remainingQueue = [];
 
     for (const order of queue) {
       try {
-        const { offline, order_no, ...syncPayload } = order;
+        const { id, offline, order_no, ...syncPayload } = order;
         const res = await request("order", "post", syncPayload);
         if (res && !res.error) {
+          await deleteOfflineOrder(id);
           successCount++;
-        } else {
-          remainingQueue.push(order);
         }
       } catch (err) {
-        remainingQueue.push(order);
+        console.error("Failed to sync offline order:", err);
       }
     }
 
     if (successCount > 0) {
-      localStorage.setItem("offline_orders_queue", JSON.stringify(remainingQueue));
       message.success({ 
         content: `Successfully synchronized ${successCount} offline orders to server!`, 
         key: 'offline-sync', 
@@ -3011,13 +3007,6 @@ function PosPage() {
 
         if (offlineActive && isNetworkErr) {
           const offlineOrderNo = `OFF-${Date.now()}`;
-          const cachedQueueStr = localStorage.getItem("offline_orders_queue") || "[]";
-          let cachedQueue = [];
-          try {
-            cachedQueue = JSON.parse(cachedQueueStr);
-          } catch(e) {
-            cachedQueue = [];
-          }
 
           const offlineOrder = {
             ...param,
@@ -3026,8 +3015,11 @@ function PosPage() {
             created_at: new Date().toISOString()
           };
 
-          cachedQueue.push(offlineOrder);
-          localStorage.setItem("offline_orders_queue", JSON.stringify(cachedQueue));
+          try {
+            await addOfflineOrder(offlineOrder);
+          } catch (dbErr) {
+            console.error("Failed to cache offline order in IndexedDB:", dbErr);
+          }
 
           window.dispatchEvent(new Event("order-completed"));
           const key = `open${Date.now()}`;
