@@ -234,7 +234,7 @@ const MatrixGrid = ({ data, planMappings, modMappings, onToggle }) => {
     const filteredPerms = data.permissions.filter(p => p.name?.toLowerCase().includes(searchText.toLowerCase()) || p.route_key?.toLowerCase().includes(searchText.toLowerCase()));
 
     return (
-        <Card style={{ borderRadius: '24px', border: '1px solid #f1f5f9' }} bodyStyle={{ padding: 0 }}>
+        <Card style={{ borderRadius: '24px', border: '2px solid #1e4a2d' }} bodyStyle={{ padding: 0 }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text strong>Global Feature Grid</Text>
                 <Input placeholder="Search..." prefix={<SearchOutlined />} onChange={e => setSearchText(e.target.value)} style={{ width: 300, borderRadius: '8px' }} />
@@ -637,7 +637,7 @@ const SystemModulePage = () => {
                             />
                         </TabPane>
                         <TabPane tab="Module Management" key="list">
-                            <Card style={{ borderRadius: '20px', border: '1px solid #f1f5f9' }} bodyStyle={{ padding: 0 }}>
+                            <Card style={{ borderRadius: '20px', border: '2px solid #1e4a2d' }} bodyStyle={{ padding: 0 }}>
                                 <Table
                                     columns={columns}
                                     dataSource={list}

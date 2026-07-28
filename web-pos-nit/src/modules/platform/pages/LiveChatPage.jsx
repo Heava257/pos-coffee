@@ -36,8 +36,8 @@ const LiveChatPage = () => {
         </Text>
       </div>
 
-      <Card title="Active Live Chat Session" bordered={false}>
-        <div style={{ display: 'flex', flexDirection: 'column', height: 400, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+      <Card title="Active Live Chat Session" bordered={true} style={{ border: '2px solid #1e4a2d' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: 400, background: '#f8fafc', borderRadius: 12, border: '2px solid #1e4a2d', overflow: 'hidden' }}>
           <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {chatMessages.map((msg, i) => (
               <div key={i} style={{
@@ -55,7 +55,7 @@ const LiveChatPage = () => {
               </div>
             ))}
           </div>
-          <div style={{ padding: 12, background: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', gap: 10 }}>
+          <div style={{ padding: 12, background: '#ffffff', borderTop: '2px solid #1e4a2d', display: 'flex', gap: 10 }}>
             <Input
               placeholder="Type your message here..."
               value={chatInput}

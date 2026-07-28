@@ -380,7 +380,7 @@ const PlanPage = () => {
                 style={{
                     borderRadius: "24px",
                     boxShadow: "0 8px 32px rgba(0,0,0,0.05)",
-                    border: 'none',
+                    border: '2px solid #1e4a2d',
                     background: 'linear-gradient(135deg, #ffffff 0%, #f9fbf9 100%)'
                 }}
             >
@@ -441,7 +441,7 @@ const PlanPage = () => {
                                 <Text type="secondary">Customize the public landing page title, subtext, promotions and support details.</Text>
                             </div>
 
-                            <Card style={{ borderRadius: 16, border: '1px solid #f0f0f0', background: '#fdfdfd' }}>
+                            <Card style={{ borderRadius: 16, border: '2px solid #1e4a2d', background: '#fdfdfd' }}>
                                 <Form form={systemForm} layout="vertical" onFinish={handleSaveSystemSettings}>
                                     <Row gutter={24}>
                                         <Col span={24}>

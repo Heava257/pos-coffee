@@ -233,19 +233,19 @@ const PaymentGatewayPage = () => {
       />
 
       <Spin spinning={loading}>
-        <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12, marginBottom: 24 }} title={<b>Active SaaS Integrations</b>}>
+        <Card bordered={true} className="shadow-sm" style={{ borderRadius: 12, marginBottom: 24, border: '2px solid #1e4a2d' }} title={<b>Active SaaS Integrations</b>}>
           <Table columns={columns} dataSource={gateways} pagination={false} size="small" rowKey="id" />
         </Card>
       </Spin>
 
-      <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12, marginBottom: 24 }} title={<span><TransactionOutlined style={{ marginRight: 8 }} /><b>Recent Platform Transaction Logs</b></span>}>
+      <Card bordered={true} className="shadow-sm" style={{ borderRadius: 12, marginBottom: 24, border: '2px solid #1e4a2d' }} title={<span><TransactionOutlined style={{ marginRight: 8 }} /><b>Recent Platform Transaction Logs</b></span>}>
         <Table columns={logColumns} dataSource={transactionLogs} pagination={false} size="small" loading={logsLoading} rowKey="key" />
       </Card>
 
       <Card 
-        bordered={false} 
+        bordered={true} 
         className="shadow-sm" 
-        style={{ borderRadius: 12 }} 
+        style={{ borderRadius: 12, border: '2px solid #1e4a2d' }} 
         title={<span><SettingOutlined style={{ marginRight: 8 }} /><b>Manual Payment & IMAP Reader Settings</b></span>}
       >
         <div style={{ marginBottom: 20 }}>

@@ -177,7 +177,7 @@ const DeveloperPortalPage = () => {
       </div>
 
       <Spin spinning={loading}>
-        <Tabs defaultActiveKey="1" style={{ background: "#fff", padding: 24, borderRadius: 12, boxShadow: "0 4px 15px rgba(0,0,0,0.02)" }}>
+        <Tabs defaultActiveKey="1" style={{ background: "#fff", padding: 24, borderRadius: 12, boxShadow: "0 4px 15px rgba(0,0,0,0.02)", border: "2px solid #1e4a2d" }}>
           <Tabs.TabPane tab={<span><KeyOutlined /> API Credentials</span>} key="1">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div>

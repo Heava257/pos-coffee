@@ -411,7 +411,7 @@ const handleDownloadInvoice = async (tranId) => {
 
                         {/* Usage Stats */}
                         <Col xs={24} lg={14}>
-                            <Card title={t.resource_utilization} style={{ borderRadius: "24px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+                            <Card title={t.resource_utilization} style={{ borderRadius: "24px", border: "2px solid #1e4a2d", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
                                 <Space direction="vertical" style={{ width: "100%" }} size="large">
 
                                     {[
@@ -435,7 +435,7 @@ const handleDownloadInvoice = async (tranId) => {
                                 </Space>
                             </Card>
 
-                            <Card style={{ marginTop: 20, borderRadius: "16px", border: "none", background: "#f8fdf9" }}>
+                            <Card style={{ marginTop: 20, borderRadius: "16px", border: "2px solid #1e4a2d", background: "#f8fdf9" }}>
                                 <Space>
                                     <CheckCircleOutlined style={{ color: "#52c41a" }} />
                                     <Text style={{ color: "#2d6a3e", fontWeight: 500 }}>{t.need_more_capacity}</Text>
@@ -471,7 +471,7 @@ const handleDownloadInvoice = async (tranId) => {
                             rowKey="id"
                             loading={billingLoading}
                             pagination={{ pageSize: 10 }}
-                            style={{ borderRadius: "16px", overflow: "hidden" }}
+                            style={{ borderRadius: "16px", overflow: "hidden", border: "2px solid #1e4a2d" }}
                             rowClassName={(record) =>
                                 record.status === "active" ? "billing-row-active" : ""
                             }
