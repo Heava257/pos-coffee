@@ -1920,7 +1920,7 @@ const MainLayout = () => {
         {/* Content */}
         <Content
           style={{
-            margin: getContentPadding(),
+            margin: 0,
             background: "transparent",
             minHeight: `calc(100vh - ${isMobile ? '120px' : '140px'})`,
           }}

@@ -71,7 +71,7 @@ const LoginAsTenantPage = () => {
       </div>
 
       <Card title="Admin Tenant Masquerade" bordered={false}>
-        <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px 20px' }}>
+        <div style={{ maxWidth: '100%', padding: '40px 20px' }}>
           <Alert
             message="Security Warning"
             description="You are entering Tenant Masquerade mode. All actions performed during this session will be logged under audit trails."

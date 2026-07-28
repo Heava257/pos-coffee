@@ -17,7 +17,7 @@ const RemoteAssistancePage = () => {
       </div>
 
       <Card title="Secure Remote Session Tool" bordered={false}>
-        <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center', padding: '40px 20px' }}>
+        <div style={{ maxWidth: '100%', textAlign: 'center', padding: '40px 20px' }}>
           <DesktopOutlined style={{ fontSize: 64, color: '#1e4a2d', marginBottom: 24 }} />
           <Title level={3}>Initiate Secure Remote Connection</Title>
           <Paragraph style={{ color: '#64748b', marginBottom: 32 }}>

@@ -34,7 +34,7 @@ const BugReportsPage = () => {
       </div>
 
       <Card title="System Defect Tracking" bordered={false}>
-        <div style={{ maxWidth: 700, margin: '0 auto', padding: '20px 0' }}>
+        <div style={{ maxWidth: '100%', padding: '20px 0' }}>
           <Title level={4} style={{ marginBottom: 24 }}>Log System Bug / Error</Title>
           <Form form={form} layout="vertical" onFinish={handleBugReport}>
             <Form.Item name="title" label="Defect Title" required rules={[{ required: true }]}>

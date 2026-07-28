@@ -17,7 +17,7 @@ const KnowledgeBasePage = () => {
       </div>
 
       <Card title="Knowledge Base Search" bordered={false}>
-        <div style={{ maxWidth: 800, margin: '0 auto', padding: '20px 0' }}>
+        <div style={{ maxWidth: '100%', padding: '20px 0' }}>
           <Input.Search
             placeholder="Search guide, documentation, and troubleshooting..."
             enterButton={<SearchOutlined />}

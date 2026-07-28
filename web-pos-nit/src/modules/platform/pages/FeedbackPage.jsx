@@ -34,7 +34,7 @@ const FeedbackPage = () => {
       </div>
 
       <Card title="Merchant Satisfaction & Feedback" bordered={false}>
-        <div style={{ maxWidth: 600, margin: '0 auto', padding: '20px 0' }}>
+        <div style={{ maxWidth: '100%', padding: '20px 0' }}>
           <Title level={3} style={{ textAlign: 'center', marginBottom: 32 }}>We Value Your Feedback</Title>
           <Form form={form} layout="vertical" onFinish={handleFeedback}>
             <Form.Item name="rating" label="How satisfied are you with the platform stability?" required initialValue={5}>
