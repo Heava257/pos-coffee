@@ -61,16 +61,37 @@ exports.getTenants = async (req, res) => {
   }
 };
 
-// Tenant Masquerade
+// Tenant Masquerade (Requires Token Verification)
 exports.masquerade = async (req, res) => {
   try {
     if (req.business_id !== 1) {
       return res.status(403).json({ success: false, message: "Forbidden: Platform Owner access only" });
     }
 
-    const { target_business_id } = req.body;
+    const { target_business_id, masquerade_token } = req.body;
     if (!target_business_id) {
       return res.status(400).json({ success: false, message: "Target business ID is required" });
+    }
+    if (!masquerade_token) {
+      return res.status(400).json({ success: false, message: "Troubleshooting requires a valid masquerade token authorized by the tenant" });
+    }
+
+    // Verify token matches target business
+    const [businesses] = await db.query(
+      "SELECT support_masquerade_token, support_masquerade_expiry FROM businesses WHERE id = ?",
+      [target_business_id]
+    );
+    if (!businesses || businesses.length === 0) {
+      return res.status(404).json({ success: false, message: "Target business not found" });
+    }
+
+    const { support_masquerade_token, support_masquerade_expiry } = businesses[0];
+    if (!support_masquerade_token || support_masquerade_token !== masquerade_token) {
+      return res.status(401).json({ success: false, message: "Invalid masquerade token" });
+    }
+
+    if (new Date(support_masquerade_expiry) < new Date()) {
+      return res.status(401).json({ success: false, message: "Masquerade token has expired" });
     }
 
     // Retrieve owner/admin user of that business
@@ -100,6 +121,36 @@ exports.masquerade = async (req, res) => {
       success: true,
       message: `Masquerading as tenant ${targetUser.business_name} successful`,
       ...loginResponse
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Generate support masquerade token for tenant
+exports.generateMasqueradeToken = async (req, res) => {
+  try {
+    const { business_id } = req;
+    if (business_id === 1) {
+      return res.status(400).json({ success: false, message: "Platform Owner cannot generate masquerade token" });
+    }
+
+    // Generate random token: MSQ-XXXXXX
+    const token = "MSQ-" + Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // Expiry: 2 hours from now
+    const expiry = new Date();
+    expiry.setHours(expiry.getHours() + 2);
+
+    await db.query(
+      "UPDATE businesses SET support_masquerade_token = ?, support_masquerade_expiry = ? WHERE id = ?",
+      [token, expiry, business_id]
+    );
+
+    res.json({
+      success: true,
+      token,
+      expiry: expiry.toISOString()
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

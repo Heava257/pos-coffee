@@ -16,5 +16,6 @@ router.post("/bugs", authMiddleware("bug-reports"), c.createBug);
 // Masquerade (Platform Admin only)
 router.get("/tenants", authMiddleware("login-as-tenant"), c.getTenants);
 router.post("/masquerade", authMiddleware("login-as-tenant"), c.masquerade);
+router.post("/masquerade/token", authMiddleware("support-tickets"), c.generateMasqueradeToken);
 
 module.exports = router;

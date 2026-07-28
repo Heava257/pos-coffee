@@ -109,7 +109,7 @@ exports.getBusinessPlan = async (req, res) => {
 
         // 1. Get Plan & Business info
         const [plans] = await db.query(`
-            SELECT p.*, b.name as business_name, b.plan_id
+            SELECT p.*, b.name as business_name, b.plan_id, b.support_masquerade_token, b.support_masquerade_expiry
             FROM businesses b
             INNER JOIN subscription_plans p ON b.plan_id = p.id
             WHERE b.id = ?

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, Typography, Space, Button, Select, Alert, message } from "antd";
+import { Card, Typography, Space, Button, Select, Alert, Input, message } from "antd";
 import { UserSwitchOutlined } from "@ant-design/icons";
 import { request } from "@/shared/utils/helper";
 import { useProfileStore } from "@/app/store/profileStore";
@@ -10,6 +10,7 @@ const { Title, Text } = Typography;
 const LoginAsTenantPage = () => {
   const [tenants, setTenants] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState(null);
+  const [masqueradeToken, setMasqueradeToken] = useState("");
   const [loading, setLoading] = useState(false);
   const { setProfile: setProfileStore, setPermissions: setPermissionsStore } = useProfileStore();
 
@@ -34,9 +35,16 @@ const LoginAsTenantPage = () => {
       message.warning("Please select a tenant business first!");
       return;
     }
+    if (!masqueradeToken) {
+      message.warning("Troubleshooting requires a valid masquerade token authorized by the tenant!");
+      return;
+    }
     setLoading(true);
     try {
-      const res = await request("support/masquerade", "post", { target_business_id: selectedTenant });
+      const res = await request("support/masquerade", "post", { 
+        target_business_id: selectedTenant,
+        masquerade_token: masqueradeToken
+      });
       if (res && res.success) {
         message.success(res.message);
         
@@ -87,6 +95,12 @@ const LoginAsTenantPage = () => {
               style={{ width: '100%' }}
               options={tenants.map(t => ({ label: t.name, value: t.id }))}
               onChange={val => setSelectedTenant(val)}
+            />
+            <Input
+              placeholder="Enter support masquerade token (e.g. MSQ-XXXXXX)"
+              size="large"
+              value={masqueradeToken}
+              onChange={e => setMasqueradeToken(e.target.value)}
             />
             <Button type="primary" danger size="large" block onClick={handleMasquerade} loading={loading}>
               Launch Impersonation Session

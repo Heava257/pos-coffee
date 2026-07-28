@@ -84,6 +84,11 @@ function MyPlanPage() {
     const [upgradeResult, setUpgradeResult] = useState(null); // { plan_name, end_date }
     const [paymentSession, setPaymentSession] = useState(null); // { tran_id, amount, plan_name }
 
+    // Support Token states
+    const [supportToken, setSupportToken] = useState(null);
+    const [supportExpiry, setSupportExpiry] = useState(null);
+    const [tokenLoading, setTokenLoading] = useState(false);
+
     useEffect(() => {
         fetchPlan();
         fetchAvailablePlans();
@@ -95,6 +100,8 @@ function MyPlanPage() {
         if (res && res.success) {
             setData(res.plan);
             setSelectedPlanId(res.plan.plan_id);
+            setSupportToken(res.plan.support_masquerade_token);
+            setSupportExpiry(res.plan.support_masquerade_expiry);
         }
         setLoading(false);
     };
@@ -109,6 +116,23 @@ function MyPlanPage() {
         const res = await request("my-plan/billing-history", "get");
         if (res && res.success) setBillingHistory(res.history || []);
         setBillingLoading(false);
+    };
+
+    const handleGenerateSupportToken = async () => {
+        setTokenLoading(true);
+        try {
+            const res = await request("support/masquerade/token", "post");
+            if (res && res.success) {
+                setSupportToken(res.token);
+                setSupportExpiry(res.expiry);
+                message.success(lang === 'kh' ? "បានបង្កើតកូដជំនួយបច្ចេកទេសដោយជោគជ័យ!" : "Support access token generated successfully!");
+            }
+        } catch (err) {
+            console.error(err);
+            message.error(err.message || "Failed to generate support token");
+        } finally {
+            setTokenLoading(false);
+        }
     };
 
     // ── Step 4: open confirmation modal ──────────────────────────
@@ -440,6 +464,56 @@ const handleDownloadInvoice = async (tranId) => {
                                     <CheckCircleOutlined style={{ color: "#52c41a" }} />
                                     <Text style={{ color: "#2d6a3e", fontWeight: 500 }}>{t.need_more_capacity}</Text>
                                     <Button type="link" onClick={() => setIsUpgradeModalVisible(true)}>{t.compare_plans}</Button>
+                                </Space>
+                            </Card>
+
+                            <Card 
+                                style={{ marginTop: 20, borderRadius: "16px", border: "2px solid #1e4a2d" }}
+                                title={<Space><SafetyCertificateOutlined style={{ color: '#1e4a2d' }} /> {lang === 'kh' ? "សិទ្ធិជំនួយបច្ចេកទេសបណ្តោះអាសន្ន" : "Temporary Support Access"}</Space>}
+                            >
+                                <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                                    <Text type="secondary" style={{ fontSize: 13, display: 'block', lineHeight: 1.4 }}>
+                                        {lang === 'kh' 
+                                            ? "ប្រសិនបើលោកអ្នកត្រូវការឱ្យអ្នកគ្រប់គ្រងប្រព័ន្ធជួយដោះស្រាយបញ្ហាបច្ចេកទេស សូមបង្កើតកូដជំនួយបច្ចេកទេសបណ្តោះអាសន្នខាងក្រោម។ អ្នកគ្រប់គ្រងនឹងមិនអាចចូលមើលប្រព័ន្ធរបស់លោកអ្នកបានទេ បើគ្មានកូដនេះ។" 
+                                            : "If you need platform administrators to assist with troubleshooting, generate a secure support token below. Administrators cannot access your workspace without this token."}
+                                    </Text>
+
+                                    {supportToken && new Date(supportExpiry) > new Date() ? (
+                                        <Alert
+                                            type="info"
+                                            showIcon
+                                            message={
+                                                <div>
+                                                    <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 4 }}>
+                                                        {lang === 'kh' ? "កូដជំនួយសកម្ម៖" : "Active Support Token:"}
+                                                    </Text>
+                                                    <Text code style={{ fontSize: 18, color: '#1e4a2d', fontWeight: 'bold' }}>{supportToken}</Text>
+                                                    <div style={{ marginTop: 4, fontSize: 11, color: '#666' }}>
+                                                        {lang === 'kh' 
+                                                            ? `ផុតកំណត់៖ ${dayjs(supportExpiry).format("DD-MM-YYYY HH:mm")}` 
+                                                            : `Expires at: ${dayjs(supportExpiry).format("DD-MM-YYYY HH:mm")}`}
+                                                    </div>
+                                                </div>
+                                            }
+                                        />
+                                    ) : (
+                                        <Alert
+                                            type="warning"
+                                            showIcon
+                                            message={lang === 'kh' ? "គ្មានកូដជំនួយសកម្មទេ" : "No active support token"}
+                                            description={lang === 'kh' ? "គណនីរបស់អ្នកមានសុវត្ថិភាពពីការចូលដោយគ្មានការអនុញ្ញាត។" : "Your account is secure from unauthorized support access."}
+                                        />
+                                    )}
+
+                                    <Button 
+                                        type="primary" 
+                                        block
+                                        style={{ backgroundColor: '#1e4a2d', borderColor: '#1e4a2d', borderRadius: 8, height: 38 }}
+                                        onClick={handleGenerateSupportToken}
+                                        loading={tokenLoading}
+                                    >
+                                        {lang === 'kh' ? "បង្កើតកូដជំនួយបច្ចេកទេស" : "Generate Support Token"}
+                                    </Button>
                                 </Space>
                             </Card>
                         </Col>
